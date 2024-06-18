@@ -1,0 +1,86 @@
+# /*---------------------------------------------------------------------------
+# |                                                                            |
+# |                          Manual resource migration                         |
+# |                                                                            |
+# +--------------------------------------------------------------------------*/
+
+- name:                                   "Pre Validations: DB Nodes"
+  become:                                 true
+  when:
+    - "'db' in inventory_hostname"
+  block:
+    - name:                               "Pre Validations: Remove any location_constraints"
+      location_constraints:
+        action:                           "remove"
+      register:                           location_constraints_results
+
+    - name:                               "Pre Validations: Validate HANA DB cluster status before migrating the HANA DB"
+      crm_cluster_status:
+        operation_step:                   "pre_failover"
+      register:                           crm_cluster_status_results_pre
+
+    - name:                               "Pre Validations on the primary node"
+      when:
+        - ansible_hostname == crm_cluster_status_results_pre.primary_node
+      block:
+        - name:                            "Pre Validations: Check if the AUTOMATED_REGISTER parameter is set to true"
+          ansible.builtin.shell:           "crm configure show | grep AUTOMATED_REGISTER=true | awk '{print $6}'"
+          register:                        automated_register
+          when:
+            - crm_cluster_status_results_pre is defined
+
+        - name:                            "Pre Validations: CleanUp any failed resource"
+          ansible.builtin.command:         crm resource cleanup
+          register:                        cleanup_failed_resource_pre
+
+    - name:                                "Test Execution: Crash the primary node."
+      when:
+        - ansible_hostname == crm_cluster_status_results_pre.primary_node
+        - crm_cluster_status_results_pre.status == "running"
+        - crm_cluster_status_results_pre is defined
+      block:
+        - name:                             "Test Execution: Move the resource to the targeted node"
+          ansible.builtin.command:          crm resource move msl_SAPHana_{{ db_sid | upper }}_HDB{{ db_instance_number }} {{ crm_cluster_status_results_pre.secondary_node }} force
+          register:                         hana_db_resource_migration
+          failed_when:                      hana_db_resource_migration.rc != 0
+
+        - name:                             "Test Execution: Pause for migration to complete"
+          ansible.builtin.wait_for:
+            timeout:                        300
+          when:
+            - automated_register.stdout != ""
+
+        - name:                             "Test Execution: Register Failed Resource"
+          become_user:                      "{{ db_sid | lower }}adm"
+          when:
+            - crm_cluster_status_results_pre is defined
+            - automated_register.stdout == ""
+          ansible.builtin.command:           hdbnsutil -sr_register --remoteHost={{crm_cluster_status_results_pre.secondary_node}} --remoteInstance={{ db_instance_number }} --replicationMode=sync --name=SITEB
+
+        - name:                              "Test Execution: Remove any location_constraints"
+          location_constraints:
+            action:                          "remove"
+          register:                          location_constraints_results
+
+    - name:                                 "Post Validations: HA cluster status after migrating the HANA DB"
+      when:
+        - ansible_hostname == crm_cluster_status_results_pre.primary_node
+        - crm_cluster_status_results_pre is defined
+      block:
+        - name:                              "Post Validations: CleanUp any failed resource"
+          ansible.builtin.command:           crm resource cleanup rsc_SAPHana_{{ db_sid | upper }}_HDB{{ db_instance_number }}
+          register:                          cleanup_failed_resource_post
+
+        - name:                              "Post Validations: Validate HANA DB cluster status after migrating the HANA DB"
+          crm_cluster_status:
+            operation_step:                  "post_failover"
+          register:                          crm_cluster_status_results_post
+          failed_when:                       crm_cluster_status_results_post.primary_node == null or crm_cluster_status_results_post.secondary_node == null
+
+        - name:                              "Post Validations: Check that the new primary instance is the old secondary instance"
+          debug:
+            msg:                             "Old primary instance is: {{ crm_cluster_status_results_pre.primary_node }} \
+                                              New primary instance is: {{ crm_cluster_status_results_post.primary_node }} \
+                                              Old secondary instance is: {{ crm_cluster_status_results_pre.secondary_node }} \
+                                              New secondary instance is: {{ crm_cluster_status_results_post.secondary_node }}"
+          failed_when:                       (crm_cluster_status_results_pre.primary_node != crm_cluster_status_results_post.secondary_node) or (crm_cluster_status_results_pre.secondary_node != crm_cluster_status_results_post.primary_node)

@@ -1,0 +1,259 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <title>SAP Automation QA Results</title>
+    <style>
+      body {
+        margin: 0;
+        font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
+        background-color: #f2f2f2; /* Microsoft's Light Gray */
+        line-height: 0.6;
+      }
+      
+      .navbar {
+        display: flex;
+        justify-content: center; /* Centers the content horizontally */
+        align-items: center;
+        padding: 10px;
+        background-color: #0078d7; /* Microsoft's Blue */
+        color: #ffffff; /* White for contrast */
+        transition: all 0.3s ease;
+      }
+      
+      .navbar .system-id {
+        font-weight: bold;
+      }
+      
+      .container {
+        display: flex;
+        align-items: flex-start;
+      }
+      
+      .left-bar {
+        flex: 1; /* take up 1/3 of the space */
+        padding: 20px;
+      }
+      
+      .right-content {
+        flex: 2; /* take up 2/3 of the space */
+        padding: 20px;
+      }
+      
+      .system-status {
+        font-weight: bold;
+        color: #323130; /* Microsoft's Dark Gray */
+      }
+      
+      .system-info {
+        background-color: #fff;
+        border-radius: 5px;
+        box-shadow: 0px 0px 10px 0px rgba(0, 0, 0, 0.1);
+        padding: 20px;
+        display: flex;
+        flex-direction: column;
+        align-items: start;
+      }
+      
+      .system-info h2 {
+        color: #333;
+        margin-bottom: 20px;
+        font-size: 24px;
+      }
+      
+      .system-info p {
+        color: #666;
+        margin-bottom: 10px;
+      }
+      
+      .system-info p strong {
+        color: #333;
+        font-weight: 600;
+      }
+      
+      .test-case {
+        margin-bottom: 10px;
+        transition: all 0.3s ease;
+      }
+      
+      .test-case:hover {
+        transform: scale(1.02);
+      }
+      
+      .test-case .title {
+        cursor: pointer;
+        background-color: #e9ecef;
+        padding: 10px;
+        border-radius: 5px;
+        transition: all 0.3s ease;
+        display: flex;
+        justify-content: space-between;
+      }
+      
+      .test-case .title:hover {
+        background-color: #dee2e6;
+      }
+      .test-case .title .name,
+      .test-case .title .duration {
+        display: inline-block;
+      }
+      
+      .test-case .details {
+        display: none;
+        padding: 10px;
+        border: 1px solid #ddd;
+        border-radius: 5px;
+      }
+      
+      .details {
+        width: 100%;
+        border-collapse: collapse;
+        margin-top: 20px;
+      }
+      
+      .details th,
+      .details td {
+        padding: 8px;
+        text-align: left;
+      }
+      
+      .details th {
+        background-color: #f2f2f2;
+        color: #333;
+      }
+      
+      .details tr:nth-child(even) {
+        background-color: #f2f2f2;
+      }
+      
+      .details tr:hover {
+        background-color: #ddd;
+      }
+      
+      .test-case.failed .title {
+        background-color: #df3d3d; /* Softer Red */
+        color: white;
+      }
+      
+      .test-case.passed .title {
+        background-color: #2a882e; /* Softer Green */
+        color: white;
+      }
+      
+      .footer {
+        position: absolute;
+        bottom: 0;
+        width: 100%;
+        height: 60px; /* Set the fixed height of the footer here */
+        padding: 10px;
+        text-align: center;
+        background-color: #0078d7; /* Microsoft's Blue */
+        color: #ffffff; /* White for contrast */
+        font-family: Arial, sans-serif;
+      }
+      @media only screen and (max-width: 600px) {
+        .container {
+          max-width: 100%;
+          padding: 0 15px;
+        }
+      
+        .navbar,
+        .footer {
+          flex-direction: column;
+          text-align: center;
+        }
+      
+        .test-case .title {
+          flex-direction: column;
+        }
+      
+        .test-case .title .name,
+        .test-case .title .duration {
+          display: block;
+        }
+      }
+    </style>
+    <script>
+      function toggleDetails(element) {
+        var details = element.nextElementSibling
+        details.style.display = details.style.display === 'none' ? 'block' : 'none'
+      }
+    </script>
+  </head>
+  <body>
+    <div class="navbar">
+      <div class="system-id">SAP Automation QA Results</div>
+    </div>
+
+    <div class="container">
+      <div class="left-bar">
+        <div class="system-info">
+          <h2>System Information</h2>
+          <p>
+            <strong>Test Group Name:</strong> {{ test_case_results.0.TestGroupName }}
+          </p>
+          <p>
+            <strong>DB SID:</strong> {{ test_case_results.0.DbSid }}
+          </p>
+          <p>
+            <strong>SAP SID:</strong> {{ test_case_results.0.SapSid }}
+          </p>
+          <p>
+            <strong>DB Fencing Agent:</strong> {{ test_case_results.0.DbFencingType }}
+          </p>
+          <p>
+            <strong>SCS Fencing Agent:</strong> {{ test_case_results.0.ScsFencingType }}
+          </p>
+          <p>
+            <strong>DB Type:</strong> {{ test_case_results.0.DBType }}
+          </p>
+          <p>
+            <strong>OS Version:</strong> {{ test_case_results.0.OsVersion }}
+          </p>
+        </div>
+      </div>
+      <div class="right-content">
+        {% for test_case_result in test_case_results %}
+          <div class="test-case {{ test_case_result.TestCaseStatus|lower }}">
+            <div class="title" onclick="toggleDetails(this)">
+              <span class="name">{{ test_case_result.TestCaseName }}</span>
+              <span class="duration">&#x1F550; {{ test_case_result.DurationSeconds }}</span>
+            </div>
+            <table class="details">
+              <tr>
+                <th>Test Description</th>
+                <td>{{ test_case_result.TestCaseDescription }}</td>
+              </tr>
+              <tr>
+                <th>Invocation ID</th>
+                <td>{{ test_case_result.TestCaseInvocationId }}</td>
+              </tr>
+              <tr>
+                <th>Start Time</th>
+                <td>{{ test_case_result.TestCaseStartTime }}</td>
+              </tr>
+              <tr>
+                <th>End Time</th>
+                <td>{{ test_case_result.TestCaseEndTime }}</td>
+              </tr>
+              <tr>
+                <th>Message</th>
+                <td>{{ test_case_result.TestCaseMessage }}</td>
+              </tr>
+              <tr>
+                <th>Package Versions</th>
+                <td>{{ test_case_result.PackageVersions }}</td>
+              </tr>
+            </table>
+          </div>
+        {% endfor %}
+      </div>
+    </div>
+    <div class="footer">
+      Report generated on: <span id="reportDate"></span>
+    </div>
+
+    <script>
+      document.getElementById('reportDate').textContent = new Date().toLocaleString()
+    </script>
+  </body>
+</html>

@@ -1,0 +1,14 @@
+# /*---------------------------------------------------------------------------
+# |                                                                            |
+# |                          HA Configuration Validation                       |
+# |                                                                            |
+# +--------------------------------------------------------------------------*/
+- name:                            "Pre Validations: Validate parameters for the DB nodes"
+  become:                          true
+  become_user:                     root
+  block:
+    - name:                        "HA Configuration check for the DB nodes"
+      pcmk_get_properties:
+        action:                    get
+        host_type:                 "{{ 'DB' if 'db' in inventory_hostname else 'SCS' }}"
+      register:                    pcmk_get_results

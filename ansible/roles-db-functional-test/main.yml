@@ -1,0 +1,60 @@
+# /*---------------------------------------------------------------------------
+# |                                                                            |
+# |         These tasks run in loop for the HA DB HANA test group              |
+# |                                                                            |
+# +--------------------------------------------------------------------------*/
+
+- name:                               "Setup telemetry data for each test case"
+  ansible.builtin.set_fact: 
+    test_case_invocation_id:          "{{ lookup('pipe', 'uuidgen') }}"
+    test_case_start_time_epoch:       "{{ now(utc=true,fmt='%Y-%m-%d %H:%M:%S') }}"
+    test_case_status:                 "Starting"
+    package_versions:                 "{{ ansible_facts.packages | default('') }}"
+
+- name:                               "Test initialization"
+  block:
+    - name:                           "Run the test case"
+      ansible.builtin.include_tasks:  "{{ item.task_name }}.yml"
+
+    - name:                           "Set the test case status to PASSED"
+      ansible.builtin.set_fact: 
+        test_case_status:             "PASSED"
+  rescue:
+    - name:                           "Test case failed"
+      ansible.builtin.set_fact: 
+        test_case_status:             "FAILED"
+        test_case_message:            "{{ ansible_failed_result }}"
+
+- name:                               "Create the telemetry JSON object for the test case"
+  send_telemetry_data: 
+    telemetry_data_destination:       "{{ telemetry_data_destination | lower }}"
+    laws_workspace_id:                "{{ laws_workspace_id | default('') }}"
+    laws_shared_key:                  "{{ laws_shared_key | default('') }}"
+    adx_database_name:                "{{ adx_database_name | default('') }}"
+    adx_cluster_fqdn:                 "{{ adx_cluster_fqdn | default('') }}"
+    adx_client_id:                    "{{ adx_client_id | default('') }}"
+    telemetry_table_name:             "{{ telemetry_table_name }}"
+    workspace_directory:              "{{ _workspace_directory }}"
+    test_group_json_data:             {
+                                        "TestCaseInvocationId": "{{ test_case_invocation_id }}",
+                                        "TestCaseStartTime": "{{ test_case_start_time_epoch }}",
+                                        "TestCaseEndTime": "{{ now(utc=true,fmt='%Y-%m-%d %H:%M:%S') }}",
+                                        "TestCaseStatus": "{{ test_case_status if test_case_status == 'FAILED' else 'PASSED'}}",
+                                        "TestCaseName": "{{ item.name }}",
+                                        "TestCaseDescription": "{{ item.description }}",
+                                        "TestGroupInvocationId": "{{ group_invocation_id }}",
+                                        "TestGroupStartTime": "{{ group_start_time }}",
+                                        "TestGroupName": "{{ group_name }}",
+                                        "OsVersion": "{{ ansible_distribution }} {{ ansible_distribution_version }}",
+                                        "TestCaseMessage": "{{ test_case_message if test_case_status == 'FAILED' else 'Test Case Passed' }}",
+                                        "DurationSeconds": "{{ ((now(utc=true,fmt='%Y-%m-%d %H:%M:%S') | to_datetime('%Y-%m-%d %H:%M:%S')) - (test_case_start_time_epoch | to_datetime)) }}",
+                                        "DbFencingType": "{{ database_cluster_type if database_high_availability else 'DB not HA' }}",
+                                        "ScsFencingType": "{{ scs_cluster_type if scs_high_availability else 'SCS not HA' }}",
+                                        "DBType": "{{ platform }}",
+                                        "DbSid": "{{ db_sid | upper }}",
+                                        "SapSid": "{{ sap_sid | upper }}",
+                                        "PackageVersions": "{{ package_versions | default('') }}"
+                                      }
+  failed_when:                        false
+  run_once:                           true
+  delegate_to:                        localhost
