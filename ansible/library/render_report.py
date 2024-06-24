@@ -1,19 +1,19 @@
 """Module to render the HTML report for the test group invocation.
 """
 
-import os
 from datetime import datetime
 from ansible.module_utils.basic import AnsibleModule
 import json
 from datetime import datetime
-import sys
 import jinja2
 
 
 def run_module():
     """
-    Main function to send telemetry data to Kusto
-    Cluster/Log Analytics Workspace and create a HTML report.
+    This function is the entry point for the Ansible module.
+    It renders a report using a provided template and test case results.
+
+    :return: None
     """
     module_args = dict(
         test_group_invocation_id=dict(type="str", required=True),

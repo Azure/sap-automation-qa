@@ -6,6 +6,18 @@ import xml.etree.ElementTree as ET
 
 
 def run_command(cmd):
+    """
+    Executes a command and returns the output.
+
+    Args:
+        cmd (str): The command to be executed.
+
+    Returns:
+        str: The output of the command.
+
+    Raises:
+        Exception: If the command execution fails.
+    """
     try:
         with subprocess.Popen(
             cmd,
@@ -18,17 +30,35 @@ def run_command(cmd):
 
 
 def remove_location_constraints(location_constraints):
+    """
+    Removes the specified location constraints.
+
+    Args:
+        location_constraints (list): A list of location constraints to be removed.
+
+    Raises:
+        Exception: If the command execution fails.
+    """
     for location_constraint in location_constraints:
         run_command(["crm", "resource", "clear", location_constraint.attrib["rsc"]])
 
 
 def location_constraints_exists():
+    """
+    Checks if location constraints exist.
+
+    Returns:
+        list: A list of location constraints if they exist, otherwise an empty list.
+    """
     xml_output = run_command(["cibadmin", "--query", "--scope", "constraints"])
     constraints = ET.fromstring(xml_output).findall(".//rsc_location")
     return constraints if constraints is not None else []
 
 
 def run_module():
+    """
+    Runs the ansible module for location constraints.
+    """
     module_args = dict(
         action=dict(type="str", required=True),
     )
@@ -44,7 +74,7 @@ def run_module():
             module.exit_json(msg="Location constraints removed", **result)
         else:
             module.exit_json(
-                msg="Location constraints do not exist or was removed. Number of location constraints.",
+                msg="Location constraints do not exist or were already removed.",
                 **result
             )
     except Exception as e:

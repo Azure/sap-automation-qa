@@ -10,6 +10,10 @@
   vars_files:
     - "./vars/input-api.yaml"
   tasks:
+    - name:                            "Set the workspace directory"
+      ansible.builtin.set_fact:
+        test_group_name:               "HA_{{ sap_functional_tests_type | default('SCS') if sap_functional_tests_type != 'DatabaseHighAvailability' else 'DB' }}_{{ platform }}_{{ ansible_distribution | upper }}-{{ ansible_distribution_major_version }}_{{ ansible_distribution_version }}"
+
     - name:                            "Enable profile_tasks callback plugin"
       ansible.builtin.set_fact:
         ansible_callbacks:

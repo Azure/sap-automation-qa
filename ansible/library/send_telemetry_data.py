@@ -15,8 +15,6 @@ from azure.kusto.ingest import (
     QueuedIngestClient,
     IngestionProperties,
     ReportLevel,
-    IngestionStatus,
-    IngestionResult,
 )
 
 LAWS_RESOURCE = "/api/logs"
@@ -30,16 +28,17 @@ def get_authorization_for_log_analytics(
     content_length,
     datetime,
 ):
-    """Builds the authorization header for Azure Log Analytics
+    """
+    Builds the authorization header for Azure Log Analytics.
 
     Args:
-        workspace_id (string): Workspace ID for Azure Log Analytics
-        workspace_shared_key (string): Workspace Key for Azure Log Analytics
-        content_length (int): Length of the payload
-        date (datetime): Date and time of the request
+        workspace_id (str): Workspace ID for Azure Log Analytics.
+        workspace_shared_key (str): Workspace Key for Azure Log Analytics.
+        content_length (int): Length of the payload.
+        date (datetime): Date and time of the request.
 
     Returns:
-        string: Authorization header
+        str: Authorization header.
     """
 
     string_to_hash = (
@@ -65,17 +64,18 @@ def get_authorization_for_log_analytics(
 
 
 def send_telemetry_data_to_dataexplorer(telemetry_json_data, module_params):
-    """Sends telemetry data to Azure Data Explorer
+    """
+    Sends telemetry data to Azure Data Explorer.
 
     Args:
-        telemetry_json_data (JSON): JSON data to be sent to Kusto
-        module_params (dict): Ansible Module parameters
+        telemetry_json_data (JSON): The JSON data to be sent to Azure Data Explorer.
+        module_params (dict): The parameters for the Ansible module.
 
     Raises:
-        ex: Exception raised during the process
+        Exception: If an error occurs during the process.
 
     Returns:
-        IngestKustoResponse: Response from the Kusto API
+        IngestKustoResponse: The response from the Kusto API.
     """
     try:
         import pandas
@@ -104,13 +104,15 @@ def send_telemetry_data_to_dataexplorer(telemetry_json_data, module_params):
 
 
 def send_telemetry_data_to_loganalytics(telemetry_json_data, module_params):
-    """Sends telemetry data to Azure Log Analytics Workspace
+    """
+    Sends telemetry data to Azure Log Analytics Workspace.
 
     Args:
-        telemetry_json_data (json): JSON data to be sent to Log Analytics
-        module_params (dict): Module parameters
+        telemetry_json_data (json): JSON data to be sent to Log Analytics.
+        module_params (dict): Module parameters.
+
     Returns:
-        response: Response from the Log Analytics API
+        response: Response from the Log Analytics API.
     """
     try:
         utc_datetime = datetime.now().strftime("%a, %d %b %Y %H:%M:%S GMT")
@@ -138,8 +140,27 @@ def send_telemetry_data_to_loganalytics(telemetry_json_data, module_params):
 
 def run_module():
     """
-    Main function to send telemetry data to Kusto
-    Cluster/Log Analytics Workspace and create a HTML report.
+    This function is the entry point for the Ansible module. It is responsible for executing the module logic.
+
+    Parameters:
+    - test_group_json_data (dict): The JSON data for the test group.
+    - telemetry_data_destination (str): The destination where the telemetry data will be sent.
+    - laws_workspace_id (str, optional): The workspace ID for the Laws service.
+    - laws_shared_key (str, optional): The shared key for the Laws service.
+    - telemetry_table_name (str): The name of the telemetry table.
+    - adx_database_name (str, optional): The name of the Azure Data Explorer database.
+    - adx_cluster_fqdn (str, optional): The fully qualified domain name of the Azure Data Explorer cluster.
+    - adx_client_id (str, optional): The client ID for accessing the Azure Data Explorer cluster.
+    - workspace_directory (str): The directory where the workspace is located.
+
+    Returns:
+    - dict: A dictionary containing the module execution result. The dictionary has the following keys:
+        - "changed" (bool): Indicates whether the module made any changes.
+        - "telemetry_data" (dict): The telemetry data.
+        - "telemetry_data_destination" (str): The destination where the telemetry data was sent.
+        - "status" (str): The status of the telemetry data sending process.
+        - "start" (datetime): The start time of the module execution.
+        - "end" (datetime): The end time of the module execution.
     """
     module_args = dict(
         test_group_json_data=dict(type="dict", required=True),

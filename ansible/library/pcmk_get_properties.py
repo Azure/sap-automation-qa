@@ -175,6 +175,11 @@ RESOURCES_CLONE_DEFAULTS = {
 def location_constraints_exists():
     """Check if location constraints exist in the pacemaker cluster.
 
+    This function checks if there are any location constraints defined in the
+    pacemaker cluster. It uses the `cibadmin` command-line tool to query the
+    cluster's constraints and parses the XML output to determine if any
+    location constraints are present.
+
     Returns:
         bool: True if location constraints exist, False otherwise.
     """
