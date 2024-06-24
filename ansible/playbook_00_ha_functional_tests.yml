@@ -10,10 +10,6 @@
   vars_files:
     - "./vars/input-api.yaml"
   tasks:
-    - name:                            "Set the workspace directory"
-      ansible.builtin.set_fact:
-        test_group_name:               "{{ sap_functional_tests_type }}"
-
     - name:                            "Enable profile_tasks callback plugin"
       ansible.builtin.set_fact:
         ansible_callbacks:
@@ -46,17 +42,17 @@
       ansible.builtin.set_fact:
         test_group_start_time:         "{{ now(utc=true,fmt='%Y-%m-%d %H:%M:%S') }}"
         test_group_invocation_id:      "{{ lookup('pipe', 'uuidgen') }}"
-        test_cases:                    "{{ test_groups | selectattr('name', 'equalto', test_group_name) | map(attribute='test_cases') | list | flatten(levels=1) }}"
+        test_cases:                    "{{ test_groups | selectattr('name', 'equalto', sap_functional_tests_type) | map(attribute='test_cases') | list | flatten(levels=1) }}"
       run_once: true
 
     - name:                            "Run test cases by including them as roles"
-      ansible.builtin.include_tasks:   "./roles/{{ test_group_name | lower }}/tasks/main.yml"
+      ansible.builtin.include_tasks:   "./roles/{{ sap_functional_tests_type | lower }}/tasks/main.yml"
       loop:                            
         "{{ test_cases }}"
       vars:
         group_invocation_id:           "{{ test_group_invocation_id }}"
         group_start_time:              "{{ test_group_start_time }}"
-        group_name:                    "{{ test_group_name }}"
+        group_name:                    "{{ sap_functional_tests_type }}"
 
     - name:                            "Create HTML report and upload it to storage account"
       run_once:                        true
@@ -69,7 +65,7 @@
         - name:                        "Read the log file and create a HTML report"
           render_report:
             test_group_invocation_id:  "{{ test_group_invocation_id }}"
-            test_group_name:           "{{ test_group_name }}"
+            test_group_name:           "{{ sap_functional_tests_type }}"
             report_template:           "{{ html_report_template }}"
             workspace_directory:       "{{ _workspace_directory }}"
           register:                    report_file_path
