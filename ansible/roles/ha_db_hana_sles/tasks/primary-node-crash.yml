@@ -72,6 +72,7 @@
           crm_cluster_status:
             operation_step:                  "post_failover"
           register:                          crm_cluster_status_results_post
+          failed_when:                       crm_cluster_status_results_post.primary_node == "null" or crm_cluster_status_results_post.secondary_node == "null"
 
         - name:                              "Post Validations: Check that the new primary instance is the old secondary instance"
           debug:

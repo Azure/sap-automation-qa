@@ -58,3 +58,6 @@
   failed_when:                        false
   run_once:                           true
   delegate_to:                        localhost
+  when:
+    - (telemetry_data_destination == "dataexplorer" and (adx_database_name != "" or adx_cluster_fqdn != "" or adx_client_id != "")) or
+      (telemetry_data_destination == "loganalytics" and (laws_workspace_id != "" or laws_shared_key != ""))

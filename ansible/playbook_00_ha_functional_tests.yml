@@ -67,5 +67,5 @@
             test_group_invocation_id:  "{{ test_group_invocation_id }}"
             test_group_name:           "{{ sap_functional_tests_type }}"
             report_template:           "{{ html_report_template }}"
-            workspace_directory:       "{{ _workspace_directory }}"
+            workspace_directory:       "{{ _workspace_directory }}/quality_assurance"
           register:                    report_file_path
