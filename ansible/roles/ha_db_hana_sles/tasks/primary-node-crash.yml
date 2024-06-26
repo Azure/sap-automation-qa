@@ -1,6 +1,6 @@
 # /*---------------------------------------------------------------------------
 # |                                                                            |
-# |                          Manual resource migration                         |
+# |                          Primary Node Crash                                |
 # |                                                                            |
 # +--------------------------------------------------------------------------*/
 
@@ -60,15 +60,15 @@
             - automated_register.stdout == ""
           ansible.builtin.command:           hdbnsutil -sr_register --remoteHost={{crm_cluster_status_results_pre.secondary_node}} --remoteInstance={{ db_instance_number }} --replicationMode=sync --name=SITEB
 
+        - name:                              "Test Execution: CleanUp any failed resource"
+          ansible.builtin.command:           crm resource cleanup rsc_SAPHana_{{ db_sid | upper }}_HDB{{ db_instance_number }}
+          register:                          cleanup_failed_resource_post
+
     - name:                                 "Post Validations: HA cluster status after stopping the HANA DB"
       when:
         - ansible_hostname == crm_cluster_status_results_pre.primary_node
         - crm_cluster_status_results_pre is defined
       block:
-        - name:                              "Post Validations: CleanUp any failed resource"
-          ansible.builtin.command:           crm resource cleanup rsc_SAPHana_{{ db_sid | upper }}_HDB{{ db_instance_number }}
-          register:                          cleanup_failed_resource_post
-
         - name:                              "Post Validations: Validate HANA DB cluster status after stopping the HANA DB"
           crm_cluster_status:
             operation_step:                  "post_failover"

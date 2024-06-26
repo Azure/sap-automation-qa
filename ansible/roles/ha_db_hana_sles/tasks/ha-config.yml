@@ -11,5 +11,5 @@
       pcmk_get_properties:
         action:                    get
         host_type:                 "{{ 'DB' if 'db' in inventory_hostname else 'SCS' }}"
-        database_sid:              "{{ db_sid }}"
+        database_sid:              "{{ db_sid | upper }}"
       register:                    pcmk_get_results
