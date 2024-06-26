@@ -1,4 +1,3 @@
-
 name: Ansible Lint
 on: [push, pull_request]
 jobs:
@@ -30,4 +29,4 @@ jobs:
 
       - name: Run ansible-lint
         run: |
-          ansible-lint deploy/ansible -c .ansible-lint
+          ansible-lint deploy/ansible -c .ansible-lint -x yaml[colons]

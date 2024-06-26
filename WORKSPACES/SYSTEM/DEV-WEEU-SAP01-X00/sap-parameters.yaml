@@ -23,7 +23,7 @@ scs_cluster_type:              AFA
 
 # sap_sid is the database SID
 db_sid:                        HDB
-db_instance_number:            00
+db_instance_number:            0
 # platform defines the database platform
 # valid values are:ASE / DB2 / HANA / ORACLE / SQLSERVER
 platform:                      HANA
@@ -36,7 +36,7 @@ database_cluster_type:         AFA
 #                                                                           #
 #############################################################################
 # MSI should have Get and List secrets permissions on the Key Vault
-managed_identity_resource_id: "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg_name/providers/Microsoft.ManagedIdentity/userAssignedIdentities/managed_identity_name" 
+managed_identity_resource_id: "resource_id"
 keyvault_resource_id:         "kyevault_name"
 ssh_key_secret_name:          "ssh_secret_name"
 ...
