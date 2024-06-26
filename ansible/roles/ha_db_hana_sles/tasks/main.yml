@@ -10,6 +10,8 @@
     test_case_start_time_epoch:       "{{ now(utc=true,fmt='%Y-%m-%d %H:%M:%S') }}"
     test_case_status:                 "Starting"
     package_versions:                 "{{ ansible_facts.packages | default('') }}"
+    ansible_callbacks:
+      profile_tasks:                  true
 
 - name:                               "Test initialization"
   block:
