@@ -201,7 +201,7 @@ def validate_global_ini_properties(DB_SID: str):
             f"/usr/sap/{DB_SID}/SYS/global/hdb/custom/config/global.ini"
         )
         with open(global_ini_file_path, "r") as file:
-            global_ini = file.readlines()
+            global_ini = [line.strip() for line in file.readlines()]
         ha_dr_provider_SAPHnaSR = global_ini.index("[ha_dr_provider_SAPHanaSR]")
         ha_dr_provider_SAPHnaSR_properties = global_ini[
             ha_dr_provider_SAPHnaSR + 1 : ha_dr_provider_SAPHnaSR + 4
