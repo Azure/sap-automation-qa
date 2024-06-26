@@ -1,34 +1,34 @@
 # Input parameters for executing the SAP Functional Tests:
 
-# 1. SAP Functional Test Type
+# SAP Functional Test Type
 # Options: SAPFunctionalTests
 TEST_TYPE:                  SAPFunctionalTests
 
-# 2. SAP Functional Test Tier
+# SAP Functional Test Tier
 # Options: DatabaseHighAvailability, SCSAvailability
 TEST_TIER:                  DatabaseHighAvailability
 
-# 3. SAP System Configuration
+# SAP System Configuration
 # String: Name of the SAP system configuration to be tested (Location: WORKSPACES/SYSTEM/DEV-WEEU-SAP01-X00 directory)
 SYSTEM_CONFIG_NAME:         DEV-WEEU-SAP01-X00
 
-# 4. SAP System Connection Type
+# SAP System Connection Type
 # Options: SSHKey, Password
 SAP_CONNECTION_TYPE:        SSHKey
 
-# 5. SAP System Connection User
+# SAP System Connection User
 # String: User name for connecting to the SAP system
 SAP_CONNECTION_USER:        azureadm
 
-# 6. SAP System Connection SSH Key path
+# SAP System Connection SSH Key path
 # String: Path to the SSH key for connecting to the SAP system
 SSH_KEY_PATH:               /path/to/ssh/key
 
-# 7. SAP System Connection Password
+# SAP System Connection Password
 # String: Password for connecting to the SAP system
 SSH_PASSWORD: #
 
-# 8. Test Results Destination
+# Test Results Destination
 # Options: Azure Log Analytics Workspace: loganalytics, Azure Data Explorer: dataexplorer
 TELEMETRY_DATA_DESTINATION: loganalytics
 
