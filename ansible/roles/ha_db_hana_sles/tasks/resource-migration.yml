@@ -18,7 +18,7 @@
       crm_cluster_status:
         operation_step:                   "pre_failover"
       register:                           crm_cluster_status_results_pre
-      failed_when:                        crm_cluster_status_results_pre.primary_node == "null" or crm_cluster_status_results_pre.secondary_node == "null"
+      failed_when:                        crm_cluster_status_results_pre.primary_node and crm_cluster_status_results_pre.secondary_node
 
     - name:                               "Pre Validations on the primary node"
       when:
