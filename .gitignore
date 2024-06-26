@@ -401,4 +401,4 @@ FodyWeavers.xsd
 # Python virtual environment
 .venv
 
-.vscode/*
+.vscode
