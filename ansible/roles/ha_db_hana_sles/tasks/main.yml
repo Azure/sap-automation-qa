@@ -12,6 +12,7 @@
     package_versions:                 "{{ ansible_facts.packages | default('') }}"
 
 - name:                               "Test initialization"
+  log_path:                           "{{ _workspace_directory }}/logs"
   block:
     - name:                           "Run the test case"
       vars:
