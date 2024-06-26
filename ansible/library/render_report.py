@@ -44,7 +44,14 @@ def run_module():
         template_content = jinja2.Template(module.params["report_template"])
         with open(f"{report_path}", "w") as report_file:
             report_file.write(
-                template_content.render({"test_case_results": test_case_results})
+                template_content.render(
+                    {
+                        "test_case_results": test_case_results,
+                        "report_generation_time": datetime.now().strftime(
+                            "%m/%d/%Y, %I:%M:%S %p"
+                        ),
+                    }
+                )
             )
         result["report_path"] = report_path
         result["status"] = "Report rendered successfully"

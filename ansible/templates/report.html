@@ -115,7 +115,7 @@
         text-align: left;
         word-wrap: break-word;
         white-space: pre-wrap;
-        vertical-align: top; 
+        vertical-align: top;
       }
       
       .details th {
@@ -142,7 +142,7 @@
       }
       
       .footer {
-        position: absolute;
+        position: fixed;
         bottom: 0;
         width: 100%;
         height: 60px; /* Set the fixed height of the footer here */
@@ -249,10 +249,10 @@
                 <th>Test Case Details (Logs)</th>
                 <td>
                   {% if test_case_result.TestCaseDetails|length > 50 %}
-                  <span id="detailsToggle{{ forloop.counter }}" onclick="toggleDetails('detailsToggle{{ forloop.counter }}')">Show more</span>
-                  <span id="details{{ forloop.counter }}" style="display: none;">{{ test_case_result.TestCaseDetails }}</span>
+                    <span id="detailsToggle{{ forloop.counter }}" onclick="toggleDetails('detailsToggle{{ forloop.counter }}')">Show more</span>
+                    <span id="details{{ forloop.counter }}" style="display: none;">{{ test_case_result.TestCaseDetails }}</span>
                   {% else %}
-                  {{ test_case_result.TestCaseDetails }}
+                    {{ test_case_result.TestCaseDetails }}
                   {% endif %}
                 </td>
               </tr>
@@ -261,12 +261,6 @@
         {% endfor %}
       </div>
     </div>
-    <div class="footer">
-      Report generated on: <span id="reportDate"></span>
-    </div>
-
-    <script>
-      document.getElementById('reportDate').textContent = new Date().toLocaleString()
-    </script>
+    <div class="footer">Report generated on: {{ report_generation_time }}</div>
   </body>
 </html>

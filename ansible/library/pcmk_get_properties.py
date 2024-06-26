@@ -227,7 +227,7 @@ def validate_global_ini_properties(DB_SID: str):
     except FileNotFoundError as e:
         return {"error": f"Exception raised, file not found error: {str(e)}"}
     except Exception as e:
-        return {"error": f"SAPHanaSR Properties validation failed: str(e)"}
+        return {"error": f"SAPHanaSR Properties validation failed: {str(e)}"}
 
 
 def validate_pacemaker_resource_clone_params(host_type):
