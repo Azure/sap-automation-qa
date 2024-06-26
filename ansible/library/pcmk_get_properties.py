@@ -206,18 +206,17 @@ def validate_global_ini_properties(DB_SID: str):
         ha_dr_provider_SAPHnaSR_properties = global_ini[
             ha_dr_provider_SAPHnaSR + 1 : ha_dr_provider_SAPHnaSR + 4
         ]
-        # load the properties into a dictionary
-        ha_dr_provider_SAPHanaSR_dict = {}
-        for prop in ha_dr_provider_SAPHnaSR_properties:
-            key, value = prop.split("=")
-            ha_dr_provider_SAPHanaSR_dict[key] = value
+        ha_dr_provider_SAPHanaSR_dict = {
+            key: value
+            for prop in ha_dr_provider_SAPHnaSR_properties
+            for key, value in [prop.split("=")]
+        }
 
         expected_properties = {
             "provider": "SAPHNASR",
             "path": "/hana/shared/myHooks",
             "execution_order": 1,
         }
-        # compare the dictionary with the json object
         if ha_dr_provider_SAPHanaSR_dict == expected_properties:
             return {"msg": f"SAPHanaSR Properties" + "{ha_dr_provider_SAPHanaSR_dict}."}
         else:
