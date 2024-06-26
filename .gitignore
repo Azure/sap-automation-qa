@@ -400,8 +400,3 @@ FodyWeavers.xsd
 
 # Python virtual environment
 .venv
-
-# System Files
-*.yaml
-*.ppk
-WORKSPACES/SYSTEM/*
