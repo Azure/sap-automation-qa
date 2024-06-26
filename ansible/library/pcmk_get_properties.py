@@ -207,7 +207,7 @@ def validate_global_ini_properties(DB_SID: str):
             ha_dr_provider_SAPHnaSR + 1 : ha_dr_provider_SAPHnaSR + 4
         ]
         ha_dr_provider_SAPHanaSR_dict = {
-            key: value
+            key.strip(): value.strip()
             for prop in ha_dr_provider_SAPHnaSR_properties
             for key, value in [prop.split("=")]
         }
