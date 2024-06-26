@@ -218,11 +218,13 @@ def validate_global_ini_properties(DB_SID: str):
             "execution_order": 1,
         }
         if ha_dr_provider_SAPHanaSR_dict == expected_properties:
-            return {"msg": f"SAPHanaSR Properties" + "{ha_dr_provider_SAPHanaSR_dict}."}
+            return {
+                "msg": f"SAPHanaSR Properties" + f"{ha_dr_provider_SAPHanaSR_dict}."
+            }
         else:
             return {
-                "error": f"SAPHanaSR Properties"
-                + " the expected properties. {ha_dr_provider_SAPHanaSR_dict}"
+                "error": f"SAPHanaSR Properties validation failed with"
+                + f" the expected properties. Properties: {ha_dr_provider_SAPHanaSR_dict}"
             }
     except FileNotFoundError as e:
         return {"error": f"Exception raised, file not found error: {str(e)}"}
