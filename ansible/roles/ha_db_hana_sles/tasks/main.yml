@@ -15,14 +15,18 @@
   block:
     - name:                           "Run the test case"
       ansible.builtin.include_tasks:  "{{ item.task_name }}.yml"
+      register:                       ansible_task_result
 
     - name:                           "Set the test case status to PASSED"
       ansible.builtin.set_fact: 
         test_case_status:             "PASSED"
+        test_case_message:            "Test Case Passed"
+        test_case_details:            "{{ ansible_task_result }}"
   rescue:
     - name:                           "Test case failed"
       ansible.builtin.set_fact: 
         test_case_status:             "FAILED"
+        test_case_details:            "{{ ansible_task_result }}"
         test_case_message:            "{{ ansible_failed_result }}"
 
 - name:                               "Create the telemetry JSON object for the test case"
@@ -46,7 +50,8 @@
                                         "TestGroupStartTime": "{{ group_start_time }}",
                                         "TestGroupName": "{{ group_name }}",
                                         "OsVersion": "{{ ansible_distribution }} {{ ansible_distribution_version }}",
-                                        "TestCaseMessage": "{{ test_case_message if test_case_status == 'FAILED' else 'Test Case Passed' }}",
+                                        "TestCaseMessage": "{{ test_case_message }}",
+                                        "TestCaseDetails": "{{ test_case_details }}",
                                         "DurationSeconds": "{{ ((now(utc=true,fmt='%Y-%m-%d %H:%M:%S') | to_datetime('%Y-%m-%d %H:%M:%S')) - (test_case_start_time_epoch | to_datetime)) }}",
                                         "DbFencingType": "{{ database_cluster_type if database_high_availability else 'DB not HA' }}",
                                         "ScsFencingType": "{{ scs_cluster_type if scs_high_availability else 'SCS not HA' }}",

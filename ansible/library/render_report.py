@@ -32,9 +32,7 @@ def run_module():
     workspace_directory = module.params["workspace_directory"]
     test_group_invocation_id = module.params["test_group_invocation_id"]
     test_group_name = module.params["test_group_name"]
-    report_path = (
-        f"{workspace_directory}/quality_assurance/{test_group_name}_{test_group_invocation_id}.html"
-    )
+    report_path = f"{workspace_directory}/quality_assurance/{test_group_name}_{test_group_invocation_id}.html"
     try:
         # Read the log file
         with open(

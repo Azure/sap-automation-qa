@@ -1,0 +1,90 @@
+X00_DB:
+  hosts:
+    x00dhdb00l01f:
+      ansible_host        : 127.0.0.1
+      ansible_user        : azureadm
+      ansible_connection  : ssh
+      connection_type     : key
+      virtual_host        : x00dhdb00l01f
+      become_user         : root
+      os_type             : linux
+      vm_name             : AZURE_VM_NAME
+
+    x00dhdb00l11f:
+      ansible_host        : 127.0.0.1
+      ansible_user        : azureadm
+      ansible_connection  : ssh
+      connection_type     : key
+      virtual_host        : x00dhdb00l11f
+      become_user         : root
+      os_type             : linux
+      vm_name             : AZURE_VM_NAME_2
+
+  vars:
+    node_tier             : hana
+    supported_tiers       : [hana]
+
+X00_SCS:
+  hosts:
+    x00scs00l1f8:
+      ansible_host        : 127.0.0.1
+      ansible_user        : azureadm
+      ansible_connection  : ssh
+      connection_type     : key
+      virtual_host        : x00scs00l01f
+      become_user         : root
+      os_type             : linux
+      vm_name             : AZURE_VM_NAME_3
+
+  vars:
+    node_tier             : scs
+    supported_tiers       : [scs]
+
+X00_ERS:
+  hosts:
+    x00scs01l1f8:
+      ansible_host        : 127.0.0.1
+      ansible_user        : azureadm
+      ansible_connection  : ssh
+      connection_type     : key
+      virtual_host        : x00ers00l01f
+      become_user         : root
+      os_type             : linux
+      vm_name             : AZURE_VM_NAME_4
+
+  vars:
+    node_tier             : ers
+    supported_tiers       : [ers]
+
+
+X00_PAS:
+  hosts:
+    x00app00l1f8:
+      ansible_host        : 127.0.0.1
+      ansible_user        : azureadm
+      ansible_connection  : ssh
+      connection_type     : key
+      virtual_host        : x00app00l01f
+      become_user         : root
+      os_type             : linux
+      vm_name             : AZURE_VM_NAME_5
+
+  vars:
+    node_tier             : pas
+    supported_tiers       : [pas]
+
+X00_APP:
+  hosts:
+    x00app01l1f8:
+      ansible_host        : 127.0.0.1
+      ansible_user        : azureadm
+      ansible_connection  : ssh
+      connection_type     : key
+      virtual_host        : x00app01l1f8
+      become_user         : root
+      os_type             : linux
+      vm_name             : AZURE_VM_NAME_6
+
+  vars:
+    node_tier             : app
+    supported_tiers       : [app]

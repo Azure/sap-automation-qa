@@ -195,6 +195,41 @@ def location_constraints_exists():
         return False
 
 
+def validate_global_ini_properties(DB_SID: str):
+    try:
+        with open(
+            f"/usr/sap/{DB_SID}/SYS/global/hdb/custom/config/global.ini", "r"
+        ) as file:
+            global_ini = file.readlines()
+        ha_dr_provider_SAPHnaSR = global_ini.index("[ha_dr_provider_SAPHanaSR]")
+        ha_dr_provider_SAPHnaSR_properties = global_ini[
+            ha_dr_provider_SAPHnaSR + 1 : ha_dr_provider_SAPHnaSR + 4
+        ]
+        # load the properties into a dictionary
+        ha_dr_provider_SAPHanaSR_dict = {}
+        for prop in ha_dr_provider_SAPHnaSR_properties:
+            key, value = prop.split("=")
+            ha_dr_provider_SAPHanaSR_dict[key] = value
+
+        expected_properties = {
+            "provider": "SAPHNASR",
+            "path": "/hana/shared/myHooks",
+            "execution_order": 1,
+        }
+        # compare the dictionary with the json object
+        if ha_dr_provider_SAPHanaSR_dict == expected_properties:
+            return {"msg": f"SAPHanaSR Properties" + "{ha_dr_provider_SAPHanaSR_dict}."}
+        else:
+            return {
+                "error": f"SAPHanaSR Properties"
+                + " the expected properties. {ha_dr_provider_SAPHanaSR_dict}"
+            }
+    except FileNotFoundError as e:
+        return {"error": f"Exception raised, file not found error: {str(e)}"}
+    except Exception as e:
+        return {"error": f"SAPHanaSR Properties validation failed: str(e)"}
+
+
 def validate_pacemaker_resource_clone_params(host_type):
     """Validate pacemaker cluster (resources>clone) parameters for DB and SCS
 
@@ -246,10 +281,8 @@ def validate_pacemaker_resource_clone_params(host_type):
         if root is not None:
             parse_default_data(root_element=root)
         if drift_parameters:
-            return {"error": f"Drift parameters found: {', '.join(drift_parameters)}"}
-        return {
-            "msg": f"No drift parameters found. Validated {', '.join(valid_parameters)}"
-        }
+            return {"error": f"Resource Parameters: {', '.join(drift_parameters)}"}
+        return {"msg": f"Resource Parameters: {', '.join(valid_parameters)}"}
 
     except subprocess.CalledProcessError as e:
         return {"error": str(e)}
@@ -310,10 +343,8 @@ def validate_pacemaker_cluster_params(host_type):
             if root is not None:
                 parse_default_data()
         if drift_parameters:
-            return {"error": f"Drift parameters found: {', '.join(drift_parameters)}"}
-        return {
-            "msg": f"No drift parameters found. Validated {', '.join(valid_parameters)}"
-        }
+            return {"error": f"Cluster Parameters: {', '.join(drift_parameters)}"}
+        return {"msg": f"Cluster Parameters: {', '.join(valid_parameters)}"}
 
     except subprocess.CalledProcessError as e:
         return {"error": str(e)}
@@ -353,12 +384,14 @@ def main():
             action=dict(type="str", choices=["get", "visualize"], required=True),
             host_type=dict(type="str"),
             xml_file=dict(type="str"),
+            database_sid=dict(type="str"),
         )
     )
 
     action = module.params["action"]
     host_type = module.params.get("host_type")
     xml_file = module.params.get("xml_file")
+    database_sid = module.params.get("database_sid")
 
     if action == "get":
         if location_constraints_exists():
@@ -366,9 +399,21 @@ def main():
         else:
             cluster_result = validate_pacemaker_cluster_params(host_type)
             resource_result = validate_pacemaker_resource_clone_params(host_type)
-            if "error" in cluster_result:
-                module.fail_json(msg=cluster_result["error"])
-            module.exit_json(msg="No drift parameters found.")
+            sap_hana_sr_result = validate_global_ini_properties(DB_SID=database_sid)
+            if any(
+                "error" in result
+                for result in [cluster_result, resource_result, sap_hana_sr_result]
+            ):
+                error_messages = [
+                    result["error"]
+                    for result in [cluster_result, resource_result, sap_hana_sr_result]
+                    if "error" in result
+                ]
+                module.fail_json(msg=", ".join(error_messages))
+            module.exit_json(
+                msg=f"No drift parameters found. This list of validated parameters: "
+                + f"{cluster_result['msg']}, {resource_result['msg']}, {sap_hana_sr_result['msg']}"
+            )
 
     elif action == "visualize":
         if xml_file is None:

@@ -1,0 +1,42 @@
+---
+#############################################################################
+#                                                                           #
+#                           Application tier                                #
+#                                                                           #
+#############################################################################
+# sap_sid is the application SID
+sap_sid:                       X00
+
+# web_sid is the Web Dispatcher SID (if applicable)
+web_sid:                       X00
+
+# scs_high_availability is a boolean flag indicating
+# if the SAP Central Services are deployed using high availability
+scs_high_availability:         true
+scs_cluster_type:              AFA
+
+#############################################################################
+#                                                                           #
+#                              Database tier                                #
+#                                                                           #
+#############################################################################
+
+# sap_sid is the database SID
+db_sid:                        HDB
+db_instance_number:            00
+# platform defines the database platform
+# valid values are:ASE / DB2 / HANA / ORACLE / SQLSERVER
+platform:                      HANA
+db_high_availability:          true
+database_cluster_type:         AFA
+
+#############################################################################
+#                                                                           #
+#                              Azure resources                              #
+#                                                                           #
+#############################################################################
+# MSI should have Get and List secrets permissions on the Key Vault
+managed_identity_resource_id: "/subscriptions/00000000-0000-0000-0000-000000000000/resourceGroups/rg_name/providers/Microsoft.ManagedIdentity/userAssignedIdentities/managed_identity_name" 
+keyvault_resource_id:         "kyevault_name"
+ssh_key_secret_name:          "ssh_secret_name"
+...
