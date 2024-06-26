@@ -400,3 +400,4 @@ FodyWeavers.xsd
 
 # Python virtual environment
 .venv
+*.yaml
