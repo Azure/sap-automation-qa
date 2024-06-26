@@ -26,7 +26,7 @@ SSH_KEY_PATH:               /path/to/ssh/key
 
 # SAP System Connection Password
 # String: Password for connecting to the SAP system
-SSH_PASSWORD: #
+SSH_PASSWORD:               "*"
 
 # Test Results Destination
 # Options: Azure Log Analytics Workspace: loganalytics, Azure Data Explorer: dataexplorer
