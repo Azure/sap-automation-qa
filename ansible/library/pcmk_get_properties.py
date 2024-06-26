@@ -212,12 +212,12 @@ def validate_global_ini_properties(DB_SID: str):
             for key, value in [prop.split("=")]
         }
 
-        expected_properties = {
-            "provider": "SAPHNASR",
-            "path": "/hana/shared/myHooks",
-            "execution_order": 1,
+        expected_properties_sles = {
+            "provider": "SAPHanaSR",
+            "path": "/usr/share/SAPHanaSR",
+            "execution_order": "1",
         }
-        if ha_dr_provider_SAPHanaSR_dict == expected_properties:
+        if ha_dr_provider_SAPHanaSR_dict == expected_properties_sles:
             return {
                 "msg": f"SAPHanaSR Properties" + f"{ha_dr_provider_SAPHanaSR_dict}."
             }
