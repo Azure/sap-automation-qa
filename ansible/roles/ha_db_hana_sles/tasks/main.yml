@@ -14,19 +14,21 @@
 - name:                               "Test initialization"
   block:
     - name:                           "Run the test case"
+      vars:
+        test_result:                  {}
       ansible.builtin.include_tasks:  "{{ item.task_name }}.yml"
-      register:                       ansible_task_result
+      register:                       task_result
 
     - name:                           "Set the test case status to PASSED"
       ansible.builtin.set_fact: 
         test_case_status:             "PASSED"
         test_case_message:            "Test Case Passed"
-        test_case_details:            "{{ ansible_task_result }}"
+        test_case_details:            "{{ task_result }}"
   rescue:
     - name:                           "Test case failed"
       ansible.builtin.set_fact: 
         test_case_status:             "FAILED"
-        test_case_details:            "{{ ansible_task_result }}"
+        test_case_details:            "{{ task_result }}"
         test_case_message:            "{{ ansible_failed_result }}"
 
 - name:                               "Create the telemetry JSON object for the test case"

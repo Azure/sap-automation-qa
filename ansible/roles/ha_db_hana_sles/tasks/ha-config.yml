@@ -12,4 +12,4 @@
         action:                    get
         host_type:                 "{{ 'DB' if 'db' in inventory_hostname else 'SCS' }}"
         database_sid:              "{{ db_sid | upper }}"
-      register:                    pcmk_get_results
+      register:                    test_result
