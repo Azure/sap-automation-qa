@@ -197,9 +197,10 @@ def location_constraints_exists():
 
 def validate_global_ini_properties(DB_SID: str):
     try:
-        with open(
-            f"/usr/sap/{DB_SID}/SYS/global/hdb/custom/config/global.ini", "r"
-        ) as file:
+        global_ini_file_path = (
+            f"/usr/sap/{DB_SID}/SYS/global/hdb/custom/config/global.ini"
+        )
+        with open(global_ini_file_path, "r") as file:
             global_ini = file.readlines()
         ha_dr_provider_SAPHnaSR = global_ini.index("[ha_dr_provider_SAPHanaSR]")
         ha_dr_provider_SAPHnaSR_properties = global_ini[
@@ -227,7 +228,9 @@ def validate_global_ini_properties(DB_SID: str):
     except FileNotFoundError as e:
         return {"error": f"Exception raised, file not found error: {str(e)}"}
     except Exception as e:
-        return {"error": f"SAPHanaSR Properties validation failed: {str(e)}"}
+        return {
+            "error": f"SAPHanaSR Properties validation failed: {str(e)} {global_ini}"
+        }
 
 
 def validate_pacemaker_resource_clone_params(host_type):
