@@ -100,20 +100,11 @@
         - name:                              "Post Validations: Set test case status"
           ansible.builtin.set_fact:
             test_case_status:                "PASSED"
-
-      rescue:
-        - name:                              "Post Validations: Set test case status"
-          ansible.builtin.set_fact:
-            test_case_status:                "FAILED"
-
-- name:                                      "Post Telemetry Data"
-  ansible.builtin.include_tasks:             "roles/misc/tasks/post-telemetry-data.yml"
-  vars:
-    test_case_message:                       "Old primary instance is: {{ crm_cluster_status_results_pre.primary_node }} \
+            test_case_message:                "Old primary instance is: {{ crm_cluster_status_results_pre.primary_node }} \
                                               New primary instance is: {{ crm_cluster_status_results_post.primary_node }} \
                                               Old secondary instance is: {{ crm_cluster_status_results_pre.secondary_node }} \
                                               New secondary instance is: {{ crm_cluster_status_results_post.secondary_node }}"
-    test_case_details:                        {
+            test_case_details:                {
                                                 "Pre Validations: Remove any location_constraints": "{{ location_constraints_results }}",
                                                 "Pre Validations: Validate HANA DB cluster status": "{{ crm_cluster_status_results_pre }}",
                                                 "Pre Validations: Check if the AUTOMATED_REGISTER": "{{ automated_register }}",
@@ -122,4 +113,14 @@
                                                 "Post Validations: CleanUp any failed resource": "{{ cleanup_failed_resource_post }}",
                                                 "Post Validations: Validate HANA DB cluster status": "{{ crm_cluster_status_results_post }}"
                                               }
+
+      rescue:
+        - name:                              "Post Validations: Set test case status"
+          ansible.builtin.set_fact:
+            test_case_status:                "FAILED"
+            test_case_message:               "{{ ansible_failed_result }}"
+            test_case_details:               "{{ ansible_failed_result }}"
+
+- name:                                      "Post Telemetry Data"
+  ansible.builtin.include_tasks:             "roles/misc/tasks/post-telemetry-data.yml"
   run_once:                                   true
