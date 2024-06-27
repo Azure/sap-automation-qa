@@ -47,8 +47,7 @@
 
     - name:                            "Run test cases by including them as roles"
       ansible.builtin.include_tasks:   "./roles/{{ sap_functional_tests_type | lower }}/tasks/{{ item.task_name }}.yml"
-      loop:                            
-        "{{ test_cases }}"
+      loop:                            "{{ test_cases | list }}"
       vars:
         group_invocation_id:           "{{ test_group_invocation_id }}"
         group_start_time:              "{{ test_group_start_time }}"
