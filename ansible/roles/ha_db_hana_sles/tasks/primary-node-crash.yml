@@ -3,6 +3,8 @@
 # |                          Primary Node Crash                                |
 # |                                                                            |
 # +--------------------------------------------------------------------------*/
+- name:                            "Test Setup Tasks"
+  ansible.builtin.include_tasks:   "roles/misc/tasks/test-case-setup.yml"
 
 - name:                                   "Pre Validations: DB Nodes"
   become:                                 true
@@ -98,3 +100,6 @@
           failed_when:
             - crm_cluster_status_results_pre.primary_node != crm_cluster_status_results_post.secondary_node
             - crm_cluster_status_results_pre.secondary_node != crm_cluster_status_results_post.primary_node
+
+- name:                            "Post Telemetry Data"
+  ansible.builtin.include_tasks:   "roles/misc/tasks/post-telemetry-data.yml"

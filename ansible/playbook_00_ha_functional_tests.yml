@@ -46,7 +46,7 @@
       run_once: true
 
     - name:                            "Run test cases by including them as roles"
-      ansible.builtin.include_tasks:   "./roles/{{ sap_functional_tests_type | lower }}/tasks/main.yml"
+      ansible.builtin.include_tasks:   "./roles/{{ sap_functional_tests_type | lower }}/tasks/{{ test_cases.task_name }}.yml"
       loop:                            
         "{{ test_cases }}"
       vars:

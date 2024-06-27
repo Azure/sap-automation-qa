@@ -1,38 +1,4 @@
-# /*---------------------------------------------------------------------------
-# |                                                                            |
-# |         These tasks run in loop for the HA DB HANA test group              |
-# |                                                                            |
-# +--------------------------------------------------------------------------*/
-
-- name:                               "Setup telemetry data for each test case"
-  ansible.builtin.set_fact:
-    test_case_invocation_id:          "{{ lookup('pipe', 'uuidgen') }}"
-    test_case_start_time_epoch:       "{{ now(utc=true, fmt='%Y-%m-%d %H:%M:%S') }}"
-    test_case_status:                 "Starting"
-    package_versions:                 "{{ ansible_facts.packages | default('') }}"
-    ansible_callbacks:
-      profile_tasks:                  true
-
-- name:                               "Test initialization"
-  block:
-    - name:                           "Run the test case"
-      vars:
-        test_result:                  {}
-      ansible.builtin.include_tasks:  "{{ item.task_name }}.yml"
-      register:                       task_result
-
-    - name:                           "Set the test case status to PASSED"
-      ansible.builtin.set_fact:
-        test_case_status:             "PASSED"
-        test_case_message:            "Test Case Passed"
-        test_case_details:            "{{ task_result.stdout_lines }}"
-  rescue:
-    - name:                           "Test case failed"
-      ansible.builtin.set_fact:
-        test_case_status:             "FAILED"
-        test_case_details:            "{{ task_result }}"
-        test_case_message:            "{{ ansible_failed_result }}"
-
+---
 - name:                               "Create the telemetry JSON object for the test case"
   failed_when:                        false
   run_once:                           true

@@ -3,6 +3,9 @@
 # |                          HA Configuration Validation                       |
 # |                                                                            |
 # +--------------------------------------------------------------------------*/
+- name:                            "Test Setup Tasks"
+  ansible.builtin.include_tasks:   "roles/misc/tasks/test-case-setup.yml"
+
 - name:                            "Pre Validations: Validate parameters for the DB nodes"
   become:                          true
   become_user:                     root
@@ -13,3 +16,18 @@
         host_type:                 "{{ 'DB' if 'db' in inventory_hostname else 'SCS' }}"
         database_sid:              "{{ db_sid | upper }}"
       register:                    test_result
+    
+    - name:                           "Set the test case status to PASSED"
+      ansible.builtin.set_fact:
+        test_case_status:             "PASSED"
+        test_case_message:            "Test Case Passed"
+        test_case_details:            "{{ test_result }}"
+  rescue:
+    - name:                           "Test case failed"
+      ansible.builtin.set_fact:
+        test_case_status:             "FAILED"
+        test_case_details:            "{{ test_result }}"
+        test_case_message:            "{{ ansible_failed_result }}"
+
+- name:                            "Post Telemetry Data"
+  ansible.builtin.include_tasks:   "roles/misc/tasks/post-telemetry-data.yml"
