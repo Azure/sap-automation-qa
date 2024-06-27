@@ -99,17 +99,16 @@
 
         - name:                              "Post Validations: Set test case status"
           ansible.builtin.set_fact:
-            test_status:                     "PASSED"
+            test_case_status:                "PASSED"
 
       rescue:
         - name:                              "Post Validations: Set test case status"
           ansible.builtin.set_fact:
-            test_status:                      "FAILED"
+            test_case_status:                "FAILED"
 
 - name:                                      "Post Telemetry Data"
   ansible.builtin.include_tasks:             "roles/misc/tasks/post-telemetry-data.yml"
   vars:
-    test_case_status:                        "{{ test_status }}"
     test_case_message:                       "Old primary instance is: {{ crm_cluster_status_results_pre.primary_node }} \
                                               New primary instance is: {{ crm_cluster_status_results_post.primary_node }} \
                                               Old secondary instance is: {{ crm_cluster_status_results_pre.secondary_node }} \
