@@ -3,8 +3,8 @@
 # |                          Manual resource migration                         |
 # |                                                                            |
 # +--------------------------------------------------------------------------*/
-- name:                            "Test Setup Tasks"
-  ansible.builtin.include_tasks:   "roles/misc/tasks/test-case-setup.yml"
+- name:                                   "Test Setup Tasks"
+  ansible.builtin.include_tasks:          "roles/misc/tasks/test-case-setup.yml"
 
 - name:                                   "Pre Validations: DB Nodes"
   become:                                 true
@@ -18,7 +18,7 @@
 
     - name:                               "Pre Validations: Validate HANA DB cluster status before migrating the HANA DB"
       crm_cluster_status:
-          operation_step:                   "pre_failover"
+          operation_step:                 "pre_failover"
       register:                           crm_cluster_status_results_pre
       failed_when:                        crm_cluster_status_results_pre.primary_node == None or crm_cluster_status_results_pre.secondary_node == None
 
