@@ -18,9 +18,9 @@
 
     - name:                               "Pre Validations: Validate HANA DB cluster status before migrating the HANA DB"
       crm_cluster_status:
-        operation_step:                   "pre_failover"
+          operation_step:                   "pre_failover"
       register:                           crm_cluster_status_results_pre
-      failed_when:                        crm_cluster_status_results_pre.primary_node and crm_cluster_status_results_pre.secondary_node
+      failed_when:                        crm_cluster_status_results_pre.primary_node == None or crm_cluster_status_results_pre.secondary_node == None
 
     - name:                               "Pre Validations on the primary node"
       when:
