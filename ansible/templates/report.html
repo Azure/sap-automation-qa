@@ -247,14 +247,7 @@
               </tr>
               <tr>
                 <th>Test Case Details (Logs)</th>
-                <td>
-                  {% if test_case_result.TestCaseDetails|length > 50 %}
-                    <span id="detailsToggle{{ forloop.counter }}" onclick="toggleDetails('detailsToggle{{ forloop.counter }}')">Show more</span>
-                    <span id="details{{ forloop.counter }}" style="display: none;">{{ test_case_result.TestCaseDetails }}</span>
-                  {% else %}
-                    {{ test_case_result.TestCaseDetails }}
-                  {% endif %}
-                </td>
+                <td> test_case_result.TestCaseDetails </td>
               </tr>
             </table>
           </div>
