@@ -98,6 +98,8 @@
           failed_when:                       crm_cluster_status_results_post.primary_node == None or crm_cluster_status_results_post.secondary_node == None
 
         - name:                              "Post Validations: Set test case status"
+          delegate_to:                       localhost
+          run_once:                          true
           ansible.builtin.set_fact:
             test_case_status:                "PASSED"
             test_case_message:                "Old primary instance is: {{ crm_cluster_status_results_pre.primary_node }} \
