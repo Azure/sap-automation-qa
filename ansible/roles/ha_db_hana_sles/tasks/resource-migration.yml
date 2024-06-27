@@ -104,7 +104,7 @@
       rescue:
         - name:                              "Post Validations: Set test case status"
           ansible.builtin.set_fact:
-            test_status:                     "FAILED"
+            test_status:                      "FAILED"
 
 - name:                                      "Post Telemetry Data"
   ansible.builtin.include_tasks:             "roles/misc/tasks/post-telemetry-data.yml"
