@@ -22,6 +22,12 @@ PARAMETERS_FOLDER="SYSTEM/$SYSTEM_CONFIG_NAME"
 SAP_PARAMS="SYSTEM/$SYSTEM_CONFIG_NAME/sap-parameters.yaml"
 INVENTORY="SYSTEM/$SYSTEM_CONFIG_NAME/hosts.yaml"
 
+# Check if ansible is installed and if not install it
+if ! command -v ansible-playbook &> /dev/null; then
+    echo "Ansible is not installed. Installing Ansible..."
+    sudo apt install ansible
+fi
+
 # Check if parameters are empty
 if [ -z "$SYSTEM_CONFIG_NAME" ] || [ -z "$TEST_TYPE" ] || [ -z "$TEST_TIER" ] || [ -z "$SAP_CONNECTION_TYPE" ] || [ -z "$SAP_CONNECTION_USER" ] || [ -z "$SSH_KEY_PATH" ] && [ -z "$SSH_PASSWORD" ]; then
     echo "Error: One or more parameters are empty."
