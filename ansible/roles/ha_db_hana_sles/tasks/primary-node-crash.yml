@@ -90,7 +90,7 @@
             operation_step:                  "post_failover"
           register:                          crm_cluster_status_results_post
           failed_when:                       crm_cluster_status_results_post.primary_node == None or crm_cluster_status_results_post.secondary_node == None
-        
+
         - name:                              "Post Validations: Set test case status"
           ansible.builtin.set_fact:
             test_case_status:                "PASSED"
