@@ -211,6 +211,17 @@
           <p>
             <strong>OS Version:</strong> {{ test_case_results.0.OsVersion }}
           </p>
+          <p>
+            <strong>Total Duration:</strong>
+            {% with total_duration_seconds=0 %}
+              {% for test_case_result in test_case_results %}
+                {% with total_duration_seconds=total_duration_seconds + test_case_result.DurationSeconds %}
+
+                {% endwith %}
+              {% endfor %}
+              {{ total_duration_seconds }}
+            {% endwith %}
+          </p>
         </div>
       </div>
       <div class="right-content">
