@@ -104,9 +104,7 @@
 - name:                            "Post Telemetry Data"
   ansible.builtin.include_tasks:   "roles/misc/tasks/post-telemetry-data.yml"
   vars:
-    test_case_status:              "{{ crm_cluster_status_results_pre.primary_node == crm_cluster_status_results_post.secondary_node
-                                    && crm_cluster_status_results_pre.secondary_node == crm_cluster_status_results_post.primary_node
-                                    ? 'PASSED' : 'FAILED' }}"
+    test_case_status:              "{{ (crm_cluster_status_results_pre.primary_node == crm_cluster_status_results_post.secondary_node && crm_cluster_status_results_pre.secondary_node == crm_cluster_status_results_post.primary_node) ? 'PASSED' : 'FAILED' }}"
     test_case_message:             "{{ message }}"
     test_case_details:             {
                                       "Pre Validations: Remove any location_constraints": "{{ location_constraints_results }}",
