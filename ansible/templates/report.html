@@ -215,7 +215,7 @@
             <strong>Total Duration:</strong>
             {% with total_duration_seconds=0 %}
               {% for test_case_result in test_case_results %}
-                {% with total_duration_seconds=total_duration_seconds + test_case_result.DurationSeconds %}
+                {% with total_duration_seconds=total_duration_seconds + test_case_result.DurationSeconds|default:'0'|int %}
 
                 {% endwith %}
               {% endfor %}
