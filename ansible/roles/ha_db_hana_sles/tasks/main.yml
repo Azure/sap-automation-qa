@@ -25,7 +25,7 @@
       ansible.builtin.set_fact:
         test_case_status:             "PASSED"
         test_case_message:            "Test Case Passed"
-        test_case_details:            "{{ task_result }}"
+        test_case_details:            "{{ task_result.stdout }}"
   rescue:
     - name:                           "Test case failed"
       ansible.builtin.set_fact:
