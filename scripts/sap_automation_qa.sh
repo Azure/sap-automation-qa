@@ -7,7 +7,7 @@ if [ ! -f ../vars.yaml ]; then
 fi
 
 # Load variables from vars.yaml file
-source ../vars.yaml
+eval "$(yq eval '(. | to_entries[] | .key + "=" + (.value | tojson))' ../vars.yaml)"
 
 # Parse variables
 SYSTEM_CONFIG_NAME=$(echo $SYSTEM_CONFIG_NAME | tr -d '"')
