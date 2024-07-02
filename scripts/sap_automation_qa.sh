@@ -1,67 +1,100 @@
 #!/bin/bash
 
-# Check if vars.yaml exists in the current directory
-if [ ! -f vars.yaml ]; then
-    echo "Error: vars.yaml not found in the parent directory."
+# Define the path to the vars.yaml file
+VARS_FILE="../vars.yaml"
+
+# Function to check if a command exists
+command_exists() {
+    command -v "$1" &> /dev/null
+}
+
+# Function to validate input parameters from vars.yaml
+validate_params() {
+    # Read each line from vars.yaml
+    while IFS=": " read -r key value; do
+        case "$key" in
+            "TEST_TYPE")
+                if [[ -z "$value" ]]; then
+                    echo "TEST_TYPE cannot be empty"
+                    exit 1
+                else
+                    TEST_TYPE="$value"
+                    echo "TEST_TYPE: $value"
+                fi
+                ;;
+            "TEST_TIER")
+                if [[ -z "$value" ]]; then
+                    echo "TEST_TIER cannot be empty"
+                    exit 1
+                else
+                    TEST_TIER="$value"
+                    echo "TEST_TIER: $value"
+                fi
+                ;;
+            "SYSTEM_CONFIG_NAME")
+                if [[ -z "$value" ]]; then
+                    echo "SYSTEM_CONFIG_NAME cannot be empty"
+                    exit 1
+                else
+                    echo "SYSTEM_CONFIG_NAME: $value"
+                    SYSTEM_CONFIG_NAME="$value"
+                fi
+                ;;
+            "TELEMETRY_DATA_DESTINATION")
+                if [[ -z "$value" ]]; then
+                    echo "TELEMETRY_DATA_DESTINATION cannot be empty"
+                    exit 1
+                else
+                    echo "TELEMETRY_DATA_DESTINATION: $value"
+                fi
+                ;;
+            # Add more parameter validations as needed
+            *)
+                ;;
+        esac
+    done < "$VARS_FILE" || { echo "Error: $VARS_FILE not found."; exit 1; }
+}
+
+# Check if ansible is installed, if not, install it
+install_ansible() {
+    if ! command_exists ansible; then
+        echo "Ansible is not installed. Installing now..."
+        # Assuming the use of a Debian-based system
+        sudo apt update && sudo apt install ansible -y
+    else
+        echo "Ansible is already installed."
+    fi
+}
+
+# Main script execution
+echo "Validating input parameters..."
+validate_params
+echo "Input parameters validated."
+
+echo "Checking Ansible installation..."
+install_ansible
+echo "Ansible installation checked."
+
+# Check if the SYSTEM_HOSTS and SYSTEM_PARAMS directory exists inside the WORKSPACES/SYSTEM folder
+SYSTEM_HOSTS="../WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME/hosts.yaml"
+SYSTEM_PARAMS="../WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME/sap-parameters.yaml"
+
+echo "Using inventory: $SYSTEM_HOSTS."
+echo "Using SAP parameters: $SYSTEM_PARAMS."
+
+if [[ ! -f "$SYSTEM_HOSTS" ]]; then
+    echo "Error: hosts.yaml not found in WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME directory."
     exit 1
 fi
 
-# Load variables from vars.yaml file
-eval "$(yq eval '(. | to_entries[] | .key + "=" + (.value | tojson))' vars.yaml)"
-
-# Parse variables
-SYSTEM_CONFIG_NAME=$(echo $SYSTEM_CONFIG_NAME | tr -d '"')
-TEST_TYPE=$(echo $TEST_TYPE | tr -d '"')
-TEST_TIER=$(echo $TEST_TIER | tr -d '"')
-SAP_CONNECTION_TYPE=$(echo $SAP_CONNECTION_TYPE | tr -d '"')
-SAP_CONNECTION_USER=$(echo $SAP_CONNECTION_USER | tr -d '"')
-SSH_KEY_PATH=$(echo $SSH_KEY_PATH | tr -d '"')
-SSH_PASSWORD=$(echo $SSH_PASSWORD | tr -d '"')
-EXTRA_PARAMS=$(echo $EXTRA_PARAMS | tr -d '"')
-EXTRA_PARAM_FILE=$(echo $EXTRA_PARAM_FILE | tr -d '"')
-
-ANSIBLE_FILE_PATH="ansible/playbook_00_ha_funtional_tests.yml"
-PARAMETERS_FOLDER="SYSTEM/$SYSTEM_CONFIG_NAME"
-SAP_PARAMS="SYSTEM/$SYSTEM_CONFIG_NAME/sap-parameters.yaml"
-INVENTORY="SYSTEM/$SYSTEM_CONFIG_NAME/hosts.yaml"
-
-# Check if ansible is installed and if not install it
-if ! command -v ansible-playbook &> /dev/null; then
-    echo "Ansible is not installed. Installing Ansible..."
-    sudo apt install ansible -y
-fi
-
-# Check if parameters are empty
-if [ -z "$SYSTEM_CONFIG_NAME" ] || [ -z "$TEST_TYPE" ] || [ -z "$TEST_TIER" ] || [ -z "$SAP_CONNECTION_TYPE" ] || [ -z "$SAP_CONNECTION_USER" ] || [ -z "$SSH_KEY_PATH" ] && [ -z "$SSH_PASSWORD" ]; then
-    echo "Error: One or more parameters are empty."
+if [[ ! -f "$SYSTEM_PARAMS" ]]; then
+    echo "Error: sap-parameters.yaml not found in WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME directory."
     exit 1
-else
-    echo -e "\033[1;32mInput Parameters validated.\033[0m"
 fi
 
-# Check if SYSTEM/$SYSTEM_CONFIG_NAME directory exists
-if [ ! -f $SAP_PARAMS ]; then
-    echo "Error: System configuration not found in SYSTEM/$SYSTEM_CONFIG_NAME directory."
-    exit 1
-else
-    echo -e "\033[1;32mSystem Configuration validated.\033[0m"
-fi
-# Check if hosts.yaml file exists in SYSTEM/$SYSTEM_CONFIG_NAME directory
-if [ ! -f $INVENTORY ]; then
-    echo "Error: hosts.yaml not found in SYSTEM/$SYSTEM_CONFIG_NAME directory."
-    exit 1
-else
-    echo -e "\033[1;32mUsing inventory: $SYSETM_CONFIG_NAME.\033[0m"
-fi
+echo "Running ansible playbook..."
+# Proceed with running ansible playbook using the inventory from the verified directory
+ansible-playbook ../ansible/playbook_00_ha_functional_tests.yml -i "$SYSTEM_PARAMS" -e @"$VARS_FILE" -e "$EXTRA_PARAMS" = "$EXTRA_PARAM_FILE" 
+echo "Ansible playbook execution completed."
 
-command = "ansible-playbook -i $INVENTORY --private-key $SSH_KEY_PATH    \
-    -e @$SAP_PARAMS -e 'download_directory=$(Agent.TempDirectory)' -e '_workspace_directory=$PARAMETERS_FOLDER' \
-    -e ansible_ssh_pass='${SSH_PASSWORD}' "$EXTRA_PARAMS" $EXTRA_PARAM_FILE                                   \
-    $ANSIBLE_FILE_PATH"
-
-echo "##[section]Executing [$command]..."
-    echo "##[group]- output"
-    eval $command
-    return_code=$?
-    echo "##[section]Ansible playbook execution completed with exit code [$return_code]"
-    echo "##[endgroup]"
+exit 0
