@@ -3,8 +3,8 @@
 # |                          Primary Node Crash                                |
 # |                                                                            |
 # +--------------------------------------------------------------------------*/
-- name:                            "Test Setup Tasks"
-  ansible.builtin.include_tasks:   "roles/misc/tasks/test-case-setup.yml"
+- name:                                   "Test Setup Tasks"
+  ansible.builtin.include_tasks:          "roles/misc/tasks/test-case-setup.yml"
 
 - name:                                   "Pre Validations: DB Nodes"
   become:                                 true
@@ -118,4 +118,4 @@
 
 - name:                                      "Post Telemetry Data"
   ansible.builtin.include_tasks:             "roles/misc/tasks/post-telemetry-data.yml"
-  run_once:                                 true
+  run_once:                                  true

@@ -1,4 +1,8 @@
 ---
+##########################################################################################
+#                       Task to setup telemetry information for each test case           #
+##########################################################################################
+
 - name:                               "Setup telemetry data for each test case"
   ansible.builtin.set_fact:
     test_case_invocation_id:          "{{ lookup('pipe', 'uuidgen') }}"

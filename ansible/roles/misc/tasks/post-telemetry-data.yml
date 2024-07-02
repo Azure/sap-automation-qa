@@ -1,4 +1,8 @@
 ---
+##########################################################################################
+#                       Tasks for sending telemetry data to the data explorer            #
+##########################################################################################
+
 - name:                               "Create the telemetry JSON object for the test case"
   failed_when:                        false
   delegate_to:                        localhost
