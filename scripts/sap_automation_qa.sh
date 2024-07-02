@@ -1,21 +1,24 @@
 #!/bin/bash
 
 # Check if vars.yaml exists in the current directory
-if [ ! -f vars.yaml ]; then
-    echo "Error: vars.yaml not found in the current directory."
+if [ ! -f ../vars.yaml ]; then
+    echo "Error: vars.yaml not found in the parent directory."
     exit 1
 fi
 
-# Read parameters from the vars.yaml file
-SYSTEM_CONFIG_NAME=$(yq r vars.yaml SYSTEM_CONFIG_NAME)
-TEST_TYPE=$(yq r vars.yaml TEST_TYPE)
-TEST_TIER=$(yq r vars.yaml TEST_TIER)
-SAP_CONNECTION_TYPE=$(yq r vars.yaml SAP_CONNECTION)
-SAP_CONNECTION_USER=$(yq r vars.yaml SAP_CONNECTION_USER)
-SSH_KEY_PATH=$(yq r vars.yaml SSH_KEY_PATH)
-SSH_PASSWORD=$(yq r vars.yaml SSH_PASSWORD)
-EXTRA_PARAMS=$(yq r vars.yaml EXTRA_PARAMS)
-EXTRA_PARAM_FILE=$(yq r vars.yaml EXTRA_PARAM_FILE)
+# Load variables from vars.yaml file
+source ../vars.yaml
+
+# Parse variables
+SYSTEM_CONFIG_NAME=$(echo $SYSTEM_CONFIG_NAME | tr -d '"')
+TEST_TYPE=$(echo $TEST_TYPE | tr -d '"')
+TEST_TIER=$(echo $TEST_TIER | tr -d '"')
+SAP_CONNECTION_TYPE=$(echo $SAP_CONNECTION_TYPE | tr -d '"')
+SAP_CONNECTION_USER=$(echo $SAP_CONNECTION_USER | tr -d '"')
+SSH_KEY_PATH=$(echo $SSH_KEY_PATH | tr -d '"')
+SSH_PASSWORD=$(echo $SSH_PASSWORD | tr -d '"')
+EXTRA_PARAMS=$(echo $EXTRA_PARAMS | tr -d '"')
+EXTRA_PARAM_FILE=$(echo $EXTRA_PARAM_FILE | tr -d '"')
 
 ANSIBLE_FILE_PATH="ansible/playbook_00_ha_funtional_tests.yml"
 PARAMETERS_FOLDER="SYSTEM/$SYSTEM_CONFIG_NAME"
@@ -25,24 +28,30 @@ INVENTORY="SYSTEM/$SYSTEM_CONFIG_NAME/hosts.yaml"
 # Check if ansible is installed and if not install it
 if ! command -v ansible-playbook &> /dev/null; then
     echo "Ansible is not installed. Installing Ansible..."
-    sudo apt install ansible
+    sudo apt install ansible -y
 fi
 
 # Check if parameters are empty
 if [ -z "$SYSTEM_CONFIG_NAME" ] || [ -z "$TEST_TYPE" ] || [ -z "$TEST_TIER" ] || [ -z "$SAP_CONNECTION_TYPE" ] || [ -z "$SAP_CONNECTION_USER" ] || [ -z "$SSH_KEY_PATH" ] && [ -z "$SSH_PASSWORD" ]; then
     echo "Error: One or more parameters are empty."
     exit 1
+else
+    echo -e "\033[1;32mInput Parameters validated.\033[0m"
 fi
 
 # Check if SYSTEM/$SYSTEM_CONFIG_NAME directory exists
 if [ ! -f $SAP_PARAMS ]; then
     echo "Error: System configuration not found in SYSTEM/$SYSTEM_CONFIG_NAME directory."
     exit 1
+else
+    echo -e "\033[1;32mSystem Configuration validated.\033[0m"
 fi
 # Check if hosts.yaml file exists in SYSTEM/$SYSTEM_CONFIG_NAME directory
 if [ ! -f $INVENTORY ]; then
     echo "Error: hosts.yaml not found in SYSTEM/$SYSTEM_CONFIG_NAME directory."
     exit 1
+else
+    echo -e "\033[1;32mUsing inventory: $SYSETM_CONFIG_NAME.\033[0m"
 fi
 
 command = "ansible-playbook -i $INVENTORY --private-key $SSH_KEY_PATH    \
