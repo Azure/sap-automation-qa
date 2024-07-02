@@ -1,6 +1,6 @@
 """Python script to get and validate the status of a cluster.
 
-This script uses the `crm` command-line tool to retrieve the status of a cluster and performs various validations on the cluster status.
+This script uses the `crm_mon` command-line tool to retrieve the status of a cluster and performs various validations on the cluster status.
 
 Methods:
 - check_node: Checks the attributes of a node and returns the corresponding action based on the attribute value.
@@ -52,7 +52,7 @@ def run_module():
     """Main function that runs the Ansible module and performs the cluster status checks.
 
     This function retrieves the operation step from the module arguments and performs the following checks:
-    - Checks the status of the cluster using the `crm` command.
+    - Checks the status of the cluster using the `crm_mon` command.
     - Validates the cluster status and checks if pacemakerd is running.
     - Checks if the minimum required number of nodes are configured in the cluster.
     - Checks if all nodes in the cluster are online.
@@ -79,19 +79,19 @@ def run_module():
     try:
         count = 0
         while result["primary_node"] is None and count < 5:
-            crm_status = subprocess.check_output(["crm", "status", "xml"])
+            cluster_status = subprocess.check_output(["crm_mon", "--output-as=xml"])
             count += 1
             result["count"] = count
-            result["cluster_status"] = crm_status.decode("utf-8").strip()
-            crm_status_xml = ET.fromstring(crm_status)
-            if crm_status_xml.find("pacemakerd").attrib["state"] != "running":
+            result["cluster_status"] = cluster_status.decode("utf-8").strip()
+            cluster_status_xml = ET.fromstring(cluster_status)
+            if cluster_status_xml.find("pacemakerd").attrib["state"] != "running":
                 return {"error": "pacemakerd is not running"}
             else:
                 result["status"] = "running"
 
             if (
                 int(
-                    crm_status_xml.find("summary")
+                    cluster_status_xml.find("summary")
                     .find("nodes_configured")
                     .attrib["number"]
                 )
@@ -99,14 +99,14 @@ def run_module():
             ):
                 return {"error": "Minimum 2 nodes are required in the cluster"}
 
-            nodes = crm_status_xml.find("nodes")
+            nodes = cluster_status_xml.find("nodes")
             for node in nodes:
                 if node.attrib["online"] != "true":
                     return {
                         "error": "Node {} is not online".format(node.attrib["name"])
                     }
 
-            node_attributes = crm_status_xml.find("node_attributes")
+            node_attributes = cluster_status_xml.find("node_attributes")
             with concurrent.futures.ThreadPoolExecutor() as executor:
                 futures = [
                     executor.submit(check_node, node) for node in node_attributes
@@ -115,7 +115,7 @@ def run_module():
                     result.update(future.result())
 
         if not result["primary_node"]:
-            module.fail_json(msg="crm status did not respond.", **result)
+            module.fail_json(msg="crm_mon status did not respond.", **result)
     except Exception as e:
         module.fail_json(msg=str(e), **result)
     result["end"] = datetime.now()
