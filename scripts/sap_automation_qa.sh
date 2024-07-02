@@ -1,13 +1,13 @@
 #!/bin/bash
 
 # Check if vars.yaml exists in the current directory
-if [ ! -f ../vars.yaml ]; then
+if [ ! -f vars.yaml ]; then
     echo "Error: vars.yaml not found in the parent directory."
     exit 1
 fi
 
 # Load variables from vars.yaml file
-eval "$(yq eval '(. | to_entries[] | .key + "=" + (.value | tojson))' ../vars.yaml)"
+eval "$(yq eval '(. | to_entries[] | .key + "=" + (.value | tojson))' vars.yaml)"
 
 # Parse variables
 SYSTEM_CONFIG_NAME=$(echo $SYSTEM_CONFIG_NAME | tr -d '"')
