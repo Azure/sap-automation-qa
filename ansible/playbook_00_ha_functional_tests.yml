@@ -62,7 +62,7 @@
             html_report_template:      "{{ lookup('file', './templates/report.html') }}"
 
         - name:                        "Read the log file and create a HTML report"
-          render_report:
+          render_html_report:
             test_group_invocation_id:  "{{ test_group_invocation_id }}"
             test_group_name:           "{{ sap_functional_tests_type }}"
             report_template:           "{{ html_report_template }}"

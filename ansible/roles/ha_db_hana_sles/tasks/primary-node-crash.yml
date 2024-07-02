@@ -17,14 +17,14 @@
       register:                           location_constraints_results
 
     - name:                               "Pre Validations: Validate HANA DB cluster status before stopping the HANA DB"
-      crm_cluster_status:
+      get_cluster_status:
         operation_step:                   "pre_failover"
-      register:                           crm_cluster_status_results_pre
-      failed_when:                        crm_cluster_status_results_pre.primary_node == None or crm_cluster_status_results_pre.secondary_node == None
+      register:                           cluster_status_pre
+      failed_when:                        cluster_status_pre.primary_node == None or cluster_status_pre.secondary_node == None
 
     - name:                               "Pre Validations on the primary node"
       when:
-        - ansible_hostname == crm_cluster_status_results_pre.primary_node
+        - ansible_hostname == cluster_status_pre.primary_node
       block:
         - name:                           "Pre Validations: Check if the AUTOMATED_REGISTER parameter is set to true"
           ansible.builtin.shell:
@@ -34,7 +34,7 @@
           register:                       automated_register
           changed_when:                   false
           when:
-            - crm_cluster_status_results_pre is defined
+            - cluster_status_pre is defined
 
         - name:                            "Pre Validations: CleanUp any failed resource"
           ansible.builtin.command:         crm resource cleanup
@@ -43,9 +43,9 @@
 
     - name:                                "Test Execution: Crash the primary node."
       when:
-        - ansible_hostname == crm_cluster_status_results_pre.primary_node
-        - crm_cluster_status_results_pre.status == "running"
-        - crm_cluster_status_results_pre is defined
+        - ansible_hostname == cluster_status_pre.primary_node
+        - cluster_status_pre.status == "running"
+        - cluster_status_pre is defined
       block:
         - name:                             "Test Execution: Stop the HANA DB"
           become:                           true
@@ -65,11 +65,11 @@
           become:                           true
           become_user:                      "{{ db_sid | lower }}adm"
           when:
-            - crm_cluster_status_results_pre is defined
+            - cluster_status_pre is defined
             - automated_register.stdout == ""
           ansible.builtin.command: |
             hdbnsutil -sr_register \
-            --remoteHost={{ crm_cluster_status_results_pre.secondary_node }} \
+            --remoteHost={{ cluster_status_pre.secondary_node }} \
             --remoteInstance={{ db_instance_number }} \
             --replicationMode=sync --name=SITEB
           register:                         hana_db_register_failed_resource
@@ -82,32 +82,32 @@
 
     - name:                                 "Post Validations: HA cluster status after stopping the HANA DB"
       when:
-        - ansible_hostname == crm_cluster_status_results_pre.primary_node
-        - crm_cluster_status_results_pre is defined
+        - ansible_hostname == cluster_status_pre.primary_node
+        - cluster_status_pre is defined
       block:
         - name:                              "Post Validations: Validate HANA DB cluster status after stopping the HANA DB"
-          crm_cluster_status:
+          get_cluster_status:
             operation_step:                  "post_failover"
-          register:                          crm_cluster_status_results_post
-          failed_when:                       crm_cluster_status_results_post.primary_node == None or crm_cluster_status_results_post.secondary_node == None
+          register:                          cluster_status_post
+          failed_when:                       cluster_status_post.primary_node == None or cluster_status_post.secondary_node == None
 
         - name:                              "Post Validations: Set test case status"
           delegate_to:                       localhost
           run_once:                          true
           ansible.builtin.set_fact:
             test_case_status:                "PASSED"
-            test_case_message:               "Old primary instance is: {{ crm_cluster_status_results_pre.primary_node }} \
-                                              New primary instance is: {{ crm_cluster_status_results_post.primary_node }} \
-                                              Old secondary instance is: {{ crm_cluster_status_results_pre.secondary_node }} \
-                                              New secondary instance is: {{ crm_cluster_status_results_post.secondary_node }}"
+            test_case_message:               "Old primary instance is: {{ cluster_status_pre.primary_node }} \
+                                              New primary instance is: {{ cluster_status_post.primary_node }} \
+                                              Old secondary instance is: {{ cluster_status_pre.secondary_node }} \
+                                              New secondary instance is: {{ cluster_status_post.secondary_node }}"
             test_case_details:               {
                                               "Pre Validations: Remove any location_constraints": "{{ location_constraints_results }}",
-                                              "Pre Validations: Validate HANA DB cluster status": "{{ crm_cluster_status_results_pre }}",
+                                              "Pre Validations: Validate HANA DB cluster status": "{{ cluster_status_pre }}",
                                               "Pre Validations: Check if the AUTOMATED_REGISTER": "{{ automated_register }}",
                                               "Pre Validations: CleanUp any failed resource": "{{ cleanup_failed_resource_pre }}",
                                               "Test Execution: Primary node crash": "{{ hana_db_stop_results }}",
                                               "Post Validations: CleanUp any failed resource": "{{ cleanup_failed_resource_post }}",
-                                              "Post Validations: Validate HANA DB cluster status": "{{ crm_cluster_status_results_post }}"
+                                              "Post Validations: Validate HANA DB cluster status": "{{ cluster_status_post }}"
                                             }
       rescue:
         - name:                              "Post Validations: Set test case status"
