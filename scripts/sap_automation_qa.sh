@@ -56,13 +56,14 @@ validate_params() {
 }
 
 # Check if ansible is installed, if not, install it
-install_ansible() {
-    if ! command_exists ansible; then
-        echo "Ansible is not installed. Installing now..."
+install_package() {
+    local package_name=$1
+    if ! command_exists "$package_name"; then
+        echo "$package_name is not installed. Installing now..."
         # Assuming the use of a Debian-based system
-        sudo apt update && sudo apt install ansible -y
+        sudo apt update && sudo apt install "$package_name" -y
     else
-        echo "Ansible is already installed."
+        echo "$package_name is already installed."
     fi
 }
 
@@ -72,12 +73,17 @@ validate_params
 echo "Input parameters validated."
 
 echo "Checking Ansible installation..."
-install_ansible
+install_package "ansible"
 echo "Ansible installation checked."
+
+echo "Checking Az CLI installation..."
+install_az_cli "az"
+echo "Az CLI installation checked."
 
 # Check if the SYSTEM_HOSTS and SYSTEM_PARAMS directory exists inside the WORKSPACES/SYSTEM folder
 SYSTEM_HOSTS="../WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME/hosts.yaml"
 SYSTEM_PARAMS="../WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME/sap-parameters.yaml"
+TEST_TIER=$(echo "$TEST_TIER" | tr '[:upper:]' '[:lower:]')
 
 echo "Using inventory: $SYSTEM_HOSTS."
 echo "Using SAP parameters: $SYSTEM_PARAMS."
@@ -92,9 +98,31 @@ if [[ ! -f "$SYSTEM_PARAMS" ]]; then
     exit 1
 fi
 
+# Check if the ssh_key is to be fethed from the Azure Key Vault
+SSH_KEY_KV=$(grep -Po 'ssh_key_from_keyvault: \K.*' $SYSTEM_PARAMS)
+
+if [[ "$SSH_KEY_KV" == "true" ]]; then
+    # Read the MSI_CLIENT_ID from the SYSTEM_PARAMS file form the parameter name managed_identity_resource_id
+    SUBSCRIPTION_ID=$(grep -Po 'subscription_id: \K.*' $SYSTEM_PARAMS)
+    SSH_KEY_SECRET_NAME=$(grep -Po 'ssh_key_secret_name: \K.*' $SYSTEM_PARAMS)
+    KEY_VAULT_NAME=$(grep -Po 'keyvault_resource_id: \K.*' $SYSTEM_PARAMS)
+    echo "UBSCRIPTION_ID: $SUBSCRIPTION_ID KEY_VAULT_NAME: $KEY_VAULT_NAME SSH_KEY_SECRET_NAME: $SSH_KEY_SECRET_NAME"
+
+    az login --identity --allow-no-subscriptions --output none
+    ssh_key=$(az keyvault secret show --name "$SSH_KEY_SECRET_NAME" --vault-name "$KEY_VAULT_NAME" --query value -o tsv)
+    echo "SSH key retrieved."
+else
+    # Set the ssk key path to the default filename in WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME directory
+    ssh_key="../WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME/ssk_key.ppk"
+    echo "Using SSH key: $ssh_key."
+fi
+
 echo "Running ansible playbook..."
 # Proceed with running ansible playbook using the inventory from the verified directory
-ansible-playbook ../ansible/playbook_00_ha_functional_tests.yml -i "$SYSTEM_HOSTS" -e @"$VARS_FILE" -e "$EXTRA_PARAMS" = "$EXTRA_PARAM_FILE"  -e @"$SYSTEM_PARAMS"
+command="ansible-playbook ../ansible/playbook_00_ha_functional_tests.yml -i $SYSTEM_HOSTS --private-key $ssh_key -e @$VARS_FILE -e @$SYSTEM_PARAMS"
+echo "Executing: $command"
+eval $command
+return_code=$?
 echo "Ansible playbook execution completed."
 
 exit 0
