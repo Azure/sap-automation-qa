@@ -94,7 +94,7 @@ fi
 
 echo "Running ansible playbook..."
 # Proceed with running ansible playbook using the inventory from the verified directory
-ansible-playbook ../ansible/playbook_00_ha_functional_tests.yml -i "$SYSTEM_PARAMS" -e @"$VARS_FILE" -e "$EXTRA_PARAMS" = "$EXTRA_PARAM_FILE" 
+ansible-playbook ../ansible/playbook_00_ha_functional_tests.yml -i "$SYSTEM_HOSTS" -e @"$VARS_FILE" -e "$EXTRA_PARAMS" = "$EXTRA_PARAM_FILE"  -e @"$SYSTEM_PARAMS"
 echo "Ansible playbook execution completed."
 
 exit 0
