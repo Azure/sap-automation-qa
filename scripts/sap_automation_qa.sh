@@ -119,7 +119,7 @@ fi
 
 echo "Running ansible playbook..."
 # Proceed with running ansible playbook using the inventory from the verified directory
-command="ansible-playbook ../ansible/playbook_00_ha_functional_tests.yml -i $SYSTEM_HOSTS --private-key $ssh_key -e @$VARS_FILE -e @$SYSTEM_PARAMS"
+command="ansible-playbook ../ansible/playbook_00_ha_functional_tests.yml -i $SYSTEM_HOSTS --private-key $ssh_key -e @$VARS_FILE -e @$SYSTEM_PARAMS -e '_workspace_directory=$../WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME'"
 echo "Executing: $command"
 eval $command
 return_code=$?
