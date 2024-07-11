@@ -112,12 +112,12 @@
                                               "Post Validations: Validate HANA DB cluster status": "{{ cluster_status_post }}"
                                             }
 
-      rescue:
-        - name:                              "Post Validations: Set test case status"
-          ansible.builtin.set_fact:
-            test_case_status:                "FAILED"
-            test_case_message:               "{{ ansible_failed_result }}"
-            test_case_details:               "{{ ansible_failed_result }}"
+  rescue:
+    - name:                              "Post Validations: Set test case status"
+      ansible.builtin.set_fact:
+        test_case_status:                "FAILED"
+        test_case_message:               "{{ ansible_failed_result }}"
+        test_case_details:               "{{ ansible_failed_result }}"
 
 - name:                                      "Post Telemetry Data"
   ansible.builtin.include_tasks:             "roles/misc/tasks/post-telemetry-data.yml"
