@@ -5,6 +5,8 @@
 
 - name:                               "Setup telemetry data for each test case"
   ansible.builtin.set_fact:
+    test_case_name:                   "{{ item.name }}"
+    test_case_description:            "{{ item.description }}"
     test_case_invocation_id:          "{{ lookup('pipe', 'uuidgen') }}"
     test_case_start_time_epoch:       "{{ now(utc=true, fmt='%Y-%m-%d %H:%M:%S') }}"
     test_case_status:                 "Starting"
