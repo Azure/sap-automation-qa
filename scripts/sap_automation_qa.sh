@@ -67,6 +67,18 @@ install_package() {
     fi
 }
 
+# Check if ansible is installed, if not, install it
+install_az_cli() {
+    $package_name="az"
+    if ! command_exists "$package_name"; then
+        echo "$package_name is not installed. Installing now..."
+        # Assuming the use of a Debian-based system
+        sudo apt update && sudo apt install "azure-cli" -y
+    else
+        echo "$package_name is already installed."
+    fi
+}
+
 # Main script execution
 echo "Validating input parameters..."
 validate_params
@@ -77,12 +89,13 @@ install_package "ansible"
 echo "Ansible installation checked."
 
 echo "Checking Az CLI installation..."
-install_az_cli "az"
+install_az_cli
 echo "Az CLI installation checked."
 
 # Check if the SYSTEM_HOSTS and SYSTEM_PARAMS directory exists inside the WORKSPACES/SYSTEM folder
-SYSTEM_HOSTS="../WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME/hosts.yaml"
-SYSTEM_PARAMS="../WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME/sap-parameters.yaml"
+SYSTEM_CONFIG_FOLDER="../WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME"
+SYSTEM_HOSTS="$SYSTEM_CONFIG_FOLDER/hosts.yaml"
+SYSTEM_PARAMS="$SYSTEM_CONFIG_FOLDER/sap-parameters.yaml"
 TEST_TIER=$(echo "$TEST_TIER" | tr '[:upper:]' '[:lower:]')
 
 echo "Using inventory: $SYSTEM_HOSTS."
@@ -119,7 +132,7 @@ fi
 
 echo "Running ansible playbook..."
 # Proceed with running ansible playbook using the inventory from the verified directory
-command="ansible-playbook ../ansible/playbook_00_ha_functional_tests.yml -i $SYSTEM_HOSTS --private-key $ssh_key -e @$VARS_FILE -e @$SYSTEM_PARAMS -e '_workspace_directory=$../WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME'"
+command="ansible-playbook ../ansible/playbook_00_ha_functional_tests.yml -i $SYSTEM_HOSTS --private-key $ssh_key -e @$VARS_FILE -e @$SYSTEM_PARAMS -e '_workspace_directory=$SYSTEM_CONFIG_FOLDER'"
 echo "Executing: $command"
 eval $command
 return_code=$?

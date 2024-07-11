@@ -347,8 +347,11 @@ def validate_pacemaker_cluster_params(host_type):
             if root is not None:
                 parse_default_data()
         if drift_parameters:
-            return {"error": f"Cluster Parameters: {', '.join(drift_parameters)}"}
-        return {"msg": f"Cluster Parameters: {', '.join(valid_parameters)}"}
+            return {
+                "error": f"Drift in cluster parameters: {', '.join(drift_parameters)}"
+                + f"Validated cluster parameters: {', '.join(valid_parameters)}"
+            }
+        return {"msg": f"Validated cluster parameters: {', '.join(valid_parameters)}"}
 
     except subprocess.CalledProcessError as e:
         return {"error": str(e)}
@@ -391,7 +394,6 @@ def main():
             database_sid=dict(type="str"),
         )
     )
-
     action = module.params["action"]
     host_type = module.params.get("host_type")
     xml_file = module.params.get("xml_file")

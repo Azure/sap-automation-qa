@@ -25,7 +25,7 @@
   rescue:
     - name:                             "Test case failed"
       ansible.builtin.set_fact:
-          test_case_name:               "{{ item.name }} - {{ inventory_hostname }}"
+          test_case_name:               "{{ item.name }}: {{ virtual_host }}"
           test_case_status:             "FAILED"
           test_case_details:            "{{ test_result }}"
           test_case_message:            "{{ ansible_failed_result }}"
