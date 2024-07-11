@@ -59,15 +59,6 @@
           ansible.builtin.wait_for:
             timeout:                        120
 
-        - name:                             "Test Execution: Validate HANA DB cluster status after stopping the HANA DB"
-          get_cluster_status:
-            operation_step:                 "post_failover"
-          register:                         cluster_status_post
-          retries:                          15
-          delay:                            20
-          until:                            cluster_status_post.primary_node == cluster_status_pre.secondary_node and 
-                                            cluster_status_post.secondary_node == cluster_status_pre.primary_node
-
         - name:                             "Test Execution: Register Failed Resource"
           become:                           true
           become_user:                      "{{ db_sid | lower }}adm"
@@ -86,6 +77,15 @@
           ansible.builtin.command:           crm resource cleanup rsc_SAPHana_{{ db_sid | upper }}_HDB{{ db_instance_number }}
           register:                          cleanup_failed_resource_post
           changed_when:                      cleanup_failed_resource_post.rc == 0
+
+        - name:                             "Test Execution: Validate HANA DB cluster status after stopping the HANA DB"
+          get_cluster_status:
+            operation_step:                 "post_failover"
+          register:                         cluster_status_post
+          retries:                          15
+          delay:                            20
+          until:                            cluster_status_post.primary_node == cluster_status_pre.secondary_node and 
+                                            cluster_status_post.secondary_node == cluster_status_pre.primary_node
 
     - name:                                 "Post Validations: HA cluster status after stopping the HANA DB"
       when:
