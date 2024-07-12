@@ -114,8 +114,11 @@ def run_module():
                 for future in concurrent.futures.as_completed(futures):
                     result.update(future.result())
 
-        if not result["primary_node"]:
-            module.fail_json(msg="crm_mon status did not respond.", **result)
+        if result["primary_node"] == "" or result["secondary_node"] == "":
+            module.fail_json(
+                msg="Pacemaker cluster is not stable and does not have primary node or secondary node",
+                **result
+            )
     except Exception as e:
         module.fail_json(msg=str(e), **result)
     result["end"] = datetime.now()
