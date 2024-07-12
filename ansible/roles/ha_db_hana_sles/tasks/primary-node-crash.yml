@@ -42,8 +42,8 @@
           changed_when:                    cleanup_failed_resource_pre.rc == 0
 
     - name:                                "Test Execution: Crash the primary node."
-      failed_when:                         cluster_status_pre.primary_node == "" or cluster_status_pre.secondary_node == ""
       when:
+        - cluster_status_pre.primary_node != "" and cluster_status_pre.secondary_node != ""
         - ansible_hostname == cluster_status_pre.primary_node
         - cluster_status_pre.status == "running"
         - cluster_status_pre is defined
