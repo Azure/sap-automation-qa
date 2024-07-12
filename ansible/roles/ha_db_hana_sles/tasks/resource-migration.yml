@@ -93,9 +93,12 @@
 
         - name:                              "Post Validations: Validate HANA DB cluster status after migrating the HANA DB"
           get_cluster_status:
-            operation_step:                  "post_failover"
-          register:                          cluster_status_post
-          failed_when:                       cluster_status_post.primary_node == None or cluster_status_post.secondary_node == None
+            operation_step:                 "post_failover"
+          register:                         cluster_status_post
+          retries:                          15
+          delay:                            20
+          until:                            cluster_status_post.primary_node == cluster_status_pre.secondary_node and 
+                                            cluster_status_post.secondary_node == cluster_status_pre.primary_node
 
         - name:                              "Post Validations: Set test case status"
           delegate_to:                       localhost
