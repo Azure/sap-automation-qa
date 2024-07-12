@@ -4,7 +4,6 @@
 ##########################################################################################
 
 - name:                               "Setup telemetry data for each test case"
-  run_once:                           true
   ansible.builtin.set_fact:
     test_case_name:                   "{{ item.name }}"
     test_case_description:            "{{ item.description }}"

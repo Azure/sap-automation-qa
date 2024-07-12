@@ -5,6 +5,7 @@
 # +--------------------------------------------------------------------------*/
 - name:                                   "Test Setup Tasks"
   ansible.builtin.include_tasks:          "roles/misc/tasks/test-case-setup.yml"
+  run_once:                              true
 
 - name:                                   "Pre Validations: DB Nodes"
   become:                                 true

@@ -5,7 +5,6 @@
 
 - name:                               "Create the telemetry JSON object for the test case"
   failed_when:                        false
-  run_once:                           true
   delegate_to:                        localhost
   when:
     - (telemetry_data_destination == "dataexplorer" and (adx_database_name != "" or adx_cluster_fqdn != "" or adx_client_id != "")) or
