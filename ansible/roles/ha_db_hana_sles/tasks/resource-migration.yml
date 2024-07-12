@@ -21,7 +21,6 @@
       get_cluster_status:
           operation_step:                 "pre_failover"
       register:                           cluster_status_pre
-      failed_when:                        cluster_status_pre.primary_node == None or cluster_status_pre.secondary_node == None
 
     - name:                               "Pre Validations on the primary node"
       when:
@@ -44,6 +43,7 @@
           changed_when:                    cleanup_failed_resource_pre.rc == 0
 
     - name:                                "Test Execution: Crash the primary node."
+      failed_when:                         cluster_status_pre.primary_node == "" or cluster_status_pre.secondary_node == ""
       when:
         - ansible_hostname == cluster_status_pre.primary_node
         - cluster_status_pre.status == "running"
