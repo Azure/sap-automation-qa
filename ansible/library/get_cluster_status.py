@@ -78,7 +78,7 @@ def run_module():
 
     try:
         count = 0
-        while result["primary_node"] is None and count < 5:
+        while result["primary_node"] is "" and count < 5:
             cluster_status = subprocess.check_output(["crm_mon", "--output-as=xml"])
             count += 1
             result["count"] = count
