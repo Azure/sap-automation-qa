@@ -4,6 +4,7 @@
 ##########################################################################################
 
 - name:                               "Create the telemetry JSON object for the test case"
+  failed_when :                       false
   delegate_to:                        localhost
   when:
     - (telemetry_data_destination == "AzureDataExplorer" and (adx_database_name != "" or adx_cluster_fqdn != "" or adx_client_id != "")) or
