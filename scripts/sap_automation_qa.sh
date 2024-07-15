@@ -126,7 +126,7 @@ if [[ "$SSH_KEY_KV" == "true" ]]; then
     echo "SSH key retrieved."
 else
     # Set the ssk key path to the default filename in WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME directory
-    ssh_key="../WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME/ssk_key.ppk"
+    ssh_key="../WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME/ssh_key.ppk"
     echo "Using SSH key: $ssh_key."
 fi
 
