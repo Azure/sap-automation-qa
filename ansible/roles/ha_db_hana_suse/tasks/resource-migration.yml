@@ -104,8 +104,7 @@
 
         - name:                              "Post Validations: Set test case status"
           delegate_to:                       localhost
-          run_once:                          true
-          changed_when:                      true
+          failed_when:                       cluster_status_pre.primary_node != cluster_status_post.secondary_node and cluster_status_pre.secondary_node != cluster_status_post.primary_node
           ansible.builtin.set_fact:
             test_case_status:                 "PASSED"
             test_case_message:                "Old primary instance is: {{ cluster_status_pre.primary_node }} \
