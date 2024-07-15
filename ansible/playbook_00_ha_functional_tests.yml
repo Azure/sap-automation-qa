@@ -38,6 +38,10 @@
         msg:                           "ipAddress: {{ item.ipAddress }} | interfaceName: {{ item.interfaceName }} | Subnet: {{ item.subnet }}"
       loop:                            "{{ network_info_parsed | list }}"
     
+    - name: Debug sap_functional_test_type
+      ansible.builtin.debug:
+        msg: "{{ sap_functional_test_type }}"
+    
     - name:                            "Set the test group name based on the inputs"
       ansible.builtin.set_fact:
         test_group_name:               "{{ sap_functional_test_type_map | selectattr('name', 'equalto', sap_functional_test_type) }}_{{ platform | upper }}_{{ ansible_os_family | upper }}"
