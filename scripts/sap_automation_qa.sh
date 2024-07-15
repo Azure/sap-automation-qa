@@ -93,6 +93,7 @@ install_az_cli
 echo "Az CLI installation checked."
 
 echo "Enable python virtual environment..."
+install_package "python3-venv"
 python3 -m venv ../.venv
 source ../.venv/bin/activate
 pip install -r ../requirements.txt
