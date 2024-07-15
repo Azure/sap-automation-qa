@@ -43,6 +43,9 @@ def run_module():
         for result in test_case_results:
             if "TestCaseDetails" in result:
                 result["TestCaseDetails"] = str(result["TestCaseDetails"]).replace(
+                    "\\n", " "
+                )
+                result["TestCaseDetails"] = str(result["TestCaseDetails"]).replace(
                     "\n", " "
                 )
 
