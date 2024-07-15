@@ -12,9 +12,9 @@
     test_case_invocation_id:          "{{ lookup('pipe', 'uuidgen') }}"
     test_case_start_time_epoch:       "{{ now(utc=true, fmt='%Y-%m-%d %H:%M:%S') }}"
     test_case_status:                 "Starting"
-    package_versions:                 "Pacemaker: {{ ansible_facts.packages['pacemaker'] | default('') }} 
-                                        Resource Agent: {{ ansible_facts.packages['resource-agents'] | default('') }}
-                                        Fencing Agent: {{ ansible_facts.packages['fence-agents-azure-arm'] | default('') }}
-                                        SAPHanaSA: {{ ansible_facts.packages['SAPHanaSR'] | default('') }}"
+    package_versions:                 "Pacemaker: {{ ansible_facts.packages['pacemaker'] | default('Not Found') }} 
+                                        Resource Agent: {{ ansible_facts.packages['resource-agents'] | default('Not Found') }}
+                                        Fencing Agent: {{ ansible_facts.packages['fence-agents-azure-arm'] | default('Not Found') }}
+                                        SAPHanaSR: {{ ansible_facts.packages['SAPHanaSR'] | default('Not Found') }}"
     ansible_callbacks:
       profile_tasks:                  true
