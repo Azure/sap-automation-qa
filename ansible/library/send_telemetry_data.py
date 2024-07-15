@@ -186,13 +186,17 @@ def run_module():
 
     # Create log files named invocation id for the test group invocation and
     # append all the test case result to the file
-    log_folder = f"/{module.params['workspace_directory']}/logs"
-    os.makedirs(log_folder, exist_ok=True)
-    with open(
-        f"{log_folder}/{telemetry_data['TestGroupInvocationId']}.log", "a"
-    ) as log_file:
-        log_file.write(json.dumps(telemetry_data))
-        log_file.write("\n")
+    try:
+        log_folder = f"/{module.params['workspace_directory']}/logs"
+        os.makedirs(log_folder, exist_ok=True)
+        with open(
+            f"{log_folder}/{telemetry_data['TestGroupInvocationId']}.log", "a"
+        ) as log_file:
+            log_file.write(json.dumps(telemetry_data))
+            log_file.write("\n")
+    except Exception as e:
+        result["status"] = f"Error writing to log file {e}"
+        module.fail_json(msg=f"Error writing to log file {e}", **result)
 
     # Send telemetry data to the destination
     try:
