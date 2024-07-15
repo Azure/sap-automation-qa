@@ -5,9 +5,9 @@
 
 # Map of functional type name and actual values
 sap_functional_test_type_map:
-  - name:                   Database High Availability
+  - name:                   "DatabaseHighAvailability"
     value:                  HA_DB
-  - name:                   Central Services High Availability
+  - name:                   "CentralServicesHighAvailability"
     value:                  HA_SCS
 
 # Test group variables
