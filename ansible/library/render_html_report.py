@@ -40,6 +40,7 @@ def run_module():
         ) as log_file:
             test_case_results = [json.loads(line) for line in log_file.readlines()]
 
+        # Replace new line characters in the test case details
         for result in test_case_results:
             if "TestCaseDetails" in result:
                 result["TestCaseDetails"] = str(result["TestCaseDetails"]).replace(
