@@ -59,7 +59,7 @@
 
         - name:                             "Test Execution: Pause for migration to complete"
           ansible.builtin.wait_for:
-            timeout:                        300
+            timeout:                        200
           when:
             - automated_register.stdout != ""
 
@@ -81,6 +81,10 @@
           location_constraints:
             action:                          "remove"
           register:                          location_constraints_results
+        
+        - name:                             "Test Execution: Pause for migration to complete"
+          ansible.builtin.wait_for:
+            timeout:                        100
 
     - name:                                 "Post Validations: HA cluster status after migrating the HANA DB"
       when:
