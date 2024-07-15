@@ -5,7 +5,7 @@
 # +--------------------------------------------------------------------------*/
 - name:                                   "Test Setup Tasks"
   ansible.builtin.include_tasks:          "roles/misc/tasks/test-case-setup.yml"
-  run_once:                              true
+  run_once:                               true
 
 - name:                                   "Pre Validations: DB Nodes"
   become:                                 true
@@ -107,12 +107,12 @@
           run_once:                          true
           failed_when:                       cluster_status_pre.primary_node != cluster_status_post.secondary_node and cluster_status_pre.secondary_node != cluster_status_post.primary_node
           ansible.builtin.set_fact:
-            test_case_status:                 "PASSED"
-            test_case_message:                "Old primary instance is: {{ cluster_status_pre.primary_node }} \
+            rsc_mgr_test_case_status:        "PASSED"
+            rsc_mgr_test_case_message:       "Old primary instance is: {{ cluster_status_pre.primary_node }} \
                                               New primary instance is: {{ cluster_status_post.primary_node }} \
                                               Old secondary instance is: {{ cluster_status_pre.secondary_node }} \
                                               New secondary instance is: {{ cluster_status_post.secondary_node }}"
-            test_case_details:                {
+            rsc_mgr_test_case_details:        {
                                                 "Pre Validations: Remove any location_constraints": "{{ location_constraints_results }}",
                                                 "Pre Validations: Validate HANA DB cluster status": "{{ cluster_status_pre }}",
                                                 "Pre Validations: Check if the AUTOMATED_REGISTER": "{{ automated_register }}",
@@ -123,12 +123,16 @@
                                               }
 
   rescue:
-    - name:                              "Post Validations: Set test case status"
+    - name:                                   "Post Validations: Set test case status"
       ansible.builtin.set_fact:
-        test_case_status:                "FAILED"
-        test_case_message:               "{{ ansible_failed_result }}"
-        test_case_details:               "{{ ansible_failed_result }}"
+        rsc_mgr_test_case_status:             "FAILED"
+        rsc_mgr_test_case_message:            "{{ ansible_failed_result }}"
+        rsc_mgr_test_case_details:            "{{ ansible_failed_result }}"
 
 - name:                                      "Post Telemetry Data"
   ansible.builtin.include_tasks:             "roles/misc/tasks/post-telemetry-data.yml"
   run_once:                                   true
+  vars:
+    test_case_details:                       "{{ rsc_mgr_test_case_details }}"
+    test_case_status:                        "{{ rsc_mgr_test_case_status }}"
+    test_case_message:                       "{{ rsc_mgr_test_case_message }}"
