@@ -1,36 +1,29 @@
-# Input parameters for executing the SAP Functional Tests:
+###############################################################
+#           DONOT PUSH THIS FILE TO GitHub                    #
+###############################################################
 
+# Input parameters for executing the SAP Functional Tests:
 # SAP Functional Test Type
 # Options: SAPFunctionalTests
 TEST_TYPE:                  SAPFunctionalTests
 
 # SAP Functional Test Tier
-# Options: DatabaseHighAvailability, SCSAvailability
-TEST_TIER:                  DatabaseHighAvailability
+# Options: Database High Availability, Central Services High Availability
+sap_functional_test_type:   Database High Availability
 
 # SAP System Configuration
 # String: Name of the SAP system configuration to be tested (Location: WORKSPACES/SYSTEM/DEV-WEEU-SAP01-X00 directory)
 SYSTEM_CONFIG_NAME:         DEV-WEEU-SAP01-X00
 
-# SAP System Connection Type
-# Options: SSHKey, Password
-SAP_CONNECTION_TYPE:        SSHKey
-
-# SAP System Connection User
-# String: User name for connecting to the SAP system
-SAP_CONNECTION_USER:        azureadm
-
-# SAP System Connection SSH Key path
-# String: Path to the SSH key for connecting to the SAP system
-SSH_KEY_PATH:               /path/to/ssh/key
-
-# SAP System Connection Password
-# String: Password for connecting to the SAP system
-SSH_PASSWORD:               "*"
+# Connection SSH key from Key Vault, if true, the SSH key will be fetched from the Key Vault
+ssh_key_from_kv:            false
 
 # Test Results Destination
 # Options: Azure Log Analytics Workspace: loganalytics, Azure Data Explorer: dataexplorer
-TELEMETRY_DATA_DESTINATION: loganalytics
+telemetry_data_destination: loganalytics
+
+# table name for telemetry data
+telemetry_table_name:       SAP_AUTOMATION_QA
 
 # Properties for Azure Log Analytics Workspace
 laws_shared_key:            null
