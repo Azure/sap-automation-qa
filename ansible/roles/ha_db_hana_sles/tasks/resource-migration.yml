@@ -102,7 +102,7 @@
           delegate_to:                       localhost
           run_once:                          true
           ansible.builtin.set_fact:
-            test_case_status:                 "{{ cluster_status_post.primary_node == cluster_status_pre.secondary_node and cluster_status_post.secondary_node == cluster_status_pre.primary_node | ternary('PASSED', 'FAILED') }}"
+            test_case_status:                 "{{ 'PASSED' if cluster_status_post.primary_node == cluster_status_pre.secondary_node and cluster_status_post.secondary_node == cluster_status_pre.primary_node else 'FAILED' }}"
             test_case_message:                "Old primary instance is: {{ cluster_status_pre.primary_node }} \
                                               New primary instance is: {{ cluster_status_post.primary_node }} \
                                               Old secondary instance is: {{ cluster_status_pre.secondary_node }} \
