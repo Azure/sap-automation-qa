@@ -43,6 +43,9 @@
         test_group_name:               "{{ sap_functional_test_type_map | selectattr('name', 'equalto', sap_functional_test_type) | map(attribute='value') | first }}_{{ platform | upper }}_{{ ansible_os_family | upper }}"
       run_once: true
 
+    - name:                               Ensure a list of package version is available for logging"
+      ansible.builtin.package_facts:
+
     - name:                            Set the test group facts
       ansible.builtin.set_fact:
         test_group_start_time:         "{{ now(utc=true,fmt='%Y-%m-%d %H:%M:%S') }}"
