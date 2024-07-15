@@ -63,7 +63,7 @@ def get_authorization_for_log_analytics(
     return "SharedKey {}:{}".format(workspace_id, encoded_hash)
 
 
-def send_telemetry_data_to_dataexplorer(telemetry_json_data, module_params):
+def send_telemetry_data_to_azuredataexplorer(telemetry_json_data, module_params):
     """
     Sends telemetry data to Azure Data Explorer.
 
@@ -103,7 +103,7 @@ def send_telemetry_data_to_dataexplorer(telemetry_json_data, module_params):
         raise ex
 
 
-def send_telemetry_data_to_loganalytics(telemetry_json_data, module_params):
+def send_telemetry_data_to_azureloganalytics(telemetry_json_data, module_params):
     """
     Sends telemetry data to Azure Log Analytics Workspace.
 
@@ -199,18 +199,23 @@ def run_module():
         module.fail_json(msg=f"Error writing to log file {e}", **result)
 
     # Send telemetry data to the destination
-    try:
-        method_name = (
-            "send_telemetry_data_to_" + module.params["telemetry_data_destination"]
+    if module.params["telemetry_data_destination"]:
+        try:
+            method_name = (
+                "send_telemetry_data_to_" + module.params["telemetry_data_destination"]
+            )
+            response = getattr(
+                sys.modules[__name__],
+                method_name,
+            )(json.dumps(telemetry_data), module.params)
+            result["status"] = f"Response: {response}"
+        except Exception as e:
+            result["status"] = f"Error sending telemetry data {e}"
+            module.fail_json(msg=f"Error sending telemetry data {e}", **result)
+    else:
+        result["status"] = (
+            "Telemetry data destination not provided. HTML report will be generated."
         )
-        response = getattr(
-            sys.modules[__name__],
-            method_name,
-        )(json.dumps(telemetry_data), module.params)
-        result["status"] = f"Response: {response}"
-    except Exception as e:
-        result["status"] = f"Error sending telemetry data {e}"
-        module.fail_json(msg=f"Error sending telemetry data {e}", **result)
     module.exit_json(**result)
 
 
