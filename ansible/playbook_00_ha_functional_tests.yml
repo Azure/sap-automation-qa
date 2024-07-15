@@ -26,7 +26,7 @@
     - name:                            Parse JSON and extract network information
       ansible.builtin.set_fact:
         network_info_parsed:           "{{ lookup('template', 'interfaces.j2', wantlist=True) | flatten(levels=1) }}"
-      
+
     - name:                            Display the variable
       ansible.builtin.debug:
         msg: 
@@ -37,11 +37,7 @@
       ansible.builtin.debug:
         msg:                           "ipAddress: {{ item.ipAddress }} | interfaceName: {{ item.interfaceName }} | Subnet: {{ item.subnet }}"
       loop:                            "{{ network_info_parsed | list }}"
-    
-    - name: Debug sap_functional_test_type
-      ansible.builtin.debug:
-        msg: "{{ sap_functional_test_type }}"
-    
+
     - name:                            "Set the test group name based on the inputs"
       ansible.builtin.set_fact:
         test_group_name:               "{{ sap_functional_test_type_map | selectattr('name', 'equalto', sap_functional_test_type) | map(attribute='value') | first }}_{{ platform | upper }}_{{ ansible_os_family | upper }}"

@@ -2,6 +2,8 @@
 ##########################################################################################
 #                       Task to setup telemetry information for each test case           #
 ##########################################################################################
+- name:                               Ensure a list of package version is available for logging"
+  ansible.builtin.package_facts:
 
 - name:                               "Setup telemetry data for each test case"
   ansible.builtin.set_fact:
