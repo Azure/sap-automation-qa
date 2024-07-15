@@ -17,6 +17,14 @@ adx_client_id:              null
 # Test group variables
 # Description: This contains the test groups and test cases that will be executed by the quality assurance playbook
 
+# Map of functional type name and actual values
+sap_functional_test_type_map:
+  - name:                   Database High Availability
+    value:                  HA_DB
+  - name:                   Central Services High Availability
+    value:                  HA_SCS
+
+# Test group variables
 test_groups:
   - name:                           HA_DB_HANA_SLES
     test_cases:
