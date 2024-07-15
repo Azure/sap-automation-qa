@@ -92,6 +92,12 @@ echo "Checking Az CLI installation..."
 install_az_cli
 echo "Az CLI installation checked."
 
+echo "Enable python virtual environment..."
+python3 -m venv ../.venv
+source ../.venv/bin/activate
+pip install -r ../requirements.txt
+echo "Python virtual environment enabled."
+
 # Check if the SYSTEM_HOSTS and SYSTEM_PARAMS directory exists inside the WORKSPACES/SYSTEM folder
 SYSTEM_CONFIG_FOLDER="../WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME"
 SYSTEM_HOSTS="$SYSTEM_CONFIG_FOLDER/hosts.yaml"
