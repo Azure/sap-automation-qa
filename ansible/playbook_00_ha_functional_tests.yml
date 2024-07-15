@@ -40,7 +40,7 @@
     
     - name:                            "Set the test group name based on the inputs"
       ansible.builtin.set_fact:
-        test_group_name:               "HA_{{ 'DB' if sap_functional_tests_type  }}_{{ platform | upper }}_{{ ansible_os_family | upper }}"
+        test_group_name:               "{{ sap_functional_tests_type  }}_{{ platform | upper }}_{{ ansible_os_family | upper }}"
       run_once: true
 
     - name:                            Set the test group facts
