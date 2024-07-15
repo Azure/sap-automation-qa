@@ -76,7 +76,7 @@
             report_template:           "{{ html_report_template }}"
             workspace_directory:       "{{ _workspace_directory }}"
           register:                    report_file_path
-        
+
         - name:                        "Debug the report file path"
           ansible.builtin.debug:
             msg:                       "Report file path: {{ report_file_path }}"
