@@ -129,7 +129,6 @@
                                     }
         
         - name:                     "Post Telemetry Data"
-          delegate_to:              localhost 
           ansible.builtin.include_tasks: "roles/misc/tasks/post-telemetry-data.yml"
 
   rescue:
