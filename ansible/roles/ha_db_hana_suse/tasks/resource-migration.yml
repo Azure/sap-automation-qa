@@ -113,6 +113,8 @@
             - cluster_status_pre.primary_node != cluster_status_post.secondary_node
             - cluster_status_pre.secondary_node != cluster_status_post.primary_node
           ansible.builtin.set_fact:
+            test_case_name:         "{{ item.name }}: {{ virtual_host }}"
+            test_case_description:  "{{ item.description }}"
             test_case_status:       "PASSED"
             test_case_message:      "Old primary instance is: {{ cluster_status_pre.primary_node }} \
                                     New primary instance is: {{ cluster_status_post.primary_node }} \
@@ -134,6 +136,8 @@
   rescue:
     - name:                         "Post Validations: Set test case status"
       ansible.builtin.set_fact:
+        test_case_name:             "{{ item.name }}: {{ virtual_host }}"
+        test_case_description:      "{{ item.description }}"
         test_case_status:           "FAILED"
         test_case_message:          "{{ ansible_failed_result }}"
         test_case_details:          "{{ ansible_failed_result }}"

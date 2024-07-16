@@ -3,7 +3,7 @@ from ansible.module_utils.basic import AnsibleModule
 import subprocess
 import json
 import xml.etree.ElementTree as ET
-from datetime import datetime
+from collections import defaultdict
 
 CLUSTER_DEFAULTS = {
     "crm_config": [
@@ -219,7 +219,7 @@ def validate_global_ini_properties(DB_SID: str):
         }
         if ha_dr_provider_SAPHanaSR_dict == expected_properties_sles:
             return {
-                "msg": f"SAPHanaSR Properties" + f"{ha_dr_provider_SAPHanaSR_dict}."
+                "msg": f"SAPHanaSR Properties: " + f"{ha_dr_provider_SAPHanaSR_dict}."
             }
         else:
             return {
@@ -245,7 +245,7 @@ def validate_pacemaker_resource_clone_params(host_type):
         error: Drift parameters found: <parameters>
     """
     try:
-        drift_parameters, valid_parameters = [], []
+        drift_parameters, valid_parameters = defaultdict(list), defaultdict(list)
 
         def parse_default_data(root_element, data=RESOURCES_CLONE_DEFAULTS, path=""):
             if isinstance(data, dict):
@@ -268,9 +268,13 @@ def validate_pacemaker_resource_clone_params(host_type):
                             value = json.loads(value)
                             for k, v in value.items():
                                 if query_param.attrib.get(k) != v:
-                                    drift_parameters.append(key)
+                                    drift_parameters[data].append(
+                                        {query_param.attrib.get(k): v}
+                                    )
                                 else:
-                                    valid_parameters.append(key)
+                                    valid_parameters[data].append(
+                                        {query_param.attrib.get(k): v}
+                                    )
             elif isinstance(data, list):
                 for item in data:
                     parse_default_data(root_element, item, path)
@@ -303,7 +307,7 @@ def validate_pacemaker_cluster_params(host_type):
         error: Drift parameters found: <parameters>
     """
     try:
-        drift_parameters, valid_parameters = [], []
+        drift_parameters, valid_parameters = defaultdict(list), defaultdict(list)
 
         for resource_operation, _ in CLUSTER_DEFAULTS.items():
             with subprocess.Popen(
@@ -331,15 +335,31 @@ def validate_pacemaker_cluster_params(host_type):
                                         query_param.attrib.get("value")
                                         != value[host_type]
                                     ):
-                                        drift_parameters.append(key)
+                                        drift_parameters[resource_operation].append(
+                                            {
+                                                query_param.attrib.get("value"): value[
+                                                    host_type
+                                                ]
+                                            }
+                                        )
                                     else:
-                                        valid_parameters.append(key)
+                                        valid_parameters[resource_operation].append(
+                                            {
+                                                query_param.attrib.get("value"): value[
+                                                    host_type
+                                                ]
+                                            }
+                                        )
                                 else:
                                     for k, v in value.items():
                                         if query_param.attrib.get(k) != v:
-                                            drift_parameters.append(key)
+                                            drift_parameters[resource_operation].append(
+                                                {k: v}
+                                            )
                                         else:
-                                            valid_parameters.append(key)
+                                            valid_parameters[resource_operation].append(
+                                                {k: v}
+                                            )
                 elif isinstance(data, list):
                     for item in data:
                         parse_default_data(item, path)
