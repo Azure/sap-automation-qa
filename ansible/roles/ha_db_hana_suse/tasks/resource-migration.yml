@@ -130,7 +130,6 @@
         
         - name:                             "Post Telemetry Data"
           ansible.builtin.include_tasks:    "roles/misc/tasks/post-telemetry-data.yml"
-          run_once:                         true
 
   rescue:
     - name:                         "Post Validations: Set test case status"
