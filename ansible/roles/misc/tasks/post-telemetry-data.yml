@@ -3,6 +3,11 @@
 #                       Tasks for sending telemetry data to the data explorer            #
 ##########################################################################################
 
+- name:                               "Debug the telemetry data"
+  ansible.builtin.debug:
+    msg:                              "Telemetry: {{ test_case_status }} {{ test_case_details }} {{ test_case_message }}"
+  failed_when:                        false
+
 - name:                               "Create the telemetry JSON object for the test case"
   failed_when :                       false
   delegate_to:                        localhost
