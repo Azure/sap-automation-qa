@@ -7,6 +7,9 @@
   ansible.builtin.include_tasks:    "roles/misc/tasks/test-case-setup.yml"
   run_once:                         true
 
+# /*---------------------------------------------------------------------------
+# |                          Pre Validations
+# /*---------------------------------------------------------------------------
 - name:                             "Pre Validations: DB Nodes"
   become:                           true
   when:
@@ -41,6 +44,9 @@
           register:                 cleanup_failed_resource_pre
           changed_when:             cleanup_failed_resource_pre.rc == 0
 
+# /*---------------------------------------------------------------------------
+# |                          Test Execution
+# /*---------------------------------------------------------------------------
     - name:                         "Test Execution: Crash the primary node."
       when:
         - cluster_status_pre.primary_node != "" and cluster_status_pre.secondary_node != ""
@@ -81,6 +87,9 @@
           register:                 cleanup_failed_resource_post
           changed_when:             cleanup_failed_resource_post.rc == 0
 
+# /*---------------------------------------------------------------------------
+# |                          Post Validations
+# /*---------------------------------------------------------------------------
     - name:                         "Post Validations: HA cluster status after stopping the HANA DB"
       when:
         - ansible_hostname == cluster_status_pre.primary_node
@@ -118,6 +127,9 @@
         test_case_message:          "{{ ansible_failed_result }}"
         test_case_details:          "{{ ansible_failed_result }}"
 
+# /*---------------------------------------------------------------------------
+# |                          Reporting
+# /*---------------------------------------------------------------------------
 - name:                             "Post Telemetry Data"
   ansible.builtin.include_tasks:    "roles/misc/tasks/post-telemetry-data.yml"
   run_once:                         true
