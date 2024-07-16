@@ -18,5 +18,3 @@
                                         SAPHanaSR: {{ ansible_facts.packages['SAPHanaSR'] | default('Not Found') }}"
     test_case_details:                {}
     test_case_message:                "Test case execution started"
-    ansible_callbacks:
-      profile_tasks:                  true
