@@ -138,11 +138,30 @@ CLUSTER_DEFAULTS = {
     ],
 }
 
+RESOURCE_CLONE_KEYS = [
+    "azure-events",
+    "SAPHanaTopology",
+    "azure-events-az",
+]
+
 RESOURCES_CLONE_DEFAULTS = {
     "clone": {
         "primitive": [
             {
                 "azure-events": {
+                    "operations": [
+                        {
+                            "op": {
+                                "monitor": '{"interval": "10s","timeout": "240s"}',
+                                "start": '{"interval": "0s","timeout": "10s"}',
+                                "stop": '{"interval": "0s","timeout": "10s"}',
+                            }
+                        }
+                    ],
+                }
+            },
+            {
+                "azure-events-az": {
                     "operations": [
                         {
                             "op": {
@@ -251,7 +270,7 @@ def validate_pacemaker_resource_clone_params(host_type):
             if isinstance(data, dict):
                 for key, value in data.items():
                     if isinstance(value, (dict, list)):
-                        if key == "azure-events" or key == "SAPHanaTopology":
+                        if key in RESOURCE_CLONE_KEYS:
                             root_element = root.findall(f".//primitive[@type='{key}']")
                             parse_default_data(root_element, value, f"{path}")
                         else:
@@ -268,13 +287,13 @@ def validate_pacemaker_resource_clone_params(host_type):
                             value = json.loads(value)
                             for k, v in value.items():
                                 if query_param.attrib.get(k) != v:
-                                    drift_parameters[data].append(
-                                        {query_param.attrib.get(k): v}
-                                    )
+                                    drift_parameters[
+                                        root_element[0].attrib["id"]
+                                    ].append({f"{key}_{k}": v})
                                 else:
-                                    valid_parameters[data].append(
-                                        {query_param.attrib.get(k): v}
-                                    )
+                                    valid_parameters[
+                                        root_element[0].attrib["id"]
+                                    ].append({f"{key}_{k}": v})
             elif isinstance(data, list):
                 for item in data:
                     parse_default_data(root_element, item, path)
@@ -289,8 +308,8 @@ def validate_pacemaker_resource_clone_params(host_type):
         if root is not None:
             parse_default_data(root_element=root)
         if drift_parameters:
-            return {"error": f"Resource Parameters: {', '.join(drift_parameters)}"}
-        return {"msg": f"Resource Parameters: {', '.join(valid_parameters)}"}
+            return {"error": f"Resource Parameters: {json.dumps(drift_parameters)}"}
+        return {"msg": f"Resource Parameters: {json.dumps(valid_parameters)}"}
 
     except subprocess.CalledProcessError as e:
         return {"error": str(e)}
@@ -336,29 +355,21 @@ def validate_pacemaker_cluster_params(host_type):
                                         != value[host_type]
                                     ):
                                         drift_parameters[resource_operation].append(
-                                            {
-                                                query_param.attrib.get("value"): value[
-                                                    host_type
-                                                ]
-                                            }
+                                            {key: query_param.attrib.get("value")}
                                         )
                                     else:
                                         valid_parameters[resource_operation].append(
-                                            {
-                                                query_param.attrib.get("value"): value[
-                                                    host_type
-                                                ]
-                                            }
+                                            {key: query_param.attrib.get("value")}
                                         )
                                 else:
                                     for k, v in value.items():
                                         if query_param.attrib.get(k) != v:
                                             drift_parameters[resource_operation].append(
-                                                {k: v}
+                                                {k: query_param.attrib.get(k)}
                                             )
                                         else:
                                             valid_parameters[resource_operation].append(
-                                                {k: v}
+                                                {k: query_param.attrib.get(k)}
                                             )
                 elif isinstance(data, list):
                     for item in data:
@@ -368,10 +379,10 @@ def validate_pacemaker_cluster_params(host_type):
                 parse_default_data()
         if drift_parameters:
             return {
-                "error": f"Drift in cluster parameters: {', '.join(drift_parameters)}"
-                + f"Validated cluster parameters: {', '.join(valid_parameters)}"
+                "error": f"Drift in cluster parameters: {json.dumps(drift_parameters)}"
+                + f"Validated cluster parameters: {json.dumps(valid_parameters)}"
             }
-        return {"msg": f"Validated cluster parameters: {', '.join(valid_parameters)}"}
+        return {"msg": f"Validated cluster parameters: {json.dumps(valid_parameters)}"}
 
     except subprocess.CalledProcessError as e:
         return {"error": str(e)}
