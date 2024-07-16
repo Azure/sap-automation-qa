@@ -16,7 +16,7 @@
         host_type:                      "{{ 'DB' if 'db' in inventory_hostname else 'SCS' }}"
         database_sid:                   "{{ db_sid | upper }}"
       register:                         test_result
-    
+
     - name:                             "Set the test case status to PASSED"
       ansible.builtin.set_fact:
         test_case_name:                 "{{ item.name }}: {{ virtual_host }}"
