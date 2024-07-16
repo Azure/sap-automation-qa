@@ -99,8 +99,9 @@
 
         - name:                     "Post Validations: Set test case status"
           delegate_to:              localhost
-          failed_when:              cluster_status_pre.primary_node != cluster_status_post.secondary_node and \
-                                    cluster_status_pre.secondary_node != cluster_status_post.primary_node
+          failed_when:
+            - cluster_status_pre.primary_node != cluster_status_post.secondary_node
+            - cluster_status_pre.secondary_node != cluster_status_post.primary_node
           ansible.builtin.set_fact:
             test_case_status:       "PASSED"
             test_case_message:      "Old primary instance is: {{ cluster_status_pre.primary_node }} \
@@ -117,6 +118,10 @@
                                       "Post Validations: Validate HANA DB cluster status": "{{ cluster_status_post }}",
                                     }
 
+        - name:                             "Post Telemetry Data"
+          ansible.builtin.include_tasks:    "roles/misc/tasks/post-telemetry-data.yml"
+          run_once:                         true
+
   rescue:
     - name:                         "Post Validations: Set test case status"
       ansible.builtin.set_fact:
@@ -124,9 +129,6 @@
         test_case_message:          "{{ ansible_failed_result }}"
         test_case_details:          "{{ ansible_failed_result }}"
 
-# /*---------------------------------------------------------------------------
-# |                          Reporting
-# /*---------------------------------------------------------------------------
-- name:                             "Post Telemetry Data"
-  ansible.builtin.include_tasks:    "roles/misc/tasks/post-telemetry-data.yml"
-  run_once:                         true
+    - name:                             "Post Telemetry Data"
+      ansible.builtin.include_tasks:    "roles/misc/tasks/post-telemetry-data.yml"
+      run_once:                         true
