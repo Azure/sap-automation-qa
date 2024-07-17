@@ -5,189 +5,102 @@ import json
 import xml.etree.ElementTree as ET
 from collections import defaultdict
 
-CLUSTER_DEFAULTS = {
-    "crm_config": [
-        {
-            "cluster_property_set": [
-                {
-                    "nvpair": {
-                        "have-watchdog": '{"DB":"false","SCS":"false"}',
-                        "cluster-infrastructure": '{"DB":"corosync","SCS":"corosync"}',
-                        "stonith-enabled": '{"DB":"true","SCS":"true"}',
-                        "concurrent-fencing": '{"DB":"true","SCS":"true"}',
-                        "stonith-timeout": '{"DB":"900s","SCS":"900"}',
-                        "maintenance-mode": '{"DB":"false","SCS":"false"}',
-                        "azure-events_globalPullState": '{"DB":"IDLE","SCS":"IDLE"}',
-                        "priority-fencing-delay": '{"DB":"30","SCS":"30"}',
-                    }
-                }
-            ]
+CLUSTER_PROPERTIES = {
+    "crm_config": {
+        "cib-bootstrap-options": {
+            "have-watchdog": "false",
+            "cluster-infrastructure": "corosync",
+            "stonith-enabled": "true",
+            "concurrent-fencing": "true",
+            "stonith-timeout": "900",
+            "maintenance-mode": "false",
+            "azure-events_globalPullState": "IDLE",
+            "priority-fencing-delay": "30",
         }
-    ],
-    "constraints": [
-        {
-            "rsc_colocation": [{"score": '{"DB":"-5000","SCS":"-5000"}'}],
-            "rsc_order": [
-                {
-                    "kind": '{"DB":"OPTIONAL","SCS":"OPTIONAL"}',
-                    "symmetrical": '{"DB":"false","SCS":"false"}',
-                    "first-action": '{"DB":"start","SCS":"start"}',
-                    "then-action": '{"DB":"stop","SCS":"stop"}',
-                }
-            ],
-        }
-    ],
-    "rsc_defaults": [
-        {
-            "meta_attributes": [
-                {
-                    "nvpair": {
-                        "resource-stickiness": '{"DB":"1000","SCS":"1"}',
-                        "migration-threshold": '{"DB":"5000","SCS":"3"}',
-                        "priority": '{"DB":"1","SCS":"1"}',
-                    },
-                }
-            ]
-        }
-    ],
-    "op_defaults": [
-        {
-            "meta_attributes": [
-                {
-                    "nvpair": {
-                        "timeout": '{"DB":"600","SCS":"600"}',
-                        "record-pending": '{"DB":"true","SCS":"true"}',
-                    },
-                }
-            ]
-        }
-    ],
-    "resources": [
-        {
-            "primitive": {
-                "fence_azure_arm": {
-                    "instance_attributes": [
-                        {
-                            "nvpair": {
-                                "pcmk_monitor_retries": '{"DB":"4","SCS":"4"}',
-                                "pcmk_action_limit": '{"DB":"3","SCS":"3"}',
-                                "power_timeout": '{"DB":"240","SCS":"240"}',
-                                "pcmk_reboot_timeout": '{"DB":"900","SCS":"900"}',
-                            }
-                        }
-                    ],
-                    "operations": [
-                        {
-                            "op": {
-                                "monitor": '{"interval": "0s"}',
-                                "stop": '{"timeout": "20s", "interval": "0s"}',
-                                "start": '{"timeout": "20s", "interval": "0s"}',
-                            },
-                        }
-                    ],
-                }
-            }
+    },
+    "rsc_defaults": {
+        "resource-stickiness": "1",
+        "migration-threshold": "3",
+        "priority": "1",
+    },
+    "op_defaults": {
+        "timeout": "600",
+        "record-pending": "true",
+    },
+    "constraints": {
+        "col_sap": {
+            "score": "-5000",
         },
-        {
-            "clone": {
-                "meta_attributes": [
-                    {
-                        "nvpair": {
-                            "interleave": '{"DB":"true","SCS":"true"}',
-                            "clone-node-max": '{"DB":"1","SCS":"1"}',
-                            "target-role": '{"DB":"Started","SCS":"Started"}',
-                        }
-                    }
-                ],
-            }
+        "ord_sap": {
+            "kind": "Optional",
+            "symmetrical": "false",
+            "first-action": "start",
+            "then-action": "stop",
         },
-        {
-            "master": {
-                "meta_attributes": [
-                    {
-                        "notify": '{"DB":"true"}',
-                        "clone-max": '{"DB":"2"}',
-                        "clone-node-max": '{"DB":"1"}',
-                        "target-role": '{"DB":"Started"}',
-                        "interleave": '{"DB":"true"}',
-                    }
-                ],
-                "primitive": {
-                    "instance_attributes": [
-                        {
-                            "nvpair": {
-                                "PREFER_SITE_TAKEOVER": '{"DB":"true"}',
-                                "DUPLICATE_PRIMARY_TIMEOUT": '{"DB":"7200"}',
-                                "AUTOMATED_REGISTER": '{"DB":"true"}',
-                            },
-                        }
-                    ],
-                    "operations": [
-                        {
-                            "op": {
-                                "start": '{"interval": "0", "timeout": "3600"}',
-                                "stop": '{"interval": "0", "timeout": "3600"}',
-                                "promote": '{"interval": "0", "timeout": "3600"}',
-                                "demote": '{"timeout": "320", "interval": "0s"}',
-                            }
-                        }
-                    ],
-                },
-            },
+    },
+    "resources": {
+        "cln_SAPHanaTopology": {
+            "clone-node-max": "1",
+            "target-role": "Started",
+            "interleave": "true",
+            "InstanceNumber": "00",
+            "monitor-interval": "10",
+            "monitor-timeout": "600",
+            "start-interval": "0",
+            "start-timeout": "600",
+            "stop-interval": "0",
+            "stop-timeout": "300",
         },
-    ],
-}
-
-RESOURCE_CLONE_KEYS = [
-    "azure-events",
-    "SAPHanaTopology",
-    "azure-events-az",
-]
-
-RESOURCES_CLONE_DEFAULTS = {
-    "clone": {
-        "primitive": [
-            {
-                "azure-events": {
-                    "operations": [
-                        {
-                            "op": {
-                                "monitor": '{"interval": "10s","timeout": "240s"}',
-                                "start": '{"interval": "0s","timeout": "10s"}',
-                                "stop": '{"interval": "0s","timeout": "10s"}',
-                            }
-                        }
-                    ],
-                }
-            },
-            {
-                "azure-events-az": {
-                    "operations": [
-                        {
-                            "op": {
-                                "monitor": '{"interval": "10s","timeout": "240s"}',
-                                "start": '{"interval": "0s","timeout": "10s"}',
-                                "stop": '{"interval": "0s","timeout": "10s"}',
-                            }
-                        }
-                    ],
-                }
-            },
-            {
-                "SAPHanaTopology": {
-                    "operations": [
-                        {
-                            "op": {
-                                "monitor": '{"interval": "10","timeout": "600"}',
-                                "start": '{"interval": "0","timeout": "600"}',
-                                "stop": '{"interval": "0","timeout": "300"}',
-                            }
-                        }
-                    ],
-                }
-            },
-        ],
-    }
+        "msl_SAPHana": {
+            "notify": "true",
+            "clone-max": "2",
+            "clone-node-max": "1",
+            "target-role": "Started",
+            "interleave": "true",
+            "SID": "HDB",
+            "InstanceNumber": "00",
+            "PREFER_SITE_TAKEOVER": "true",
+            "DUPLICATE_PRIMARY_TIMEOUT": "7200",
+            "AUTOMATED_REGISTER": "true",
+            "start-interval": "0",
+            "start-timeout": "3600",
+            "stop-interval": "0",
+            "stop-timeout": "3600",
+            "promote-interval": "0",
+            "promote-timeout": "3600",
+            "monitor-Master-interval": "60",
+            "monitor-Master-timeout": "700",
+            "monitor-Slave-interval": "61",
+            "monitor-Slave-timeout": "700",
+            "demote-interval": "0s",
+            "demote-timeout": "320",
+        },
+        "rsc_st_azure": {
+            "pcmk_monitor_retries": "4",
+            "pcmk_action_limit": "3",
+            "power_timeout": "240",
+            "pcmk_reboot_timeout": "900",
+            "pcmk_delay_max": "15",
+            "monitor-interval": "3600",
+            "monitor-timeout": "120",
+            "start-interval": "0s",
+            "start-timeout": "20s",
+            "stop-interval": "0s",
+            "stop-timeout": "20s",
+        },
+        "health-azure-events": {
+            "interleave": "true",
+            "allow-unhealthy-nodes": "true",
+            "failure-timeout": "120s",
+            "start-start-delay": "60s",
+            "start-interval": "0s",
+            "start-timeout": "10s",
+            "monitor-interval": "10s",
+            "monitor-timeout": "240s",
+            "stop-timeout": "10s",
+            "stop-interval": "0s",
+        },
+    },
 }
 
 
@@ -253,69 +166,7 @@ def validate_global_ini_properties(DB_SID: str):
         }
 
 
-def validate_pacemaker_resource_clone_params(host_type):
-    """Validate pacemaker cluster (resources>clone) parameters for DB and SCS
-
-    Args:
-        host_type (string): Host type DB or SCS
-
-    Returns:
-        success: No drift parameters found. Validated <parameters>
-        error: Drift parameters found: <parameters>
-    """
-    try:
-        drift_parameters, valid_parameters = defaultdict(list), defaultdict(list)
-
-        def parse_default_data(root_element, data=RESOURCES_CLONE_DEFAULTS, path=""):
-            if isinstance(data, dict):
-                for key, value in data.items():
-                    if isinstance(value, (dict, list)):
-                        if key in RESOURCE_CLONE_KEYS:
-                            root_element = root.findall(f".//primitive[@type='{key}']")
-                            parse_default_data(root_element, value, f"{path}")
-                        else:
-                            parse_default_data(root_element, value, f"{path}/{key}")
-                    else:
-                        query_param = (
-                            root_element[0].find(
-                                f"./{('/').join(path.split('/')[3:])}/[@name='{key}']"
-                            )
-                            if root_element
-                            else None
-                        )
-                        if query_param is not None:
-                            value = json.loads(value)
-                            for k, v in value.items():
-                                if query_param.attrib.get(k) != v:
-                                    drift_parameters[
-                                        root_element[0].attrib["id"]
-                                    ].append({f"{key}_{k}": v})
-                                else:
-                                    valid_parameters[
-                                        root_element[0].attrib["id"]
-                                    ].append({f"{key}_{k}": v})
-            elif isinstance(data, list):
-                for item in data:
-                    parse_default_data(root_element, item, path)
-
-        with subprocess.Popen(
-            ["cibadmin", "--query", "--scope", "resources"],
-            stdout=subprocess.PIPE,
-            encoding="utf-8",
-        ) as proc:
-            xml_output = proc.stdout.read()
-        root = ET.fromstring(xml_output)
-        if root is not None:
-            parse_default_data(root_element=root)
-        if drift_parameters:
-            return {"error": f"Resource Parameters: {json.dumps(drift_parameters)}"}
-        return {"msg": f"Resource Parameters: {json.dumps(valid_parameters)}"}
-
-    except subprocess.CalledProcessError as e:
-        return {"error": str(e)}
-
-
-def validate_pacemaker_cluster_params(host_type):
+def validate_cluster_params(host_type):
     """Validate pacemaker cluster parameters for DB and SCS
 
     Args:
@@ -326,9 +177,11 @@ def validate_pacemaker_cluster_params(host_type):
         error: Drift parameters found: <parameters>
     """
     try:
-        drift_parameters, valid_parameters = defaultdict(list), defaultdict(list)
+        drift_parameters, valid_parameters = defaultdict(
+            defaultdict(list)
+        ), defaultdict(defaultdict(list))
 
-        for resource_operation, _ in CLUSTER_DEFAULTS.items():
+        for resource_operation, _ in CLUSTER_PROPERTIES.items():
             with subprocess.Popen(
                 ["cibadmin", "--query", "--scope", f"{resource_operation}"],
                 stdout=subprocess.PIPE,
@@ -337,46 +190,50 @@ def validate_pacemaker_cluster_params(host_type):
                 xml_output = proc.stdout.read()
             root = ET.fromstring(xml_output)
 
-            def parse_default_data(data=CLUSTER_DEFAULTS, path=""):
-                if isinstance(data, dict):
-                    for key, value in data.items():
-                        if isinstance(value, (dict, list)):
-                            parse_default_data(value, f"{path}/{key}")
-                        else:
-                            query_param = root.find(
-                                f"./{('/').join(path.split('/')[2:])}/[@name='{key}']"
-                            )
-                            if query_param is not None:
-                                value = json.loads(value)
+            for root_element in root:
+                root_id = root_element.get("id")
+                extracted_values = {root_id: {}}
 
-                                if query_param.attrib.get("value"):
-                                    if (
-                                        query_param.attrib.get("value")
-                                        != value[host_type]
-                                    ):
-                                        drift_parameters[resource_operation].append(
-                                            {key: query_param.attrib.get("value")}
-                                        )
-                                    else:
-                                        valid_parameters[resource_operation].append(
-                                            {key: query_param.attrib.get("value")}
-                                        )
+                # Extract nvpair parameters and their values from XML
+                for nvpair in root_element.findall(".//nvpair"):
+                    name = nvpair.get("name")
+                    value = nvpair.get("value")
+                    extracted_values[root_id][name] = value
+
+                # Extract operation parameters
+                for op in root_element.findall(".//op"):
+                    name = (
+                        f"{op.get('name')}-{op.get('role', 'NoRole')}-interval"
+                        if op.get("role")
+                        else f"{op.get('name')}-interval"
+                    )
+                    value = op.get("interval")
+                    extracted_values[root_id][name] = value
+
+                    name = (
+                        f"{op.get('name')}-{op.get('role', 'NoRole')}-timeout"
+                        if op.get("role")
+                        else f"{op.get('name')}-timeout"
+                    )
+                    value = op.get("timeout")
+                    extracted_values[root_id][name] = value
+
+                recommended_for_root = {}
+                for key in CLUSTER_PROPERTIES[resource_operation].keys():
+                    if root_id.startswith(key):
+                        recommended_for_root = CLUSTER_PROPERTIES[resource_operation][
+                            key
+                        ]
+                        for name, value in extracted_values[root_id].items():
+                            if name in recommended_for_root:
+                                if value != recommended_for_root.get(name):
+                                    drift_parameters[resource_operation][
+                                        root_id
+                                    ].append({name: value})
                                 else:
-                                    for k, v in value.items():
-                                        if query_param.attrib.get(k) != v:
-                                            drift_parameters[resource_operation].append(
-                                                {k: query_param.attrib.get(k)}
-                                            )
-                                        else:
-                                            valid_parameters[resource_operation].append(
-                                                {k: query_param.attrib.get(k)}
-                                            )
-                elif isinstance(data, list):
-                    for item in data:
-                        parse_default_data(item, path)
-
-            if root is not None:
-                parse_default_data()
+                                    valid_parameters[resource_operation][
+                                        root_id
+                                    ].append({name: value})
         if drift_parameters:
             return {
                 "error": f"Drift in cluster parameters: {json.dumps(drift_parameters)}"
@@ -434,22 +291,20 @@ def main():
         if location_constraints_exists():
             module.fail_json(changed=False, msg="Location constraints found.")
         else:
-            cluster_result = validate_pacemaker_cluster_params(host_type)
-            resource_result = validate_pacemaker_resource_clone_params(host_type)
+            cluster_result = validate_cluster_params(host_type)
             sap_hana_sr_result = validate_global_ini_properties(DB_SID=database_sid)
             if any(
-                "error" in result
-                for result in [cluster_result, resource_result, sap_hana_sr_result]
+                "error" in result for result in [cluster_result, sap_hana_sr_result]
             ):
                 error_messages = [
                     result["error"]
-                    for result in [cluster_result, resource_result, sap_hana_sr_result]
+                    for result in [cluster_result, sap_hana_sr_result]
                     if "error" in result
                 ]
                 module.fail_json(msg=", ".join(error_messages))
             module.exit_json(
                 msg=f"No drift parameters found. This list of validated parameters: "
-                + f"{cluster_result['msg']}, {resource_result['msg']}, {sap_hana_sr_result['msg']}"
+                + f"{cluster_result['msg']}, {sap_hana_sr_result['msg']}"
             )
 
     elif action == "visualize":
