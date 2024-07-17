@@ -36,6 +36,8 @@ CLUSTER_PROPERTIES = {
             "clone-node-max": "1",
             "target-role": "Started",
             "interleave": "true",
+            "SID": "SID",
+            "InstanceNumber": "XX",
             "InstanceNumber": "00",
             "monitor-interval": "10",
             "monitor-timeout": "600",
@@ -50,6 +52,8 @@ CLUSTER_PROPERTIES = {
             "clone-node-max": "1",
             "target-role": "Started",
             "interleave": "true",
+            "SID": "SID",
+            "InstanceNumber": "XX",
             "PREFER_SITE_TAKEOVER": "true",
             "DUPLICATE_PRIMARY_TIMEOUT": "7200",
             "AUTOMATED_REGISTER": "true",
@@ -74,22 +78,13 @@ CLUSTER_PROPERTIES = {
             "pcmk_delay_max": "15",
             "monitor-interval": "3600",
             "monitor-timeout": "120",
-            "start-interval": "0s",
-            "start-timeout": "20s",
-            "stop-interval": "0s",
-            "stop-timeout": "20s",
         },
         "health-azure-events": {
             "interleave": "true",
             "allow-unhealthy-nodes": "true",
             "failure-timeout": "120s",
             "start-start-delay": "60s",
-            "start-interval": "0s",
-            "start-timeout": "10s",
             "monitor-interval": "10s",
-            "monitor-timeout": "240s",
-            "stop-timeout": "10s",
-            "stop-interval": "0s",
         },
     },
 }
@@ -165,11 +160,12 @@ def validate_global_ini_properties(DB_SID: str):
         }
 
 
-def validate_cluster_params(host_type):
+def validate_cluster_params(cluster_properties: dict):
     """Validate pacemaker cluster parameters for DB and SCS
 
     Args:
-        host_type (string): Host type DB or SCS
+        cluster_properties (dict): Dictionary of recommended values of
+                                    cluster properties
 
     Returns:
         success: No drift parameters found. Validated <parameters>
@@ -180,7 +176,7 @@ def validate_cluster_params(host_type):
             lambda: defaultdict(list)
         ), defaultdict(lambda: defaultdict(list))
 
-        for resource_operation, _ in CLUSTER_PROPERTIES.items():
+        for resource_operation, _ in cluster_properties.items():
             with subprocess.Popen(
                 ["cibadmin", "--query", "--scope", f"{resource_operation}"],
                 stdout=subprocess.PIPE,
@@ -278,20 +274,34 @@ def main():
             action=dict(type="str", choices=["get", "visualize"], required=True),
             host_type=dict(type="str"),
             xml_file=dict(type="str"),
-            database_sid=dict(type="str"),
+            sid=dict(type="str"),
+            instance_number=dict(type="str"),
         )
     )
     action = module.params["action"]
     host_type = module.params.get("host_type")
     xml_file = module.params.get("xml_file")
-    database_sid = module.params.get("database_sid")
+    sid = module.params.get("sid")
+    instance_number = module.params.get("instance_number")
+
+    # load the CLUSTER_PROPERTIES dictionary with SID and InstanceNumber
+    # in the resource parameters
+
+    CLUSTER_PROPERTIES["resources"]["msl_SAPHana"]["SID"] = sid
+    CLUSTER_PROPERTIES["resources"]["msl_SAPHana"]["InstanceNumber"] = instance_number
+    CLUSTER_PROPERTIES["resources"]["cln_SAPHanaTopology"]["SID"] = sid
+    CLUSTER_PROPERTIES["resources"]["cln_SAPHanaTopology"][
+        "InstanceNumber"
+    ] = instance_number
 
     if action == "get":
         if location_constraints_exists():
             module.fail_json(changed=False, msg="Location constraints found.")
         else:
-            cluster_result = validate_cluster_params(host_type)
-            sap_hana_sr_result = validate_global_ini_properties(DB_SID=database_sid)
+            cluster_result = validate_cluster_params(
+                cluster_properties=CLUSTER_PROPERTIES,
+            )
+            sap_hana_sr_result = validate_global_ini_properties(DB_SID=sid)
             if any(
                 "error" in result for result in [cluster_result, sap_hana_sr_result]
             ):
