@@ -249,7 +249,8 @@ def validate_cluster_params(cluster_properties: dict):
             required_param in valid_parameters for required_param in REQUIRED_PARAMETERS
         ):
             return {
-                "msg": f"Required parameters missing in cluster parameters: {json.dumps(valid_parameters)}",
+                "msg": f"Required parameters missing in cluster parameters: {REQUIRED_PARAMETERS}."
+                + f"Validated cluster parameters: {json.dumps(valid_parameters)}",
                 "status": "WARNING",
             }
         return {
