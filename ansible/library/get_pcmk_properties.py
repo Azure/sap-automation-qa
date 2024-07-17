@@ -20,8 +20,8 @@ CLUSTER_PROPERTIES = {
     },
     "rsc_defaults": {
         "build-resource-defaults": {
-            "resource-stickiness": "1",
-            "migration-threshold": "3",
+            "resource-stickiness": "1000",
+            "migration-threshold": "5000",
             "priority": "1",
         }
     },
@@ -50,8 +50,6 @@ CLUSTER_PROPERTIES = {
             "clone-node-max": "1",
             "target-role": "Started",
             "interleave": "true",
-            "SID": "HDB",
-            "InstanceNumber": "00",
             "PREFER_SITE_TAKEOVER": "true",
             "DUPLICATE_PRIMARY_TIMEOUT": "7200",
             "AUTOMATED_REGISTER": "true",
@@ -121,6 +119,14 @@ def location_constraints_exists():
 
 
 def validate_global_ini_properties(DB_SID: str):
+    """Validate SAPHanaSR properties in global.ini file.
+
+    Args:
+        DB_SID (str): Database SID
+
+    Returns:
+        AnsibleModule.exit_json: SAPHanaSR Properties: {properties}
+    """
     try:
         global_ini_file_path = (
             f"/usr/sap/{DB_SID}/SYS/global/hdb/custom/config/global.ini"
