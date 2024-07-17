@@ -89,6 +89,11 @@ CLUSTER_PROPERTIES = {
     },
 }
 
+REQUIRED_PARAMETERS = {
+    "pcmk_delay_max",
+    "priority_fencing_delay",
+}
+
 
 def location_constraints_exists():
     """Check if location constraints exist in the pacemaker cluster.
@@ -145,17 +150,25 @@ def validate_global_ini_properties(DB_SID: str):
         }
 
         if ha_dr_provider_SAPHanaSR_dict == expected_properties_sles:
-            return {"msg": f"SAPHanaSR Properties: {ha_dr_provider_SAPHanaSR_dict}."}
+            return {
+                "msg": f"SAPHanaSR Properties: {ha_dr_provider_SAPHanaSR_dict}.",
+                "status": "PASSED",
+            }
         else:
             return {
                 "error": "SAPHanaSR Properties validation failed with the "
-                + f"expected properties. Properties: {ha_dr_provider_SAPHanaSR_dict}"
+                + f"expected properties. Properties: {ha_dr_provider_SAPHanaSR_dict}",
+                "status": "FAILED",
             }
     except FileNotFoundError as e:
-        return {"error": f"Exception raised, file not found error: {str(e)}"}
+        return {
+            "error": f"Exception raised, file not found error: {str(e)}",
+            "status": "FAILED",
+        }
     except Exception as e:
         return {
-            "error": f"SAPHanaSR Properties validation failed: {str(e)} {global_ini}"
+            "error": f"SAPHanaSR Properties validation failed: {str(e)} {global_ini}",
+            "status": "FAILED",
         }
 
 
@@ -228,12 +241,24 @@ def validate_cluster_params(cluster_properties: dict):
         if drift_parameters:
             return {
                 "error": f"Drift in cluster parameters: {json.dumps(drift_parameters)}"
-                + f"Validated cluster parameters: {json.dumps(valid_parameters)}"
+                + f"Validated cluster parameters: {json.dumps(valid_parameters)}",
+                "status": "FAILED",
             }
-        return {"msg": f"Validated cluster parameters: {json.dumps(valid_parameters)}"}
+        # if any of the REQUIRED_PARAMETERS ar enot in valid_parameters then return status as warning
+        if not all(
+            required_param in valid_parameters for required_param in REQUIRED_PARAMETERS
+        ):
+            return {
+                "msg": f"Required parameters missing in cluster parameters: {json.dumps(valid_parameters)}",
+                "status": "WARNING",
+            }
+        return {
+            "msg": f"Validated cluster parameters: {json.dumps(valid_parameters)}",
+            "status": "PASSED",
+        }
 
     except subprocess.CalledProcessError as e:
-        return {"error": str(e)}
+        return {"error": str(e), "status": "FAILED"}
 
 
 def visualize_cluster_actions(xml_file):
@@ -305,8 +330,8 @@ def main():
                 ]
                 module.fail_json(msg=", ".join(error_messages))
             module.exit_json(
-                msg="No drift parameters found. This list of validated parameters: "
-                + f"{cluster_result['msg']}, {sap_hana_sr_result['msg']}"
+                msg=f"{cluster_result['msg']}, {sap_hana_sr_result['msg']}",
+                status=cluster_result["status"],
             )
 
     elif action == "visualize":
