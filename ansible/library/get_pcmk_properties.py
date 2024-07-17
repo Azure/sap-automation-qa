@@ -171,8 +171,8 @@ def validate_cluster_params(host_type):
     """
     try:
         drift_parameters, valid_parameters = defaultdict(
-            defaultdict(list)
-        ), defaultdict(defaultdict(list))
+            lambda: defaultdict(list)
+        ), defaultdict(lambda: defaultdict(list))
 
         for resource_operation, _ in CLUSTER_PROPERTIES.items():
             with subprocess.Popen(
