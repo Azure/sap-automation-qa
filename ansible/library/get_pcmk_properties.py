@@ -3,6 +3,7 @@ import subprocess
 import json
 from collections import defaultdict
 import xml.etree.ElementTree as ET
+from ansible.module_utils.basic import AnsibleModule
 
 CLUSTER_PROPERTIES = {
     "crm_config": {
@@ -266,14 +267,12 @@ def main():
     module = AnsibleModule(
         argument_spec=dict(
             action=dict(type="str", choices=["get", "visualize"], required=True),
-            host_type=dict(type="str"),
             xml_file=dict(type="str"),
             sid=dict(type="str"),
             instance_number=dict(type="str"),
         )
     )
     action = module.params["action"]
-    host_type = module.params.get("host_type")
     xml_file = module.params.get("xml_file")
     sid = module.params.get("sid")
     instance_number = module.params.get("instance_number")

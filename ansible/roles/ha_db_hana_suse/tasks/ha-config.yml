@@ -13,8 +13,8 @@
     - name:                             "HA Configuration check for the DB nodes"
       get_pcmk_properties:
         action:                         get
-        host_type:                      "{{ 'DB' if 'db' in inventory_hostname else 'SCS' }}"
-        database_sid:                   "{{ db_sid | upper }}"
+        sid:                            "{{ db_sid | upper }}"
+        instance_number:                "{{ db_instance_number }}"
       register:                         test_result
 
     - name:                             "Set the test case status to PASSED"
