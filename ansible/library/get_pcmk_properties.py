@@ -1,9 +1,8 @@
 #!/usr/bin/python
-from ansible.module_utils.basic import AnsibleModule
 import subprocess
 import json
-import xml.etree.ElementTree as ET
 from collections import defaultdict
+import xml.etree.ElementTree as ET
 
 CLUSTER_PROPERTIES = {
     "crm_config": {
@@ -120,7 +119,7 @@ def validate_global_ini_properties(DB_SID: str):
         DB_SID (str): Database SID
 
     Returns:
-        AnsibleModule.exit_json: SAPHanaSR Properties: {properties}
+        dict: SAPHanaSR Properties
     """
     try:
         global_ini_file_path = (
@@ -128,29 +127,27 @@ def validate_global_ini_properties(DB_SID: str):
         )
         with open(global_ini_file_path, "r") as file:
             global_ini = [line.strip() for line in file.readlines()]
+
         ha_dr_provider_SAPHnaSR = global_ini.index("[ha_dr_provider_SAPHanaSR]")
         ha_dr_provider_SAPHnaSR_properties = global_ini[
             ha_dr_provider_SAPHnaSR + 1 : ha_dr_provider_SAPHnaSR + 4
         ]
-        ha_dr_provider_SAPHanaSR_dict = {
-            key.strip(): value.strip()
-            for prop in ha_dr_provider_SAPHnaSR_properties
-            for key, value in [prop.split("=")]
-        }
+        ha_dr_provider_SAPHanaSR_dict = dict(
+            prop.split("=") for prop in ha_dr_provider_SAPHnaSR_properties
+        )
 
         expected_properties_sles = {
             "provider": "SAPHanaSR",
             "path": "/usr/share/SAPHanaSR",
             "execution_order": "1",
         }
+
         if ha_dr_provider_SAPHanaSR_dict == expected_properties_sles:
-            return {
-                "msg": f"SAPHanaSR Properties: " + f"{ha_dr_provider_SAPHanaSR_dict}."
-            }
+            return {"msg": f"SAPHanaSR Properties: {ha_dr_provider_SAPHanaSR_dict}."}
         else:
             return {
-                "error": f"SAPHanaSR Properties validation failed with"
-                + f" the expected properties. Properties: {ha_dr_provider_SAPHanaSR_dict}"
+                "error": "SAPHanaSR Properties validation failed with the "
+                + f"expected properties. Properties: {ha_dr_provider_SAPHanaSR_dict}"
             }
     except FileNotFoundError as e:
         return {"error": f"Exception raised, file not found error: {str(e)}"}
@@ -164,17 +161,14 @@ def validate_cluster_params(cluster_properties: dict):
     """Validate pacemaker cluster parameters for DB and SCS
 
     Args:
-        cluster_properties (dict): Dictionary of recommended values of
-                                    cluster properties
+        cluster_properties (dict): Dictionary of recommended values of cluster properties
 
     Returns:
-        success: No drift parameters found. Validated <parameters>
-        error: Drift parameters found: <parameters>
+        dict: Validated cluster parameters
     """
     try:
-        drift_parameters, valid_parameters = defaultdict(
-            lambda: defaultdict(list)
-        ), defaultdict(lambda: defaultdict(list))
+        drift_parameters = defaultdict(lambda: defaultdict(list))
+        valid_parameters = defaultdict(lambda: defaultdict(list))
 
         for resource_operation, _ in cluster_properties.items():
             with subprocess.Popen(
@@ -190,10 +184,10 @@ def validate_cluster_params(cluster_properties: dict):
                 extracted_values = {root_id: {}}
 
                 # Extract nvpair parameters and their values from XML
-                for nvpair in root_element.findall(".//nvpair"):
-                    name = nvpair.get("name")
-                    value = nvpair.get("value")
-                    extracted_values[root_id][name] = value
+                extracted_values[root_id] = {
+                    nvpair.get("name"): nvpair.get("value")
+                    for nvpair in root_element.findall(".//nvpair")
+                }
 
                 # Extract operation parameters
                 for op in root_element.findall(".//op"):
@@ -214,9 +208,9 @@ def validate_cluster_params(cluster_properties: dict):
                     extracted_values[root_id][name] = value
 
                 recommended_for_root = {}
-                for key in CLUSTER_PROPERTIES[resource_operation].keys():
+                for key in cluster_properties[resource_operation].keys():
                     if root_id.startswith(key):
-                        recommended_for_root = CLUSTER_PROPERTIES[resource_operation][
+                        recommended_for_root = cluster_properties[resource_operation][
                             key
                         ]
                         for name, value in extracted_values[root_id].items():
@@ -284,9 +278,8 @@ def main():
     sid = module.params.get("sid")
     instance_number = module.params.get("instance_number")
 
-    # load the CLUSTER_PROPERTIES dictionary with SID and InstanceNumber
-    # in the resource parameters
-
+    # load the CLUSTER_PROPERTIES dictionary with
+    # SID and InstanceNumber in the resource parameters
     CLUSTER_PROPERTIES["resources"]["msl_SAPHana"]["SID"] = sid
     CLUSTER_PROPERTIES["resources"]["msl_SAPHana"]["InstanceNumber"] = instance_number
     CLUSTER_PROPERTIES["resources"]["cln_SAPHanaTopology"]["SID"] = sid
@@ -299,7 +292,7 @@ def main():
             module.fail_json(changed=False, msg="Location constraints found.")
         else:
             cluster_result = validate_cluster_params(
-                cluster_properties=CLUSTER_PROPERTIES,
+                cluster_properties=CLUSTER_PROPERTIES
             )
             sap_hana_sr_result = validate_global_ini_properties(DB_SID=sid)
             if any(
@@ -312,7 +305,7 @@ def main():
                 ]
                 module.fail_json(msg=", ".join(error_messages))
             module.exit_json(
-                msg=f"No drift parameters found. This list of validated parameters: "
+                msg="No drift parameters found. This list of validated parameters: "
                 + f"{cluster_result['msg']}, {sap_hana_sr_result['msg']}"
             )
 
