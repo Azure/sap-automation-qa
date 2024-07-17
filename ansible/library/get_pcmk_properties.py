@@ -12,31 +12,24 @@ CLUSTER_PROPERTIES = {
             "cluster-infrastructure": "corosync",
             "stonith-enabled": "true",
             "concurrent-fencing": "true",
-            "stonith-timeout": "900",
+            "stonith-timeout": "900s",
             "maintenance-mode": "false",
             "azure-events_globalPullState": "IDLE",
             "priority-fencing-delay": "30",
         }
     },
     "rsc_defaults": {
-        "resource-stickiness": "1",
-        "migration-threshold": "3",
-        "priority": "1",
+        "build-resource-defaults": {
+            "resource-stickiness": "1",
+            "migration-threshold": "3",
+            "priority": "1",
+        }
     },
     "op_defaults": {
-        "timeout": "600",
-        "record-pending": "true",
-    },
-    "constraints": {
-        "col_sap": {
-            "score": "-5000",
-        },
-        "ord_sap": {
-            "kind": "Optional",
-            "symmetrical": "false",
-            "first-action": "start",
-            "then-action": "stop",
-        },
+        "op-options": {
+            "timeout": "600",
+            "record-pending": "true",
+        }
     },
     "resources": {
         "cln_SAPHanaTopology": {
