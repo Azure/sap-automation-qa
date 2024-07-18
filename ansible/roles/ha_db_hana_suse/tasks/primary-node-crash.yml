@@ -59,10 +59,13 @@
           changed_when:             hana_db_stop_results == 0
           failed_when:              hana_db_stop_results.rc != 0
 
-        - name:                     "Test Execution: Pause for the cluster to stabilize"
-          ansible.builtin.wait_for:
-            timeout:                300
-          when:                     automated_register.stdout != ""
+        - name:                     "Test Execution: Validate HANA DB cluster status after stopping the HANA DB"
+          get_cluster_status:
+            operation_step:         "test_execution"
+          register:                 cluster_status_test_execution
+          retries:                  30
+          delay:                    10
+          until:                    cluster_status_test_execution.primary_node == "" or cluster_status_test_execution.secondary_node == ""
 
         - name:                     "Test Execution: Register Failed Resource"
           become:                   true

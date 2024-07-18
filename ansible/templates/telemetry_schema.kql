@@ -1,0 +1,26 @@
+# kusto query to create a table in Azure Data Explorer database
+
+.create table SAP_AUTOMATION_QA (
+    TestCaseInvocationId:guid,
+    TestCaseStartTime:datetime,
+    TestCaseEndTime:datetime,
+    TestCaseStatus:string,
+    TestCaseName:string,
+    TestCaseDescription:string,
+    TestGroupInvocationId:guid,
+    TestGroupStartTime:datetime,
+    TestGroupName:string,
+    OsVersion:string,
+    TestCaseMessage:string,
+    TestCaseDetails:string,
+    DurationSeconds:string,
+    DbFencingType:string,
+    ScsFencingType:string,
+    DBType:string,
+    DbSid:string,
+    SapSid:string,
+    PackageVersions:string,
+    Tags:string,
+    TestExecutionStartTime:datetime,
+    TestExecutionEndTime:datetime
+)
