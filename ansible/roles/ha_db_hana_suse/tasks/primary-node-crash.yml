@@ -51,7 +51,7 @@
         - cluster_status_pre.status == "running"
         - cluster_status_pre is defined
       block:
-        - name:                     "Test Execution: Start the test execution start timer"
+        - name:                     "Test Execution: Start timer"
           ansible.builtin.set_fact:
             test_execution_start:   "{{ now(utc=true, fmt='%Y-%m-%d %H:%M:%S') }}"
 
@@ -69,9 +69,12 @@
           register:                 cluster_status_test_execution
           retries:                  30
           delay:                    10
-          until:                    cluster_status_test_execution.primary_node != "" and cluster_status_test_execution.secondary_node != ""
+          until:
+            - cluster_status_test_execution.primary_node != "" and cluster_status_test_execution.secondary_node != ""
+            - cluster_status_test_execution.primary_node == cluster_status_pre.secondary_node
+            - cluster_status_test_execution.secondary_node == cluster_status_pre.primary_node
 
-        - name:                     "Test Execution: Start the test execution start timer"
+        - name:                     "Test Execution: Stop timer"
           ansible.builtin.set_fact:
             test_execution_end:     "{{ now(utc=true, fmt='%Y-%m-%d %H:%M:%S') }}"
 
