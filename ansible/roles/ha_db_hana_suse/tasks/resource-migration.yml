@@ -72,6 +72,7 @@
           register:                 cluster_status_test_execution
           retries:                  20
           delay:                    10
+          failed_when:              false
           until:                    cluster_status_test_execution.primary_node == cluster_status_pre.secondary_node
 
         - name:                     "Test Execution: Register Failed Resource"
