@@ -51,6 +51,10 @@
         - cluster_status_pre.status == "running"
         - cluster_status_pre is defined
       block:
+        - name:                     "Test Execution: Start the test execution start timer"
+          ansible.builtin.set_fact:
+            test_execution_start:   "{{ now(utc=true, fmt='%Y-%m-%d %H:%M:%S') }}"
+
         - name:                     "Test Execution: Stop the HANA DB"
           become:                   true
           become_user:              "{{ db_sid | lower }}adm"
@@ -59,13 +63,17 @@
           changed_when:             hana_db_stop_results == 0
           failed_when:              hana_db_stop_results.rc != 0
 
-        - name:                     "Test Execution: Validate HANA DB cluster status after stopping the HANA DB"
+        - name:                     "Test Execution: Validate HANA DB cluster status during stop operation."
           get_cluster_status:
             operation_step:         "test_execution"
           register:                 cluster_status_test_execution
           retries:                  30
           delay:                    10
-          until:                    cluster_status_test_execution.primary_node == "" or cluster_status_test_execution.secondary_node == ""
+          until:                    cluster_status_test_execution.primary_node != "" and cluster_status_test_execution.secondary_node != ""
+
+        - name:                     "Test Execution: Start the test execution start timer"
+          ansible.builtin.set_fact:
+            test_execution_end:     "{{ now(utc=true, fmt='%Y-%m-%d %H:%M:%S') }}"
 
         - name:                     "Test Execution: Register Failed Resource"
           become:                   true
@@ -109,6 +117,8 @@
             test_case_name:         "{{ item.name }}: {{ virtual_host }}"
             test_case_description:  "{{ item.description }}"
             test_case_status:       "PASSED"
+            test_execution_start_time: "{{ test_execution_start }}"
+            test_execution_end_time: "{{ test_execution_end }}"
             test_case_message:      "Old primary instance is: {{ cluster_status_pre.primary_node }} \
                                     New primary instance is: {{ cluster_status_post.primary_node }} \
                                     Old secondary instance is: {{ cluster_status_pre.secondary_node }} \
