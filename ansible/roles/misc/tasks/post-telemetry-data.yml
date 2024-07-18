@@ -39,5 +39,8 @@
                                         "DBType": "{{ platform }}",
                                         "DbSid": "{{ db_sid | upper }}",
                                         "SapSid": "{{ sap_sid | upper }}",
-                                        "PackageVersions": "{{ package_versions | default('') }}"
+                                        "PackageVersions": "{{ package_versions | default('') }}",
+                                        "Tags": "{{ execution_tags | default({}) }}",
+                                        "TestExecutionStartTime": "{{ test_execution_start_time, default('') }}",
+                                        "TestExecutionEndTime": "{{ test_execution_end_time, default('') }}"
                                       }

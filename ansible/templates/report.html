@@ -242,6 +242,18 @@
                 <th>End Time</th>
                 <td>{{ test_case_result.TestCaseEndTime }}</td>
               </tr>
+              {% if test_case_result.TestExecutionStartTime %}
+                <tr>
+                  <th>Test Execution Start Time</th>
+                  <td>{{ test_case_result.TestExecutionStartTime }}</td>
+                </tr>
+              {% endif %}
+              {% if test_case_result.TestExecutionEndTime %}
+              <tr>
+                <th>Test Execution End Time</th>
+                <td>{{ test_case_result.TestExecutionEndTime }}</td>
+              </tr>
+              {% endif %}
               <tr>
                 <th>Message</th>
                 <td>{{ test_case_result.TestCaseMessage }}</td>

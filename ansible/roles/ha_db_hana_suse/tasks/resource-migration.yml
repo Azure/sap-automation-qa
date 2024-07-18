@@ -52,6 +52,10 @@
         - cluster_status_pre.status == "running"
         - cluster_status_pre is defined
       block:
+        - name:                     "Test Execution: Start timer"
+          ansible.builtin.set_fact:
+            test_execution_start:   "{{ now(utc=true, fmt='%Y-%m-%d %H:%M:%S') }}"
+
         - name:                     "Test Execution: Move the resource to the targeted node"
           ansible.builtin.command: |
                                     crm resource move msl_SAPHana_{{ db_sid | upper }}_HDB{{ db_instance_number }} \
@@ -59,11 +63,16 @@
           register:                 hana_db_resource_migration
           failed_when:              hana_db_resource_migration.rc != 0
           changed_when:             hana_db_resource_migration.rc == 0
-
-        - name:                     "Test Execution: Pause for migration to complete"
-          ansible.builtin.wait_for:
-            timeout:                200
-          when:                     automated_register.stdout != ""
+        
+        - name:                     "Test Execution: Validate HANA DB cluster status after migration."
+          when:
+            automated_register.stdout != ""
+          get_cluster_status:
+            operation_step:         "test_execution"
+          register:                 cluster_status_test_execution
+          retries:                  20
+          delay:                    10
+          until:                    cluster_status_test_execution.primary_node == cluster_status_pre.secondary_node
 
         - name:                     "Test Execution: Register Failed Resource"
           become:                   true
@@ -84,9 +93,17 @@
             action:                 "remove"
           register:                 location_constraints_results
 
-        - name:                     "Test Execution: Pause for migration to complete"
-          ansible.builtin.wait_for:
-            timeout:                100
+        - name:                     "Test Execution: Validate HANA DB cluster status during after removing location constraints."
+          get_cluster_status:
+            operation_step:         "test_execution"
+          register:                 cluster_status_test_execution
+          retries:                  10
+          delay:                    10
+          until:                    cluster_status_test_execution_1.primary_node == cluster_status_pre.secondary_node and cluster_status_test_execution_1.secondary_node == cluster_status_pre.primary_node
+
+        - name:                     "Test Execution: Stop timer"
+          ansible.builtin.set_fact:
+            test_execution_end:     "{{ now(utc=true, fmt='%Y-%m-%d %H:%M:%S') }}"
 
 # /*---------------------------------------------------------------------------
 # |                          Post Validations
@@ -116,6 +133,8 @@
             test_case_name:         "{{ item.name }}: {{ virtual_host }}"
             test_case_description:  "{{ item.description }}"
             test_case_status:       "PASSED"
+            test_case_start_time:   "{{ test_execution_start }}"
+            test_case_end_time:     "{{ test_execution_end }}"
             test_case_message:      "Old primary instance is: {{ cluster_status_pre.primary_node }} \
                                     New primary instance is: {{ cluster_status_post.primary_node }} \
                                     Old secondary instance is: {{ cluster_status_pre.secondary_node }} \
