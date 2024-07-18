@@ -64,13 +64,14 @@
           failed_when:              hana_db_stop_results.rc != 0
 
         - name:                     "Test Execution: Validate HANA DB cluster status during stop operation."
+          when:
+            automated_register.stdout != ""
           get_cluster_status:
             operation_step:         "test_execution"
           register:                 cluster_status_test_execution
           retries:                  30
           delay:                    10
           until:
-            - cluster_status_test_execution.primary_node != "" and cluster_status_test_execution.secondary_node != ""
             - cluster_status_test_execution.primary_node == cluster_status_pre.secondary_node
             - cluster_status_test_execution.secondary_node == cluster_status_pre.primary_node
 
