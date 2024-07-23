@@ -151,7 +151,7 @@ def validate_global_ini_properties(DB_SID: str, anible_os_family: str):
             },
             "REDHAT": {
                 "provider": "SAPHanaSR",
-                "path": "/usr/share/myHooks",
+                "path": "/hana/shared/myHooks",
                 "execution_order": "1",
             },
         }
