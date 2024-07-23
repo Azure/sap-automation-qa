@@ -17,7 +17,7 @@ def define_custom_parameters(module_params, cluster_properties):
         str: Value of the key from the custom dictionary
     """
     custom_parameters_values = {
-        "priority_fencing_delay": {
+        "priority-fencing-delay": {
             "SUSE": "30",
             "REDHAT": "15s",
         },
