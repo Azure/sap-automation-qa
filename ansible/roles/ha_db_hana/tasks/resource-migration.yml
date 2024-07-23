@@ -126,7 +126,7 @@
           get_cluster_status:
             operation_step:         "post_failover"
           register:                 cluster_status_post
-          retries:                  10
+          retries:                  20
           delay:                    10
           until:                    cluster_status_post.primary_node == cluster_status_pre.secondary_node and cluster_status_post.secondary_node == cluster_status_pre.primary_node
 
