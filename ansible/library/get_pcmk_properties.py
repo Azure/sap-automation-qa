@@ -28,9 +28,15 @@ def define_custom_parameters(module_params, cluster_properties):
     }
 
     cluster_properties["resources"]["msl_SAPHana"]["SID"] = module_params.get("sid")
-    cluster_properties["resources"]["msl_SAPHana"]["InstanceNumber"] = module_params.get("instance_number")
-    cluster_properties["resources"]["cln_SAPHanaTopology"]["SID"] = module_params.get("sid")
-    cluster_properties["resources"]["cln_SAPHanaTopology"]["InstanceNumber"] = module_params.get("instance_number")
+    cluster_properties["resources"]["msl_SAPHana"]["InstanceNumber"] = (
+        module_params.get("instance_number")
+    )
+    cluster_properties["resources"]["cln_SAPHanaTopology"]["SID"] = module_params.get(
+        "sid"
+    )
+    cluster_properties["resources"]["cln_SAPHanaTopology"]["InstanceNumber"] = (
+        module_params.get("instance_number")
+    )
 
     for key, value in custom_parameters_values.items():
         cluster_properties["crm_config"]["cib-bootstrap-options"][key] = value.get(
@@ -123,7 +129,7 @@ CLUSTER_PROPERTIES = {
 }
 
 REQUIRED_PARAMETERS = {
-    "pcmk_delay_max",
+    "priority-fencing-delay",
 }
 
 
