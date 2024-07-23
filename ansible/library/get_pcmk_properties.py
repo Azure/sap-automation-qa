@@ -352,25 +352,27 @@ def validate_cluster_params(cluster_properties: dict):
                                     valid_parameters[resource_operation][
                                         root_id
                                     ].append({name: value})
+        valid_parameters_json = json.dumps(valid_parameters)
+        drift_parameters_json = json.dumps(drift_parameters)
         if drift_parameters:
             return {
-                "error": f"Drift in cluster parameters: {json.dumps(drift_parameters)}. "
-                + f"Validated cluster parameters: {json.dumps(valid_parameters)}",
+                "error": f"Drift in cluster parameters: {drift_parameters_json}. "
+                + f"Validated cluster parameters: {valid_parameters_json}",
                 "status": "FAILED",
             }
         missing_parameters = [
             parameter
             for parameter in REQUIRED_PARAMETERS
-            if parameter not in valid_parameters
+            if parameter not in valid_parameters_json
         ]
         if missing_parameters:
             return {
                 "msg": f"Required parameters missing in cluster parameters: {missing_parameters}. "
-                + f"Validated cluster parameters: {json.dumps(valid_parameters)}",
+                + f"Validated cluster parameters: {valid_parameters_json}",
                 "status": "WARNING",
             }
         return {
-            "msg": f"Validated cluster parameters: {json.dumps(valid_parameters)}",
+            "msg": f"Validated cluster parameters: {valid_parameters_json}",
             "status": "PASSED",
         }
 
