@@ -418,17 +418,15 @@ def main():
     )
     action = module.params["action"]
     xml_file = module.params.get("xml_file")
-    sid = module.params.get("sid")
-    instance_number = module.params.get("instance_number")
     ansible_os_family = module.params.get("ansible_os_family")
+    cluster_properties = (
+        CLUSTER_PROPERTIES_SUSE
+        if ansible_os_family == "SUSE"
+        else CLUSTER_PROPERTIES_REDHAT
+    )
 
     custom_cluster_properties = define_custom_parameters(
-        module.params,
-        (
-            CLUSTER_PROPERTIES_SUSE
-            if ansible_os_family == "SUSE"
-            else CLUSTER_PROPERTIES_REDHAT
-        ),
+        module.params, cluster_properties
     )
 
     if action == "get":
@@ -439,7 +437,7 @@ def main():
                 cluster_properties=custom_cluster_properties
             )
             sap_hana_sr_result = validate_global_ini_properties(
-                DB_SID=sid, anible_os_family=ansible_os_family
+                DB_SID=module.params.get("sid"), anible_os_family=ansible_os_family
             )
             if any(
                 "error" in result for result in [cluster_result, sap_hana_sr_result]
