@@ -191,6 +191,9 @@ def validate_cluster_params(cluster_properties: dict):
                 encoding="utf-8",
             ) as proc:
                 xml_output = proc.stdout.read()
+            # check if xml_output is empty of not xml output
+            if not xml_output.startswith("<?xml"):
+                continue
             root = ET.fromstring(xml_output)
 
             for root_element in root:
