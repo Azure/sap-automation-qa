@@ -358,12 +358,14 @@ def validate_cluster_params(cluster_properties: dict):
                 + f"Validated cluster parameters: {json.dumps(valid_parameters)}",
                 "status": "FAILED",
             }
-        # if any of the REQUIRED_PARAMETERS ar enot in valid_parameters then return status as warning
-        if not all(
-            required_param in valid_parameters for required_param in REQUIRED_PARAMETERS
-        ):
+        missing_parameters = [
+            parameter
+            for parameter in REQUIRED_PARAMETERS
+            if parameter not in valid_parameters
+        ]
+        if missing_parameters:
             return {
-                "msg": f"Required parameters missing in cluster parameters: {REQUIRED_PARAMETERS}. "
+                "msg": f"Required parameters missing in cluster parameters: {missing_parameters}. "
                 + f"Validated cluster parameters: {json.dumps(valid_parameters)}",
                 "status": "WARNING",
             }
