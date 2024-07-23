@@ -51,5 +51,3 @@ commands:
   - name:                           resource_migration_cmd
     SUSE:                           "crm resource move msl_SAPHana_{{ db_sid | upper }}_HDB{{ db_instance_number }} {{ cluster_status_pre.secondary_node }} force"
     REDHAT:                         "pcs resource move SAPHana_{{ db_sid | upper }}_{{ db_instance_number  }}-clone --master"
-
----
