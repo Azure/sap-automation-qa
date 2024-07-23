@@ -117,11 +117,12 @@ def location_constraints_exists():
         return False
 
 
-def validate_global_ini_properties(DB_SID: str):
+def validate_global_ini_properties(DB_SID: str, anible_os_family: str):
     """Validate SAPHanaSR properties in global.ini file.
 
     Args:
         DB_SID (str): Database SID
+        anible_os_family (str): Ansible OS family
 
     Returns:
         dict: SAPHanaSR Properties
@@ -142,13 +143,20 @@ def validate_global_ini_properties(DB_SID: str):
             for prop in ha_dr_provider_SAPHnaSR_properties
         }
 
-        expected_properties_sles = {
-            "provider": "SAPHanaSR",
-            "path": "/usr/share/SAPHanaSR",
-            "execution_order": "1",
+        expected_properties = {
+            "SUSE": {
+                "provider": "SAPHanaSR",
+                "path": "/usr/share/SAPHanaSR",
+                "execution_order": "1",
+            },
+            "REDHAT": {
+                "provider": "SAPHanaSR",
+                "path": "/usr/share/myHooks",
+                "execution_order": "1",
+            },
         }
 
-        if ha_dr_provider_SAPHanaSR_dict == expected_properties_sles:
+        if ha_dr_provider_SAPHanaSR_dict == expected_properties[anible_os_family]:
             return {
                 "msg": f"SAPHanaSR Properties: {ha_dr_provider_SAPHanaSR_dict}.",
                 "status": "PASSED",
@@ -324,7 +332,9 @@ def main():
             cluster_result = validate_cluster_params(
                 cluster_properties=CLUSTER_PROPERTIES
             )
-            sap_hana_sr_result = validate_global_ini_properties(DB_SID=sid)
+            sap_hana_sr_result = validate_global_ini_properties(
+                DB_SID=sid, anible_os_family=ansible_os_family
+            )
             if any(
                 "error" in result for result in [cluster_result, sap_hana_sr_result]
             ):
