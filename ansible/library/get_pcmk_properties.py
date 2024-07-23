@@ -5,6 +5,45 @@ from collections import defaultdict
 import xml.etree.ElementTree as ET
 from ansible.module_utils.basic import AnsibleModule
 
+
+def define_custom_parameters(module_params, cluster_properties):
+    """Get custom value for certain parameters depending on user input and OS family
+
+    Args:
+        module_params (dict): Ansible module parameters
+        cluster_properties (dict): Dictionary of cluster properties
+
+    Returns:
+        str: Value of the key from the custom dictionary
+    """
+    custom_parameters_values = {
+        "priority_fencing_delay": {
+            "SUSE": "30",
+            "REDHAT": "15",
+        },
+        "stonith-timeout": {
+            "SUSE": "900s",
+            "REDHAT": "900",
+        },
+    }
+
+    cluster_properties["resources"]["msl_SAPHana"]["SID"] = module_params.get("sid")
+    cluster_properties["resources"]["msl_SAPHana"]["InstanceNumber"] = (
+        module_params.get("sid")("instance_number")
+    )
+    cluster_properties["resources"]["cln_SAPHanaTopology"]["SID"] = module_params.get(
+        "sid"
+    )
+    cluster_properties["resources"]["cln_SAPHanaTopology"]["InstanceNumber"] = (
+        module_params.get("sid")("instance_number")
+    )
+    for key, value in custom_parameters_values.items():
+        cluster_properties["crm_config"]["cib-bootstrap-options"][key] = value.get(
+            module_params.get("ansible_os_family")
+        )
+    return cluster_properties
+
+
 CLUSTER_PROPERTIES = {
     "crm_config": {
         "cib-bootstrap-options": {
@@ -77,7 +116,6 @@ CLUSTER_PROPERTIES = {
             "pcmk_reboot_timeout": "900",
             "pcmk_delay_max": "15",
             "monitor-interval": "3600",
-            "monitor-timeout": "120",
         },
         "health-azure-events": {
             "interleave": "true",
@@ -316,21 +354,16 @@ def main():
     instance_number = module.params.get("instance_number")
     ansible_os_family = module.params.get("ansible_os_family")
 
-    # load the CLUSTER_PROPERTIES dictionary with
-    # SID and InstanceNumber in the resource parameters
-    CLUSTER_PROPERTIES["resources"]["msl_SAPHana"]["SID"] = sid
-    CLUSTER_PROPERTIES["resources"]["msl_SAPHana"]["InstanceNumber"] = instance_number
-    CLUSTER_PROPERTIES["resources"]["cln_SAPHanaTopology"]["SID"] = sid
-    CLUSTER_PROPERTIES["resources"]["cln_SAPHanaTopology"][
-        "InstanceNumber"
-    ] = instance_number
+    custom_cluster_properties = define_custom_parameters(
+        module.params, CLUSTER_PROPERTIES
+    )
 
     if action == "get":
         if location_constraints_exists() and ansible_os_family == "SUSE":
             module.fail_json(changed=False, msg="Location constraints found.")
         else:
             cluster_result = validate_cluster_params(
-                cluster_properties=CLUSTER_PROPERTIES
+                cluster_properties=custom_cluster_properties
             )
             sap_hana_sr_result = validate_global_ini_properties(
                 DB_SID=sid, anible_os_family=ansible_os_family
