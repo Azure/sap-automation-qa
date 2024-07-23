@@ -91,18 +91,17 @@
           location_constraints:
             action:                 "remove"
             ansible_os_family:      "{{ ansible_os_family | upper}}"
-          register:                 location_constraints_results
-        
-        - name:                     "Test Execution: CleanUp any failed resource"
-          ansible.builtin.command:  "{{ commands | selectattr('name', 'equalto', 'resource_cleanup_cmd') | map(attribute=(ansible_os_family | upper)) | first }}"
-          register:                 cleanup_failed_resource_post
-          changed_when:             cleanup_failed_resource_post.rc == 0
+          register:                 location_constraints_result
+
+        - name:                     "Test Execution: Wait for 10 seconds"
+          ansible.builtin.wait_for:
+            timeout:                10
 
         - name:                     "Test Execution: Validate HANA DB cluster status during after removing location constraints."
           get_cluster_status:
             operation_step:         "test_execution"
           register:                 cluster_status_test_execution_1
-          retries:                  10
+          retries:                  20
           delay:                    10
           until:                    cluster_status_test_execution_1.primary_node == cluster_status_pre.secondary_node and cluster_status_test_execution_1.secondary_node == cluster_status_pre.primary_node
 
@@ -118,14 +117,18 @@
         - ansible_hostname == cluster_status_pre.primary_node
         - cluster_status_pre is defined
       block:
+        - name:                     "Post Validations: CleanUp any failed resource"
+          ansible.builtin.command:  "{{ commands | selectattr('name', 'equalto', 'resource_cleanup_cmd') | map(attribute=(ansible_os_family | upper)) | first }}"
+          register:                 cleanup_failed_resource_post
+          changed_when:             cleanup_failed_resource_post.rc == 0
+
         - name:                     "Post Validations: Validate HANA DB cluster status after migrating the HANA DB"
           get_cluster_status:
             operation_step:         "post_failover"
           register:                 cluster_status_post
           retries:                  10
           delay:                    10
-          failed_when:              cluster_status_post.primary_node == "" or cluster_status_post.secondary_node == ""
-
+          until:                    cluster_status_post.primary_node == cluster_status_pre.secondary_node and cluster_status_post.secondary_node == cluster_status_pre.primary_node
 
         - name:                     "Post Validations: Set test case status"
           delegate_to:              localhost
