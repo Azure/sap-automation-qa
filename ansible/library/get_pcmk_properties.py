@@ -6,29 +6,6 @@ import xml.etree.ElementTree as ET
 from ansible.module_utils.basic import AnsibleModule
 
 
-def define_custom_parameters(module_params, cluster_properties):
-    """Get custom value for certain parameters depending on user input and OS family
-
-    Args:
-        module_params (dict): Ansible module parameters
-        cluster_properties (dict): Dictionary of cluster properties
-
-    Returns:
-        str: Value of the key from the custom dictionary
-    """
-    cluster_properties["resources"]["msl_SAPHana"]["SID"] = module_params.get("sid")
-    cluster_properties["resources"]["msl_SAPHana"]["InstanceNumber"] = (
-        module_params.get("instance_number")
-    )
-    cluster_properties["resources"]["cln_SAPHanaTopology"]["SID"] = module_params.get(
-        "sid"
-    )
-    cluster_properties["resources"]["cln_SAPHanaTopology"]["InstanceNumber"] = (
-        module_params.get("instance_number")
-    )
-    return cluster_properties
-
-
 CLUSTER_PROPERTIES_SUSE = {
     "crm_config": {
         "cib-bootstrap-options": {
@@ -198,6 +175,27 @@ CLUSTER_PROPERTIES_REDHAT = {
 REQUIRED_PARAMETERS = {
     "priority-fencing-delay",
 }
+
+
+def define_custom_parameters(module_params, cluster_properties):
+    """Get custom value for certain parameters depending on user input and OS family
+
+    Args:
+        module_params (dict): Ansible module parameters
+        cluster_properties (dict): Dictionary of cluster properties
+
+    Returns:
+        str: Value of the key from the custom dictionary
+    """
+    cluster_properties["resources"]["SAPHana_"]["SID"] = module_params.get("sid")
+    cluster_properties["resources"]["SAPHana_"]["InstanceNumber"] = module_params.get(
+        "instance_number"
+    )
+    cluster_properties["resources"]["SAPHanaTopology"]["SID"] = module_params.get("sid")
+    cluster_properties["resources"]["SAPHanaTopology"]["InstanceNumber"] = (
+        module_params.get("instance_number")
+    )
+    return cluster_properties
 
 
 def location_constraints_exists():
