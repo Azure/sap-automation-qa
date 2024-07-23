@@ -40,7 +40,10 @@
         - name:                     "Pre Validations: CleanUp any failed resource"
           ansible.builtin.command:  "{{ commands | selectattr('name', 'equalto', 'resource_cleanup_cmd') | map(attribute=(ansible_os_family | upper)) | first }}"
           register:                 cleanup_failed_resource_pre
+          timeout:                  10
+          retries:                  3
           changed_when:             cleanup_failed_resource_pre.rc == 0
+          failed_when:              cleanup_failed_resource_pre.rc != 0
 
 # /*---------------------------------------------------------------------------
 # |                          Test Execution
