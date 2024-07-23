@@ -45,14 +45,15 @@ def remove_location_constraints(location_constraints, ansible_os_family):
         "REDHAT": "pcs",
     }
     for location_constraint in location_constraints:
-        run_command(
-            [
-                module_name[ansible_os_family],
-                "resource",
-                "clear",
-                location_constraint.attrib["rsc"],
-            ]
-        )
+        if location_constraint.attrib.get("rsc") is not None:
+            run_command(
+                [
+                    module_name[ansible_os_family],
+                    "resource",
+                    "clear",
+                    location_constraint.attrib["rsc"],
+                ]
+            )
 
 
 def location_constraints_exists():
