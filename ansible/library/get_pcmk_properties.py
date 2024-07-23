@@ -16,17 +16,6 @@ def define_custom_parameters(module_params, cluster_properties):
     Returns:
         str: Value of the key from the custom dictionary
     """
-    custom_parameters_values = {
-        "priority-fencing-delay": {
-            "SUSE": "30",
-            "REDHAT": "15s",
-        },
-        "stonith-timeout": {
-            "SUSE": "900s",
-            "REDHAT": "900",
-        },
-    }
-
     cluster_properties["resources"]["msl_SAPHana"]["SID"] = module_params.get("sid")
     cluster_properties["resources"]["msl_SAPHana"]["InstanceNumber"] = (
         module_params.get("instance_number")
@@ -37,15 +26,10 @@ def define_custom_parameters(module_params, cluster_properties):
     cluster_properties["resources"]["cln_SAPHanaTopology"]["InstanceNumber"] = (
         module_params.get("instance_number")
     )
-
-    for key, value in custom_parameters_values.items():
-        cluster_properties["crm_config"]["cib-bootstrap-options"][key] = value.get(
-            module_params.get("ansible_os_family")
-        )
     return cluster_properties
 
 
-CLUSTER_PROPERTIES = {
+CLUSTER_PROPERTIES_SUSE = {
     "crm_config": {
         "cib-bootstrap-options": {
             "have-watchdog": "false",
@@ -116,6 +100,89 @@ CLUSTER_PROPERTIES = {
             "power_timeout": "240",
             "pcmk_reboot_timeout": "900",
             "pcmk_delay_max": "15",
+            "monitor-interval": "3600",
+        },
+        "health-azure-events": {
+            "interleave": "true",
+            "allow-unhealthy-nodes": "true",
+            "failure-timeout": "120s",
+            "start-start-delay": "60s",
+            "monitor-interval": "10s",
+        },
+    },
+}
+
+CLUSTER_PROPERTIES_REDHAT = {
+    "crm_config": {
+        "cib-bootstrap-options": {
+            "have-watchdog": "false",
+            "cluster-infrastructure": "corosync",
+            "stonith-enabled": "true",
+            "concurrent-fencing": "true",
+            "stonith-timeout": "900",
+            "maintenance-mode": "false",
+            "azure-events_globalPullState": "IDLE",
+            "priority-fencing-delay": "30",
+        }
+    },
+    "rsc_defaults": {
+        "build-resource-defaults": {
+            "resource-stickiness": "1000",
+            "migration-threshold": "5000",
+            "priority": "1",
+        }
+    },
+    "op_defaults": {
+        "op-options": {
+            "timeout": "600",
+            "record-pending": "true",
+        }
+    },
+    "resources": {
+        "SAPHanaTopology": {
+            "clone-node-max": "1",
+            "target-role": "Started",
+            "interleave": "true",
+            "SID": "SID",
+            "InstanceNumber": "XX",
+            "InstanceNumber": "00",
+            "monitor-interval": "10",
+            "monitor-timeout": "600",
+            "start-interval": "0",
+            "start-timeout": "600",
+            "stop-interval": "0",
+            "stop-timeout": "300",
+        },
+        "SAPHana_": {
+            "notify": "true",
+            "clone-max": "2",
+            "clone-node-max": "1",
+            "target-role": "Started",
+            "interleave": "true",
+            "SID": "SID",
+            "InstanceNumber": "XX",
+            "PREFER_SITE_TAKEOVER": "true",
+            "DUPLICATE_PRIMARY_TIMEOUT": "7200",
+            "AUTOMATED_REGISTER": "true",
+            "start-interval": "0",
+            "start-timeout": "3600",
+            "stop-interval": "0",
+            "stop-timeout": "3600",
+            "promote-interval": "0",
+            "promote-timeout": "3600",
+            "monitor-Master-interval": "60",
+            "monitor-Master-timeout": "700",
+            "monitor-Slave-interval": "61",
+            "monitor-Slave-timeout": "700",
+            "demote-interval": "0s",
+            "demote-timeout": "320",
+        },
+        "rsc_st_azure": {
+            "pcmk_monitor_retries": "4",
+            "pcmk_action_limit": "3",
+            "power_timeout": "240",
+            "pcmk_reboot_timeout": "900",
+            "pcmk_delay_max": "15s",
             "monitor-interval": "3600",
         },
         "health-azure-events": {
@@ -356,7 +423,12 @@ def main():
     ansible_os_family = module.params.get("ansible_os_family")
 
     custom_cluster_properties = define_custom_parameters(
-        module.params, CLUSTER_PROPERTIES
+        module.params,
+        (
+            CLUSTER_PROPERTIES_SUSE
+            if ansible_os_family == "SUSE"
+            else CLUSTER_PROPERTIES_REDHAT
+        ),
     )
 
     if action == "get":
