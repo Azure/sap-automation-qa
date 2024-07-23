@@ -114,7 +114,7 @@
         - cluster_status_pre is defined
       block:
         - name:                     "Post Validations: CleanUp any failed resource"
-          ansible.builtin.command:   "{{ commands | selectattr('name', 'equalto', 'specific_resource_cleanup_cmd') | map(attribute=(ansible_os_family | upper)) | first }}"
+          ansible.builtin.command:  "{{ commands | selectattr('name', 'equalto', 'resource_cleanup_cmd') | map(attribute=(ansible_os_family | upper)) | first }}"
           register:                 cleanup_failed_resource_post
           changed_when:             cleanup_failed_resource_post.rc == 0
 
