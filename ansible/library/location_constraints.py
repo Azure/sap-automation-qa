@@ -46,7 +46,7 @@ def remove_location_constraints(location_constraints, ansible_os_family):
     }
     for location_constraint in location_constraints:
         if location_constraint.attrib.get("rsc") is not None:
-            run_command(
+            return run_command(
                 [
                     module_name[ansible_os_family],
                     "resource",
@@ -76,17 +76,18 @@ def run_module():
         action=dict(type="str", required=True),
         ansible_os_family=dict(type="str", required=False),
     )
-    result = dict(changed=False, location_constraint_removed=False)
+    result = dict(changed=False, location_constraint_removed=False, stdout="")
     module = AnsibleModule(argument_spec=module_args, supports_check_mode=True)
     if module.check_mode:
         module.exit_json(**result)
     try:
         location_constraints = location_constraints_exists()
         if location_constraints and module.params.get("action") == "remove":
-            remove_location_constraints(
+            output = remove_location_constraints(
                 location_constraints, module.params.get("ansible_os_family")
             )
             result["location_constraint_removed"] = True
+            result["stdout"] = output
             module.exit_json(msg="Location constraints removed", **result)
         else:
             module.exit_json(
