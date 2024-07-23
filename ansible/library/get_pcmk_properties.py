@@ -19,7 +19,7 @@ def define_custom_parameters(module_params, cluster_properties):
     custom_parameters_values = {
         "priority_fencing_delay": {
             "SUSE": "30",
-            "REDHAT": "15",
+            "REDHAT": "15s",
         },
         "stonith-timeout": {
             "SUSE": "900s",
