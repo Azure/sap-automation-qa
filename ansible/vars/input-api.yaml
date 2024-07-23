@@ -16,9 +16,9 @@ test_groups:
         task_name:                  ha-config
         description:                This validates the HA configuration
 
-      # - name:                       HA Functional Test- Resource Migration
-      #   task_name:                  resource-migration
-      #   description:                This runs a functional test for resource migration
+      - name:                       HA Functional Test- Resource Migration
+        task_name:                  resource-migration
+        description:                This runs a functional test for resource migration
 
       - name:                       HA Functional Test- Primary Node Crash
         task_name:                  primary-node-crash
