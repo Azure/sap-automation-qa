@@ -29,18 +29,30 @@ def run_command(cmd):
         raise Exception(str(e))
 
 
-def remove_location_constraints(location_constraints):
+def remove_location_constraints(location_constraints, ansible_os_family):
     """
     Removes the specified location constraints.
 
     Args:
         location_constraints (list): A list of location constraints to be removed.
+        ansible_os_family (str): The distribution of the Ansible host.
 
     Raises:
         Exception: If the command execution fails.
     """
+    module_name = {
+        "SUSE": "crm",
+        "REDHAT": "pcs",
+    }
     for location_constraint in location_constraints:
-        run_command(["crm", "resource", "clear", location_constraint.attrib["rsc"]])
+        run_command(
+            [
+                module_name[ansible_os_family],
+                "resource",
+                "clear",
+                location_constraint.attrib["rsc"],
+            ]
+        )
 
 
 def location_constraints_exists():
@@ -61,6 +73,7 @@ def run_module():
     """
     module_args = dict(
         action=dict(type="str", required=True),
+        ansible_os_family=dict(type="str", required=False),
     )
     result = dict(changed=False, location_constraint_removed=False)
     module = AnsibleModule(argument_spec=module_args, supports_check_mode=True)
@@ -69,7 +82,9 @@ def run_module():
     try:
         location_constraints = location_constraints_exists()
         if location_constraints and module.params.get("action") == "remove":
-            remove_location_constraints(location_constraints)
+            remove_location_constraints(
+                location_constraints, module.params.get("ansible_os_family")
+            )
             result["location_constraint_removed"] = True
             module.exit_json(msg="Location constraints removed", **result)
         else:

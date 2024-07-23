@@ -17,6 +17,7 @@
     - name:                         "Pre Validations: Remove any location_constraints"
       location_constraints:
         action:                     "remove"
+        ansible_os_family:          "{{ ansible_os_family | upper}}"
       register:                     location_constraints_results
 
     - name:                         "Pre Validations: Validate HANA DB cluster status before stopping the HANA DB"
@@ -30,15 +31,13 @@
       block:
         - name:                     "Pre Validations: Check if the AUTOMATED_REGISTER parameter is set to true"
           ansible.builtin.shell:
-            cmd: |
-                                    set -o pipefail
-                                    crm configure show | grep AUTOMATED_REGISTER=true | awk '{print $6}'
+            cmd:                    "{{ automated_register[ansible_os_family | upper] }}"
           register:                 automated_register
           changed_when:             false
           when:                     cluster_status_pre is defined
 
         - name:                     "Pre Validations: CleanUp any failed resource"
-          ansible.builtin.command:  crm resource cleanup
+          ansible.builtin.command:  "{{ resource_cleanup[ansible_os_family | upper] }}"
           register:                 cleanup_failed_resource_pre
           changed_when:             cleanup_failed_resource_pre.rc == 0
 
@@ -93,7 +92,7 @@
           changed_when:             hana_db_register_failed_resource.rc == 0
 
         - name:                     "Test Execution: CleanUp any failed resource"
-          ansible.builtin.command:  crm resource cleanup rsc_SAPHana_{{ db_sid | upper }}_HDB{{ db_instance_number }}
+          ansible.builtin.command:  "{{ specific_resource_cleanup[ansible_os_family | upper] }}"
           register:                 cleanup_failed_resource_post
           changed_when:             cleanup_failed_resource_post.rc == 0
 

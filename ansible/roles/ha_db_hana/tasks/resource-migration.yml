@@ -17,6 +17,7 @@
     - name:                         "Pre Validations: Remove any location_constraints"
       location_constraints:
         action:                     "remove"
+        ansible_os_family:          "{{ ansible_os_family | upper}}"
       register:                     location_constraints_results
 
     - name:                         "Pre Validations: Validate HANA DB cluster status before migrating the HANA DB"
@@ -30,16 +31,14 @@
       block:
         - name:                     "Pre Validations: Check if the AUTOMATED_REGISTER parameter is set to true"
           ansible.builtin.shell:
-            cmd: |
-                                    set -o pipefail
-                                    crm configure show | grep AUTOMATED_REGISTER=true | awk '{print $6}'
+            cmd:                    "{{ automated_register[ansible_os_family | upper] }}"
             executable:             /bin/bash
           register:                 automated_register
           changed_when:             false
           when:                     cluster_status_pre is defined
 
         - name:                     "Pre Validations: CleanUp any failed resource"
-          ansible.builtin.command:  crm resource cleanup
+          ansible.builtin.command:  "{{ resource_cleanup[ansible_os_family | upper] }}"
           register:                 cleanup_failed_resource_pre
           changed_when:             cleanup_failed_resource_pre.rc == 0
 
@@ -58,9 +57,7 @@
             test_execution_start:   "{{ now(utc=true, fmt='%Y-%m-%d %H:%M:%S') }}"
 
         - name:                     "Test Execution: Move the resource to the targeted node"
-          ansible.builtin.command: |
-                                    crm resource move msl_SAPHana_{{ db_sid | upper }}_HDB{{ db_instance_number }} \
-                                    {{ cluster_status_pre.secondary_node }} force
+          ansible.builtin.command:  "{{ resource_migration[ansible_os_family | upper] }}"
           register:                 hana_db_resource_migration
           failed_when:              hana_db_resource_migration.rc != 0
           changed_when:             hana_db_resource_migration.rc == 0
@@ -93,6 +90,7 @@
         - name:                     "Test Execution: Remove any location_constraints"
           location_constraints:
             action:                 "remove"
+            ansible_os_family:   "{{ ansible_os_family | upper}}"
           register:                 location_constraints_results
 
         - name:                     "Test Execution: Validate HANA DB cluster status during after removing location constraints."
@@ -116,7 +114,7 @@
         - cluster_status_pre is defined
       block:
         - name:                     "Post Validations: CleanUp any failed resource"
-          ansible.builtin.command:  crm resource cleanup rsc_SAPHana_{{ db_sid | upper }}_HDB{{ db_instance_number }}
+          ansible.builtin.command:  "{{ specific_resource_cleanup[ansible_os_family | upper] }}"
           register:                 cleanup_failed_resource_post
           changed_when:             cleanup_failed_resource_post.rc == 0
 

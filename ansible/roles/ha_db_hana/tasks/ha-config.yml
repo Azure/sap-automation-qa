@@ -15,6 +15,7 @@
         action:                         get
         sid:                            "{{ db_sid | upper }}"
         instance_number:                "{{ db_instance_number }}"
+        ansible_os_family:              "{{ ansible_os_family | upper }}"
       register:                         test_result
 
     - name:                             "Set the test case status to PASSED"

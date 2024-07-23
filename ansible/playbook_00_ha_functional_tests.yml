@@ -40,7 +40,7 @@
 
     - name:                            "Set the test group name based on the inputs"
       ansible.builtin.set_fact:
-        test_group_name:               "{{ sap_functional_test_type_map | selectattr('name', 'equalto', sap_functional_test_type) | map(attribute='value') | first }}_{{ platform | upper }}_{{ ansible_os_family | upper }}"
+        test_group_name:               "{{ sap_functional_test_type_map | selectattr('name', 'equalto', sap_functional_test_type) | map(attribute='value') | first }}_{{ platform | upper }}"
       run_once: true
 
     - name:                            Set the test group facts
@@ -73,7 +73,7 @@
         - name:                        "Read the log file and create a HTML report"
           render_html_report:
             test_group_invocation_id:  "{{ test_group_invocation_id }}"
-            test_group_name:           "{{ test_group_name }}"
+            test_group_name:           "{{ test_group_name }}_{{ ansible_os_family | upper }}"
             report_template:           "{{ html_report_template }}"
             workspace_directory:       "{{ _workspace_directory }}"
           register:                    report_file_path

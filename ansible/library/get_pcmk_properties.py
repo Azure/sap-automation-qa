@@ -296,12 +296,14 @@ def main():
             xml_file=dict(type="str"),
             sid=dict(type="str"),
             instance_number=dict(type="str"),
+            ansible_os_family=dict(type="str"),
         )
     )
     action = module.params["action"]
     xml_file = module.params.get("xml_file")
     sid = module.params.get("sid")
     instance_number = module.params.get("instance_number")
+    ansible_os_family = module.params.get("ansible_os_family")
 
     # load the CLUSTER_PROPERTIES dictionary with
     # SID and InstanceNumber in the resource parameters
@@ -313,7 +315,7 @@ def main():
     ] = instance_number
 
     if action == "get":
-        if location_constraints_exists():
+        if location_constraints_exists() and ansible_os_family == "SUSE":
             module.fail_json(changed=False, msg="Location constraints found.")
         else:
             cluster_result = validate_cluster_params(
