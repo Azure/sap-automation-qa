@@ -64,7 +64,7 @@
           register:                 hana_db_resource_migration
           failed_when:              hana_db_resource_migration.rc != 0
           changed_when:             hana_db_resource_migration.rc == 0
-        
+
         - name:                     "Test Execution: Validate HANA DB cluster status after migration."
           when:
             automated_register.stdout != ""
@@ -95,6 +95,7 @@
             ansible_os_family:      "{{ ansible_os_family | upper}}"
           register:                 location_constraints_result
 
+        # This is required because the cluster reports incorrect location constraints after the location constraints is removed.
         - name:                     "Test Execution: Wait for 100 seconds to cluster to stabilize and show the correct status"
           ansible.builtin.wait_for:
             timeout:                100
@@ -156,7 +157,7 @@
                                       "Post Validations: CleanUp any failed resource": "{{ cleanup_failed_resource_post }}",
                                       "Post Validations: Validate HANA DB cluster status": "{{ cluster_status_post }}",
                                     }
-        
+
         - name:                     "Post Telemetry Data"
           ansible.builtin.include_tasks: "roles/misc/tasks/post-telemetry-data.yml"
 
@@ -168,7 +169,7 @@
         test_case_status:           "FAILED"
         test_case_message:          "{{ ansible_failed_result }}"
         test_case_details:          "{{ ansible_failed_result }}"
-    
+
     - name:                         "Post Telemetry Data"
       ansible.builtin.include_tasks: "roles/misc/tasks/post-telemetry-data.yml"
       run_once:                     true
