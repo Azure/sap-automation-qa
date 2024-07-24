@@ -71,7 +71,7 @@
           get_cluster_status:
             operation_step:         "test_execution"
           register:                 cluster_status_test_execution
-          retries:                  20
+          retries:                  30
           delay:                    10
           failed_when:              false
           until:                    cluster_status_test_execution.primary_node == cluster_status_pre.secondary_node and cluster_status_test_execution.secondary_node == ""
@@ -129,7 +129,7 @@
           get_cluster_status:
             operation_step:         "post_failover"
           register:                 cluster_status_post
-          retries:                  20
+          retries:                  30
           delay:                    10
           until:                    cluster_status_post.primary_node == cluster_status_pre.secondary_node and cluster_status_post.secondary_node == cluster_status_pre.primary_node
 
