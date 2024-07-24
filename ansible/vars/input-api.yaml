@@ -43,7 +43,7 @@ commands:
 
   - name: resource_cleanup_cmd
     SUSE: "crm resource cleanup"
-    REDHAT: "pcs resource cleanup"
+    REDHAT: "crm_resource --cleanup"
 
   - name: specific_resource_cleanup_cmd
     SUSE: "crm resource cleanup rsc_SAPHana_{{ db_sid | upper }}_HDB{{ db_instance_number }}"

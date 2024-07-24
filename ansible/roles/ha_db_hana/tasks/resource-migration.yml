@@ -95,15 +95,11 @@
             ansible_os_family:      "{{ ansible_os_family | upper}}"
           register:                 location_constraints_result
 
-        - name:                     "Test Execution: Wait for 200 seconds"
-          ansible.builtin.wait_for:
-            timeout:                200
-
         - name:                     "Test Execution: Validate HANA DB cluster status during after removing location constraints."
           get_cluster_status:
             operation_step:         "test_execution"
           register:                 cluster_status_test_execution_1
-          retries:                  20
+          retries:                  30
           delay:                    10
           until:                    cluster_status_test_execution_1.primary_node == cluster_status_pre.secondary_node and cluster_status_test_execution_1.secondary_node == cluster_status_pre.primary_node
 

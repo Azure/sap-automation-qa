@@ -59,6 +59,11 @@
         group_name:                    "{{ test_group_name }}"
       when:
         - test_group_name is defined
+    
+    - name:                            "Cluster report from the HA cluster"
+      ansible.builtin.command:         "crm_report -f {{ test_group_start_time }} -t {{ now(utc=true, fmt='%Y-%m-%d %H:%M:%S') }} --dest {{ _workspace_directory }}/logs/{{ test_group_invocation_id }}.zip"
+      run_once:                        true
+      register:                        cluster_report_results
 
     - name:                            "Create HTML report and upload it to storage account"
       run_once:                        true
