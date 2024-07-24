@@ -1,28 +1,4 @@
----
-##########################################################################################
-#                   Task to get the cluster report from the primary instance             #
-#                 after all the test cases have been executed.                           #
-##########################################################################################
-- name:                               Get the cluster status"
-  get_cluster_status:
-    operation_step:                   "cluster_report_collection"
-  register:                           cluster_status
-  failed_when:                        cluster_status.primary_node == "" or cluster_status.secondary_node == ""
-
-- name:                               "Get the cluster report from the primary node, copy it to localhost and remove the report from the primary node"
-  when:                               cluster_status.primary_node == ansible_hostname
-  block:
-    - name:                           "Cluster report from the HA cluster"
-      ansible.builtin.command:        "crm_report -f {{ test_group_start_time }} --dest /tmp/cluster_report/{{ test_group_invocation_id }}"
-      register:                       cluster_report_results
-
-    - name:                           "Copy the cluster report to the local machine"
-      ansible.builtin.fetch:
-        src:                          "/tmp/cluster_report/{{ test_group_invocation_id }}"
-        dest:                         "{{ _workspace_directory }}/cluster_report/{{ test_group_invocation_id }}"
-      changed_when:                   false
-    
-    - name:                           "Remove the cluster report from the primary node"
-      ansible.builtin.file:
-        state:                        absent
-        path:                         "/tmp/cluster_report/{{ test_group_invocation_id }}*"
+    - name:                            "Cluster report from the HA cluster"
+      ansible.builtin.include_tasks:   "./roles/misc/tasks/cluster_report.yml"
+      when:
+        - test_group_name is defined
