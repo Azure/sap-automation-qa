@@ -20,8 +20,8 @@
 
     - name:                           "Copy the cluster report to the local machine"
       ansible.builtin.fetch:
-        src:                          "/tmp/cluster_report/{{ test_group_invocation_id }}"
-        dest:                         "{{ _workspace_directory }}/cluster_report/{{ test_group_invocation_id }}.tar.bz2"
+        src:                          "/tmp/cluster_report/{{ test_group_invocation_id }}.tar.bz2"
+        dest:                         "{{ _workspace_directory }}/cluster_report/{{ test_group_invocation_id }}"
       changed_when:                   false
     
     - name:                           "Remove the cluster report from the primary node"
