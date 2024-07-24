@@ -15,7 +15,7 @@
   when:                             "'db' in inventory_hostname"
   block:
     - name:                         "Pre Validations: Remove any location_constraints"
-      location_constraints:
+      remove_location_constraints:
         action:                     "remove"
         ansible_os_family:          "{{ ansible_os_family | upper}}"
       register:                     location_constraints_results
