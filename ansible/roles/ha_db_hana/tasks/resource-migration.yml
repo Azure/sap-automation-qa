@@ -95,16 +95,9 @@
             ansible_os_family:      "{{ ansible_os_family | upper}}"
           register:                 location_constraints_result
 
-        - name:                     "Test Execution: CleanUp failed resource"
-          ansible.builtin.command:  "{{ commands | selectattr('name', 'equalto', 'resource_cleanup_cmd') | map(attribute=(ansible_os_family | upper)) | first }}"
-          register:                 cleanup_failed_resource_post
-          timeout:                  10
-          retries:                  5
-          until:                    cleanup_failed_resource_post.rc == 0
-
-        - name:                     "Test Execution: Wait for 20 seconds"
+        - name:                     "Test Execution: Wait for 200 seconds"
           ansible.builtin.wait_for:
-            timeout:                20
+            timeout:                200
 
         - name:                     "Test Execution: Validate HANA DB cluster status during after removing location constraints."
           get_cluster_status:
@@ -126,6 +119,11 @@
         - ansible_hostname == cluster_status_pre.primary_node
         - cluster_status_pre is defined
       block:
+        - name:                     "Post Validations: CleanUp any failed resource"
+          ansible.builtin.command:  "{{ commands | selectattr('name', 'equalto', 'resource_cleanup_cmd') | map(attribute=(ansible_os_family | upper)) | first }}"
+          register:                 cleanup_failed_resource_post
+          changed_when:             cleanup_failed_resource_post.rc == 0
+
         - name:                     "Post Validations: Validate HANA DB cluster status after migrating the HANA DB"
           get_cluster_status:
             operation_step:         "post_failover"
