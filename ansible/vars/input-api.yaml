@@ -47,7 +47,7 @@ commands:
 
   - name: specific_resource_cleanup_cmd
     SUSE: "crm resource cleanup rsc_SAPHana_{{ db_sid | upper }}_HDB{{ db_instance_number }}"
-    REDHAT: "pcs resource cleanup rsc_SAPHana_{{ db_sid | upper }}_HDB{{ db_instance_number }}"
+    REDHAT: "pcs resource cleanup SAPHana_{{ db_sid | upper }}_HDB{{ db_instance_number }}"
 
   - name: resource_migration_cmd
     SUSE: "crm resource move msl_SAPHana_{{ db_sid | upper }}_HDB{{ db_instance_number }} {{ cluster_status_pre.secondary_node }} force"

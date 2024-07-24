@@ -84,7 +84,6 @@
           become:                   true
           become_user:              "{{ db_sid | lower }}adm"
           when:
-            - cluster_status_pre is defined
             - automated_register.stdout == ""
           ansible.builtin.command: |
                                     hdbnsutil -sr_register \
