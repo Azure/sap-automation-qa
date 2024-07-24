@@ -4,12 +4,14 @@
 #                 after all the test cases have been executed.                           #
 ##########################################################################################
 - name:                               Get the cluster status"
+  become:                             true
   get_cluster_status:
     operation_step:                   "cluster_report_collection"
   register:                           cluster_status
   failed_when:                        cluster_status.primary_node == "" or cluster_status.secondary_node == ""
 
 - name:                               "Get the cluster report from the primary node, copy it to localhost and remove the report from the primary node"
+  become:                             true
   when:                               cluster_status.primary_node == ansible_hostname
   block:
     - name:                           "Cluster report from the HA cluster"
