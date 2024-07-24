@@ -15,7 +15,7 @@
   when:                               cluster_status.primary_node == ansible_hostname
   block:
     - name:                           "Cluster report from the HA cluster"
-      ansible.builtin.command:        "crm_report -f {{ test_group_start_time }} --dest /tmp/cluster_report/{{ test_group_invocation_id }}"
+      ansible.builtin.command:        "crm_report -f '{{ test_group_start_time }}' --dest /tmp/cluster_report/{{ test_group_invocation_id }}"
       register:                       cluster_report_results
 
     - name:                           "Copy the cluster report to the local machine"
