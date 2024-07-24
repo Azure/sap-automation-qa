@@ -15,7 +15,7 @@
   when:                             "'db' in inventory_hostname"
   block:
     - name:                         "Pre Validations: Remove any location_constraints"
-      remove_location_constraints:
+      rm_location_constraints:
         action:                     "remove"
         ansible_os_family:          "{{ ansible_os_family | upper}}"
       register:                     location_constraints_results
@@ -90,7 +90,7 @@
           changed_when:             hana_db_register_failed_resource.rc == 0
 
         - name:                     "Test Execution: Remove any location_constraints"
-          remove_location_constraints:
+          rm_location_constraints:
             action:                 "remove"
             ansible_os_family:      "{{ ansible_os_family | upper}}"
           register:                 location_constraints_result
