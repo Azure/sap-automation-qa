@@ -20,7 +20,7 @@
 
     - name:                           "Copy the cluster report to the local machine"
       ansible.builtin.fetch:
-        src:                          "/tmp/cluster_report/{{ test_group_invocation_id }}{% if ansible_os_family == 'RedHat' %}.tar.bz2{% endif %}"
+        src:                          "/tmp/{{ test_group_invocation_id }}{% if ansible_os_family == 'RedHat' %}.tar.bz2{% endif %}"
         dest:                         "{{ _workspace_directory }}/logs/"
         flat:                         yes
       changed_when:                   false
