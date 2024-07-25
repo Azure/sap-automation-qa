@@ -189,21 +189,26 @@ def define_custom_parameters(module_params, cluster_properties):
     """
     if module_params.get("ansible_os_family") == "SUSE":
         cluster_properties["resources"]["msl_SAPHana"]["SID"] = module_params.get("sid")
-        cluster_properties["resources"]["msl_SAPHana"]["InstanceNumber"] = module_params.get(
-            "instance_number"
+        cluster_properties["resources"]["msl_SAPHana"]["InstanceNumber"] = (
+            module_params.get("instance_number")
         )
-        cluster_properties["resources"]["cln_SAPHanaTopology"]["SID"] = module_params.get("sid")
+        cluster_properties["resources"]["cln_SAPHanaTopology"]["SID"] = (
+            module_params.get("sid")
+        )
         cluster_properties["resources"]["cln_SAPHanaTopology"]["InstanceNumber"] = (
             module_params.get("instance_number")
         )
     else:
         cluster_properties["resources"]["SAPHana_"]["SID"] = module_params.get("sid")
-        cluster_properties["resources"]["SAPHana_"]["InstanceNumber"] = module_params.get(
-            "instance_number"
+        cluster_properties["resources"]["SAPHana_"]["InstanceNumber"] = (
+            module_params.get("instance_number")
         )
-        cluster_properties["resources"]["SAPHanaTopology"]["SID"] = module_params.get("sid")
+        cluster_properties["resources"]["SAPHanaTopology"]["SID"] = module_params.get(
+            "sid"
+        )
         cluster_properties["resources"]["SAPHanaTopology"]["InstanceNumber"] = (
             module_params.get("instance_number")
+        )
     return cluster_properties
 
 
