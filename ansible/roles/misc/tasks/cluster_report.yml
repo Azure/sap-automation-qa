@@ -20,7 +20,7 @@
 
     - name:                           "Copy the cluster report to the local machine"
       ansible.builtin.fetch:
-        src:                          "/tmp/{{ test_group_invocation_id }}{% if ansible_os_family == 'RedHat' %}.tar.bz2{% elif ansible_os_family == 'SUSE' %}.tar.gz{% endif %}"
+        src:                          "/tmp/{{ test_group_invocation_id }}{% if ansible_os_family == 'RedHat' %}.tar.bz2{% elif ansible_os_family == 'Suse' %}.tar.gz{% endif %}"
         dest:                         "{{ _workspace_directory }}/logs/"
         flat:                         yes
       changed_when:                   false
@@ -28,4 +28,4 @@
     - name:                           "Remove the cluster report from the primary node"
       ansible.builtin.file:
         state:                        absent
-        path:                         "/tmp/{{ test_group_invocation_id }}{% if ansible_os_family == 'RedHat' %}.tar.bz2{% elif ansible_os_family == 'SUSE' %}.tar.gz{% endif %}"
+        path:                         "/tmp/{{ test_group_invocation_id }}{% if ansible_os_family == 'RedHat' %}.tar.bz2{% elif ansible_os_family == 'Suse' %}.tar.gz{% endif %}"
