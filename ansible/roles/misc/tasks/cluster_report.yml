@@ -12,14 +12,10 @@
 
 - name:                               "Get the cluster report from the primary node, copy it to localhost and remove the report from the primary node"
   become:                             true
-  when:                               cluster_status.primary_node == ansible_hostname
+  when:                               cluster_status is defined and cluster_status.primary_node == ansible_hostname
   block:
-    - name:                           "debug"
-      ansible.builtin.debug:
-        msg:                          "crm_report -f '{{ test_group_start_time }}' --dest /tmp/{{ test_group_invocation_id }}"
-
     - name:                           "Cluster report from the HA cluster"
-      ansible.builtin.shell:          "crm_report -f '{{ test_group_start_time }}' --dest /tmp/{{ test_group_invocation_id }}"
+      ansible.builtin.command:        "{{ commands | selectattr('name', 'equalto', 'crm_report_cmd') | map(attribute=(ansible_os_family | upper)) | first }}"
       register:                       cluster_report_results
 
     - name:                           "Copy the cluster report to the local machine"

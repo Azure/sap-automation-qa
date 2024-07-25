@@ -46,4 +46,4 @@ commands:
 
   - name:                           crm_report_cmd
     SUSE:                           "crm_report -f '{{ test_group_start_time }}' /tmp/{{ test_group_invocation_id }}"
-    REDHAT:                         "crm_report -f '{{ test_group_start_time }}' --dest /tmp/{{ test_group_invocation_id }}"
+    REDHAT:                         "crm_report -f '{{ test_group_start_time }}' --dest /tmp/{{ test_group_invocation_id }} -y"
