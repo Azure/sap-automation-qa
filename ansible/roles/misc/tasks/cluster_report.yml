@@ -8,7 +8,7 @@
   get_cluster_status:
     operation_step:                   "cluster_report_collection"
   register:                           cluster_status
-  failed_when:                        cluster_status.primary_node == "" or cluster_status.secondary_node == ""
+  failed_when:                        cluster_status.primary_node == ""
 
 - name:                               "Get the cluster report from the primary node, copy it to localhost and remove the report from the primary node"
   become:                             true
