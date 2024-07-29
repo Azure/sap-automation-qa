@@ -84,7 +84,18 @@ def run_module():
             result["count"] = count
             result["cluster_status"] = cluster_status.decode("utf-8").strip()
             cluster_status_xml = ET.fromstring(cluster_status)
-            if cluster_status_xml.find("pacemakerd").attrib["state"] != "running":
+            if cluster_status_xml.find("pacemakerd") is None:
+                pacemakerd_state = (
+                    cluster_status_xml.find("summary")
+                    .find("stack")
+                    .attrib.get("pacemakerd-state")
+                )
+            else:
+                pacemakerd_state = cluster_status_xml.find("pacemakerd").attrib.get(
+                    "state"
+                )
+
+            if pacemakerd_state != "running":
                 return {"error": "pacemakerd is not running"}
             else:
                 result["status"] = "running"
