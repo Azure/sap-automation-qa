@@ -14,7 +14,7 @@
     test_case_status:                 "Starting"
     package_versions:                 "Pacemaker: {{ ansible_facts.packages['pacemaker'] | default('Not Found') }}
                                         Resource Agent: {{ ansible_facts.packages['resource-agents'] | default('Not Found') }}
-                                        Fencing Agent: {{ ansible_facts.packages['fence-agents-azure-arm'] | default('Not Found') }}
+                                        Fencing Agent: {{ ansible_facts.packages['fence-agents'] | default('Not Found') }}
                                         SAPHanaSR: {{ ansible_facts.packages['SAPHanaSR'] | default('Not Found') }}"
     test_case_details:                {}
     test_case_message:                "Test case execution started"
