@@ -4,6 +4,20 @@
 # |                           HA Testing Framework                            |
 # |                                                                            |
 # +------------------------------------4--------------------------------------*/
+- hosts:                               localhost
+  gather_facts:                        true
+  name:                                "Setup deployer for HA Testing Framework"
+  vars_files:
+    - "./vars/input-api.yaml"
+  tasks:
+    - name:                            "Install python azure pacakges required for rendering azure telemetry data"
+      delegate_to:                     localhost
+      ansible.builtin.pip:
+        name:
+          - azure-kusto-data
+          - azure-kusto-ingest
+      become:                          True
+
 - hosts:                               "{{ sap_sid | upper }}_DB"
   name:                                "Host tasks"
   gather_facts:                        true
@@ -37,14 +51,6 @@
       ansible.builtin.debug:
         msg:                           "ipAddress: {{ item.ipAddress }} | interfaceName: {{ item.interfaceName }} | Subnet: {{ item.subnet }}"
       loop:                            "{{ network_info_parsed | list }}"
-
-    - name:                            "Install python azure pacakges required for rendering azure telemetry data"
-      delegate_to:                     localhost
-      ansible.builtin.pip:
-        name:
-          - azure-kusto-data
-          - azure-kusto-ingest
-      become:                          True
 
     - name:                            "Set the test group name based on the inputs"
       ansible.builtin.set_fact:
