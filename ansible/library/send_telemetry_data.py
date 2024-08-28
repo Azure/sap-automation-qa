@@ -200,7 +200,7 @@ def run_module():
         telemetry_data_destination=dict(type="str", required=True),
         laws_workspace_id=dict(type="str", required=False),
         laws_shared_key=dict(type="str", required=False),
-        telemetry_table_name=dict(type="str", required=True),
+        telemetry_table_name=dict(type="str", required=False),
         adx_database_name=dict(type="str", required=False),
         adx_cluster_fqdn=dict(type="str", required=False),
         adx_client_id=dict(type="str", required=False),
