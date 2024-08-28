@@ -12,7 +12,7 @@
     adx_database_name:                "{{ adx_database_name | default('') }}"
     adx_cluster_fqdn:                 "{{ adx_cluster_fqdn | default('') }}"
     adx_client_id:                    "{{ adx_client_id | default('') }}"
-    telemetry_table_name:             "{{ telemetry_table_name }}"
+    telemetry_table_name:             "{{ telemetry_table_name | default('') }}"
     workspace_directory:              "{{ _workspace_directory }}"
     test_group_json_data:             {
                                         "TestCaseInvocationId": "{{ test_case_invocation_id }}",
