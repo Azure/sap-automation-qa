@@ -38,6 +38,14 @@
         msg:                           "ipAddress: {{ item.ipAddress }} | interfaceName: {{ item.interfaceName }} | Subnet: {{ item.subnet }}"
       loop:                            "{{ network_info_parsed | list }}"
 
+    - name:                            "Install python azure pacakges required for rendering azure telemetry data"
+      ansible.builtin.pip:
+        name:                          "{{ item }}"
+        state:                         present
+      loop:
+        - "azure-kusto-data"
+        - "azure-kusto-ingest"
+
     - name:                            "Set the test group name based on the inputs"
       ansible.builtin.set_fact:
         test_group_name:               "{{ sap_functional_test_type_map | selectattr('name', 'equalto', sap_functional_test_type) | map(attribute='value') | first }}_{{ platform | upper }}"

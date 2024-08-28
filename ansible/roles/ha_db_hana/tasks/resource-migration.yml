@@ -12,7 +12,7 @@
 # /*---------------------------------------------------------------------------
 - name:                             "Pre Validations: DB Nodes"
   become:                           true
-  when:                             "'db' in inventory_hostname"
+  when:                             node_tier == "hana"
   block:
     - name:                         "Pre Validations: Remove any location_constraints"
       location_constraints:
