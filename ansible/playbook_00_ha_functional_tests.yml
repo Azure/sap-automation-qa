@@ -39,11 +39,11 @@
       loop:                            "{{ network_info_parsed | list }}"
 
     - name:                            "Install python azure pacakges required for rendering azure telemetry data"
-      become:                          true
       ansible.builtin.pip:
         name:
           - azure-kusto-data
           - azure-kusto-ingest
+      become:                          True
 
     - name:                            "Set the test group name based on the inputs"
       ansible.builtin.set_fact:
