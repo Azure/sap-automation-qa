@@ -7,6 +7,7 @@
   become:                             true
   get_cluster_status:
     operation_step:                   "cluster_report_collection"
+    database_sid:                     "{{ db_sid | lower }}"
   register:                           cluster_status
   failed_when:                        cluster_status.primary_node == ""
 

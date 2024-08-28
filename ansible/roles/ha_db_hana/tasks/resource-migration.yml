@@ -23,6 +23,7 @@
     - name:                         "Pre Validations: Validate HANA DB cluster status before migrating the HANA DB"
       get_cluster_status:
         operation_step:             "pre_failover"
+        database_sid:               "{{ db_sid | lower }}"
       register:                     cluster_status_pre
       failed_when:                  cluster_status_pre.primary_node == "" or cluster_status_pre.secondary_node == ""
 
@@ -70,6 +71,7 @@
             automated_register.stdout != ""
           get_cluster_status:
             operation_step:         "test_execution"
+            database_sid:           "{{ db_sid | lower }}"
           register:                 cluster_status_test_execution
           retries:                  30
           delay:                    10
@@ -103,6 +105,7 @@
         - name:                     "Test Execution: Validate HANA DB cluster status during after removing location constraints."
           get_cluster_status:
             operation_step:         "test_execution"
+            database_sid:           "{{ db_sid | lower }}"
           register:                 cluster_status_test_execution_1
           retries:                  30
           delay:                    10
@@ -128,6 +131,7 @@
         - name:                     "Post Validations: Validate HANA DB cluster status after migrating the HANA DB"
           get_cluster_status:
             operation_step:         "post_failover"
+            database_sid:           "{{ db_sid | lower }}"
           register:                 cluster_status_post
           retries:                  30
           delay:                    10

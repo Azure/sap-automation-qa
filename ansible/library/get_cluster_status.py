@@ -15,21 +15,8 @@ from ansible.module_utils.basic import AnsibleModule
 import xml.etree.ElementTree as ET
 from datetime import datetime
 
-attribute_actions = {
-    ("hana_hdb_clone_state", "PROMOTED"): lambda node: {
-        "primary_node": node.attrib["name"]
-    },
-    ("hana_hdb_sync_state", "PRIM"): lambda node: {"primary_node": node.attrib["name"]},
-    ("hana_hdb_clone_state", "DEMOTED"): lambda node: {
-        "secondary_node": node.attrib["name"]
-    },
-    ("hana_hdb_sync_state", "SOK"): lambda node: {
-        "secondary_node": node.attrib["name"]
-    },
-}
 
-
-def check_node(node):
+def check_node(node, database_sid):
     """Checks the attributes of a node and returns the corresponding action based on the attribute value.
 
     Args:
@@ -39,6 +26,20 @@ def check_node(node):
         dict: A dictionary containing the action to be taken based on the attribute value.
 
     """
+    attribute_actions = {
+        (f"hana_{database_sid}_clone_state", "PROMOTED"): lambda node: {
+            "primary_node": node.attrib["name"]
+        },
+        (f"hana_{database_sid}_sync_state", "PRIM"): lambda node: {
+            "primary_node": node.attrib["name"]
+        },
+        (f"hana_{database_sid}_clone_state", "DEMOTED"): lambda node: {
+            "secondary_node": node.attrib["name"]
+        },
+        (f"hana_{database_sid}_sync_state", "SOK"): lambda node: {
+            "secondary_node": node.attrib["name"]
+        },
+    }
     for attribute in node:
         action = attribute_actions.get(
             (attribute.attrib["name"], attribute.attrib["value"])
@@ -61,6 +62,7 @@ def run_module():
     """
     module_args = dict(
         operation_step=dict(type="str", required=True),
+        database_sid=dict(type="str", required=True),
     )
 
     result = {
@@ -75,6 +77,7 @@ def run_module():
     }
 
     module = AnsibleModule(argument_spec=module_args, supports_check_mode=True)
+    database_sid = module.params["database_sid"]
 
     try:
         count = 0
@@ -120,7 +123,8 @@ def run_module():
             node_attributes = cluster_status_xml.find("node_attributes")
             with concurrent.futures.ThreadPoolExecutor() as executor:
                 futures = [
-                    executor.submit(check_node, node) for node in node_attributes
+                    executor.submit(check_node, node, database_sid)
+                    for node in node_attributes
                 ]
                 for future in concurrent.futures.as_completed(futures):
                     result.update(future.result())
@@ -128,7 +132,7 @@ def run_module():
         if result["primary_node"] == "" or result["secondary_node"] == "":
             module.fail_json(
                 msg="Pacemaker cluster is not stable and does not have primary node or secondary node",
-                **result
+                **result,
             )
     except Exception as e:
         module.fail_json(msg=str(e), **result)
