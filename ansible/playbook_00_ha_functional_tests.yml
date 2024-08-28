@@ -40,11 +40,9 @@
 
     - name:                            "Install python azure pacakges required for rendering azure telemetry data"
       ansible.builtin.pip:
-        name:                          "{{ item }}"
-        state:                         present
-      loop:
-        - "azure-kusto-data"
-        - "azure-kusto-ingest"
+        name:
+          - azure-kusto-data
+          - azure-kusto-ingest
 
     - name:                            "Set the test group name based on the inputs"
       ansible.builtin.set_fact:
