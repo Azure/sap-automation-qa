@@ -73,7 +73,7 @@
         group_name:                    "{{ test_group_name }}"
       when:
         - test_group_name is defined
-    
+
     - name:                            "Cluster report from the HA cluster"
       ansible.builtin.include_tasks:   "./roles/misc/tasks/cluster_report.yml"
       when:
