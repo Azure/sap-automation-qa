@@ -103,6 +103,39 @@ def send_telemetry_data_to_azuredataexplorer(telemetry_json_data, module_params)
         raise ex
 
 
+def validate_params(module_params):
+    """
+    Validate the telemetry data destination parameters.
+
+    Args:
+        module_params (Ansible Module Parameters): The parameters for the Ansible module.
+
+    Returns:
+        boolean: True if the parameters are valid, False otherwise.F
+    """
+    telemetry_data_destination = module_params.get("telemetry_data_destination")
+
+    if telemetry_data_destination == "azureloganalytics":
+        if (
+            "laws_workspace_id" not in module_params
+            or "laws_shared_key" not in module_params
+        ):
+            return False
+    elif telemetry_data_destination == "azuredataexplorer":
+        required_params = [
+            "adx_database_name",
+            "telemetry_table_name",
+            "adx_cluster_fqdn",
+            "adx_client_id",
+        ]
+        missing_params = [
+            param for param in required_params if param not in module_params
+        ]
+        if missing_params:
+            return False
+    return True
+
+
 def send_telemetry_data_to_azureloganalytics(telemetry_json_data, module_params):
     """
     Sends telemetry data to Azure Log Analytics Workspace.
@@ -200,6 +233,10 @@ def run_module():
 
     # Send telemetry data to the destination
     if module.params["telemetry_data_destination"]:
+        if not validate_params(module.params):
+            result["status"] = (
+                "Invalid parameters for telemetry data destination. Data will not be sent."
+            )
         try:
             method_name = (
                 "send_telemetry_data_to_" + module.params["telemetry_data_destination"]
