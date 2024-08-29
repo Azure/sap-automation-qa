@@ -7,9 +7,6 @@
 # sap_sid is the application SID
 sap_sid:                       X00
 
-# web_sid is the Web Dispatcher SID (if applicable)
-web_sid:                       X00
-
 # scs_high_availability is a boolean flag indicating
 # if the SAP Central Services are deployed using high availability
 scs_high_availability:         true
