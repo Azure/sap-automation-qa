@@ -9,7 +9,7 @@ TEST_TYPE:                  SAPFunctionalTests
 
 # SAP Functional Test Tier
 # Options: Database High Availability, Central Services High Availability
-sap_functional_test_type:   Database High Availability
+sap_functional_test_type:   DatabaseHighAvailability
 
 # SAP System Configuration
 # String: Name of the SAP system configuration to be tested (Location: WORKSPACES/SYSTEM/DEV-WEEU-SAP01-X00 directory)

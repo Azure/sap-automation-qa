@@ -34,8 +34,6 @@ database_cluster_type:         AFA
 #############################################################################
 # MSI should have Get and List secrets permissions on the Key Vault
 sap_user_name:                "azureadm"
-managed_identity_resource_id: "resource_id"
 keyvault_resource_id:         "kyevault_name"
-ssh_key_secret_name:          "ssh_secret_name"
-ssh_password_secret_name:     "ssh_password_secret_name"
+keyvault_secret_name:         "ssh_secret_name"
 ...
