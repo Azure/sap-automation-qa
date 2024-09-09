@@ -28,6 +28,7 @@
       ansible.builtin.package:
         name:                          acl
         state:                         present
+
     - name:                            "Enable profile_tasks callback plugin"
       ansible.builtin.set_fact:
         ansible_callbacks:
