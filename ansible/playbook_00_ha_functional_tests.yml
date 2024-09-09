@@ -10,8 +10,6 @@
   gather_facts:                        true
   vars_files:
     - "./vars/input-api.yaml"
-  vars:
-    ansible_python_interpreter:        "{{ PYTHON_VENV_PATH }}/bin/"
   tasks:
     - name:                            "Enable profile_tasks callback plugin"
       ansible.builtin.set_fact:
