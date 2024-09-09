@@ -10,6 +10,10 @@
   vars_files:
     - "./vars/input-api.yaml"
   tasks:
+    - name: "Ensure virtualenv is installed"
+      become: true
+      ansible.builtin.pip:
+        name: virtualenv
     - name:                            "Install python azure pacakges required for rendering azure telemetry data"
       become:                          true
       ansible.builtin.pip:
