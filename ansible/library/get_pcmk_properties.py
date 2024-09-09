@@ -230,7 +230,9 @@ def location_constraints_exists():
             encoding="utf-8",
         ) as proc:
             xml_output = proc.stdout.read()
-        return ET.fromstring(xml_output).find(".//rsc_location") is not None
+        if ET.fromstring(xml_output).find(".//rsc_location") is not None:
+            return ET.fromstring(xml_output).find(".//rsc_location")
+        return False
     except subprocess.CalledProcessError:
         return False
 
@@ -297,12 +299,12 @@ def validate_global_ini_properties(DB_SID: str, anible_os_family: str):
         }
 
 
-def validate_cluster_params(cluster_properties: dict):
+def validate_cluster_params(cluster_properties: dict, ansible_os_family: str):
     """Validate pacemaker cluster parameters for DB and SCS
 
     Args:
         cluster_properties (dict): Dictionary of recommended values of cluster properties
-
+        ansible_os_family (str): Ansible OS family
     Returns:
         dict: Validated cluster parameters
     """
@@ -368,12 +370,6 @@ def validate_cluster_params(cluster_properties: dict):
                                     ].append({name: value})
         valid_parameters_json = json.dumps(valid_parameters)
         drift_parameters_json = json.dumps(drift_parameters)
-        if drift_parameters:
-            return {
-                "error": f"Drift in cluster parameters: {drift_parameters_json}. "
-                + f"Validated cluster parameters: {valid_parameters_json}",
-                "status": "FAILED",
-            }
         missing_parameters = [
             parameter
             for parameter in REQUIRED_PARAMETERS
@@ -385,6 +381,25 @@ def validate_cluster_params(cluster_properties: dict):
                 + f"Validated cluster parameters: {valid_parameters_json}",
                 "status": "WARNING",
             }
+
+        location_constraints = location_constraints_exists()
+        error_messages = []
+        if drift_parameters:
+            error_messages.append(
+                f"Drift in cluster parameters: {drift_parameters_json}"
+            )
+
+        if location_constraints and ansible_os_family == "SUSE":
+            error_messages.append(
+                f"Location constraints detected {location_constraints}"
+            )
+        if error_messages:
+            return {
+                "error": " ".join(error_messages)
+                + f". Validated cluster parameters: {valid_parameters_json}",
+                "status": "FAILED",
+            }
+
         return {
             "msg": f"Validated cluster parameters: {valid_parameters_json}",
             "status": "PASSED",
@@ -446,28 +461,24 @@ def main():
     )
 
     if action == "get":
-        if location_constraints_exists() and ansible_os_family == "SUSE":
-            module.fail_json(changed=False, msg="Location constraints found.")
-        else:
-            cluster_result = validate_cluster_params(
-                cluster_properties=custom_cluster_properties
-            )
-            sap_hana_sr_result = validate_global_ini_properties(
-                DB_SID=module.params.get("sid"), anible_os_family=ansible_os_family
-            )
-            if any(
-                "error" in result for result in [cluster_result, sap_hana_sr_result]
-            ):
-                error_messages = [
-                    result["error"]
-                    for result in [cluster_result, sap_hana_sr_result]
-                    if "error" in result
-                ]
-                module.fail_json(msg=", ".join(error_messages))
-            module.exit_json(
-                msg=f"{cluster_result['msg']}, {sap_hana_sr_result['msg']}",
-                status=cluster_result["status"],
-            )
+        cluster_result = validate_cluster_params(
+            cluster_properties=custom_cluster_properties,
+            ansible_os_family=ansible_os_family,
+        )
+        sap_hana_sr_result = validate_global_ini_properties(
+            DB_SID=module.params.get("sid"), anible_os_family=ansible_os_family
+        )
+        if any("error" in result for result in [cluster_result, sap_hana_sr_result]):
+            error_messages = [
+                result["error"]
+                for result in [cluster_result, sap_hana_sr_result]
+                if "error" in result
+            ]
+            module.fail_json(msg=", ".join(error_messages))
+        module.exit_json(
+            msg=f"{cluster_result['msg']}, {sap_hana_sr_result['msg']}",
+            status=cluster_result["status"],
+        )
 
     elif action == "visualize":
         if xml_file is None:
