@@ -110,7 +110,7 @@ This contains of the password, in plain text, for the SAP system hosts.
 
 ### Supported scenarios
 
-| SAP Stack | SAP Stack Type  | Cluster Type | High Availability |
+| SAP Tier | SAP Tier Type  | Cluster Type | High Availability |
 | :----------- | :------------ | :------------ | :------------- |
 | Central Services       |     NA     | Azure Fencing Agent         | Yes |
 | Database       |      HANA    | Azure Fencing Agent         | Yes |
