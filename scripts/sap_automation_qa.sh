@@ -8,6 +8,9 @@ command_exists() {
     command -v "$1" &> /dev/null
 }
 
+RED='\033[0;31m'
+GREEN='\033[0;32m'
+
 # Function to validate input parameters from vars.yaml
 validate_params() {
     local missing_params=()
@@ -49,18 +52,6 @@ install_package() {
     fi
 }
 
-# Check if ansible is installed, if not, install it
-install_az_cli() {
-    $package_name="az"
-    if ! command_exists "$package_name"; then
-        echo "$package_name is not installed. Installing now..."
-        # Assuming the use of a Debian-based system
-        sudo apt update && sudo apt install "azure-cli" -y
-    else
-        echo "$package_name is already installed."
-    fi
-}
-
 # Main script execution
 echo "Validating input parameters..."
 validate_params
@@ -74,9 +65,9 @@ echo "Checking Ansible installation..."
 install_package "ansible"
 echo "Ansible installation checked."
 
-echo "Checking Az CLI installation..."
-install_az_cli
-echo "Az CLI installation checked."
+echo "Checking sshpass installation..."
+install_package "sshpass"
+echo "sshpass installation checked."
 
 echo "Enable python virtual environment..."
 install_package "python3-venv"
@@ -90,31 +81,32 @@ SYSTEM_HOSTS="$SYSTEM_CONFIG_FOLDER/hosts.yaml"
 SYSTEM_PARAMS="$SYSTEM_CONFIG_FOLDER/sap-parameters.yaml"
 TEST_TIER=$(echo "$TEST_TIER" | tr '[:upper:]' '[:lower:]')
 
-echo "Using inventory: $SYSTEM_HOSTS."
-echo "Using SAP parameters: $SYSTEM_PARAMS."
-echo "Using AUthentication Type: $AUTHENTICATION_TYPE."
+
+echo -e "${GREEN}Using inventory: $SYSTEM_HOSTS."
+echo -e "${GREEN}Using SAP parameters: $SYSTEM_PARAMS."
+echo -e "${GREEN}Using AUthentication Type: $AUTHENTICATION_TYPE."
 
 if [[ ! -f "$SYSTEM_HOSTS" ]]; then
-    echo "Error: hosts.yaml not found in WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME directory."
+    echo -e "${RED}Error: hosts.yaml not found in WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME directory."
     exit 1
 fi
 
 if [[ ! -f "$SYSTEM_PARAMS" ]]; then
-    echo "Error: sap-parameters.yaml not found in WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME directory."
+    echo -e "${RED}Error: sap-parameters.yaml not found in WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME directory."
     exit 1
 fi
 
 if [[ "$AUTHENTICATION_TYPE" == "SSHKEY" ]]; then
     ssh_key="../WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME/ssh_key.ppk"
-    echo "Using SSH key: $ssh_key."
+    echo -e "${GREEN}Using SSH key: $ssh_key."
     command="ansible-playbook ../ansible/playbook_00_ha_functional_tests.yml -i $SYSTEM_HOSTS --private-key $ssh_key -e @$VARS_FILE -e @$SYSTEM_PARAMS -e '_workspace_directory=$SYSTEM_CONFIG_FOLDER'"
 else
-    echo "Using password authentication."
+    echo -e "${GREEN}Using password authentication."
     command="ansible-playbook ../ansible/playbook_00_ha_functional_tests.yml -i $SYSTEM_HOSTS --extra-vars "ansible_ssh_pass=$(cat ../WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME/password)" --extra-vars @$VARS_FILE -e @$SYSTEM_PARAMS -e '_workspace_directory=$SYSTEM_CONFIG_FOLDER'"
 fi
 
-echo "Running ansible playbook..."
-echo "Executing: $command"
+echo -e "${GREEN}Running ansible playbook..."
+echo -e "${GREEN}Executing: $command"
 eval $command
 return_code=$?
 echo "Ansible playbook execution completed."
