@@ -23,6 +23,8 @@
   gather_facts:                        true
   vars_files:
     - "./vars/input-api.yaml"
+  vars:
+    anibles_python_interpreter:        "/usr/bin/python3"
   tasks:
     - name:                            "Enable profile_tasks callback plugin"
       ansible.builtin.set_fact:
