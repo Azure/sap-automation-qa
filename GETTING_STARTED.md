@@ -20,23 +20,32 @@ A Linux jump host must be running on Azure with connectivity to the SAP system's
 Optionally, configure a data factory, such as Azure Log Analytics or Azure Data Explorer, where test results can be stored in a tabular structure for further analysis.
 
 ## How to run the test cases for you SAP system?
-1. Clone the HA Testing Framework repository on Linux machine, which has connectivity to your SAP systems:
+1. Log in to the Linux Virtual Machine:
+Access the Linux virtual machine (jump box) that has connectivity to your SAP systems and log in as the root user.
+
+2. Clone the HA Testing Framework Repository:
+On the logged-in Linux machine, clone the HA Testing Framework repository:
 ```
 git clone https://github.com/devanshjainms/sap-automaiton-qa.git
 ```
-2. Configure the test environment by updating the test configuration file `vars.yaml` in the root directory. The details about the parameters defined in the file are mentioned in the [test configuration](#test-configuration-file) section.
-3. Navigate to the WORKSPACES/SYSTEM directory and update the SAP system configuration based on the specifications mentioned in the [WORKSPACES](#workspaces) section. You can refer to an example configuration in the WORKSPACES/SYSTEM/DEV-WEEU-SAP01-X00 directory:
+3. Configure the Test Environment:
+Update the test configuration file vars.yaml located in the root directory to set up the test environment. Detailed information about the parameters defined in this file can be found in the [Test Configuration File](#test-configuration-file) section.
+
+4. Set Up SAP System Configuration:
+Navigate to the WORKSPACES/SYSTEM directory and configure your SAP system based on the specifications outlined in the [WORKSPACES](#workspaces) section. You can reference an example configuration in the [WORKSPACES/SYSTEM/DEV-WEEU-SAP01-X00](./WORKSPACES/SYSTEM/DEV-WEEU-SAP01-X00/) directory:
 ```
 cd WORKSPACES/SYSTEM
 mkdir ENV-REGION-VNET-SID
 cd ENV-REGION-VNET-SID
 ```
-4. Navigate to the scripts directory and execute the run_tests.sh script:
+5. Execute the Test Script:
+Navigate to the scripts directory and run the sap_automation_qa.sh script:
 ```
 cd scripts
 ./sap_automation_qa.sh
 ```
-5. After the test execution completes, an HTML report is generated in the WORKSPACES/SYSTEM/SYSTEM_CONFIG_NAME/quality_assurance/ directory. You can copy and view this report in a web browser. Optionally, you can send data to Azure Log Analytics or Azure Data Explorer by setting the telemetry_data_destination variable in the vars.yaml file, more details about this are provided in the WORKSPACES section.
+6. View Test Results:
+After the test execution completes, an HTML report will be generated in the WORKSPACES/SYSTEM/SYSTEM_CONFIG_NAME/quality_assurance/ directory. You can copy and view this report in a web browser. Additionally, if you wish to send data to Azure Log Analytics or Azure Data Explorer, set the telemetry_data_destination variable in the vars.yaml file. More details on this can be found in the [WORKSPACES](#workspaces) section.
 
 ## Test configuration file
 
@@ -60,7 +69,7 @@ This file contains the variables used in the test cases. The vars.yaml file cont
 - ade_client_id: The client ID of the Azure Data Explorer.
 
 ## WORKSPACES
-This diectory consists of your SAP system-specific configuration files required to connect to the SAP system, and execute the test scenarios. A WORKSPACE/SYSTEM/ is a directory that contains system-specific sub-directories, that is, each directory in this directory represents a SAP system. Each of this system directory contains the following files:
+This directory contains the configuration files specific to your SAP system, necessary for connecting to the system and executing test scenarios. The WORKSPACE/SYSTEM/ directory holds sub-directories, each representing a different SAP system. Each of these system-specific directories should have the following files:
 
 1. `hosts.yaml` File (required)
 This file contains the connection properties of the SAP system hosts. This file acts as a [inventory file](https://docs.ansible.com/ansible/latest/inventory_guide/intro_inventory.html) for the ansible framework to connect to the SAP system. Example of a inventory file:
