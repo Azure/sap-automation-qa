@@ -100,7 +100,7 @@ def run_module():
                 )
 
             if pacemakerd_state != "running":
-                return {"error": "pacemakerd is not running"}
+                result["msg"] = "pacemakerd is not running"
             else:
                 result["status"] = "running"
 
@@ -131,7 +131,9 @@ def run_module():
                     result.update(future.result())
 
         if result["primary_node"] == "" or result["secondary_node"] == "":
-            result["msg"] = "Pacemaker cluster is not stable and does not have primary node or secondary node"
+            result["msg"] = (
+                "Pacemaker cluster is not stable and does not have primary node or secondary node"
+            )
             module.fail_json(**result)
     except Exception as e:
         result["msg"] = str(e)
