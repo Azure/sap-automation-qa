@@ -62,7 +62,7 @@
         - name:                     "Test Execution: Stop the HANA DB"
           become:                   true
           become_user:              "{{ db_sid | lower }}adm"
-          ansible.builtin.command:  /usr/sap/{{ db_sid | upper }}/HDB{{ db_instance_number }}/HDB stop
+          ansible.builtin.command:  HDB stop
           register:                 hana_db_stop_results
           changed_when:             hana_db_stop_results == 0
           failed_when:              hana_db_stop_results.rc != 0
