@@ -7,6 +7,7 @@ VARS_FILE="../vars.yaml"
 command_exists() {
     command -v "$1" &> /dev/null
 }
+export ANSIBLE_HOST_KEY_CHECKING=False
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
