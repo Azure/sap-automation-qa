@@ -72,6 +72,8 @@ sudo apt update -y
 echo "Enable python virtual environment..."
 python3 -m venv ../.venv
 source ../.venv/bin/activate
+# Get the complete path of the virtual environment
+VIRTUAL_ENV_PATH=$(realpath ../.venv)
 apt install python3-azure-kusto-data -y
 apt install python3-azure-kusto-ingest -y
 echo "Python virtual environment enabled."
@@ -100,10 +102,10 @@ fi
 if [[ "$AUTHENTICATION_TYPE" == "SSHKEY" ]]; then
     ssh_key="../WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME/ssh_key.ppk"
     echo -e "${GREEN}Using SSH key: $ssh_key."
-    command="ansible-playbook ../ansible/playbook_00_ha_functional_tests.yml -i $SYSTEM_HOSTS --private-key $ssh_key -e @$VARS_FILE -e @$SYSTEM_PARAMS -e '_workspace_directory=$SYSTEM_CONFIG_FOLDER'"
+    command="ansible-playbook ../ansible/playbook_00_ha_functional_tests.yml -i $SYSTEM_HOSTS --private-key $ssh_key -e @$VARS_FILE -e @$SYSTEM_PARAMS -e '_workspace_directory=$SYSTEM_CONFIG_FOLDER' -e 'PYTHON_VENV_PATH=$VIRTUAL_ENV_PATH'"
 else
     echo -e "${GREEN}Using password authentication."
-    command="ansible-playbook ../ansible/playbook_00_ha_functional_tests.yml -i $SYSTEM_HOSTS --extra-vars "ansible_ssh_pass=$(cat ../WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME/password)" --extra-vars @$VARS_FILE -e @$SYSTEM_PARAMS -e '_workspace_directory=$SYSTEM_CONFIG_FOLDER'"
+    command="ansible-playbook ../ansible/playbook_00_ha_functional_tests.yml -i $SYSTEM_HOSTS --extra-vars "ansible_ssh_pass=$(cat ../WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME/password)" --extra-vars @$VARS_FILE -e @$SYSTEM_PARAMS -e '_workspace_directory=$SYSTEM_CONFIG_FOLDER' -e 'PYTHON_VENV_PATH=$VIRTUAL_ENV_PATH'"
 fi
 
 echo -e "${GREEN}Running ansible playbook..."
