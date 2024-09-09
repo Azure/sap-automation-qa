@@ -11,12 +11,11 @@
     - "./vars/input-api.yaml"
   tasks:
     - name:                            "Install python azure pacakges required for rendering azure telemetry data"
-      delegate_to:                     localhost
+      become:                          true
       ansible.builtin.pip:
         name:
           - azure-kusto-data
           - azure-kusto-ingest
-      become:                          True
 
 - hosts:                               "{{ sap_sid | upper }}_DB"
   name:                                "Host tasks"

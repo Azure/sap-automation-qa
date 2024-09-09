@@ -220,7 +220,7 @@ def run_module():
     # Create log files named invocation id for the test group invocation and
     # append all the test case result to the file
     try:
-        log_folder = f"/{module.params['workspace_directory']}/logs"
+        log_folder = f"{module.params['workspace_directory']}/logs"
         os.makedirs(log_folder, exist_ok=True)
         with open(
             f"{log_folder}/{telemetry_data['TestGroupInvocationId']}.log", "a"
@@ -232,7 +232,7 @@ def run_module():
         module.fail_json(msg=f"Error writing to log file {e}", **result)
 
     # Send telemetry data to the destination
-    if module.params["telemetry_data_destination"]:
+    if module.params["telemetry_data_destination"] in ["azureloganalytics", "azuredataexplorer"]:
         if not validate_params(module.params):
             result["status"] = (
                 "Invalid parameters for telemetry data destination. Data will not be sent."

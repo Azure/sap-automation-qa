@@ -55,7 +55,6 @@ This file contains the variables used in the test cases. The vars.yaml file cont
   - SAPFunctionalTests
 - sap_functional_test_type: The type of SAP functional test to be executed. Supported values are:
   - DatabaseHighAvailability
-  - CentralServicesHighAvailability
 - SYSTEM_CONFIG_NAME: The name of the SAP system configuration for which you want to execute the test cases.
 - ssh_key_from_kv: Boolean indicating if the SSH key is stored in Azure Key Vault.
 - telemetry_data_destination: The destination of the telemetry data. Supported values are:
@@ -95,16 +94,19 @@ X00_DB:
       become_user: root
       os_type: linux
       vm_name: AZURE_VM_NAME_2
+  vars:
+    node_tier: hana
 ```
 `X00` is the SAP SID of the SAP system followed by the host type (DB, ASCS, PAS, etc.). The `hosts.yaml` file contains the following information:
 - `ansible_host`: The IP address of the host.
 - `ansible_user`: The user to connect to the host.
 - `ansible_connection`: The connection type.
-- `connection_type`: The type of connection.
+- `connection_type`: The type of connection. Applicable only when using ssh key for connection, while using password, this should not be specified.
 - `virtual_host`: The virtual host name of the SCS/DB host.
 - `become_user`: The user with root privileges.
 - `os_type`: The operating system type (Linux/Windows).
 - `vm_name`: The computer name of the Azure VM.
+- `node_tier`: This defines the type of node tier. Supported values: hana, ers, scs
 
 Please refer to an example `hosts.yaml` in the `WORKSPACES/SYSTEM/DEV-WEEU-SAP01-X00/hosts.yaml` file.
 
