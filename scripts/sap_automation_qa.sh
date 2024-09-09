@@ -72,10 +72,6 @@ sudo apt update -y
 echo "Enable python virtual environment..."
 python3 -m venv ../.venv
 source ../.venv/bin/activate
-# Get the complete path of the virtual environment
-VIRTUAL_ENV_PATH=$(realpath ../.venv)
-apt install python3-azure-kusto-data -y
-apt install python3-azure-kusto-ingest -y
 echo "Python virtual environment enabled."
 
 # Check if the SYSTEM_HOSTS and SYSTEM_PARAMS directory exists inside the WORKSPACES/SYSTEM folder
