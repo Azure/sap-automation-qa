@@ -10,9 +10,14 @@ The HA Testing Framework consists of the following components:
 - WORKSPACES: SAP system-specific configuration files, including inventory files, configuration files, and connection keys required to connect to the SAP system. Please refer to the [WORKSPACES](#workspaces) section for more details.
 
 ## Pre-requisites to run the HA Testing Framework
-- SAP system hosted on Azure cloud, configured with the high availability configuration. The supported scenarios are mentioned [here](#supported-scenarios). (required)
-- A linux jump host running on Azure that has connectivity to the SAP system's virtual network. (required)
-- A data factory, either Azure Log Analytics or Azure Data Exploerer where you want to have your test results stored in tabular structure. (optional)
+- SAP System on Azure Cloud (Required):
+Your SAP system must be hosted on the Azure cloud and configured with high availability. For supported high availability configurations, please refer to the supported scenarios. 
+
+- Linux Jump Host (Required):
+A Linux jump host must be running on Azure with connectivity to the SAP system's virtual network. This host will facilitate secure management and access to the SAP environment.
+
+- Data Storage for Test Results (Optional):
+Optionally, configure a data factory, such as Azure Log Analytics or Azure Data Explorer, where test results can be stored in a tabular structure for further analysis.
 
 ## How to run the test cases for you SAP system?
 1. Clone the HA Testing Framework repository on Linux machine, which has connectivity to your SAP systems:
