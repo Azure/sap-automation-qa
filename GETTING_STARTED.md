@@ -9,12 +9,17 @@ The HA Testing Framework consists of the following components:
 - Scripts to help execute the test cases
 - WORKSPACES: SAP system-specific configuration files, including inventory files, configuration files, and connection keys required to connect to the SAP system. Please refer to the [WORKSPACES](#workspaces) section for more details.
 
+## Pre-requisites to run the HA Testing Framework
+- SAP system hosted on Azure cloud, configured with the high availability configuration. The supported scenarios are mentioned [here](#supported-scenarios). (required)
+- A linux jump host running on Azure that has connectivity to the SAP system's virtual network. (required)
+- A data factory, either Azure Log Analytics or Azure Data Exploerer where you want to have your test results stored in tabular structure. (optional)
+
 ## How to run the test cases for you SAP system?
 1. Clone the HA Testing Framework repository on Linux machine, which has connectivity to your SAP systems:
 ```
 git clone https://github.com/devanshjainms/sap-automaiton-qa.git
 ```
-2. Configure the test environment by updating the test configuration file `vars.yaml` in the root directory.
+2. Configure the test environment by updating the test configuration file `vars.yaml` in the root directory. The details about the parameters defined in the file are mentioned in the [test configuration](#test-configuration-file) section.
 3. Navigate to the WORKSPACES/SYSTEM directory and update the SAP system configuration based on the specifications mentioned in the [WORKSPACES](#workspaces) section. You can refer to an example configuration in the WORKSPACES/SYSTEM/DEV-WEEU-SAP01-X00 directory:
 ```
 cd WORKSPACES/SYSTEM
@@ -102,3 +107,10 @@ This file contains the private key used to connect to the SAP system hosts. The 
 
 4. `password` File (optional)
 This contains of the password, in plain text, for the SAP system hosts.
+
+### Supported scenarios
+
+| SAP Stack | SAP Stack Type  | Cluster Type | High Availability |
+| :----------- | :------------ | :------------ | :------------- |
+| Central Services       |     NA     | Azure Fencing Agent         | Yes |
+| Database       |      HANA    | Azure Fencing Agent         | Yes |
