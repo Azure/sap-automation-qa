@@ -46,33 +46,31 @@ install_package() {
     if ! command_exists "$package_name"; then
         echo "$package_name is not installed. Installing now..."
         # Assuming the use of a Debian-based system
-        sudo apt update && sudo apt install "$package_name" -y
+        sudo apt install "$package_name" -y
     else
         echo "$package_name is already installed."
     fi
 }
+
+echo "Starting SAP Automation QA script..."
 
 # Main script execution
 echo "Validating input parameters..."
 validate_params
 echo "Input parameters validated."
 
-echo "Checking pip installation..."
-install_package "python3-pip"
-echo "python3-pip installation checked."
+sudo apt update -y
+packages=("python3-pip" "ansible" "sshpass" "python3-venv")
 
-echo "Checking Ansible installation..."
-install_package "ansible"
-echo "Ansible installation checked."
-
-echo "Checking sshpass installation..."
-install_package "sshpass"
-echo "sshpass installation checked."
+for package in "${packages[@]}"; do
+    echo "Checking $package installation ..."
+    install_package "$package"
+done
 
 echo "Enable python virtual environment..."
-install_package "python3-venv"
 python3 -m venv ../.venv
 source ../.venv/bin/activate
+pip install azure-kusto-data azure-kusto-ingest
 echo "Python virtual environment enabled."
 
 # Check if the SYSTEM_HOSTS and SYSTEM_PARAMS directory exists inside the WORKSPACES/SYSTEM folder

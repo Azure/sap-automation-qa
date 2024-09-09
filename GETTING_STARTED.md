@@ -27,6 +27,7 @@ Access the Linux virtual machine (jump box) that has connectivity to your SAP sy
 On the logged-in Linux machine, clone the HA Testing Framework repository:
 ```
 git clone https://github.com/devanshjainms/sap-automaiton-qa.git
+cd sap-automation-qa
 ```
 3. Configure the Test Environment:
 Update the test configuration file vars.yaml located in the root directory to set up the test environment. Detailed information about the parameters defined in this file can be found in the [Test Configuration File](#test-configuration-file) section.

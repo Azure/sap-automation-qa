@@ -4,18 +4,6 @@
 # |                           HA Testing Framework                            |
 # |                                                                            |
 # +------------------------------------4--------------------------------------*/
-- hosts:                               localhost
-  gather_facts:                        true
-  name:                                "Setup deployer for HA Testing Framework"
-  vars_files:
-    - "./vars/input-api.yaml"
-  tasks:
-    - name:                            "Install python azure pacakges required for rendering azure telemetry data"
-      become:                          true
-      ansible.builtin.pip:
-        name:
-          - azure-kusto-data
-          - azure-kusto-ingest
 
 - hosts:                               "{{ sap_sid | upper }}_DB"
   name:                                "Host tasks"
