@@ -16,6 +16,7 @@
         name:
           - azure-kusto-data
           - azure-kusto-ingest
+        virtualenv:                           "{{ _workspace_directory }}/.venv"
 
 - hosts:                               "{{ sap_sid | upper }}_DB"
   name:                                "Host tasks"
