@@ -46,7 +46,7 @@ install_package() {
     if ! command_exists "$package_name"; then
         echo "$package_name is not installed. Installing now..."
         # Assuming the use of a Debian-based system
-        sudo apt install "$package_name" -y
+        apt install "$package_name" -y
     else
         echo "$package_name is already installed."
     fi
@@ -72,7 +72,7 @@ sudo apt update -y
 echo "Enable python virtual environment..."
 python3 -m venv ../.venv
 source ../.venv/bin/activate
-apt-install python3-azure-kusto-data python3-azure-kusto-ingest -y
+apt install python3-azure-kusto-data python3-azure-kusto-ingest -y
 echo "Python virtual environment enabled."
 
 # Check if the SYSTEM_HOSTS and SYSTEM_PARAMS directory exists inside the WORKSPACES/SYSTEM folder
