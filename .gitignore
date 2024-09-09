@@ -402,3 +402,6 @@ FodyWeavers.xsd
 .venv
 
 .vscode
+
+WORKSPACES/*
+*.yaml

@@ -6,6 +6,7 @@ from ansible.module_utils.basic import AnsibleModule
 import json
 from datetime import datetime
 import jinja2
+import os
 
 
 def run_module():
@@ -49,7 +50,7 @@ def run_module():
                 result["TestCaseDetails"] = str(result["TestCaseDetails"]).replace(
                     "\n", " "
                 )
-
+        os.makedirs(f"{workspace_directory}/quality_assurance", exist_ok=True)
         # Load the template and render the report with the test case results
         template_content = jinja2.Template(module.params["report_template"])
         with open(f"{report_path}", "w") as report_file:

@@ -10,49 +10,31 @@ command_exists() {
 
 # Function to validate input parameters from vars.yaml
 validate_params() {
-    # Read each line from vars.yaml
-    while IFS=": " read -r key value; do
-        case "$key" in
-            "TEST_TYPE")
-                if [[ -z "$value" ]]; then
-                    echo "TEST_TYPE cannot be empty"
-                    exit 1
-                else
-                    TEST_TYPE="$value"
-                    echo "TEST_TYPE: $value"
-                fi
-                ;;
-            "TEST_TIER")
-                if [[ -z "$value" ]]; then
-                    echo "TEST_TIER cannot be empty"
-                    exit 1
-                else
-                    TEST_TIER="$value"
-                    echo "TEST_TIER: $value"
-                fi
-                ;;
-            "SYSTEM_CONFIG_NAME")
-                if [[ -z "$value" ]]; then
-                    echo "SYSTEM_CONFIG_NAME cannot be empty"
-                    exit 1
-                else
-                    echo "SYSTEM_CONFIG_NAME: $value"
-                    SYSTEM_CONFIG_NAME="$value"
-                fi
-                ;;
-            "TELEMETRY_DATA_DESTINATION")
-                if [[ -z "$value" ]]; then
-                    echo "TELEMETRY_DATA_DESTINATION cannot be empty"
-                    exit 1
-                else
-                    echo "TELEMETRY_DATA_DESTINATION: $value"
-                fi
-                ;;
-            # Add more parameter validations as needed
-            *)
-                ;;
-        esac
-    done < "$VARS_FILE" || { echo "Error: $VARS_FILE not found."; exit 1; }
+    local missing_params=()
+    local params=("TEST_TYPE" "SYSTEM_CONFIG_NAME" "sap_functional_test_type")
+
+    # Check if vars.yaml exists
+    if [ ! -f "$VARS_FILE" ]; then
+        echo "Error: $VARS_FILE not found."
+        exit 1
+    fi
+
+    for param in "${params[@]}"; do
+        # Use grep to find the line and awk to split the line and get the value
+        value=$(grep "^$param:" "$VARS_FILE" | awk '{split($0,a,": "); print a[2]}')
+
+        if [[ -z "$value" ]]; then
+            missing_params+=("$param")
+        else
+            echo "$param: $value"
+            declare -g "$param=$value"
+        fi
+    done
+
+    if [ ${#missing_params[@]} -ne 0 ]; then
+        echo "Error: The following parameters cannot be empty: ${missing_params[*]}"
+        exit 1
+    fi
 }
 
 # Check if ansible is installed, if not, install it
@@ -84,6 +66,10 @@ echo "Validating input parameters..."
 validate_params
 echo "Input parameters validated."
 
+echo "Checking pip installation..."
+install_package "python3-pip"
+echo "python3-pip installation checked."
+
 echo "Checking Ansible installation..."
 install_package "ansible"
 echo "Ansible installation checked."
@@ -96,7 +82,6 @@ echo "Enable python virtual environment..."
 install_package "python3-venv"
 python3 -m venv ../.venv
 source ../.venv/bin/activate
-pip install -r ../requirements.txt
 echo "Python virtual environment enabled."
 
 # Check if the SYSTEM_HOSTS and SYSTEM_PARAMS directory exists inside the WORKSPACES/SYSTEM folder
@@ -118,28 +103,17 @@ if [[ ! -f "$SYSTEM_PARAMS" ]]; then
     exit 1
 fi
 
-# Check if the ssh_key is to be fethed from the Azure Key Vault
-SSH_KEY_KV=$(grep -Po 'ssh_key_from_keyvault: \K.*' $SYSTEM_PARAMS)
-
-if [[ "$SSH_KEY_KV" == "true" ]]; then
-    # Read the MSI_CLIENT_ID from the SYSTEM_PARAMS file form the parameter name managed_identity_resource_id
-    SUBSCRIPTION_ID=$(grep -Po 'subscription_id: \K.*' $SYSTEM_PARAMS)
-    SSH_KEY_SECRET_NAME=$(grep -Po 'ssh_key_secret_name: \K.*' $SYSTEM_PARAMS)
-    KEY_VAULT_NAME=$(grep -Po 'keyvault_resource_id: \K.*' $SYSTEM_PARAMS)
-    echo "UBSCRIPTION_ID: $SUBSCRIPTION_ID KEY_VAULT_NAME: $KEY_VAULT_NAME SSH_KEY_SECRET_NAME: $SSH_KEY_SECRET_NAME"
-
-    az login --identity --allow-no-subscriptions --output none
-    ssh_key=$(az keyvault secret show --name "$SSH_KEY_SECRET_NAME" --vault-name "$KEY_VAULT_NAME" --query value -o tsv)
-    echo "SSH key retrieved."
-else
+if [[ "$AUTHENTICATION_TYPE" == "SSHKEY" ]]; then
     # Set the ssk key path to the default filename in WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME directory
     ssh_key="../WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME/ssh_key.ppk"
     echo "Using SSH key: $ssh_key."
+    command="ansible-playbook ../ansible/playbook_00_ha_functional_tests.yml -i $SYSTEM_HOSTS --private-key $ssh_key -e @$VARS_FILE -e @$SYSTEM_PARAMS -e '_workspace_directory=$SYSTEM_CONFIG_FOLDER'"
+else
+    echo "Using password authentication."
+    command="ansible-playbook ../ansible/playbook_00_ha_functional_tests.yml -i $SYSTEM_HOSTS --extra-vars @$VARS_FILE -e @$SYSTEM_PARAMS -e '_workspace_directory=$SYSTEM_CONFIG_FOLDER'"
 fi
 
 echo "Running ansible playbook..."
-# Proceed with running ansible playbook using the inventory from the verified directory
-command="ansible-playbook ../ansible/playbook_00_ha_functional_tests.yml -i $SYSTEM_HOSTS --private-key $ssh_key -e @$VARS_FILE -e @$SYSTEM_PARAMS -e '_workspace_directory=$SYSTEM_CONFIG_FOLDER'"
 echo "Executing: $command"
 eval $command
 return_code=$?
