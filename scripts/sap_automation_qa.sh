@@ -11,7 +11,7 @@ command_exists() {
 # Function to validate input parameters from vars.yaml
 validate_params() {
     local missing_params=()
-    local params=("TEST_TYPE" "SYSTEM_CONFIG_NAME" "sap_functional_test_type")
+    local params=("TEST_TYPE" "SYSTEM_CONFIG_NAME" "sap_functional_test_type" "AUTHENTICATION_TYPE")
 
     # Check if vars.yaml exists
     if [ ! -f "$VARS_FILE" ]; then
@@ -21,7 +21,7 @@ validate_params() {
 
     for param in "${params[@]}"; do
         # Use grep to find the line and awk to split the line and get the value
-        value=$(grep "^$param:" "$VARS_FILE" | awk '{split($0,a,": "); print a[2]}')
+        value=$(grep "^$param:" "$VARS_FILE" | awk '{split($0,a,": "); print a[2]}' | xargs)
 
         if [[ -z "$value" ]]; then
             missing_params+=("$param")
@@ -92,6 +92,7 @@ TEST_TIER=$(echo "$TEST_TIER" | tr '[:upper:]' '[:lower:]')
 
 echo "Using inventory: $SYSTEM_HOSTS."
 echo "Using SAP parameters: $SYSTEM_PARAMS."
+echo "Using AUthentication Type: $AUTHENTICATION_TYPE."
 
 if [[ ! -f "$SYSTEM_HOSTS" ]]; then
     echo "Error: hosts.yaml not found in WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME directory."
@@ -104,13 +105,12 @@ if [[ ! -f "$SYSTEM_PARAMS" ]]; then
 fi
 
 if [[ "$AUTHENTICATION_TYPE" == "SSHKEY" ]]; then
-    # Set the ssk key path to the default filename in WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME directory
     ssh_key="../WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME/ssh_key.ppk"
     echo "Using SSH key: $ssh_key."
     command="ansible-playbook ../ansible/playbook_00_ha_functional_tests.yml -i $SYSTEM_HOSTS --private-key $ssh_key -e @$VARS_FILE -e @$SYSTEM_PARAMS -e '_workspace_directory=$SYSTEM_CONFIG_FOLDER'"
 else
     echo "Using password authentication."
-    command="ansible-playbook ../ansible/playbook_00_ha_functional_tests.yml -i $SYSTEM_HOSTS --extra-vars @$VARS_FILE -e @$SYSTEM_PARAMS -e '_workspace_directory=$SYSTEM_CONFIG_FOLDER'"
+    command="ansible-playbook ../ansible/playbook_00_ha_functional_tests.yml -i $SYSTEM_HOSTS --extra-vars "ansible_ssh_pass=$(cat ../WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME/password)" --extra-vars @$VARS_FILE -e @$SYSTEM_PARAMS -e '_workspace_directory=$SYSTEM_CONFIG_FOLDER'"
 fi
 
 echo "Running ansible playbook..."
