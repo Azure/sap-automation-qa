@@ -74,6 +74,7 @@ def run_module():
         "count": 0,
         "start": datetime.now(),
         "end": datetime.now(),
+        "msg": "",
     }
 
     module = AnsibleModule(argument_spec=module_args, supports_check_mode=True)
@@ -130,12 +131,11 @@ def run_module():
                     result.update(future.result())
 
         if result["primary_node"] == "" or result["secondary_node"] == "":
-            module.fail_json(
-                msg="Pacemaker cluster is not stable and does not have primary node or secondary node",
-                **result,
-            )
+            result["msg"] = "Pacemaker cluster is not stable and does not have primary node or secondary node"
+            module.fail_json(**result)
     except Exception as e:
-        module.fail_json(msg=str(e), **result)
+        result["msg"] = str(e)
+        module.fail_json(**result)
     result["end"] = datetime.now()
     module.exit_json(**result)
 
