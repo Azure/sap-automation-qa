@@ -89,7 +89,7 @@ def run_module():
             result["cluster_status"] = cluster_status.decode("utf-8").strip()
             cluster_status_xml = ET.fromstring(cluster_status)
             pacemaker_status = subprocess.check_output(
-                ["systemctl", "is-active", "pacemaker.service"]
+                ["systemctl", "is-active", "pacemaker"]
             )
             if pacemaker_status.decode("utf-8").strip() == "active":
                 result["status"] = "running"

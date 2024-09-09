@@ -59,18 +59,20 @@ echo "Validating input parameters..."
 validate_params
 echo "Input parameters validated."
 
-sudo apt update -y
+
 packages=("python3-pip" "ansible" "sshpass" "python3-venv")
 
 for package in "${packages[@]}"; do
-    echo "Checking $package installation ..."
+    echo "Checking $package installation and updating packages..."
     install_package "$package"
 done
+
+sudo apt update -y
 
 echo "Enable python virtual environment..."
 python3 -m venv ../.venv
 source ../.venv/bin/activate
-pip install azure-kusto-data azure-kusto-ingest
+apt-install python3-azure-kusto-data python3-azure-kusto-ingest -y
 echo "Python virtual environment enabled."
 
 # Check if the SYSTEM_HOSTS and SYSTEM_PARAMS directory exists inside the WORKSPACES/SYSTEM folder
