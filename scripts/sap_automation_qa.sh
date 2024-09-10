@@ -70,6 +70,7 @@ done
 
 sudo apt update -y
 
+pip install azure-kusto-data azure-kusto-ingest
 echo "Enable python virtual environment..."
 python3 -m venv ../.venv
 source ../.venv/bin/activate
