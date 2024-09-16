@@ -26,26 +26,33 @@ def check_node(node, database_sid):
         dict: A dictionary containing the action to be taken based on the attribute value.
 
     """
+    node_states = {}
+
     attribute_actions = {
-        (f"hana_{database_sid}_clone_state", "PROMOTED"): lambda node: {
-            "primary_node": node.attrib["name"]
-        },
-        (f"hana_{database_sid}_sync_state", "PRIM"): lambda node: {
-            "primary_node": node.attrib["name"]
-        },
-        (f"hana_{database_sid}_clone_state", "DEMOTED"): lambda node: {
-            "secondary_node": node.attrib["name"]
-        },
-        (f"hana_{database_sid}_sync_state", "SOK"): lambda node: {
-            "secondary_node": node.attrib["name"]
-        },
+        f"hana_{database_sid}_clone_state": lambda node, value: node_states.update(
+            {"clone_state": value}
+        ),
+        f"hana_{database_sid}_sync_state": lambda node, value: node_states.update(
+            {"sync_state": value}
+        ),
     }
+
     for attribute in node:
-        action = attribute_actions.get(
-            (attribute.attrib["name"], attribute.attrib["value"])
-        )
+        action = attribute_actions.get(attribute.attrib["name"])
         if action:
-            return action(node)
+            action(node, attribute.attrib["value"])
+
+    if (
+        node_states.get("clone_state") == "PROMOTED"
+        and node_states.get("sync_state") == "PRIM"
+    ):
+        return {"primary_node": node.attrib["name"]}
+    elif (
+        node_states.get("clone_state") == "DEMOTED"
+        and node_states.get("sync_state") == "SOK"
+    ):
+        return {"secondary_node": node.attrib["name"]}
+
     return {}
 
 
