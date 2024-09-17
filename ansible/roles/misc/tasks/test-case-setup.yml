@@ -6,6 +6,7 @@
   ansible.builtin.package_facts:
 
 - name:                               Create package dictionary for telemetry data
+  become:                             true
   get_package_list:
     package_facts_list:               "{{ ansible_facts.packages }}"
   register:                           packages_list
