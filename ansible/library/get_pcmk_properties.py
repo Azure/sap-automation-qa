@@ -475,7 +475,7 @@ def main():
         )
         module.exit_json(
             msg="Cluster parameters validation completed",
-            details=f"{cluster_result['msg']}, {sap_hana_sr_result['msg']}",
+            details={**cluster_result, **sap_hana_sr_result},
             status=(
                 "PASSED"
                 if cluster_result["status"] == "PASSED"
