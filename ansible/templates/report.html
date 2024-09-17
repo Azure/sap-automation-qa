@@ -274,7 +274,7 @@
     <div class="footer">Report generated on: {{ report_generation_time }}</div>
     <script>
       const jsonString = document.getElementById('jsonobject').textContent.trim()
-      const fixedJsonString = jsonString.replace(/'/g, '"').replace(/False/g, 'false').replace(/True/g, 'true')
+      const fixedJsonString = jsonString.replace(/'/g, '"').replace(/False/g, 'false').replace(/True/g, 'true').replace(/\\n/g, '\\n')
       const jsonObject = JSON.parse(fixedJsonString)
       const beautifiedJson = JSON.stringify(jsonObject, null, 4)
       document.getElementById('output').textContent = beautifiedJson
