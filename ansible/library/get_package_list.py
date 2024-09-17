@@ -24,12 +24,13 @@ def run_module():
 
     for package in PACKAGE_LIST:
         if package["key"] in package_list:
+            properties = package_list[package["key"]][0]
             result["packages_list"].append(
                 {
                     package["name"]: {
-                        "version": package_list[package["key"]].get("version"),
-                        "release": package_list[package["key"]].get("release"),
-                        "architecture": package_list[package["key"]].get("arch"),
+                        "version": properties.get("version"),
+                        "release": properties.get("release"),
+                        "architecture": properties.get("arch"),
                     }
                 }
             )
