@@ -99,6 +99,13 @@
         border-radius: 5px;
       }
       
+      .cluster-table,
+      .package-table {
+        width: 100%;
+        border-collapse: collapse;
+        table-layout: fixed;
+      }
+      
       .details {
         width: 100%;
         border-collapse: collapse;
@@ -255,7 +262,11 @@
               </tr>
               <tr>
                 <th>Test Case Details (Logs)</th>
-                <td class="jsonobject">{{ test_case_result.TestCaseDetails }}</td>
+                {% if test_case_result.TestCaseName == 'HA Parameters Validation' %}
+                  <td class="cluster">{{ test_case_result.TestCaseDetails }}</td>
+                {% else %}
+                  <td class="jsonobject">{{ test_case_result.TestCaseDetails }}</td>
+                {% endif %}
               </tr>
             </table>
           </div>
@@ -299,6 +310,7 @@
         }
       
         const table = document.createElement('table')
+        table.className = 'package-table'
         const thead = document.createElement('thead')
         const tbody = document.createElement('tbody')
       
@@ -353,6 +365,63 @@
           console.error('Error creating package table:', error)
         }
       }
+      
+      function createClusterTable(clusterData) {
+        const table = document.createElement('table')
+        table.className = 'cluster-table'
+      
+        function addRow(key, value, depth = 0) {
+          const row = table.insertRow()
+          const keyCell = row.insertCell()
+          const valueCell = row.insertCell()
+          keyCell.style.paddingLeft = depth * 10 + 'px'
+      
+          if (Array.isArray(value)) {
+            keyCell.textContent = key
+            keyCell.style.fontWeight = 'bold'
+            value.forEach((item) => {
+              const [subKey, subValue] = item.split(': ')
+              addRow(subKey, subValue, depth + 1)
+            })
+          } else if (typeof value === 'object' && value !== null) {
+            keyCell.textContent = key
+            keyCell.style.fontWeight = 'bold'
+            for (const [subKey, subValue] of Object.entries(value)) {
+              addRow(subKey, subValue, depth + 1)
+            }
+          } else {
+            keyCell.textContent = key
+            valueCell.textContent = value
+          }
+        }
+      
+        for (const [key, value] of Object.entries(clusterData)) {
+          addRow(key, value)
+        }
+      
+        return table
+      }
+      
+      // Function to parse and convert cluster data to tables
+      function parseClusterData() {
+        const clusterElements = document.getElementsByClassName('cluster')
+        for (let clusterElement of clusterElements) {
+          try {
+            const clusterText = clusterElement.textContent.trim()
+            const fixedClusterText = clusterText.replace(/'/g, '"').replace(/False/g, 'false').replace(/True/g, 'true')
+            const clusterData = JSON.parse(fixedClusterText)
+            const clusterTable = createClusterTable(clusterData)
+      
+            clusterElement.textContent = '' // Clear the existing content
+            clusterElement.appendChild(clusterTable)
+          } catch (error) {
+            console.error('Error parsing cluster data:', error)
+          }
+        }
+      }
+      
+      // Call the function to parse and convert cluster data
+      parseClusterData()
     </script>
   </body>
 </html>
