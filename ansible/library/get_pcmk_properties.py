@@ -87,6 +87,11 @@ CLUSTER_PROPERTIES_SUSE = {
             "start-start-delay": "60s",
             "monitor-interval": "10s",
         },
+        "vip_": {
+            "monitor-interval": "10s",
+            "monitor-timeout": "20s",
+            "resource-stickiness": "0",
+        },
     },
 }
 
@@ -114,6 +119,16 @@ CLUSTER_PROPERTIES_REDHAT = {
         "op-options": {
             "timeout": "600",
             "record-pending": "true",
+        }
+    },
+    "constraints": {
+        "rsc_colocation": {
+            "score": "4000",
+            "rsc-role": "Started",
+        },
+        "rsc_order": {
+            "first-action": "start",
+            "then-action": "start",
         }
     },
     "resources": {
@@ -169,6 +184,10 @@ CLUSTER_PROPERTIES_REDHAT = {
             "failure-timeout": "120s",
             "start-start-delay": "60s",
             "monitor-interval": "10s",
+        },
+        "vip_": {
+            "monitor-interval": "10s",
+            "monitor-timeout": "20s",
         },
     },
 }
