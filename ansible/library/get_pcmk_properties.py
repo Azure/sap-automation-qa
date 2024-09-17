@@ -232,7 +232,7 @@ def location_constraints_exists():
         ) as proc:
             xml_output = proc.stdout.read()
         if ET.fromstring(xml_output).find(".//rsc_location") is not None:
-            health_location = ET.fromstring(constraints).find(
+            health_location = ET.fromstring(xml_output).find(
                 ".//rsc_location[@rsc-pattern='!health-.*']"
             )
             if health_location is None:
