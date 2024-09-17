@@ -251,7 +251,7 @@
               </tr>
               <tr>
                 <th>Package Versions</th>
-                <td>{{ test_case_result.PackageVersions }}</td>
+                <td class="packages">{{ test_case_result.PackageVersions }}</td>
               </tr>
               <tr>
                 <th>Test Case Details (Logs)</th>
@@ -266,17 +266,84 @@
     <script>
       const jsonObjects = document.getElementsByClassName('jsonobject')
       for (let jsonObjectElement of jsonObjects) {
-        const jsonString = jsonObjectElement.textContent.trim()
-        console.log(jsonString)
-        const fixedJsonString = jsonString.replace(/'/g, '"').replace(/False/g, 'false').replace(/True/g, 'true').replace(/\\n/g, '')
-        const jsonObject = JSON.parse(fixedJsonString)
-        const beautifiedJson = JSON.stringify(jsonObject, null, 4)
-        jsonObjectElement.textContent = beautifiedJson
+        try {
+          const jsonString = jsonObjectElement.textContent.trim()
+          console.log(jsonString)
+          const fixedJsonString = jsonString.replace(/'/g, '"').replace(/False/g, 'false').replace(/True/g, 'true').replace(/\\n/g, '')
+          const jsonObject = JSON.parse(fixedJsonString)
+          const beautifiedJson = JSON.stringify(jsonObject, null, 4)
+          jsonObjectElement.textContent = beautifiedJson
+        } catch (error) {
+          console.error('Error parsing JSON:', error)
+        }
       }
+      const packages = document.getElementsByClassName('packages')
+      
       function toggleDetails(element) {
         var details = element.nextElementSibling
         details.style.display = details.style.display === 'none' ? 'block' : 'none'
       }
+      function createPackageTable() {
+        const containerText = document.getElementsByClassName('packages')[0].textContent.replace(/'/g, '"')
+        console.log('Container Text:', containerText) // Log the container text to debug
+      
+        if (!containerText) return
+      
+        let packages
+        try {
+          packages = JSON.parse(containerText)
+        } catch (e) {
+          console.error('Failed to parse JSON:', e)
+          return
+        }
+      
+        const table = document.createElement('table')
+        const thead = document.createElement('thead')
+        const tbody = document.createElement('tbody')
+      
+        // Create table headers
+        const headers = ['Package Name', 'Version', 'Release', 'Architecture']
+        const headerRow = document.createElement('tr')
+        headers.forEach((header) => {
+          const th = document.createElement('th')
+          th.textContent = header
+          headerRow.appendChild(th)
+        })
+        thead.appendChild(headerRow)
+      
+        // Create table rows
+        packages.forEach((pkg) => {
+          const [packageName, details] = Object.entries(pkg)[0]
+          const row = document.createElement('tr')
+      
+          const packageNameCell = document.createElement('td')
+          packageNameCell.textContent = packageName
+          row.appendChild(packageNameCell)
+      
+          const versionCell = document.createElement('td')
+          versionCell.textContent = details.version
+          row.appendChild(versionCell)
+      
+          const releaseCell = document.createElement('td')
+          releaseCell.textContent = details.release
+          row.appendChild(releaseCell)
+      
+          const archCell = document.createElement('td')
+          archCell.textContent = details.architecture
+          row.appendChild(archCell)
+      
+          tbody.appendChild(row)
+        })
+      
+        table.appendChild(thead)
+        table.appendChild(tbody)
+        const packagesContainer = document.getElementsByClassName('packages')[0]
+        packagesContainer.textContent = '' // Clear the existing content
+        packagesContainer.appendChild(table)
+      }
+      
+      // Call the function to create the table for package version
+      createPackageTable()
     </script>
   </body>
 </html>
