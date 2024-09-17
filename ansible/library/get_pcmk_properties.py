@@ -369,10 +369,11 @@ def validate_cluster_params(cluster_properties: dict, ansible_os_family: str):
                                     valid_parameters[resource_operation][
                                         root_id
                                     ].append({name: value})
+        valid_parameters_json = json.dumps(valid_parameters)
         missing_parameters = [
             parameter
             for parameter in REQUIRED_PARAMETERS
-            if parameter not in valid_parameters
+            if parameter not in valid_parameters_json
         ]
         if missing_parameters:
             return {
