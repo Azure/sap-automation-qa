@@ -377,8 +377,10 @@ def validate_cluster_params(cluster_properties: dict, ansible_os_family: str):
         ]
         if missing_parameters:
             return {
-                "msg": f"Required parameters missing in cluster parameters: {missing_parameters}. "
-                + f"Validated cluster parameters: {valid_parameters_json}",
+                "msg": {
+                    "Required parameters missing in cluster parameters": missing_parameters,
+                    "Validated cluster parameters": valid_parameters_json,
+                },
                 "status": "WARNING",
             }
 
@@ -386,22 +388,24 @@ def validate_cluster_params(cluster_properties: dict, ansible_os_family: str):
         error_messages = []
         if drift_parameters:
             error_messages.append(
-                f"Drift in cluster parameters: {drift_parameters_json}"
+                {"Drift in cluster parameters": drift_parameters_json}
             )
 
         if location_constraints and ansible_os_family == "SUSE":
             error_messages.append(
-                f"Location constraints detected {location_constraints}"
+                {"Location constraints detected": location_constraints}
             )
         if error_messages:
             return {
-                "error": " ".join(error_messages)
-                + f". Validated cluster parameters: {valid_parameters_json}",
+                "error": {
+                    "Validated cluster parameters": valid_parameters_json,
+                    "Errors": error_messages,
+                },
                 "status": "FAILED",
             }
 
         return {
-            "msg": f"Validated cluster parameters: {valid_parameters_json}",
+            "msg": {"Validated cluster parameters": valid_parameters_json},
             "status": "PASSED",
         }
 
