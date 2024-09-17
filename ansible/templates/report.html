@@ -264,11 +264,11 @@
     </div>
     <div class="footer">Report generated on: {{ report_generation_time }}</div>
     <script>
+      // Function to beautify JSON objects
       const jsonObjects = document.getElementsByClassName('jsonobject')
       for (let jsonObjectElement of jsonObjects) {
         try {
           const jsonString = jsonObjectElement.textContent.trim()
-          console.log(jsonString)
           const fixedJsonString = jsonString.replace(/'/g, '"').replace(/False/g, 'false').replace(/True/g, 'true').replace(/\\n/g, '')
           const jsonObject = JSON.parse(fixedJsonString)
           const beautifiedJson = JSON.stringify(jsonObject, null, 4)
@@ -277,15 +277,16 @@
           console.error('Error parsing JSON:', error)
         }
       }
-      const packages = document.getElementsByClassName('packages')
       
+      // Function to toggle the details of a test case
       function toggleDetails(element) {
         var details = element.nextElementSibling
         details.style.display = details.style.display === 'none' ? 'block' : 'none'
       }
-      function createPackageTable() {
-        const containerText = document.getElementsByClassName('packages')[0].textContent.replace(/'/g, '"')
-        console.log('Container Text:', containerText) // Log the container text to debug
+      
+      // Function to create a table for package versions
+      function createPackageTable(packageList) {
+        const containerText = packageList.replace(/'/g, '"')
       
         if (!containerText) return
       
@@ -337,13 +338,21 @@
       
         table.appendChild(thead)
         table.appendChild(tbody)
-        const packagesContainer = document.getElementsByClassName('packages')[0]
-        packagesContainer.textContent = '' // Clear the existing content
-        packagesContainer.appendChild(table)
+        return table
       }
       
       // Call the function to create the table for package version
-      createPackageTable()
+      const packageLists = document.getElementsByClassName('packages')
+      for (let packageList of packageLists) {
+        try {
+          table = createPackageTable(packageList.textContent)
+          const packagesContainer = packageList
+          packagesContainer.textContent = '' // Clear the existing content
+          packagesContainer.appendChild(table)
+        } catch (error) {
+          console.error('Error creating package table:', error)
+        }
+      }
     </script>
   </body>
 </html>
