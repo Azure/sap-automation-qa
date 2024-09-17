@@ -398,11 +398,11 @@ def validate_cluster_params(cluster_properties: dict, ansible_os_family: str):
                                 if value != recommended_for_root.get(name):
                                     drift_parameters[resource_operation][
                                         root_id
-                                    ].append({name: value})
+                                    ].append(f"{name}: {value}")
                                 else:
                                     valid_parameters[resource_operation][
                                         root_id
-                                    ].append({name: value})
+                                    ].append(f"{name}: {value}")
         valid_parameters_json = json.dumps(valid_parameters)
         missing_parameters = [
             parameter
