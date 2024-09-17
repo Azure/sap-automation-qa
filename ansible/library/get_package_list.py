@@ -1,6 +1,5 @@
 """Custom ansible module for formatting the packages list"""
 
-import subprocess
 from ansible.module_utils.basic import AnsibleModule
 
 PACKAGE_LIST = [

@@ -78,6 +78,7 @@ CLUSTER_PROPERTIES_SUSE = {
             "pcmk_reboot_timeout": "900",
             "pcmk_delay_max": "15",
             "monitor-interval": "3600",
+            "monitor-timeout": "120",
         },
         "health-azure-events": {
             "interleave": "true",
@@ -231,7 +232,11 @@ def location_constraints_exists():
         ) as proc:
             xml_output = proc.stdout.read()
         if ET.fromstring(xml_output).find(".//rsc_location") is not None:
-            return ET.fromstring(xml_output).find(".//rsc_location")
+            health_location = ET.fromstring(constraints).find(
+                ".//rsc_location[@rsc-pattern='!health-.*']"
+            )
+            if health_location is None:
+                return ET.fromstring(xml_output).find(".//rsc_location")
         return False
     except subprocess.CalledProcessError:
         return False
@@ -389,7 +394,7 @@ def validate_cluster_params(cluster_properties: dict, ansible_os_family: str):
         if drift_parameters:
             error_messages.append({"Drift in cluster parameters": drift_parameters})
 
-        if location_constraints and ansible_os_family == "SUSE":
+        if location_constraints:
             error_messages.append(
                 {"Location constraints detected": location_constraints}
             )

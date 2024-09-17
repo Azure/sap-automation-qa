@@ -75,7 +75,7 @@
       vars:
         group_invocation_id:           "{{ test_group_invocation_id }}"
         group_start_time:              "{{ test_group_start_time }}"
-        group_name:                    "{{ test_group_name }}"
+        group_name:                    "{{ sap_functional_test_type }}"
       when:
         - test_group_name is defined
 
