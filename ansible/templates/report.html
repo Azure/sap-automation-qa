@@ -73,11 +73,7 @@
         margin-bottom: 10px;
         transition: all 0.3s ease;
       }
-      
-      .test-case:hover {
-        transform: scale(1.02);
-      }
-      
+
       .test-case .title {
         cursor: pointer;
         background-color: #e9ecef;
@@ -262,9 +258,9 @@
                 <th>Package Versions</th>
                 <td>{{ test_case_result.PackageVersions }}</td>
               </tr>
-              <tr id="jsonobject">
+              <tr>
                 <th>Test Case Details (Logs)</th>
-                <td>{{ test_case_result.TestCaseDetails }}</td>
+                <td id="jsonobject">{{ test_case_result.TestCaseDetails }}</td>
               </tr>
             </table>
           </div>
@@ -273,11 +269,15 @@
     </div>
     <div class="footer">Report generated on: {{ report_generation_time }}</div>
     <script>
-      const jsonString = document.getElementById('jsonobject').textContent.trim()
-      const fixedJsonString = jsonString.replace(/'/g, '"').replace(/False/g, 'false').replace(/True/g, 'true').replace(/\\n/g, '\\n')
-      const jsonObject = JSON.parse(fixedJsonString)
-      const beautifiedJson = JSON.stringify(jsonObject, null, 4)
-      document.getElementById('output').textContent = beautifiedJson
+      const jsonObjects = document.getElementsByClassName('jsonobject')
+      for (let jsonObjectElement of jsonObjects) {
+        const jsonString = jsonObjectElement.textContent.trim()
+        console.log(jsonString)
+        const fixedJsonString = jsonString.replace(/'/g, '"').replace(/False/g, 'false').replace(/True/g, 'true').replace(/\\n/g, '')
+        const jsonObject = JSON.parse(fixedJsonString)
+        const beautifiedJson = JSON.stringify(jsonObject, null, 4)
+        jsonObjectElement.textContent = beautifiedJson
+      }
     </script>
   </body>
 </html>

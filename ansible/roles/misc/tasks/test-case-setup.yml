@@ -5,6 +5,25 @@
 - name:                               Ensure a list of package version is available for logging"
   ansible.builtin.package_facts:
 
+- name: "Create Package Version Dictionary for individual package"
+  ansible.builtin.set_fact:
+    package_versions_dict: >-
+      {{
+        dict(
+          (package.name, {
+            "version": ansible_facts.packages[package.value].version,
+            "release": ansible_facts.packages[package.value].release,
+            "arch": ansible_facts.packages[package.value].arch
+          }) if ansible_facts.packages[package.value] is defined else (package.name, {})
+          for package in [
+            {"name": "Pacemaker", "value": "pacemaker"},
+            {"name": "Resource Agent", "value": "resource-agents"},
+            {"name": "Fencing Agent", "value": "fence-agents"},
+            {"name": "SAPHanaSR", "value": "SAPHanaSR"}
+          ]
+        )
+      }}
+
 - name:                               "Setup telemetry data for each test case"
   ansible.builtin.set_fact:
     test_case_name:                   "{{ item.name }}"
@@ -12,9 +31,6 @@
     test_case_invocation_id:          "{{ lookup('pipe', 'uuidgen') }}"
     test_case_start_time_epoch:       "{{ now(utc=true, fmt='%Y-%m-%d %H:%M:%S') }}"
     test_case_status:                 "Starting"
-    package_versions:                 "Pacemaker: {{ ansible_facts.packages['pacemaker'] | default('Not Found') }}
-                                        Resource Agent: {{ ansible_facts.packages['resource-agents'] | default('Not Found') }}
-                                        Fencing Agent: {{ ansible_facts.packages['fence-agents'] | default('Not Found') }}
-                                        SAPHanaSR: {{ ansible_facts.packages['SAPHanaSR'] | default('Not Found') }}"
+    package_versions:                 package_versions_dict
     test_case_details:                {}
     test_case_message:                "Test case execution started"
