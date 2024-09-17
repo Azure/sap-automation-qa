@@ -249,10 +249,10 @@
                 </tr>
               {% endif %}
               {% if test_case_result.TestExecutionEndTime %}
-              <tr>
-                <th>Test Execution End Time</th>
-                <td>{{ test_case_result.TestExecutionEndTime }}</td>
-              </tr>
+                <tr>
+                  <th>Test Execution End Time</th>
+                  <td>{{ test_case_result.TestExecutionEndTime }}</td>
+                </tr>
               {% endif %}
               <tr>
                 <th>Message</th>
@@ -262,7 +262,7 @@
                 <th>Package Versions</th>
                 <td>{{ test_case_result.PackageVersions }}</td>
               </tr>
-              <tr>
+              <tr id="jsonobject">
                 <th>Test Case Details (Logs)</th>
                 <td>{{ test_case_result.TestCaseDetails }}</td>
               </tr>
@@ -272,5 +272,12 @@
       </div>
     </div>
     <div class="footer">Report generated on: {{ report_generation_time }}</div>
+    <script>
+      const jsonString = document.getElementById('jsonobject').textContent.trim()
+      const fixedJsonString = jsonString.replace(/'/g, '"').replace(/False/g, 'false').replace(/True/g, 'true')
+      const jsonObject = JSON.parse(fixedJsonString)
+      const beautifiedJson = JSON.stringify(jsonObject, null, 4)
+      document.getElementById('output').textContent = beautifiedJson
+    </script>
   </body>
 </html>
