@@ -278,23 +278,26 @@ def validate_global_ini_properties(DB_SID: str, anible_os_family: str):
 
         if ha_dr_provider_SAPHanaSR_dict == expected_properties[anible_os_family]:
             return {
-                "msg": f"SAPHanaSR Properties: {ha_dr_provider_SAPHanaSR_dict}.",
+                "msg": {"SAPHanaSR Properties": ha_dr_provider_SAPHanaSR_dict},
                 "status": "PASSED",
             }
         else:
             return {
-                "error": "SAPHanaSR Properties validation failed with the "
-                + f"expected properties. Properties: {ha_dr_provider_SAPHanaSR_dict}",
+                "error": {
+                    "SAPHanaSR Properties validation failed with the expected properties. ": ha_dr_provider_SAPHanaSR_dict
+                },
                 "status": "FAILED",
             }
     except FileNotFoundError as e:
         return {
-            "error": f"Exception raised, file not found error: {str(e)}",
+            "error": {"Exception raised, file not found error": str(e)},
             "status": "FAILED",
         }
     except Exception as e:
         return {
-            "error": f"SAPHanaSR Properties validation failed: {str(e)} {global_ini}",
+            "error": {
+                "SAPHanaSR Properties validation failed": f"{str(e)} {global_ini}"
+            },
             "status": "FAILED",
         }
 
