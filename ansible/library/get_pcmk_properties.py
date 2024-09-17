@@ -283,21 +283,19 @@ def validate_global_ini_properties(DB_SID: str, anible_os_family: str):
             }
         else:
             return {
-                "error": {
+                "msg": {
                     "SAPHanaSR Properties validation failed with the expected properties. ": ha_dr_provider_SAPHanaSR_dict
                 },
                 "status": "FAILED",
             }
     except FileNotFoundError as e:
         return {
-            "error": {"Exception raised, file not found error": str(e)},
+            "msg": {"Exception raised, file not found error": str(e)},
             "status": "FAILED",
         }
     except Exception as e:
         return {
-            "error": {
-                "SAPHanaSR Properties validation failed": f"{str(e)} {global_ini}"
-            },
+            "msg": {"SAPHanaSR Properties validation failed": f"{str(e)} {global_ini}"},
             "status": "FAILED",
         }
 
@@ -400,7 +398,7 @@ def validate_cluster_params(cluster_properties: dict, ansible_os_family: str):
             )
         if error_messages:
             return {
-                "error": {
+                "msg": {
                     "Validated cluster parameters": valid_parameters_json,
                     "Errors": error_messages,
                 },
@@ -475,16 +473,15 @@ def main():
         sap_hana_sr_result = validate_global_ini_properties(
             DB_SID=module.params.get("sid"), anible_os_family=ansible_os_family
         )
-        if any("error" in result for result in [cluster_result, sap_hana_sr_result]):
-            error_messages = [
-                result["error"]
-                for result in [cluster_result, sap_hana_sr_result]
-                if "error" in result
-            ]
-            module.fail_json(msg=", ".join(error_messages))
         module.exit_json(
-            msg=f"{cluster_result['msg']}, {sap_hana_sr_result['msg']}",
-            status=cluster_result["status"],
+            msg="Cluster parameters validation completed",
+            details=f"{cluster_result['msg']}, {sap_hana_sr_result['msg']}",
+            status=(
+                "PASSED"
+                if cluster_result["status"] == "PASSED"
+                and sap_hana_sr_result["status"] == "PASSED"
+                else "FAILED"
+            ),
         )
 
     elif action == "visualize":

@@ -22,8 +22,8 @@
       ansible.builtin.set_fact:
         test_case_name:                 "{{ item.name }}: {{ virtual_host }}"
         test_case_status:               "{{ test_result.status }}"
-        test_case_message:              "Test Case Passed"
-        test_case_details:              "{{ test_result.msg }}"
+        test_case_message:              "{{ test_result.msg }}"
+        test_case_details:              "{{ test_result.details }}"
   rescue:
     - name:                             "Test case failed"
       ansible.builtin.set_fact:
