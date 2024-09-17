@@ -129,7 +129,7 @@ CLUSTER_PROPERTIES_REDHAT = {
         "rsc_order": {
             "first-action": "start",
             "then-action": "start",
-        }
+        },
     },
     "resources": {
         "SAPHanaTopology": {
@@ -190,6 +190,16 @@ CLUSTER_PROPERTIES_REDHAT = {
             "monitor-timeout": "20s",
         },
     },
+}
+
+VM_PARAMETERS = {
+    "tcp_timestamps": "0",
+    "swappiness": "10",
+}
+
+COROSYNC_PARAMETERS = {
+    "token": "30000",
+    "expected_votes": "1",
 }
 
 REQUIRED_PARAMETERS = {
