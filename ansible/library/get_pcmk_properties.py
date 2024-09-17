@@ -369,8 +369,6 @@ def validate_cluster_params(cluster_properties: dict, ansible_os_family: str):
                                     valid_parameters[resource_operation][
                                         root_id
                                     ].append({name: value})
-        valid_parameters_json = json.dumps(valid_parameters)
-        drift_parameters_json = json.dumps(drift_parameters)
         missing_parameters = [
             parameter
             for parameter in REQUIRED_PARAMETERS
