@@ -473,9 +473,11 @@ def main():
         sap_hana_sr_result = validate_global_ini_properties(
             DB_SID=module.params.get("sid"), anible_os_family=ansible_os_family
         )
+        cluster_result_msg = cluster_result["msg"]
+        sap_hana_sr_result_msg = sap_hana_sr_result["msg"]
         module.exit_json(
             msg="Cluster parameters validation completed",
-            details={**cluster_result, **sap_hana_sr_result},
+            details={**cluster_result_msg, **sap_hana_sr_result_msg},
             status=(
                 "PASSED"
                 if cluster_result["status"] == "PASSED"
