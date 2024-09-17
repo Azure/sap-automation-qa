@@ -18,6 +18,6 @@
     test_case_invocation_id:          "{{ lookup('pipe', 'uuidgen') }}"
     test_case_start_time_epoch:       "{{ now(utc=true, fmt='%Y-%m-%d %H:%M:%S') }}"
     test_case_status:                 "Starting"
-    package_versions:                 {{ packages_list.packages_list }}
+    package_versions:                 "{{ packages_list.packages_list }}"
     test_case_details:                {}
     test_case_message:                "Test case execution started"
