@@ -2,7 +2,7 @@
 ##########################################################################################
 #                       Tasks for sending telemetry data to the data explorer            #
 ##########################################################################################
-- name:                               "Create the telemetry JSON object for the test case"
+- name:                               "{{ ansible_date_time.iso8601 }} Create the telemetry JSON object for the test case"
   failed_when :                       false
   become:                             true
   delegate_to:                        localhost
