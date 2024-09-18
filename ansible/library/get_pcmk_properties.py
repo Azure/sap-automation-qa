@@ -192,14 +192,15 @@ CLUSTER_PROPERTIES_REDHAT = {
     },
 }
 
-VM_PARAMETERS = {
-    "tcp_timestamps": "0",
-    "swappiness": "10",
-}
-
-COROSYNC_PARAMETERS = {
-    "token": "30000",
-    "expected_votes": "1",
+OS_PARAMETERS = {
+    "sysctl": {
+        "net.ipv4.tcp_timestamps": {"expected_value": "1"},
+        "vm.swappiness": {"expected_value": "10"},
+    },
+    "corosync-cmapctl -g": {
+        "runtime.config.totem.token": {"expected_value": "30000"},
+        "runtime.config.totem.consensus": {"expected_value": "36000"},
+    },
 }
 
 REQUIRED_PARAMETERS = {
@@ -271,20 +272,62 @@ def location_constraints_exists():
         return False
 
 
-def validate_global_ini_properties(DB_SID: str, anible_os_family: str):
+def validate_os_parameters(SID: str, ansible_os_family: str):
+    """Validate SAP OS parameters.
+
+    Args:
+        SID (str): Database SID
+        ansible_os_family (str): Ansible OS family
+
+    Returns:
+        dict: SAP VM Parameters
+    """
+    try:
+        drift_parameters = {}
+        validated_parameters = {}
+        for stack_name, stack_details in OS_PARAMETERS.items():
+            for parameter, details in stack.items():
+                with subprocess.Popen(
+                    [stack_name, parameter], stdout=subprocess.PIPE, encoding="utf-8"
+                ) as proc:
+                    output = proc.stdout.read()
+                    parameter_value = output.split("=")[1].strip()
+                    if parameter_value != details["expected_value"]:
+                        drift_parameters[parameter] = parameter_value
+                    else:
+                        validated_parameters[parameter] = parameter_value
+        if drift_parameters:
+            return {
+                "msg": {
+                    "SAP OS parameters with drift": drift_parameters,
+                    "SAP OS parameters": validated_parameters,
+                },
+                "status": "FAILED",
+            }
+
+        return {
+            "msg": {"SAP OS Parameters": validated_parameters},
+            "status": "PASSED",
+        }
+    except Exception as e:
+        return {
+            "msg": {"SAP OS Parameters validation failed": str(e)},
+            "status": "FAILED",
+        }
+
+
+def validate_global_ini_properties(SID: str, ansible_os_family: str):
     """Validate SAPHanaSR properties in global.ini file.
 
     Args:
-        DB_SID (str): Database SID
+        SID (str): Database SID
         anible_os_family (str): Ansible OS family
 
     Returns:
         dict: SAPHanaSR Properties
     """
     try:
-        global_ini_file_path = (
-            f"/usr/sap/{DB_SID}/SYS/global/hdb/custom/config/global.ini"
-        )
+        global_ini_file_path = f"/usr/sap/{SID}/SYS/global/hdb/custom/config/global.ini"
         with open(global_ini_file_path, "r") as file:
             global_ini = [line.strip() for line in file.readlines()]
 
@@ -310,7 +353,7 @@ def validate_global_ini_properties(DB_SID: str, anible_os_family: str):
             },
         }
 
-        if ha_dr_provider_SAPHanaSR_dict == expected_properties[anible_os_family]:
+        if ha_dr_provider_SAPHanaSR_dict == expected_properties[ansible_os_family]:
             return {
                 "msg": {"SAPHanaSR Properties": ha_dr_provider_SAPHanaSR_dict},
                 "status": "PASSED",
@@ -502,17 +545,26 @@ def main():
             ansible_os_family=ansible_os_family,
         )
         sap_hana_sr_result = validate_global_ini_properties(
-            DB_SID=module.params.get("sid"), anible_os_family=ansible_os_family
+            SID=module.params.get("sid"), ansible_os_family=ansible_os_family
+        )
+        os_parameters_result = validate_os_parameters(
+            SID=module.params.get("sid"), ansible_os_family=ansible_os_family
         )
         cluster_result_msg = cluster_result["msg"]
         sap_hana_sr_result_msg = sap_hana_sr_result["msg"]
+        os_parameters_result_msg = os_parameters_result["msg"]
         module.exit_json(
             msg="Cluster parameters validation completed",
-            details={**cluster_result_msg, **sap_hana_sr_result_msg},
+            details={
+                **cluster_result_msg,
+                **sap_hana_sr_result_msg,
+                **os_parameters_result_msg,
+            },
             status=(
                 "PASSED"
                 if cluster_result["status"] == "PASSED"
                 and sap_hana_sr_result["status"] == "PASSED"
+                and os_parameters_result["status"] == "PASSED"
                 else "FAILED"
             ),
         )
