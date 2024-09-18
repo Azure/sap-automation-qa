@@ -286,7 +286,7 @@ def validate_os_parameters(SID: str, ansible_os_family: str):
         drift_parameters = {}
         validated_parameters = {}
         for stack_name, stack_details in OS_PARAMETERS.items():
-            for parameter, details in stack.items():
+            for parameter, details in stack_details.items():
                 with subprocess.Popen(
                     [stack_name, parameter], stdout=subprocess.PIPE, encoding="utf-8"
                 ) as proc:
