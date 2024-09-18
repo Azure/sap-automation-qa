@@ -272,6 +272,10 @@
                   <td class="jsonobject">{{ test_case_result.TestCaseDetails }}</td>
                 {% endif %}
               </tr>
+              <tr>
+                <th>Logs from /var/log/messages</th>
+                <td>{{ test_case_result.TestCaseLogMessagesFromSap }}</td>
+              </tr>
             </table>
           </div>
         {% endfor %}
