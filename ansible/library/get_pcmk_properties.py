@@ -286,18 +286,21 @@ def validate_os_parameters(SID: str, ansible_os_family: str):
         drift_parameters = {}
         validated_parameters = {}
         for stack_name, stack_details in OS_PARAMETERS.items():
-            args = ["sysctl"] if stack_name == "sysctl" else ["corosync-cmapctl", "-g"]
+            base_args = (
+                ["sysctl"] if stack_name == "sysctl" else ["corosync-cmapctl", "-g"]
+            )
             for parameter, details in stack_details.items():
-                args.append(parameter)
-                with subprocess.Popen(
-                    args, stdout=subprocess.PIPE, encoding="utf-8"
-                ) as proc:
-                    output = proc.stdout.read()
-                    parameter_value = output.split("=")[1].strip()
-                    if parameter_value != details["expected_value"]:
-                        drift_parameters[parameter] = parameter_value
-                    else:
-                        validated_parameters[parameter] = parameter_value
+                args = base_args + [parameter]
+                result = subprocess.run(
+                    args, capture_output=True, text=True, check=True
+                )
+                output = result.stdout
+                parameter_value = output.split("=")[1].strip()
+
+                if parameter_value != details["expected_value"]:
+                    drift_parameters[parameter] = parameter_value
+                else:
+                    validated_parameters[parameter] = parameter_value
         if drift_parameters:
             return {
                 "msg": {
