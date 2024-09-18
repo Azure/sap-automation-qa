@@ -41,5 +41,6 @@
                                         "Tags": "{{ execution_tags | default('') }}",
                                         "TestExecutionStartTime": "{{ test_execution_start_time | default('') }}",
                                         "TestExecutionEndTime": "{{ test_execution_end_time | default('') }}",
-                                        "TestCaseHostname": "{{ test_case_hostname }}"
+                                        "TestCaseHostname": "{{ test_case_hostname }}",
+                                        "TestCaseLogMessagesFromSap": "{{ test_case_var_log_messages | default('') }}"
                                       }

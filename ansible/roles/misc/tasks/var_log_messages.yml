@@ -1,0 +1,14 @@
+---
+################################################################################################
+#                      Read the log file /var/log/messages for given time period               #
+################################################################################################
+
+- name:                                 Read the log file /var/log/messages for given time period
+  become:                               true
+  block:
+    - name:                             Read the log file /var/log/messages for given time period
+      ansible.builtin.shell:            "journalctl --since {{ test_case_start_time_epoch }} --until {{ test_case_end_time_epoch }}"
+      register:                         var_log_messages_output
+      changed_when:                     false
+      failed_when:                      false
+      ignore_errors:                    true

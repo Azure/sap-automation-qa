@@ -117,6 +117,9 @@
           delay:                    10
           until:                    cluster_status_post.primary_node == cluster_status_pre.secondary_node and cluster_status_post.secondary_node == cluster_status_pre.primary_node
 
+        - name:                     "{{ ansible_date_time.iso8601 }} Read var log messages by importing role"
+          ansible.builtin.include_tasks: "roles/misc/var_log_messages.yml"
+
         - name:                     "{{ ansible_date_time.iso8601 }} - Post Validations: Set test case status"
           delegate_to:              localhost
           failed_when:
@@ -129,6 +132,7 @@
             test_execution_start_time: "{{ test_execution_start }}"
             test_case_hostname:     "{{ virtual_host }}"
             test_execution_end_time: "{{ test_execution_end }}"
+            test_case_var_log_messages: "{{ var_log_messages_output }}"
             test_case_message:      "Old primary: {{ cluster_status_pre.primary_node }} \
                                     New primary: {{ cluster_status_post.primary_node }} \
                                     Old secondary: {{ cluster_status_pre.secondary_node }} \
@@ -147,6 +151,9 @@
           ansible.builtin.include_tasks: "roles/misc/tasks/post-telemetry-data.yml"
 
   rescue:
+    - name:                     "{{ ansible_date_time.iso8601 }} Read var log messages by importing role"
+      ansible.builtin.include_tasks: "roles/misc/var_log_messages.yml"
+
     - name:                         "{{ ansible_date_time.iso8601 }} - Post Validations: Set test case status"
       ansible.builtin.set_fact:
         test_case_name:             "{{ item.name }}: {{ virtual_host }}"
@@ -155,6 +162,7 @@
         test_case_status:           "FAILED"
         test_case_message:          "{{ ansible_failed_result.msg }}"
         test_case_details:          "{{ ansible_failed_result }}"
+        test_case_var_log_messages: "{{ var_log_messages_output }}"
 
     - name:                         "Post Telemetry Data"
       ansible.builtin.include_tasks: "roles/misc/tasks/post-telemetry-data.yml"
