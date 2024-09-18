@@ -197,7 +197,7 @@ OS_PARAMETERS = {
         "net.ipv4.tcp_timestamps": {"expected_value": "1"},
         "vm.swappiness": {"expected_value": "10"},
     },
-    "corosync-cmapctl -g": {
+    "corosync-cmapctl": {
         "runtime.config.totem.token": {"expected_value": "30000"},
         "runtime.config.totem.consensus": {"expected_value": "36000"},
     },
@@ -286,9 +286,11 @@ def validate_os_parameters(SID: str, ansible_os_family: str):
         drift_parameters = {}
         validated_parameters = {}
         for stack_name, stack_details in OS_PARAMETERS.items():
+            args = ["sysctl"] if stack_name == "sysctl" else ["corosync-cmapctl", "-g"]
             for parameter, details in stack_details.items():
+                args.append(parameter)
                 with subprocess.Popen(
-                    [stack_name, parameter], stdout=subprocess.PIPE, encoding="utf-8"
+                    args, stdout=subprocess.PIPE, encoding="utf-8"
                 ) as proc:
                     output = proc.stdout.read()
                     parameter_value = output.split("=")[1].strip()
@@ -308,6 +310,11 @@ def validate_os_parameters(SID: str, ansible_os_family: str):
         return {
             "msg": {"SAP OS Parameters": validated_parameters},
             "status": "PASSED",
+        }
+    except subprocess.CalledProcessError as e:
+        return {
+            "msg": {"SAP OS Parameters validation failed": str(e)},
+            "status": "FAILED",
         }
     except Exception as e:
         return {
