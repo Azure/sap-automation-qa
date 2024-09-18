@@ -6,11 +6,11 @@
 - name:                                 "Test Setup Tasks"
   ansible.builtin.include_tasks:        "roles/misc/tasks/test-case-setup.yml"
 
-- name:                                 "Pre Validations: Validate parameters for the DB nodes"
+- name:                                 "{ ansible_date_time.iso8601 }} - Pre Validations: Validate parameters for the DB nodes"
   become:                               true
   become_user:                          root
   block:
-    - name:                             "HA Configuration check for the DB nodes"
+    - name:                             "{ ansible_date_time.iso8601 }} - HA Configuration check for the DB nodes"
       get_pcmk_properties:
         action:                         get
         sid:                            "{{ db_sid | upper }}"
@@ -18,19 +18,21 @@
         ansible_os_family:              "{{ ansible_os_family | upper }}"
       register:                         test_result
 
-    - name:                             "Set the test case status to PASSED"
+    - name:                             "{ ansible_date_time.iso8601 }} - Set the test case status to PASSED"
       ansible.builtin.set_fact:
         test_case_name:                 "{{ item.name }}: {{ virtual_host }}"
         test_case_status:               "{{ test_result.status }}"
         test_case_message:              "{{ test_result.msg }}"
         test_case_details:              "{{ test_result.details }}"
+        test_case_hostname:             "{{ virtual_host }}"
   rescue:
-    - name:                             "Test case failed"
+    - name:                             "{ ansible_date_time.iso8601 }} - Test case failed"
       ansible.builtin.set_fact:
           test_case_name:               "{{ item.name }}: {{ virtual_host }}"
           test_case_status:             "FAILED"
           test_case_details:            "{{ test_result }}"
           test_case_message:            "{{ ansible_failed_result }}"
+          test_case_hostname:           "{{ virtual_host }}"
 
 - name:                                 "Post Telemetry Data"
   ansible.builtin.include_tasks:        "roles/misc/tasks/post-telemetry-data.yml"

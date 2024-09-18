@@ -214,6 +214,12 @@
           <p>
             <strong>OS Version:</strong> {{ test_case_results.0.OsVersion }}
           </p>
+          <p>
+            <strong>Hostnames:</strong>
+            {% with unique_hostnames=test_case_results|map:'TestCaseHostname'|unique %}
+              {{ unique_hostnames|join:', ' }}
+            {% endwith %}
+          </p>
         </div>
       </div>
       <div class="right-content">

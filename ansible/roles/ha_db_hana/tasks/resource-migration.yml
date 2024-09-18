@@ -10,17 +10,17 @@
 # /*---------------------------------------------------------------------------
 # |                          Pre Validations
 # /*---------------------------------------------------------------------------
-- name:                             "Pre Validations: DB Nodes"
+- name:                             "{ ansible_date_time.iso8601 }} - Pre Validations: DB Nodes"
   become:                           true
   when:                             node_tier == "hana"
   block:
-    - name:                         "Pre Validations: Remove any location_constraints"
+    - name:                         "{ ansible_date_time.iso8601 }} - Pre Validations: Remove any location_constraints"
       location_constraints:
         action:                     "remove"
         ansible_os_family:          "{{ ansible_os_family | upper}}"
       register:                     location_constraints_results
 
-    - name:                         "Pre Validations: Validate HANA DB cluster status before migrating the HANA DB"
+    - name:                         "{ ansible_date_time.iso8601 }} - Pre Validations: Validate HANA DB cluster status before migrating the HANA DB"
       get_cluster_status:
         operation_step:             "pre_failover"
         database_sid:               "{{ db_sid | lower }}"
@@ -30,7 +30,7 @@
     - name:                         "Pre Validations on the primary node"
       when:                         ansible_hostname == cluster_status_pre.primary_node
       block:
-        - name:                     "Pre Validations: Check if the AUTOMATED_REGISTER parameter is set to true"
+        - name:                     "{ ansible_date_time.iso8601 }} - Pre Validations: Check if the AUTOMATED_REGISTER parameter is set to true"
           ansible.builtin.shell:
             cmd:                    "{{ commands | selectattr('name', 'equalto', 'automated_register_cmd') | map(attribute=(ansible_os_family | upper)) | first }}"
             executable:             /bin/bash
@@ -38,7 +38,7 @@
           changed_when:             false
           when:                     cluster_status_pre is defined
 
-        - name:                     "Pre Validations: CleanUp any failed resource"
+        - name:                     "{ ansible_date_time.iso8601 }} - Pre Validations: CleanUp any failed resource"
           ansible.builtin.command:  "crm_resource --cleanup"
           register:                 cleanup_failed_resource_pre
           timeout:                  10
@@ -49,24 +49,24 @@
 # /*---------------------------------------------------------------------------
 # |                          Test Execution
 # /*---------------------------------------------------------------------------
-    - name:                         "Test Execution: Crash the primary node."
+    - name:                         "{ ansible_date_time.iso8601 }} - Test Execution: Crash the primary node."
       when:
         - cluster_status_pre.primary_node != "" and cluster_status_pre.secondary_node != ""
         - ansible_hostname == cluster_status_pre.primary_node
         - cluster_status_pre.status == "running"
         - cluster_status_pre is defined
       block:
-        - name:                     "Test Execution: Start timer"
+        - name:                     "{ ansible_date_time.iso8601 }} - Test Execution: Start timer"
           ansible.builtin.set_fact:
             test_execution_start:   "{{ now(utc=true, fmt='%Y-%m-%d %H:%M:%S') }}"
 
-        - name:                     "Test Execution: Move the resource to the targeted node"
+        - name:                     "{ ansible_date_time.iso8601 }} - Test Execution: Move the resource to the targeted node"
           ansible.builtin.command:  "{{ commands | selectattr('name', 'equalto', 'resource_migration_cmd') | map(attribute=(ansible_os_family | upper)) | first }}"
           register:                 hana_db_resource_migration
           failed_when:              hana_db_resource_migration.rc != 0
           changed_when:             hana_db_resource_migration.rc == 0
 
-        - name:                     "Test Execution: Validate HANA DB cluster status after migration."
+        - name:                     "{ ansible_date_time.iso8601 }} - Test Execution: Validate HANA DB cluster status after migration."
           when:
             automated_register.stdout != ""
           get_cluster_status:
@@ -78,7 +78,7 @@
           failed_when:              false
           until:                    cluster_status_test_execution.primary_node == cluster_status_pre.secondary_node and cluster_status_test_execution.secondary_node == ""
 
-        - name:                     "Test Execution: Register Failed Resource"
+        - name:                     "{ ansible_date_time.iso8601 }} - Test Execution: Register Failed Resource"
           become:                   true
           become_user:              "{{ db_sid | lower }}adm"
           when:
@@ -91,18 +91,18 @@
           register:                 hana_db_register_failed_resource
           changed_when:             hana_db_register_failed_resource.rc == 0
 
-        - name:                     "Test Execution: Remove any location_constraints"
+        - name:                     "{ ansible_date_time.iso8601 }} - Test Execution: Remove any location_constraints"
           location_constraints:
             action:                 "remove"
             ansible_os_family:      "{{ ansible_os_family | upper}}"
           register:                 location_constraints_result
 
         # This is required because the cluster reports incorrect location constraints after the location constraints is removed.
-        - name:                     "Test Execution: Wait for 100 seconds to cluster to stabilize and show the correct status"
+        - name:                     "{ ansible_date_time.iso8601 }} - Test Execution: Wait for 100 seconds to cluster to stabilize and show the correct status"
           ansible.builtin.wait_for:
             timeout:                200
 
-        - name:                     "Test Execution: Validate HANA DB cluster status during after removing location constraints."
+        - name:                     "{ ansible_date_time.iso8601 }} - Test Execution: Validate HANA DB cluster status during after removing location constraints."
           get_cluster_status:
             operation_step:         "test_execution"
             database_sid:           "{{ db_sid | lower }}"
@@ -111,24 +111,24 @@
           delay:                    10
           until:                    cluster_status_test_execution_1.primary_node == cluster_status_pre.secondary_node and cluster_status_test_execution_1.secondary_node == cluster_status_pre.primary_node
 
-        - name:                     "Test Execution: Stop timer"
+        - name:                     "{ ansible_date_time.iso8601 }} - Test Execution: Stop timer"
           ansible.builtin.set_fact:
             test_execution_end:     "{{ now(utc=true, fmt='%Y-%m-%d %H:%M:%S') }}"
 
 # /*---------------------------------------------------------------------------
 # |                          Post Validations
 # /*---------------------------------------------------------------------------
-    - name:                         "Post Validations: HA cluster status after migrating the HANA DB"
+    - name:                         "{ ansible_date_time.iso8601 }} - Post Validations: HA cluster status after migrating the HANA DB"
       when:
         - ansible_hostname == cluster_status_pre.primary_node
         - cluster_status_pre is defined
       block:
-        - name:                     "Post Validations: CleanUp any failed resource"
+        - name:                     "{ ansible_date_time.iso8601 }} - Post Validations: CleanUp any failed resource"
           ansible.builtin.command:  "crm_resource --cleanup"
           register:                 cleanup_failed_resource_post
           changed_when:             cleanup_failed_resource_post.rc == 0
 
-        - name:                     "Post Validations: Validate HANA DB cluster status after migrating the HANA DB"
+        - name:                     "{ ansible_date_time.iso8601 }} - Post Validations: Validate HANA DB cluster status after migrating the HANA DB"
           get_cluster_status:
             operation_step:         "post_failover"
             database_sid:           "{{ db_sid | lower }}"
@@ -137,7 +137,7 @@
           delay:                    10
           until:                    cluster_status_post.primary_node == cluster_status_pre.secondary_node and cluster_status_post.secondary_node == cluster_status_pre.primary_node
 
-        - name:                     "Post Validations: Set test case status"
+        - name:                     "{ ansible_date_time.iso8601 }} - Post Validations: Set test case status"
           delegate_to:              localhost
           failed_when:
             - cluster_status_pre.primary_node != cluster_status_post.secondary_node
@@ -147,6 +147,7 @@
             test_case_description:  "{{ item.description }}"
             test_case_status:       "PASSED"
             test_execution_start_time: "{{ test_execution_start }}"
+            test_case_hostname:      "{{ virtual_host }}"
             test_execution_end_time: "{{ test_execution_end }}"
             test_case_message:      "Old primary: {{ cluster_status_pre.primary_node }} \
                                     New primary: {{ cluster_status_post.primary_node }} \
@@ -166,11 +167,12 @@
           ansible.builtin.include_tasks: "roles/misc/tasks/post-telemetry-data.yml"
 
   rescue:
-    - name:                         "Post Validations: Set test case status"
+    - name:                         "{ ansible_date_time.iso8601 }} - Post Validations: Set test case status"
       ansible.builtin.set_fact:
         test_case_name:             "{{ item.name }}: {{ virtual_host }}"
         test_case_description:      "{{ item.description }}"
         test_case_status:           "FAILED"
+        test_case_hostname:          "{{ virtual_host }}"
         test_case_message:          "{{ ansible_failed_result.msg }}"
         test_case_details:          "{{ ansible_failed_result }}"
 
