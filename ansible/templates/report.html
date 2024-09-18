@@ -262,7 +262,7 @@
               </tr>
               <tr>
                 <th>Test Case Details (Logs)</th>
-                {% if test_case_result.TestCaseName == 'HA Parameters Validation' %}
+                {% if 'HA Parameters Validation' in test_case_result.TestCaseName %}
                   <td class="cluster">{{ test_case_result.TestCaseDetails }}</td>
                 {% else %}
                   <td class="jsonobject">{{ test_case_result.TestCaseDetails }}</td>
