@@ -216,9 +216,7 @@
           </p>
           <p>
             <strong>Hostnames:</strong>
-            {% with unique_hostnames=test_case_results|map:'TestCaseHostname'|unique %}
-              {{ unique_hostnames|join:', ' }}
-            {% endwith %}
+            {{ test_case_results|map(attribute='TestCaseHostname')|unique|join(', ') }}
           </p>
         </div>
       </div>
