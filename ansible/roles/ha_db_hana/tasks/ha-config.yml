@@ -6,11 +6,11 @@
 - name:                                 "Test Setup Tasks"
   ansible.builtin.include_tasks:        "roles/misc/tasks/test-case-setup.yml"
 
-- name:                                 "{{ ansible_date_time.iso8601 }} - Pre Validations: Validate parameters for the DB nodes"
+- name:                                 "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} - Pre Validations: Validate parameters for the DB nodes"
   become:                               true
   become_user:                          root
   block:
-    - name:                             "{{ ansible_date_time.iso8601 }} - HA Configuration check for the DB nodes"
+    - name:                             "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} - HA Configuration check for the DB nodes"
       get_pcmk_properties:
         action:                         get
         sid:                            "{{ db_sid | upper }}"
@@ -18,7 +18,7 @@
         ansible_os_family:              "{{ ansible_os_family | upper }}"
       register:                         test_result
 
-    - name:                             "{{ ansible_date_time.iso8601 }} - Set the test case status to PASSED"
+    - name:                             "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} - Set the test case status to PASSED"
       ansible.builtin.set_fact:
         test_case_name:                 "{{ item.name }}: {{ virtual_host }}"
         test_case_status:               "{{ test_result.status }}"
@@ -26,7 +26,7 @@
         test_case_details:              "{{ test_result.details }}"
         test_case_hostname:             "{{ virtual_host }}"
   rescue:
-    - name:                             "{{ ansible_date_time.iso8601 }} - Test case failed"
+    - name:                             "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} - Test case failed"
       ansible.builtin.set_fact:
           test_case_name:               "{{ item.name }}: {{ virtual_host }}"
           test_case_status:             "FAILED"

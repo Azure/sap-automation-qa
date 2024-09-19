@@ -2,16 +2,16 @@
 ##########################################################################################
 #                       Task to setup telemetry information for each test case           #
 ##########################################################################################
-- name:                               "{{ ansible_date_time.iso8601 }} Ensure a list of package version is available for logging"
+- name:                               "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} Ensure a list of package version is available for logging"
   ansible.builtin.package_facts:
 
-- name:                               "{{ ansible_date_time.iso8601 }} Create package dictionary for telemetry data"
+- name:                               "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} Create package dictionary for telemetry data"
   become:                             true
   get_package_list:
     package_facts_list:               "{{ ansible_facts.packages }}"
   register:                           packages_list
 
-- name:                               "{{ ansible_date_time.iso8601 }} Setup telemetry data for each test case"
+- name:                               "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} Setup telemetry data for each test case"
   ansible.builtin.set_fact:
     test_case_name:                   "{{ item.name }}"
     test_case_description:            "{{ item.description }}"
