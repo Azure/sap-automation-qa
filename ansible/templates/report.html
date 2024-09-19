@@ -275,7 +275,7 @@
               {% if test_case_result.TestCaseLogMessagesFromSap %}
                 <tr>
                   <th>Logs from /var/log/messages</th>
-                  <td>{{ test_case_result.TestCaseLogMessagesFromSap }}</td>
+                  <td class="newlinemessages">{{ test_case_result.TestCaseLogMessagesFromSap }}</td>
                 </tr>
               {% endif %}
             </table>
@@ -296,6 +296,17 @@
           jsonObjectElement.textContent = beautifiedJson
         } catch (error) {
           console.error('Error parsing JSON:', error)
+        }
+      }
+      
+      const messages = document.getElementsByClassName('newlinemessages')
+      for (let message of messages) {
+        try {
+          const messageText = message.textContent.trim()
+          const formattedMessage = messageText.replace(/\\n/g, '<br>')
+          message.innerHTML = formattedMessage
+        } catch (error) {
+          console.error('Error formatting messages:', error)
         }
       }
       
