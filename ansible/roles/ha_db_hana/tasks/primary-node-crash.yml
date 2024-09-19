@@ -132,7 +132,7 @@
             test_execution_start_time: "{{ test_execution_start }}"
             test_case_hostname:     "{{ virtual_host }}"
             test_execution_end_time: "{{ test_execution_end }}"
-            test_case_var_log_messages: "{{ var_log_messages_output }}"
+            test_case_var_log_messages: "{{ var_log_messages_output.filtered_logs }}"
             test_case_message:      "Old primary: {{ cluster_status_pre.primary_node }} \
                                     New primary: {{ cluster_status_post.primary_node }} \
                                     Old secondary: {{ cluster_status_pre.secondary_node }} \
@@ -162,7 +162,7 @@
         test_case_status:           "FAILED"
         test_case_message:          "{{ ansible_failed_result.msg }}"
         test_case_details:          "{{ ansible_failed_result }}"
-        test_case_var_log_messages: "{{ var_log_messages_output }}"
+        test_case_var_log_messages: "{{ var_log_messages_output.filtered_logs }}"
 
     - name:                         "Post Telemetry Data"
       ansible.builtin.include_tasks: "roles/misc/tasks/post-telemetry-data.yml"

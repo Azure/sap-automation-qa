@@ -60,7 +60,6 @@ def run_module():
     pacemaker_keywords = [
         "LogAction",
         "LogNodeActions",
-        "stonith-ng",
         "pacemaker-fenced",
         "check_migration_threshold",
         "corosync",
@@ -81,10 +80,6 @@ def run_module():
         r"SAPHanaController\(",
         r"SAPHanaTopology\(",
         r"SAPInstance\(",
-        "gcp-vpc-move-vip",
-        "gcp:alias",
-        "gcp:stonith",
-        "fence_gce",
         "fence_azure_arm",
         "rsc_st_azure",
         "rsc_ip_",
