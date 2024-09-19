@@ -290,7 +290,25 @@
       for (let jsonObjectElement of jsonObjects) {
         try {
           const jsonString = jsonObjectElement.textContent.trim()
-          const fixedJsonString = jsonString.replace(/'/g, '"').replace(/False/g, 'false').replace(/True/g, 'true').replace(/\\n/g, '')
+          const fixedJsonString = jsonString
+            .replace(/False/g, 'false')
+            .replace(/True/g, 'true')
+            .replace(/\\n/g, '')
+            .replace(/None/g, 'null')
+            .replace(/'([^']+)'(?=\s*:)/g, '"$1"')
+            .replace(/:\s*'([^']*)'(?=\s*[,\}])/g, function (match, value) {
+              if (value === '') {
+                return ': ""'
+              }
+              return `: "${value}"`
+            })
+            .replace(/'([^']*)'(?=\s*[\],])/g, function (match, value) {
+              if (value === '') {
+                return '""'
+              }
+              return `"${value}"`
+            })
+      
           const jsonObject = JSON.parse(fixedJsonString)
           const beautifiedJson = JSON.stringify(jsonObject, null, 4)
           jsonObjectElement.textContent = beautifiedJson
@@ -302,9 +320,7 @@
       const messages = document.getElementsByClassName('newlinemessages')
       for (let message of messages) {
         try {
-          const messageText = message.textContent.trim()
-          const formattedMessage = messageText.replace(/\\n/g, '<br>')
-          message.innerHTML = formattedMessage
+          message.innerHTML = JSON.parse(message.textContent.trim().replace(/\\n/g, '').replace(/'/g, '"')).join('<br>')
         } catch (error) {
           console.error('Error formatting messages:', error)
         }

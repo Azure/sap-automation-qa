@@ -76,17 +76,17 @@ def run_module():
         "-standby",
     ]
     system_keywords = [
-        r"SAPHana\(",
-        r"SAPHanaController\(",
-        r"SAPHanaTopology\(",
-        r"SAPInstance\(",
+        "SAPHana",
+        "SAPHanaController",
+        "SAPHanaTopology",
+        "SAPInstance",
         "fence_azure_arm",
         "rsc_st_azure",
         "rsc_ip_",
         "rsc_nc_",
         "rsc_Db2_",
         "rsc_HANA_",
-        "corosync\[",
+        "corosync",
         "Result of",
         "reboot",
     ]

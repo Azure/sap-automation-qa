@@ -74,7 +74,7 @@
             operation_step:         "test_execution"
             database_sid:           "{{ db_sid | lower }}"
           register:                 cluster_status_test_execution
-          retries:                  30
+          retries:                  40
           delay:                    10
           until:                    cluster_status_test_execution.primary_node == cluster_status_pre.secondary_node and cluster_status_test_execution.secondary_node == cluster_status_pre.primary_node
 
