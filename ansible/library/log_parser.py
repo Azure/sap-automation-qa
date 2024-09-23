@@ -1,5 +1,6 @@
 import datetime
 from ansible.module_utils.basic import AnsibleModule
+import json
 
 
 def filter_logs(start_time, end_time, keywords, log_file="/var/log/messages"):
@@ -21,20 +22,30 @@ def filter_logs(start_time, end_time, keywords, log_file="/var/log/messages"):
             try:
                 log_time_str = " ".join(line.split()[:3])
                 log_time = datetime.datetime.strptime(log_time_str, "%b %d %H:%M:%S")
-                log_time = log_time.replace(
-                    year=start_dt.year
-                )  # Assuming logs are from the current year
+                log_time = log_time.replace(year=start_dt.year)
 
                 if start_dt <= log_time <= end_dt:
                     if any(keyword in line for keyword in keywords):
                         filtered_logs.append(line)
             except ValueError:
-                continue  # Skip lines that don't match the expected format
+                continue
 
-    return filtered_logs
+    return json.dumps(filtered_logs)
 
 
 def run_module():
+    """
+    Sets up and runs the log parsing module with the specified arguments.
+
+    :param start_time: The start time for log parsing. This is a required parameter.
+    :type start_time: str
+    :param end_time: The end time for log parsing. This is a required parameter.
+    :type end_time: str
+    :param log_file: The path to the log file to be parsed. Defaults to "/var/log/messages".
+    :type log_file: str, optional
+    :param keywords: A list of keywords to filter the log entries. Defaults to empty list.
+    :type keywords: list, optional
+    """
     module_args = dict(
         start_time=dict(type="str", required=True),
         end_time=dict(type="str", required=True),
