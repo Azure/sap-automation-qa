@@ -233,7 +233,11 @@ def validate_fence_azure_arm(ansible_os_family: str, virtual_machine_name: str):
             text=True,
             check=True,
         )
+        print(result.stdout)
         stonith_config = json.loads(result.stdout)
+        print(stonith_config)
+        print(type(stonith_config))
+        
         for item in stonith_config:
             if isinstance(item, dict):
                 stonith_config = item
@@ -376,9 +380,9 @@ def validate_os_parameters(SID: str, ansible_os_family: str):
             result = subprocess.run(
                 details["command"], capture_output=True, text=True, check=True
             )
-            output = result.stdout
+            output = result.stdout.splitlines()
             parameter_value = None
-            for line in output.split("\n"):
+            for line in output:
                 if details["parameter_name"] in line:
                     parameter_value = output.split(":")[1].strip()
                     break
