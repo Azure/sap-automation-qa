@@ -217,6 +217,88 @@ REQUIRED_PARAMETERS = {
     "priority-fencing-delay",
 }
 
+CONSTRAINTS = {
+    "rsc_colocation": {
+        "score": "4000",
+        "rsc-role": "Started",
+        "with-rsc-role": "Promoted",
+    },
+    "rsc_order": {
+        "first-action": "start",
+        "then-action": "start",
+        "symmetrical": "false",
+    },
+    "rsc_location": {
+        "score-attribute": "#health-azure",
+        "operation": "defined",
+        "attribute": "#uname",
+    },
+}
+
+
+def location_constraints_exists():
+    """Check if location constraints exist in the pacemaker cluster.
+
+    This function checks if there are any location constraints defined in the
+    pacemaker cluster. It uses the `cibadmin` command-line tool to query the
+    cluster's constraints and parses the XML output to determine if any
+    location constraints are present.
+
+    Returns:
+        bool: True if location constraints exist, False otherwise.
+    """
+    try:
+        with subprocess.Popen(
+            ["cibadmin", "--query", "--scope", "constraints"],
+            stdout=subprocess.PIPE,
+            encoding="utf-8",
+        ) as proc:
+            xml_output = proc.stdout.read()
+        if ET.fromstring(xml_output).find(".//rsc_location") is not None:
+            health_location = ET.fromstring(xml_output).find(
+                ".//rsc_location[@rsc-pattern='!health-.*']"
+            )
+            if health_location is None:
+                return ET.fromstring(xml_output).find(".//rsc_location")
+        return False
+    except subprocess.CalledProcessError:
+        return False
+
+
+def define_custom_parameters(module_params, cluster_properties):
+    """Get custom value for certain parameters depending on user input and OS family
+
+    Args:
+        module_params (dict): Ansible module parameters
+        cluster_properties (dict): Dictionary of cluster properties
+
+    Returns:
+        str: Value of the key from the custom dictionary
+    """
+    if module_params.get("ansible_os_family") == "SUSE":
+        cluster_properties["resources"]["msl_SAPHana"]["SID"] = module_params.get("sid")
+        cluster_properties["resources"]["msl_SAPHana"]["InstanceNumber"] = (
+            module_params.get("instance_number")
+        )
+        cluster_properties["resources"]["cln_SAPHanaTopology"]["SID"] = (
+            module_params.get("sid")
+        )
+        cluster_properties["resources"]["cln_SAPHanaTopology"]["InstanceNumber"] = (
+            module_params.get("instance_number")
+        )
+    else:
+        cluster_properties["resources"]["SAPHana_"]["SID"] = module_params.get("sid")
+        cluster_properties["resources"]["SAPHana_"]["InstanceNumber"] = (
+            module_params.get("instance_number")
+        )
+        cluster_properties["resources"]["SAPHanaTopology"]["SID"] = module_params.get(
+            "sid"
+        )
+        cluster_properties["resources"]["SAPHanaTopology"]["InstanceNumber"] = (
+            module_params.get("instance_number")
+        )
+    return cluster_properties
+
 
 def validate_fence_azure_arm(ansible_os_family: str, virtual_machine_name: str):
 
@@ -291,70 +373,6 @@ def validate_fence_azure_arm(ansible_os_family: str, virtual_machine_name: str):
         return {"msg": {"Fence agent permissions": str(e)}, "status": "FAILED"}
 
 
-def define_custom_parameters(module_params, cluster_properties):
-    """Get custom value for certain parameters depending on user input and OS family
-
-    Args:
-        module_params (dict): Ansible module parameters
-        cluster_properties (dict): Dictionary of cluster properties
-
-    Returns:
-        str: Value of the key from the custom dictionary
-    """
-    if module_params.get("ansible_os_family") == "SUSE":
-        cluster_properties["resources"]["msl_SAPHana"]["SID"] = module_params.get("sid")
-        cluster_properties["resources"]["msl_SAPHana"]["InstanceNumber"] = (
-            module_params.get("instance_number")
-        )
-        cluster_properties["resources"]["cln_SAPHanaTopology"]["SID"] = (
-            module_params.get("sid")
-        )
-        cluster_properties["resources"]["cln_SAPHanaTopology"]["InstanceNumber"] = (
-            module_params.get("instance_number")
-        )
-    else:
-        cluster_properties["resources"]["SAPHana_"]["SID"] = module_params.get("sid")
-        cluster_properties["resources"]["SAPHana_"]["InstanceNumber"] = (
-            module_params.get("instance_number")
-        )
-        cluster_properties["resources"]["SAPHanaTopology"]["SID"] = module_params.get(
-            "sid"
-        )
-        cluster_properties["resources"]["SAPHanaTopology"]["InstanceNumber"] = (
-            module_params.get("instance_number")
-        )
-    return cluster_properties
-
-
-def location_constraints_exists():
-    """Check if location constraints exist in the pacemaker cluster.
-
-    This function checks if there are any location constraints defined in the
-    pacemaker cluster. It uses the `cibadmin` command-line tool to query the
-    cluster's constraints and parses the XML output to determine if any
-    location constraints are present.
-
-    Returns:
-        bool: True if location constraints exist, False otherwise.
-    """
-    try:
-        with subprocess.Popen(
-            ["cibadmin", "--query", "--scope", "constraints"],
-            stdout=subprocess.PIPE,
-            encoding="utf-8",
-        ) as proc:
-            xml_output = proc.stdout.read()
-        if ET.fromstring(xml_output).find(".//rsc_location") is not None:
-            health_location = ET.fromstring(xml_output).find(
-                ".//rsc_location[@rsc-pattern='!health-.*']"
-            )
-            if health_location is None:
-                return ET.fromstring(xml_output).find(".//rsc_location")
-        return False
-    except subprocess.CalledProcessError:
-        return False
-
-
 def validate_os_parameters(SID: str, ansible_os_family: str):
     """Validate SAP OS parameters.
 
@@ -424,6 +442,65 @@ def validate_os_parameters(SID: str, ansible_os_family: str):
             "msg": {"SAP OS Parameters validation failed": str(e)},
             "status": "FAILED",
         }
+
+
+def validate_constraints(SID: str, ansible_os_family: str):
+    drift_parameters = defaultdict(lambda: defaultdict(list))
+    valid_parameters = defaultdict(lambda: defaultdict(list))
+    try:
+        cluster_properties = CONSTRAINTS
+        with subprocess.Popen(
+            ["cibadmin", "--query", "--scope", "constraints"],
+            stdout=subprocess.PIPE,
+            encoding="utf-8",
+        ) as proc:
+            xml_output = proc.stdout.read()
+        root = ET.fromstring(xml_output)
+        for constraint in root:
+            constraint_type = constraint.tag
+
+            if constraint_type in cluster_properties:
+                constraint_id = constraint.attrib.get("id", "")
+                for key, value in constraint.attrib.items():
+                    if key in cluster_properties[constraint_type]:
+                        if value != cluster_properties[constraint_type][key]:
+                            drift_parameters[constraint_type][constraint_id].append(
+                                {key: value}
+                            )
+                        else:
+                            valid_parameters[constraint_type][constraint_id].append(
+                                {key: value}
+                            )
+
+                for child in constraint:
+                    for key, value in child.attrib.items():
+                        if key in cluster_properties[constraint_type]:
+                            if value != cluster_properties[constraint_type][key]:
+                                drift_parameters[constraint_type][constraint_id].append(
+                                    {key: value}
+                                )
+                            else:
+                                valid_parameters[constraint_type][constraint_id].append(
+                                    {key: value}
+                                )
+        if drift_parameters:
+            return {
+                "msg": {
+                    "Valid Constraints parameters": valid_parameters,
+                    "Drift in Constraints parameters": drift_parameters,
+                },
+                "status": "FAILED",
+            }
+
+        return {
+            "msg": {"Valid Constraints parameter": valid_parameters},
+            "status": "PASSED",
+        }
+
+    except subprocess.CalledProcessError as e:
+        return {"msg": {"Constraints validation": f"{str(e)}"}, "status": "FAILED"}
+    except Exception as e:
+        return {"msg": {"Constraints validation": f"{str(e)}"}, "status": "FAILED"}
 
 
 def validate_global_ini_properties(SID: str, ansible_os_family: str):
@@ -665,10 +742,14 @@ def main():
             ansible_os_family=ansible_os_family,
             virtual_machine_name=module.params.get("virtual_machine_name"),
         )
+        constraints = validate_constraints(
+            SID=module.params.get("sid"), ansible_os_family=ansible_os_family
+        )
         cluster_result_msg = cluster_result["msg"]
         sap_hana_sr_result_msg = sap_hana_sr_result["msg"]
         os_parameters_result_msg = os_parameters_result["msg"]
         fence_azure_arm_result_msg = fence_azure_arm_result["msg"]
+        constraints_msg = constraints["msg"]
         module.exit_json(
             msg="Cluster parameters validation completed",
             details={
@@ -676,6 +757,7 @@ def main():
                 **sap_hana_sr_result_msg,
                 **os_parameters_result_msg,
                 **fence_azure_arm_result_msg,
+                **constraints_msg,
             },
             status=(
                 "PASSED"
@@ -683,6 +765,7 @@ def main():
                 and sap_hana_sr_result["status"] == "PASSED"
                 and os_parameters_result["status"] == "PASSED"
                 and fence_azure_arm_result["status"] == "PASSED"
+                and constraints["status"] == "PASSED"
                 else "FAILED"
             ),
         )
