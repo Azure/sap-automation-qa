@@ -203,9 +203,99 @@ OS_PARAMETERS = {
     },
 }
 
+CUSTOM_OS_PARAMETERS = {
+    "REDHAT": {
+        "quorum.expected_votes": {
+            "expected_value": "2",
+            "parameter_name": "Expected votes",
+            "command": [
+                "pcs",
+                "quorum",
+                "status",
+                "|",
+                "grep",
+                "-i",
+                "'Expected votes'",
+            ],
+        },
+    }
+}
+
 REQUIRED_PARAMETERS = {
     "priority-fencing-delay",
 }
+
+
+def validate_fence_azure_arm(ansible_os_family: str, virtual_machine_name: str):
+
+    try:
+        command = []
+        if ansible_os_family == "SUSE":
+            command = ["crm", "stonith", "config", "--output-format=json"]
+        elif ansible_os_family == "REDHAT":
+            command = ["pcs", "stonith", "show", "--output-format=json"]
+
+        result = subprocess.run(
+            command,
+            capture_output=True,
+            text=True,
+            check=True,
+        )
+        stonith_config = json.loads(result.stdout)
+        nvpairs = (
+            stonith_config.get("primitives", {})
+            .get("instance_attributes", {})
+            .get("nvpairs", [])
+        )
+        msi_value = None
+        for nvpair in nvpairs:
+            if nvpair.get("name") == "msi":
+                msi_value = nvpair.get("value")
+                if isinstance(msi_value, str):
+                    msi_value = True if msi_value.lower() == "true" else False
+                break
+
+        if msi_value:
+            result_azure_arm = subprocess.run(
+                ["fence_azure_arm", "--msi", "--action=list"],
+                capture_output=True,
+                text=True,
+                check=True,
+            )
+            fence_azure_arm_output = result_azure_arm.stdout
+            if "Error" in fence_azure_arm_output:
+                return {
+                    "msg": {"Fence agent permissions": fence_azure_arm_output},
+                    "status": "FAILED",
+                }
+            if virtual_machine_name in fence_azure_arm_output:
+                return {
+                    "msg": {"Fence agent permissions": fence_azure_arm_output},
+                    "status": "PASSED",
+                }
+            else:
+                return {
+                    "msg": {
+                        "Fence agent permissions": f"The virtual machine is not found in the "
+                        + f"list of virtual machines {fence_azure_arm_output}"
+                    },
+                    "status": "FAILED",
+                }
+        return {
+            "msg": {
+                "Fence agent permissions": "MSI value not found or the stonith is configured using SPN"
+            },
+            "status": "PASSED",
+        }
+    except subprocess.CalledProcessError as e:
+        return {
+            "msg": {"Fence agent permissions": str(e)},
+            "status": "FAILED",
+        }
+    except json.JSONDecodeError as e:
+        return {"msg": {"Fence agent permissions": str(e)}, "status": "FAILED"}
+    except Exception as e:
+        return {"msg": {"Fence agent permissions": str(e)}, "status": "FAILED"}
 
 
 def define_custom_parameters(module_params, cluster_properties):
@@ -285,6 +375,19 @@ def validate_os_parameters(SID: str, ansible_os_family: str):
     try:
         drift_parameters = {}
         validated_parameters = {}
+
+        for parameter, details in CUSTOM_OS_PARAMETERS[ansible_os_family]:
+            result = subprocess.run(
+                details["command"], capture_output=True, text=True, check=True
+            )
+            output = result.stdout
+            parameter_value = output.split(":")[1].strip() if output else ""
+
+            if parameter_value != details["expected_value"]:
+                drift_parameters[parameter] = parameter_value
+            else:
+                validated_parameters[parameter] = parameter_value
+
         for stack_name, stack_details in OS_PARAMETERS.items():
             base_args = (
                 ["sysctl"] if stack_name == "sysctl" else ["corosync-cmapctl", "-g"]
@@ -534,6 +637,7 @@ def main():
             sid=dict(type="str"),
             instance_number=dict(type="str"),
             ansible_os_family=dict(type="str"),
+            virtual_machine_name=dict(type="str"),
         )
     )
     action = module.params["action"]
@@ -560,21 +664,28 @@ def main():
         os_parameters_result = validate_os_parameters(
             SID=module.params.get("sid"), ansible_os_family=ansible_os_family
         )
+        fence_azure_arm_result = validate_fence_azure_arm(
+            ansible_os_family=ansible_os_family,
+            virtual_machine_name=module.params.get("virtual_machine_name"),
+        )
         cluster_result_msg = cluster_result["msg"]
         sap_hana_sr_result_msg = sap_hana_sr_result["msg"]
         os_parameters_result_msg = os_parameters_result["msg"]
+        fence_azure_arm_result_msg = fence_azure_arm_result["msg"]
         module.exit_json(
             msg="Cluster parameters validation completed",
             details={
                 **cluster_result_msg,
                 **sap_hana_sr_result_msg,
                 **os_parameters_result_msg,
+                **fence_azure_arm_result_msg,
             },
             status=(
                 "PASSED"
                 if cluster_result["status"] == "PASSED"
                 and sap_hana_sr_result["status"] == "PASSED"
                 and os_parameters_result["status"] == "PASSED"
+                and fence_azure_arm_result["status"] == "PASSED"
                 else "FAILED"
             ),
         )

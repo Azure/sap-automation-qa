@@ -138,7 +138,7 @@
           until:                    cluster_status_post.primary_node == cluster_status_pre.secondary_node and cluster_status_post.secondary_node == cluster_status_pre.primary_node
 
         - name:                     "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} Read var log messages by importing role"
-          ansible.builtin.include_tasks: "roles/misc/tasks/var_log_messages.yml"
+          ansible.builtin.include_tasks: "roles/misc/tasks/var-log-messages.yml"
 
         - name:                     "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} - Post Validations: Set test case status"
           delegate_to:              localhost
@@ -172,7 +172,7 @@
 
   rescue:
     - name:                     "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} Read var log messages by importing role"
-      ansible.builtin.include_tasks: "roles/misc/tasks/var_log_messages.yml"
+      ansible.builtin.include_tasks: "roles/misc/tasks/var-log-messages.yml"
 
     - name:                         "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} - Post Validations: Set test case status"
       ansible.builtin.set_fact:

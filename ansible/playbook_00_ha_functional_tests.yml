@@ -46,17 +46,6 @@
       ansible.builtin.set_fact:
         network_info_parsed:           "{{ lookup('template', 'interfaces.j2', wantlist=True) | flatten(levels=1) }}"
 
-    - name:                            Display the variable
-      ansible.builtin.debug:
-        msg: 
-          - "network_data_1:           {{ network_info_parsed }}"
-      failed_when:                     false
-
-    - name:                            Display extracted information
-      ansible.builtin.debug:
-        msg:                           "ipAddress: {{ item.ipAddress }} | interfaceName: {{ item.interfaceName }} | Subnet: {{ item.subnet }}"
-      loop:                            "{{ network_info_parsed | list }}"
-
     - name:                            "Set the test group name based on the inputs"
       ansible.builtin.set_fact:
         test_group_name:               "{{ sap_functional_test_type_map | selectattr('name', 'equalto', sap_functional_test_type) | map(attribute='value') | first }}_{{ platform | upper }}"
@@ -80,7 +69,7 @@
         - test_group_name is defined
 
     - name:                            "Cluster report from the HA cluster"
-      ansible.builtin.include_tasks:   "./roles/misc/tasks/cluster_report.yml"
+      ansible.builtin.include_tasks:   "./roles/misc/tasks/cluster-report.yml"
       when:
         - test_group_name is defined
 
