@@ -208,15 +208,7 @@ CUSTOM_OS_PARAMETERS = {
         "quorum.expected_votes": {
             "expected_value": "2",
             "parameter_name": "Expected votes",
-            "command": [
-                "pcs",
-                "quorum",
-                "status",
-                "|",
-                "grep",
-                "-i",
-                "'Expected votes'",
-            ],
+            "command": ["pcs", "quorum", "status"],
         },
     }
 }
@@ -242,6 +234,10 @@ def validate_fence_azure_arm(ansible_os_family: str, virtual_machine_name: str):
             check=True,
         )
         stonith_config = json.loads(result.stdout)
+        for item in stonith_config:
+            if isinstance(item, dict):
+                stonith_config = item
+                break
         nvpairs = (
             stonith_config.get("primitives", {})
             .get("instance_attributes", {})
@@ -380,8 +376,11 @@ def validate_os_parameters(SID: str, ansible_os_family: str):
             result = subprocess.run(
                 details["command"], capture_output=True, text=True, check=True
             )
-            output = result.stdout
-            parameter_value = output.split(":")[1].strip() if output else ""
+            parameter_value = None
+            for line in result.stdout.split("\n"):
+                if details["parameter_name"] in line:
+                    parameter_value = output.split(":")[1].strip()
+                    break
 
             if parameter_value != details["expected_value"]:
                 drift_parameters[parameter] = parameter_value
