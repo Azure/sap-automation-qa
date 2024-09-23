@@ -10,6 +10,14 @@
   become:                               true
   become_user:                          root
   block:
+    - name:                             "Retrieve Virtual Machine name"
+      ansible.builtin.uri:
+        url:                            http://169.254.169.254/metadata/instance?api-version=2021-02-01
+        use_proxy:                      false
+        headers:
+          Metadata:                     true
+      register:                         azure_instance_metadata
+
     - name:                             "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} - HA Configuration check for the DB nodes"
       get_pcmk_properties:
         action:                         get
