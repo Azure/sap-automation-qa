@@ -498,16 +498,17 @@ def validate_cluster_params(cluster_properties: dict, ansible_os_family: str):
     """
     try:
         drift_parameters = defaultdict(lambda: defaultdict(list))
-        valid_parameters = defaultdict(lambda: defaultdict(list))
+        valid_parameters = defaultdict(
+            lambda: defaultdict(dict)
+        )  # Use dict for grouping
 
-        for resource_operation, _ in cluster_properties.items():
+        for resource_operation in cluster_properties:
             with subprocess.Popen(
-                ["cibadmin", "--query", "--scope", f"{resource_operation}"],
+                ["cibadmin", "--query", "--scope", resource_operation],
                 stdout=subprocess.PIPE,
                 encoding="utf-8",
             ) as proc:
                 xml_output = proc.stdout.read()
-            # check if xml_output is empty of not xml output
             if not xml_output.startswith("<"):
                 continue
             root = ET.fromstring(xml_output)
@@ -515,48 +516,51 @@ def validate_cluster_params(cluster_properties: dict, ansible_os_family: str):
             for root_element in root:
                 for element in root_element:
                     root_id = element.get("id")
-                    extracted_values = {root_id: {}}
-
-                    # Extract nvpair parameters and their values from XML
-                    extracted_values[root_id] = {
+                    extracted_values = {
                         nvpair.get("name"): nvpair.get("value")
                         for nvpair in root_element.findall(".//nvpair")
                     }
 
                     # Extract operation parameters
                     for op in root_element.findall(".//op"):
-                        name = (
+                        name_interval = (
                             f"{op.get('name')}-{op.get('role', 'NoRole')}-interval"
-                            if op.get("role")
-                            else f"{op.get('name')}-interval"
                         )
-                        value = op.get("interval")
-                        extracted_values[root_id][name] = value
-
-                        name = (
+                        valid_parameters[resource_operation][name_interval] = (
+                            extracted_values.get(name_interval, op.get("interval"))
+                        )
+                        name_timeout = (
                             f"{op.get('name')}-{op.get('role', 'NoRole')}-timeout"
-                            if op.get("role")
-                            else f"{op.get('name')}-timeout"
                         )
-                        value = op.get("timeout")
-                        extracted_values[root_id][name] = value
+                        valid_parameters[resource_operation][name_timeout] = (
+                            extracted_values.get(name_timeout, op.get("timeout"))
+                        )
 
                     recommended_for_root = {}
-                    for key in cluster_properties[resource_operation].keys():
-                        if root_id is not None and root_id.startswith(key):
+                    for key in cluster_properties[resource_operation]:
+                        if root_id and root_id.startswith(key):
                             recommended_for_root = cluster_properties[
                                 resource_operation
                             ][key]
-                            for name, value in extracted_values[root_id].items():
+                            for name, value in extracted_values.items():
                                 if name in recommended_for_root:
-                                    if value != recommended_for_root.get(name):
+                                    if value != recommended_for_root[name]:
                                         drift_parameters[resource_operation][
                                             root_id
                                         ].append({name: value})
                                     else:
+                                        # Group similar parameters under a common key
+                                        if (
+                                            name
+                                            not in valid_parameters[resource_operation]
+                                        ):
+                                            valid_parameters[resource_operation][
+                                                name
+                                            ] = []
                                         valid_parameters[resource_operation][
-                                            root_id
-                                        ].append({name: value})
+                                            name
+                                        ].append(value)
+
         valid_parameters_json = json.dumps(valid_parameters)
         missing_parameters = [
             parameter
@@ -581,6 +585,7 @@ def validate_cluster_params(cluster_properties: dict, ansible_os_family: str):
             error_messages.append(
                 {"Location constraints detected": location_constraints}
             )
+
         if error_messages:
             return {
                 "msg": {
