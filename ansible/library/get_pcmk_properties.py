@@ -233,7 +233,7 @@ def validate_fence_azure_arm(ansible_os_family: str, virtual_machine_name: str):
         if ansible_os_family == "SUSE":
             command = ["crm", "stonith", "config", "--output-format=json"]
         elif ansible_os_family == "REDHAT":
-            command = ["pcs", "stonith", "show", "--output-format=json"]
+            command = ["pcs", "stonith", "config", "--output-format=json"]
 
         result = subprocess.run(
             command,
@@ -376,7 +376,7 @@ def validate_os_parameters(SID: str, ansible_os_family: str):
         drift_parameters = {}
         validated_parameters = {}
 
-        for parameter, details in CUSTOM_OS_PARAMETERS[ansible_os_family]:
+        for parameter, details in CUSTOM_OS_PARAMETERS[ansible_os_family].items():
             result = subprocess.run(
                 details["command"], capture_output=True, text=True, check=True
             )
