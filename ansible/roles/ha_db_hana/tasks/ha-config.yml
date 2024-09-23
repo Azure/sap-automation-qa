@@ -16,7 +16,7 @@
         sid:                            "{{ db_sid | upper }}"
         instance_number:                "{{ db_instance_number }}"
         ansible_os_family:              "{{ ansible_os_family | upper }}"
-        virtual_machine_name:           "{{ azure_network_metadata.json.compute.name }}"
+        virtual_machine_name:           "{{ azure_instance_metadata.json.compute.name }}"
       register:                         test_result
 
     - name:                             "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} - Set the test case status to PASSED"

@@ -34,17 +34,13 @@
         ansible_callbacks:
           profile_tasks:               true
 
-    - name:                            "SAP OS configuration playbook: - Get the IP information from instance meta data service"
+    - name:                            "SAP OS configuration playbook: - Get the instnce information"
       ansible.builtin.uri:
-        url:                           http://169.254.169.254/metadata/instance/network/interface?api-version=2021-02-01&format=json
+        url:                           http://169.254.169.254/metadata/instance?api-version=2021-02-01
         use_proxy:                     false
         headers:
           Metadata:                    true
-      register:                        azure_network_metadata
-
-    - name:                            Parse JSON and extract network information
-      ansible.builtin.set_fact:
-        network_info_parsed:           "{{ lookup('template', 'interfaces.j2', wantlist=True) | flatten(levels=1) }}"
+      register:                        azure_instance_metadata
 
     - name:                            "Set the test group name based on the inputs"
       ansible.builtin.set_fact:
