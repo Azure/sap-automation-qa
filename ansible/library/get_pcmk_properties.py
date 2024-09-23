@@ -238,12 +238,12 @@ def validate_fence_azure_arm(ansible_os_family: str, virtual_machine_name: str):
         if isinstance(stonith_config, list):
             for item in stonith_config:
                 if isinstance(item, dict):
-                    stonith_config = item
+                    stonith_config_parsed = item
                     break
             else:
                 raise ValueError("No dictionary found in stonith_config list")
         nvpairs = (
-            stonith_config.get("primitives", {})
+            stonith_config_parsed.get("primitives", {})
             .get("instance_attributes", {})
             .get("nvpairs", [])
         )
@@ -283,7 +283,7 @@ def validate_fence_azure_arm(ansible_os_family: str, virtual_machine_name: str):
                 }
         return {
             "msg": {
-                "Fence agent permissions": "MSI value not found or the stonith is configured using SPN"
+                "Fence agent permissions": f"MSI value not found or the stonith is configured using SPN {stonith_config} {type(stonith_config_parsed)} {stonith_config_parsed}"
             },
             "status": "PASSED",
         }
