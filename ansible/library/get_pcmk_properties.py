@@ -233,15 +233,15 @@ def validate_fence_azure_arm(ansible_os_family: str, virtual_machine_name: str):
             text=True,
             check=True,
         )
-        print(result.stdout)
         stonith_config = json.loads(result.stdout)
-        print(stonith_config)
-        print(type(stonith_config))
-        
-        for item in stonith_config:
-            if isinstance(item, dict):
-                stonith_config = item
-                break
+
+        if isinstance(stonith_config, list):
+            for item in stonith_config:
+                if isinstance(item, dict):
+                    stonith_config = item
+                    break
+            else:
+                raise ValueError("No dictionary found in stonith_config list")
         nvpairs = (
             stonith_config.get("primitives", {})
             .get("instance_attributes", {})
@@ -384,7 +384,7 @@ def validate_os_parameters(SID: str, ansible_os_family: str):
             parameter_value = None
             for line in output:
                 if details["parameter_name"] in line:
-                    parameter_value = output.split(":")[1].strip()
+                    parameter_value = line.split(":")[1].strip()
                     break
 
             if parameter_value != details["expected_value"]:
