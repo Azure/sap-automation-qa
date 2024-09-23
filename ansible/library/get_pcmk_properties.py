@@ -235,10 +235,12 @@ def validate_fence_azure_arm(ansible_os_family: str, virtual_machine_name: str):
         )
         stonith_config = json.loads(result.stdout)
 
-        nvpairs = []
-        for primitive in stonith_config.get("primitives", []):
-            instance_attributes = primitive.get("instance_attributes", {})
-            nvpairs.extend(instance_attributes.get("nvpairs", []))
+        nvpairs = (
+            stonith_config.get("primitives", [])[0]
+            .get("instance_attributes", [])[0]
+            .get("nvpairs", [])
+        )
+
         for nvpair in nvpairs:
             if nvpair.get("name") == "msi":
                 msi_value = nvpair.get("value")
