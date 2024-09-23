@@ -276,7 +276,7 @@ def validate_fence_azure_arm(ansible_os_family: str, virtual_machine_name: str):
                 }
         return {
             "msg": {
-                "Fence agent permissions": f"MSI value not found or the stonith is configured using SPN {stonith_config} {type(stonith_config)} {stonith_config_parsed}"
+                "Fence agent permissions": f"MSI value not found or the stonith is configured using SPN."
             },
             "status": "PASSED",
         }
@@ -513,49 +513,50 @@ def validate_cluster_params(cluster_properties: dict, ansible_os_family: str):
             root = ET.fromstring(xml_output)
 
             for root_element in root:
-                root_id = root_element.get("id")
-                extracted_values = {root_id: {}}
+                for element in root_element:
+                    root_id = element.get("id")
+                    extracted_values = {root_id: {}}
 
-                # Extract nvpair parameters and their values from XML
-                extracted_values[root_id] = {
-                    nvpair.get("name"): nvpair.get("value")
-                    for nvpair in root_element.findall(".//nvpair")
-                }
+                    # Extract nvpair parameters and their values from XML
+                    extracted_values[root_id] = {
+                        nvpair.get("name"): nvpair.get("value")
+                        for nvpair in root_element.findall(".//nvpair")
+                    }
 
-                # Extract operation parameters
-                for op in root_element.findall(".//op"):
-                    name = (
-                        f"{op.get('name')}-{op.get('role', 'NoRole')}-interval"
-                        if op.get("role")
-                        else f"{op.get('name')}-interval"
-                    )
-                    value = op.get("interval")
-                    extracted_values[root_id][name] = value
+                    # Extract operation parameters
+                    for op in root_element.findall(".//op"):
+                        name = (
+                            f"{op.get('name')}-{op.get('role', 'NoRole')}-interval"
+                            if op.get("role")
+                            else f"{op.get('name')}-interval"
+                        )
+                        value = op.get("interval")
+                        extracted_values[root_id][name] = value
 
-                    name = (
-                        f"{op.get('name')}-{op.get('role', 'NoRole')}-timeout"
-                        if op.get("role")
-                        else f"{op.get('name')}-timeout"
-                    )
-                    value = op.get("timeout")
-                    extracted_values[root_id][name] = value
+                        name = (
+                            f"{op.get('name')}-{op.get('role', 'NoRole')}-timeout"
+                            if op.get("role")
+                            else f"{op.get('name')}-timeout"
+                        )
+                        value = op.get("timeout")
+                        extracted_values[root_id][name] = value
 
-                recommended_for_root = {}
-                for key in cluster_properties[resource_operation].keys():
-                    if root_id.startswith(key):
-                        recommended_for_root = cluster_properties[resource_operation][
-                            key
-                        ]
-                        for name, value in extracted_values[root_id].items():
-                            if name in recommended_for_root:
-                                if value != recommended_for_root.get(name):
-                                    drift_parameters[resource_operation][
-                                        root_id
-                                    ].append(f"{name}: {value}")
-                                else:
-                                    valid_parameters[resource_operation][
-                                        root_id
-                                    ].append(f"{name}: {value}")
+                    recommended_for_root = {}
+                    for key in cluster_properties[resource_operation].keys():
+                        if root_id is not None and root_id.startswith(key):
+                            recommended_for_root = cluster_properties[
+                                resource_operation
+                            ][key]
+                            for name, value in extracted_values[root_id].items():
+                                if name in recommended_for_root:
+                                    if value != recommended_for_root.get(name):
+                                        drift_parameters[resource_operation][
+                                            root_id
+                                        ].append({name: value})
+                                    else:
+                                        valid_parameters[resource_operation][
+                                            root_id
+                                        ].append({name: value})
         valid_parameters_json = json.dumps(valid_parameters)
         missing_parameters = [
             parameter
