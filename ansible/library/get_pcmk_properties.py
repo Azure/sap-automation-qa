@@ -376,8 +376,9 @@ def validate_os_parameters(SID: str, ansible_os_family: str):
             result = subprocess.run(
                 details["command"], capture_output=True, text=True, check=True
             )
+            output = result.stdout
             parameter_value = None
-            for line in result.stdout.split("\n"):
+            for line in output.split("\n"):
                 if details["parameter_name"] in line:
                     parameter_value = output.split(":")[1].strip()
                     break
