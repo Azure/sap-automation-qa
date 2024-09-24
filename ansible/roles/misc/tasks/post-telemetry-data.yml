@@ -29,9 +29,8 @@
                                         "TestCaseMessage": "{{ test_case_message }}",
                                         "TestCaseDetails": "{{ test_case_details }}",
                                         "DurationSeconds": "{{
-                                            ((test_execution_end_time | to_datetime)
-                                            - (test_execution_start_time | to_datetime))
-                                        }}",
+                                            ((test_execution_end_time | to_datetime (default=now(utc=true, fmt='%Y-%m-%d %H:%M:%S')))
+                                            - (test_execution_start_time | to_datetime (default=test_case_start_time_epoch))) }}",
                                         "DbFencingType": "{{ database_cluster_type if database_high_availability else 'DB not HA' }}",
                                         "ScsFencingType": "{{ scs_cluster_type if scs_high_availability else 'SCS not HA' }}",
                                         "DBType": "{{ platform }}",
