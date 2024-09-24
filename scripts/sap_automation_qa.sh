@@ -1,5 +1,7 @@
 #!/bin/bash
 
+set -e
+
 # Define the path to the vars.yaml file
 VARS_FILE="../vars.yaml"
 
@@ -11,6 +13,19 @@ export ANSIBLE_HOST_KEY_CHECKING=False
 
 RED='\033[0;31m'
 GREEN='\033[0;32m'
+NC='\033[0m'
+
+# Function to print logs with color based on severity
+log() {
+    local severity=$1
+    local message=$2
+
+    if [[ "$severity" == "ERROR" ]]; then
+        printf "${RED}%s${NC}\n" "$message"
+    else
+        printf "${GREEN}%s${NC}\n" "$message"
+    fi
+}
 
 # Function to validate input parameters from vars.yaml
 validate_params() {
@@ -19,7 +34,7 @@ validate_params() {
 
     # Check if vars.yaml exists
     if [ ! -f "$VARS_FILE" ]; then
-        echo "Error: $VARS_FILE not found."
+        log "ERROR" "Error: $VARS_FILE not found."
         exit 1
     fi
 
@@ -30,51 +45,30 @@ validate_params() {
         if [[ -z "$value" ]]; then
             missing_params+=("$param")
         else
-            echo "$param: $value"
+            log "INFO" "$param: $value"
             declare -g "$param=$value"
         fi
     done
 
     if [ ${#missing_params[@]} -ne 0 ]; then
-        echo "Error: The following parameters cannot be empty: ${missing_params[*]}"
+        log "ERROR" "Error: The following parameters cannot be empty: ${missing_params[*]}"
         exit 1
     fi
 }
 
-# Check if ansible is installed, if not, install it
-install_package() {
-    local package_name=$1
-    if ! command_exists "$package_name"; then
-        echo "$package_name is not installed. Installing now..."
-        # Assuming the use of a Debian-based system
-        apt install "$package_name" -y
-    else
-        echo "$package_name is already installed."
+# Function to check if a file exists
+check_file_exists() {
+    local file_path=$1
+    local error_message=$2
+
+    if [[ ! -f "$file_path" ]]; then
+        log "ERROR" "Error: $error_message"
+        exit 1
     fi
 }
 
-echo "Starting SAP Automation QA script..."
-
-# Main script execution
-echo "Validating input parameters..."
+# Validate parameters
 validate_params
-echo "Input parameters validated."
-
-
-packages=("python3-pip" "ansible" "sshpass" "python3-venv")
-
-for package in "${packages[@]}"; do
-    echo "Checking $package installation and updating packages..."
-    install_package "$package"
-done
-
-sudo apt update -y
-
-pip install azure-kusto-data azure-kusto-ingest
-echo "Enable python virtual environment..."
-python3 -m venv ../.venv
-source ../.venv/bin/activate
-echo "Python virtual environment enabled."
 
 # Check if the SYSTEM_HOSTS and SYSTEM_PARAMS directory exists inside the WORKSPACES/SYSTEM folder
 SYSTEM_CONFIG_FOLDER="../WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME"
@@ -82,34 +76,35 @@ SYSTEM_HOSTS="$SYSTEM_CONFIG_FOLDER/hosts.yaml"
 SYSTEM_PARAMS="$SYSTEM_CONFIG_FOLDER/sap-parameters.yaml"
 TEST_TIER=$(echo "$TEST_TIER" | tr '[:upper:]' '[:lower:]')
 
+log "INFO" "Using inventory: $SYSTEM_HOSTS."
+log "INFO" "Using SAP parameters: $SYSTEM_PARAMS."
+log "INFO" "Using Authentication Type: $AUTHENTICATION_TYPE."
 
-echo -e "${GREEN}Using inventory: $SYSTEM_HOSTS."
-echo -e "${GREEN}Using SAP parameters: $SYSTEM_PARAMS."
-echo -e "${GREEN}Using AUthentication Type: $AUTHENTICATION_TYPE."
+check_file_exists "$SYSTEM_HOSTS" "hosts.yaml not found in WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME directory."
+check_file_exists "$SYSTEM_PARAMS" "sap-parameters.yaml not found in WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME directory."
 
-if [[ ! -f "$SYSTEM_HOSTS" ]]; then
-    echo -e "${RED}Error: hosts.yaml not found in WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME directory."
-    exit 1
-fi
-
-if [[ ! -f "$SYSTEM_PARAMS" ]]; then
-    echo -e "${RED}Error: sap-parameters.yaml not found in WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME directory."
+if [ "$sap_function_test_type" = "DatabaseHighAvailability" ]; then
+    playbook_name="playbook_00_ha_db_functional_tests"
+elif [ "$sap_function_test_type" = "CentralServicesHighAvailability" ]; then
+    playbook_name="playbook_00_ha_scs_functional_tests"
+else
+    echo "Unknown sap_function_test_type: $sap_function_test_type"
     exit 1
 fi
 
 if [[ "$AUTHENTICATION_TYPE" == "SSHKEY" ]]; then
     ssh_key="../WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME/ssh_key.ppk"
-    echo -e "${GREEN}Using SSH key: $ssh_key."
-    command="ansible-playbook ../ansible/playbook_00_ha_functional_tests.yml -i $SYSTEM_HOSTS --private-key $ssh_key -e @$VARS_FILE -e @$SYSTEM_PARAMS -e '_workspace_directory=$SYSTEM_CONFIG_FOLDER'"
+    log "INFO" "Using SSH key: $ssh_key."
+    command="ansible-playbook ../ansible/$playbook_name.yml -i $SYSTEM_HOSTS --private-key $ssh_key -e @$VARS_FILE -e @$SYSTEM_PARAMS -e '_workspace_directory=$SYSTEM_CONFIG_FOLDER'"
 else
-    echo -e "${GREEN}Using password authentication."
-    command="ansible-playbook ../ansible/playbook_00_ha_functional_tests.yml -i $SYSTEM_HOSTS --extra-vars "ansible_ssh_pass=$(cat ../WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME/password)" --extra-vars @$VARS_FILE -e @$SYSTEM_PARAMS -e '_workspace_directory=$SYSTEM_CONFIG_FOLDER'"
+    log "INFO" "Using password authentication."
+    command="ansible-playbook ../ansible/$playbook_name.yml -i $SYSTEM_HOSTS --extra-vars \"ansible_ssh_pass=$(cat ../WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME/password)\" --extra-vars @$VARS_FILE -e @$SYSTEM_PARAMS -e '_workspace_directory=$SYSTEM_CONFIG_FOLDER'"
 fi
 
-echo -e "${GREEN}Running ansible playbook..."
-echo -e "${GREEN}Executing: $command"
+log "INFO" "Running ansible playbook..."
+log "INFO" "Executing: $command"
 eval $command
 return_code=$?
-echo "Ansible playbook execution completed."
+log "INFO" "Ansible playbook execution completed with return code: $return_code"
 
-exit 0
+exit $return_code

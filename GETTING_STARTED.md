@@ -13,15 +13,15 @@ The HA Testing Framework consists of the following components:
 - SAP System on Azure Cloud (Required):
 Your SAP system must be hosted on the Azure cloud and configured with high availability. For supported high availability configurations, please refer to the supported scenarios. 
 
-- Linux Jump Host (Required):
-A Linux jump host must be running on Azure with connectivity to the SAP system's virtual network. This host will facilitate secure management and access to the SAP environment.
+- Ubuntu Jump Host (Required):
+A Ubuntu OS based jump host must be running on Azure with connectivity to the SAP system's virtual network. This host will facilitate secure management and access to the SAP environment.
 
 - Data Storage for Test Results (Optional):
 Optionally, configure a data factory, such as Azure Log Analytics or Azure Data Explorer, where test results can be stored in a tabular structure for further analysis.
 
 ## How to run the test cases for you SAP system?
-1. Log in to the Linux Virtual Machine:
-Access the Linux virtual machine (jump box) that has connectivity to your SAP systems and log in as the root user.
+1. Log in to the Virtual Machine (jump box):
+Access the virtual machine (jump box) that has connectivity to your SAP systems and log in as the root user.
 
 2. Clone the HA Testing Framework Repository:
 On the logged-in Linux machine, clone the HA Testing Framework repository:
@@ -29,23 +29,30 @@ On the logged-in Linux machine, clone the HA Testing Framework repository:
 git clone https://github.com/devanshjainms/sap-automaiton-qa.git
 cd sap-automation-qa
 ```
-3. Configure the Test Environment:
+3. Run the setup script (one time setup):
+This script sets up the test environment by installing the necessary dependencies for the test framework to execute the tests. In addition to these dependencies, the setup script also creates a Python virtual environment. This virtual environment will later be utilized by the Ansible playbooks to install Python dependencies.
+```
+# installs "python3-pip" "ansible" "sshpass" "python3-venv"
+cd scripts
+./setup.sh
+``` 
+4. Configure the Test Environment:
 Update the test configuration file vars.yaml located in the root directory to set up the test environment. Detailed information about the parameters defined in this file can be found in the [Test Configuration File](#test-configuration-file) section.
 
-4. Set Up SAP System Configuration:
+5. Set Up SAP System Configuration:
 Navigate to the WORKSPACES/SYSTEM directory and configure your SAP system based on the specifications outlined in the [WORKSPACES](#workspaces) section. You can reference an example configuration in the [WORKSPACES/SYSTEM/DEV-WEEU-SAP01-X00](./WORKSPACES/SYSTEM/DEV-WEEU-SAP01-X00/) directory:
 ```
 cd WORKSPACES/SYSTEM
 mkdir ENV-REGION-VNET-SID
 cd ENV-REGION-VNET-SID
 ```
-5. Execute the Test Script:
+6. Execute the Test Script:
 Navigate to the scripts directory and run the sap_automation_qa.sh script:
 ```
 cd scripts
 ./sap_automation_qa.sh
 ```
-6. View Test Results:
+7. View Test Results:
 After the test execution completes, an HTML report will be generated in the WORKSPACES/SYSTEM/SYSTEM_CONFIG_NAME/quality_assurance/ directory. You can copy and view this report in a web browser. Additionally, if you wish to send data to Azure Log Analytics or Azure Data Explorer, set the telemetry_data_destination variable in the vars.yaml file. More details on this can be found in the [WORKSPACES](#workspaces) section.
 
 ## Test configuration file
@@ -56,6 +63,7 @@ This file contains the variables used in the test cases. The vars.yaml file cont
   - SAPFunctionalTests
 - sap_functional_test_type: The type of SAP functional test to be executed. Supported values are:
   - DatabaseHighAvailability
+  - CentralServicesHighAvailability
 - SYSTEM_CONFIG_NAME: The name of the SAP system configuration for which you want to execute the test cases.
 - ssh_key_from_kv: Boolean indicating if the SSH key is stored in Azure Key Vault.
 - telemetry_data_destination: The destination of the telemetry data. Supported values are:
@@ -98,7 +106,7 @@ X00_DB:
   vars:
     node_tier: hana
 ```
-`X00` is the SAP SID of the SAP system followed by the host type (DB, ASCS, PAS, etc.). The `hosts.yaml` file contains the following information:
+`X00` is the SAP SID of the SAP system, followed by the host type (DB, ASCS, PAS, etc.). You should provide the SAP SID of the SAP system, regardless of whether you are testing Database High Availability or Central Services High Availability. The `hosts.yaml` file contains the following information:
 - `ansible_host`: The IP address of the host.
 - `ansible_user`: The user to connect to the host.
 - `ansible_connection`: The connection type.

@@ -6,7 +6,7 @@
 - name:                                 "Test Setup Tasks"
   ansible.builtin.include_tasks:        "roles/misc/tasks/test-case-setup.yml"
 
-- name:                                 "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} - Pre Validations: Validate parameters for the DB nodes"
+- name:                                 "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} - Pre Validations: Validate parameters for the SCS nodes"
   become:                               true
   become_user:                          root
   block:
@@ -18,14 +18,14 @@
           Metadata:                     true
       register:                         azure_instance_metadata
 
-    - name:                             "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} - HA Configuration check for the DB nodes"
+    - name:                             "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} - HA Configuration check for the SCS nodes"
       get_pcmk_properties:
         action:                         get
-        sid:                            "{{ db_sid | upper }}"
-        instance_number:                "{{ db_instance_number }}"
+        sid:                            "{{ sap_sid | upper }}"
+        instance_number:                "{{ scs_instance_number }}"
         ansible_os_family:              "{{ ansible_os_family | upper }}"
         virtual_machine_name:           "{{ azure_instance_metadata.json.compute.name }}"
-        node_tier:                      "db"
+        node_tier:                      "scs"
       register:                         test_result
 
     - name:                             "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} - Set the test case status to PASSED"

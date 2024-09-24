@@ -17,7 +17,7 @@
           - azure-kusto-data
           - azure-kusto-ingest
 
-- hosts:                               "{{ sap_sid | upper }}_DB"
+- hosts:                               "{{ sap_sid | upper }}_SCS"
   name:                                "Host tasks"
   gather_facts:                        true
   vars_files:
@@ -33,29 +33,6 @@
       ansible.builtin.set_fact:
         ansible_callbacks:
           profile_tasks:               true
-
-    - name:                            "SAP OS configuration playbook: - Get the IP information from instance meta data service"
-      ansible.builtin.uri:
-        url:                           http://169.254.169.254/metadata/instance/network/interface?api-version=2021-02-01&format=json
-        use_proxy:                     false
-        headers:
-          Metadata:                    true
-      register:                        azure_network_metadata
-
-    - name:                            Parse JSON and extract network information
-      ansible.builtin.set_fact:
-        network_info_parsed:           "{{ lookup('template', 'interfaces.j2', wantlist=True) | flatten(levels=1) }}"
-
-    - name:                            Display the variable
-      ansible.builtin.debug:
-        msg: 
-          - "network_data_1:           {{ network_info_parsed }}"
-      failed_when:                     false
-
-    - name:                            Display extracted information
-      ansible.builtin.debug:
-        msg:                           "ipAddress: {{ item.ipAddress }} | interfaceName: {{ item.interfaceName }} | Subnet: {{ item.subnet }}"
-      loop:                            "{{ network_info_parsed | list }}"
 
     - name:                            "Set the test group name based on the inputs"
       ansible.builtin.set_fact:
@@ -79,29 +56,8 @@
       when:
         - test_group_name is defined
 
-    - name:                            "Cluster report from the HA cluster"
-      ansible.builtin.include_tasks:   "./roles/misc/tasks/cluster-report.yml"
+    - name:                            "Run test cases by including them as roles"
+      ansible.builtin.include_tasks:   "./roles/misc/tasks/render-html-report.yml"
       when:
         - test_group_name is defined
 
-    - name:                            "Create HTML report and upload it to storage account"
-      run_once:                        true
-      delegate_to:                     localhost
-      when:
-        - test_cases is defined
-      block:
-        - name:                        "Load HTML jinja2 template"
-          ansible.builtin.set_fact:
-            html_report_template:      "{{ lookup('file', './templates/report.html') }}"
-
-        - name:                        "Read the log file and create a HTML report"
-          render_html_report:
-            test_group_invocation_id:  "{{ test_group_invocation_id }}"
-            test_group_name:           "{{ test_group_name }}_{{ ansible_os_family | upper }}"
-            report_template:           "{{ html_report_template }}"
-            workspace_directory:       "{{ _workspace_directory }}"
-          register:                    report_file_path
-
-        - name:                        "Debug the report file path"
-          ansible.builtin.debug:
-            msg:                       "Report file path: {{ report_file_path }}"

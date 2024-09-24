@@ -3,10 +3,18 @@
 from ansible.module_utils.basic import AnsibleModule
 
 PACKAGE_LIST = [
+    {"name": "Corosync Lib", "key": "corosynclib"},
+    {"name": "Corosync", "key": "corosync"},
+    {"name": "Fence Agents Common", "key": "fence-agents-common"},
+    {"name": "Fencing Agent", "key": "fence-agents-azure-arm"},
+    {"name": "Pacemaker CLI", "key": "pacemaker-cli"},
+    {"name": "Pacemaker Libs", "key": "pacemaker-libs"},
+    {"name": "Pacemaker Schemas", "key": "pacemaker-schemas"},
     {"name": "Pacemaker", "key": "pacemaker"},
     {"name": "Resource Agent", "key": "resource-agents"},
-    {"name": "Fencing Agent", "key": "fence-agents"},
+    {"name": "SAP Cluster Connector", "key": "sap-cluster-connector"},
     {"name": "SAPHanaSR", "key": "SAPHanaSR"},
+    {"name": "Socat", "key": "socat"},
 ]
 
 
@@ -23,20 +31,17 @@ def run_module():
     module = AnsibleModule(argument_spec=module_args, supports_check_mode=True)
     package_list = module.params["package_facts_list"]
 
-    for package in PACKAGE_LIST:
-        if package["key"] in package_list:
-            properties = package_list[package["key"]][0]
-            result["packages_list"].append(
-                {
-                    package["name"]: {
-                        "version": properties.get("version"),
-                        "release": properties.get("release"),
-                        "architecture": properties.get("arch"),
-                    }
-                }
-            )
-        else:
-            result["packages_list"].append({package["name"]: "Not Found"})
+    result["packages_list"] = [
+        {
+            package["name"]: {
+                "version": package_list[package["key"]][0].get("version"),
+                "release": package_list[package["key"]][0].get("release"),
+                "architecture": package_list[package["key"]][0].get("arch"),
+            }
+        }
+        for package in PACKAGE_LIST
+        if package["key"] in package_list
+    ]
 
     module.exit_json(**result)
 

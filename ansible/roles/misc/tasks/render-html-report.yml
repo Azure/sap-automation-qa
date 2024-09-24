@@ -1,0 +1,19 @@
+####################################################################################
+#                     Render HTML report from the test results                     #
+####################################################################################
+
+- name:                            "Create HTML report and upload it to storage account"
+  run_once:                        true
+  delegate_to:                     localhost
+  block:
+    - name:                        "Load HTML jinja2 template"
+      ansible.builtin.set_fact:
+        html_report_template:      "{{ lookup('file', './templates/report.html') }}"
+
+    - name:                        "Read the log file and create a HTML report"
+      render_html_report:
+        test_group_invocation_id:  "{{ test_group_invocation_id }}"
+        test_group_name:           "{{ test_group_name }}_{{ ansible_os_family | upper }}"
+        report_template:           "{{ html_report_template }}"
+        workspace_directory:       "{{ _workspace_directory }}"
+      register:                    report_file_path

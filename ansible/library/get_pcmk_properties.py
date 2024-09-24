@@ -690,6 +690,7 @@ def main():
             instance_number=dict(type="str"),
             ansible_os_family=dict(type="str"),
             virtual_machine_name=dict(type="str"),
+            node_tier=dict(type="str"),
         )
     )
     action = module.params["action"]
@@ -708,9 +709,11 @@ def main():
             cluster_properties=custom_cluster_properties,
             ansible_os_family=ansible_os_family,
         )
-        sap_hana_sr_result = validate_global_ini_properties(
-            SID=module.params.get("sid"), ansible_os_family=ansible_os_family
-        )
+        sap_hana_sr_result = {}
+        if module.params.get("node_tier") == "db":
+            sap_hana_sr_result = validate_global_ini_properties(
+                SID=module.params.get("sid"), ansible_os_family=ansible_os_family
+            )
         os_parameters_result = validate_os_parameters(
             SID=module.params.get("sid"), ansible_os_family=ansible_os_family
         )
@@ -725,7 +728,7 @@ def main():
             msg="Cluster parameters validation completed",
             details={
                 **cluster_result["msg"],
-                **sap_hana_sr_result["msg"],
+                **sap_hana_sr_result.get("msg", {}),
                 **os_parameters_result["msg"],
                 **fence_azure_arm_result["msg"],
                 **constraints["msg"],
