@@ -185,7 +185,7 @@ CLUSTER_PROPERTIES_REDHAT = {
             "start-start-delay": "60s",
             "monitor-interval": "10s",
         },
-        "vip_": {
+        "g_ip_": {
             "monitor-interval": "10s",
             "monitor-timeout": "20s",
         },
