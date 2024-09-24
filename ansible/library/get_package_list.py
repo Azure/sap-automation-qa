@@ -12,7 +12,9 @@ PACKAGE_LIST = [
 
 def run_module():
     """
-    Runs the ansible module for location constraints.
+    Sets up and runs the package list module with the specified arguments.
+
+    :param package_facts_list: The package facts list from the target host.
     """
     module_args = dict(
         package_facts_list=dict(type="dict", required=True),

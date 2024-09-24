@@ -301,7 +301,16 @@ def define_custom_parameters(module_params, cluster_properties):
 
 
 def validate_fence_azure_arm(ansible_os_family: str, virtual_machine_name: str):
+    """
+    Validate the permissions of the fence agent in Azure ARM.
 
+    Args:
+        ansible_os_family (str): Ansible OS family
+        virtual_machine_name (str): Virtual machine name
+
+    Returns:
+        dict: Fence agent permissions
+    """
     try:
         command = []
         if ansible_os_family == "SUSE":
@@ -445,6 +454,15 @@ def validate_os_parameters(SID: str, ansible_os_family: str):
 
 
 def validate_constraints(SID: str, ansible_os_family: str):
+    """
+    Validate constraints in the pacemaker cluster.
+
+    Args:
+        SID (str): Database SID
+        ansible_os_family (str): Ansible OS family
+    Returns:
+        dict: Validated constraints
+    """
     drift_parameters = defaultdict(lambda: defaultdict(list))
     valid_parameters = defaultdict(lambda: defaultdict(list))
     try:
