@@ -3,8 +3,12 @@
   <head>
     <title>SAP Automation QA Results</title>
     <style>
+      html,
       body {
+        height: 100%;
         margin: 0;
+        display: flex;
+        flex-direction: column;
         font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
         background-color: #f2f2f2; /* Microsoft's Light Gray */
       }
@@ -17,6 +21,10 @@
         background-color: #0078d7; /* Microsoft's Blue */
         color: #ffffff; /* White for contrast */
         transition: all 0.3s ease;
+      }
+      
+      .main-content {
+        flex: 1;
       }
       
       .navbar .system-id {
@@ -71,7 +79,6 @@
       
       .test-case {
         margin-bottom: 10px;
-        transition: all 0.3s ease;
       }
       
       .test-case .title {
@@ -150,7 +157,6 @@
       }
       
       .footer {
-        position: fixed;
         bottom: 0;
         width: 100%;
         height: 40px; /* Set the fixed height of the footer here */
@@ -188,104 +194,105 @@
     <div class="navbar">
       <div class="system-id">SAP Automation QA Results</div>
     </div>
-
-    <div class="container">
-      <div class="left-bar">
-        <div class="system-info">
-          <h2>System Information</h2>
-          <p>
-            <strong>Test Group Name:</strong> {{ test_case_results.0.TestGroupName }}
-          </p>
-          <p>
-            <strong>DB SID:</strong> {{ test_case_results.0.DbSid }}
-          </p>
-          <p>
-            <strong>SAP SID:</strong> {{ test_case_results.0.SapSid }}
-          </p>
-          <p>
-            <strong>DB Fencing Agent:</strong> {{ test_case_results.0.DbFencingType }}
-          </p>
-          <p>
-            <strong>SCS Fencing Agent:</strong> {{ test_case_results.0.ScsFencingType }}
-          </p>
-          <p>
-            <strong>DB Type:</strong> {{ test_case_results.0.DBType }}
-          </p>
-          <p>
-            <strong>OS Version:</strong> {{ test_case_results.0.OsVersion }}
-          </p>
-          <p>
-            <strong>Hostnames:</strong>
-            {{ test_case_results|map(attribute='TestCaseHostname')|unique|join(', ') }}
-          </p>
-        </div>
-      </div>
-      <div class="right-content">
-        {% for test_case_result in test_case_results %}
-          <div class="test-case {{ test_case_result.TestCaseStatus|lower }}">
-            <div class="title" onclick="toggleDetails(this)">
-              <span class="name">{{ test_case_result.TestCaseName }}</span>
-              <span class="duration">&#x1F550; {{ test_case_result.DurationSeconds }}</span>
-            </div>
-            <table class="details">
-              <tr>
-                <th>Test Description</th>
-                <td>{{ test_case_result.TestCaseDescription }}</td>
-              </tr>
-              <tr>
-                <th>Invocation ID</th>
-                <td>{{ test_case_result.TestCaseInvocationId }}</td>
-              </tr>
-              <tr>
-                <th>Start Time</th>
-                <td>{{ test_case_result.TestCaseStartTime }}</td>
-              </tr>
-              <tr>
-                <th>End Time</th>
-                <td>{{ test_case_result.TestCaseEndTime }}</td>
-              </tr>
-              {% if test_case_result.TestExecutionStartTime %}
-                <tr>
-                  <th>Test Execution Start Time</th>
-                  <td>{{ test_case_result.TestExecutionStartTime }}</td>
-                </tr>
-              {% endif %}
-              {% if test_case_result.TestExecutionEndTime %}
-                <tr>
-                  <th>Test Execution End Time</th>
-                  <td>{{ test_case_result.TestExecutionEndTime }}</td>
-                </tr>
-              {% endif %}
-              <tr>
-                <th>Message</th>
-                <td>{{ test_case_result.TestCaseMessage }}</td>
-              </tr>
-              <tr>
-                <th>Package Versions</th>
-                <td class="packages">{{ test_case_result.PackageVersions }}</td>
-              </tr>
-              <tr>
-                <th>Test Case Details (Logs)</th>
-                {% if 'HA Parameters Validation' in test_case_result.TestCaseName %}
-                  <td class="cluster">{{ test_case_result.TestCaseDetails }}</td>
-                {% else %}
-                  <td class="jsonobject">{{ test_case_result.TestCaseDetails }}</td>
-                {% endif %}
-              </tr>
-              {% if test_case_result.TestCaseLogMessagesFromSap %}
-                <tr>
-                  <th>Logs from /var/log/messages</th>
-                  <td class="newlinemessages">
-                    <details>
-                      <summary>Click to expand</summary>
-                      {{ test_case_result.TestCaseLogMessagesFromSap }}
-                    </details>
-                  </td>
-                </tr>
-              {% endif %}
-            </table>
+    <div class="main-content">
+      <div class="container">
+        <div class="left-bar">
+          <div class="system-info">
+            <h2>System Information</h2>
+            <p>
+              <strong>Test Group Name:</strong> {{ test_case_results.0.TestGroupName }}
+            </p>
+            <p>
+              <strong>DB SID:</strong> {{ test_case_results.0.DbSid }}
+            </p>
+            <p>
+              <strong>SAP SID:</strong> {{ test_case_results.0.SapSid }}
+            </p>
+            <p>
+              <strong>DB Fencing Agent:</strong> {{ test_case_results.0.DbFencingType }}
+            </p>
+            <p>
+              <strong>SCS Fencing Agent:</strong> {{ test_case_results.0.ScsFencingType }}
+            </p>
+            <p>
+              <strong>DB Type:</strong> {{ test_case_results.0.DBType }}
+            </p>
+            <p>
+              <strong>OS Version:</strong> {{ test_case_results.0.OsVersion }}
+            </p>
+            <p>
+              <strong>Hostnames:</strong>
+              {{ test_case_results|map(attribute='TestCaseHostname')|unique|join(', ') }}
+            </p>
           </div>
-        {% endfor %}
+        </div>
+        <div class="right-content">
+          {% for test_case_result in test_case_results %}
+            <div class="test-case {{ test_case_result.TestCaseStatus|lower }}">
+              <div class="title" onclick="toggleDetails(this)">
+                <span class="name">{{ test_case_result.TestCaseName }}</span>
+                <span class="duration">&#x1F550; {{ test_case_result.DurationSeconds }}</span>
+              </div>
+              <table class="details">
+                <tr>
+                  <th>Test Description</th>
+                  <td>{{ test_case_result.TestCaseDescription }}</td>
+                </tr>
+                <tr>
+                  <th>Invocation ID</th>
+                  <td>{{ test_case_result.TestCaseInvocationId }}</td>
+                </tr>
+                <tr>
+                  <th>Start Time</th>
+                  <td>{{ test_case_result.TestCaseStartTime }}</td>
+                </tr>
+                <tr>
+                  <th>End Time</th>
+                  <td>{{ test_case_result.TestCaseEndTime }}</td>
+                </tr>
+                {% if test_case_result.TestExecutionStartTime %}
+                  <tr>
+                    <th>Test Execution Start Time</th>
+                    <td>{{ test_case_result.TestExecutionStartTime }}</td>
+                  </tr>
+                {% endif %}
+                {% if test_case_result.TestExecutionEndTime %}
+                  <tr>
+                    <th>Test Execution End Time</th>
+                    <td>{{ test_case_result.TestExecutionEndTime }}</td>
+                  </tr>
+                {% endif %}
+                <tr>
+                  <th>Message</th>
+                  <td>{{ test_case_result.TestCaseMessage }}</td>
+                </tr>
+                <tr>
+                  <th>Package Versions</th>
+                  <td class="packages">{{ test_case_result.PackageVersions }}</td>
+                </tr>
+                <tr>
+                  <th>Test Case Details (Logs)</th>
+                  {% if 'HA Parameters Validation' in test_case_result.TestCaseName %}
+                    <td class="cluster">{{ test_case_result.TestCaseDetails }}</td>
+                  {% else %}
+                    <td class="jsonobject">{{ test_case_result.TestCaseDetails }}</td>
+                  {% endif %}
+                </tr>
+                {% if test_case_result.TestCaseLogMessagesFromSap %}
+                  <tr>
+                    <th>Logs from /var/log/messages</th>
+                    <td class="newlinemessages">
+                      <details>
+                        <summary>Click to expand</summary>
+                        {{ test_case_result.TestCaseLogMessagesFromSap }}
+                      </details>
+                    </td>
+                  </tr>
+                {% endif %}
+              </table>
+            </div>
+          {% endfor %}
+        </div>
       </div>
     </div>
     <div class="footer">Report generated on: {{ report_generation_time }}</div>
