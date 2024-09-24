@@ -465,11 +465,11 @@ def validate_constraints(SID: str, ansible_os_family: str):
                     if key in cluster_properties[constraint_type]:
                         if value != cluster_properties[constraint_type][key]:
                             drift_parameters[constraint_type][constraint_id].append(
-                                {key: value}
+                                f"{key}: {value}"
                             )
                         else:
                             valid_parameters[constraint_type][constraint_id].append(
-                                {key: value}
+                                f"{key}: {value}"
                             )
 
                 for child in constraint:
@@ -477,11 +477,11 @@ def validate_constraints(SID: str, ansible_os_family: str):
                         if key in cluster_properties[constraint_type]:
                             if value != cluster_properties[constraint_type][key]:
                                 drift_parameters[constraint_type][constraint_id].append(
-                                    {key: value}
+                                    f"{key}: {value}"
                                 )
                             else:
                                 valid_parameters[constraint_type][constraint_id].append(
-                                    {key: value}
+                                    f"{key}: {value}"
                                 )
         if drift_parameters:
             return {
