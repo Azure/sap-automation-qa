@@ -283,7 +283,6 @@
                     <th>Logs from /var/log/messages</th>
                     <td class="newlinemessages">
                       <details>
-                        <summary>Click to expand</summary>
                         {{ test_case_result.TestCaseLogMessagesFromSap }}
                       </details>
                     </td>
@@ -298,43 +297,89 @@
     <div class="footer">Report generated on: {{ report_generation_time }}</div>
     <script>
       // Function to beautify JSON objects
-      const jsonObjects = document.getElementsByClassName('jsonobject')
-      for (let jsonObjectElement of jsonObjects) {
-        try {
-          const jsonString = jsonObjectElement.textContent.trim()
-          const fixedJsonString = jsonString
-            .replace(/False/g, 'false')
-            .replace(/True/g, 'true')
-            .replace(/\\n/g, '')
-            .replace(/None/g, 'null')
-            .replace(/'([^']+)'(?=\s*:)/g, '"$1"')
-            .replace(/:\s*'([^']*)'(?=\s*[,\}])/g, function (match, value) {
-              if (value === '') {
-                return ': ""'
-              }
-              return `: "${value}"`
-            })
-            .replace(/'([^']*)'(?=\s*[\],])/g, function (match, value) {
-              if (value === '') {
-                return '""'
-              }
-              return `"${value}"`
-            })
+      function formatJsonObjects() {
+        const jsonObjects = document.getElementsByClassName('jsonobject')
+        for (let jsonObjectElement of jsonObjects) {
+          try {
+            const jsonString = jsonObjectElement.textContent.trim()
+            const fixedJsonString = jsonString
+              .replace(/False/g, 'false')
+              .replace(/True/g, 'true')
+              .replace(/\\n/g, '')
+              .replace(/None/g, 'null')
+              .replace(/'([^']+)'(?=\s*:)/g, '"$1"')
+              .replace(/:\s*'([^']*)'(?=\s*[,\}])/g, function (match, value) {
+                if (value === '') {
+                  return ': ""'
+                }
+                return `: "${value}"`
+              })
+              .replace(/'([^']*)'(?=\s*[\],])/g, function (match, value) {
+                if (value === '') {
+                  return '""'
+                }
+                return `"${value}"`
+              })
       
-          const jsonObject = JSON.parse(fixedJsonString)
-          const beautifiedJson = JSON.stringify(jsonObject, null, 4)
-          jsonObjectElement.textContent = beautifiedJson
-        } catch (error) {
-          console.error('Error parsing JSON:', error)
+            const jsonObject = JSON.parse(fixedJsonString)
+      
+            // Clear existing content
+            jsonObjectElement.innerHTML = ''
+      
+            // Create a pre element to maintain formatting
+            const preElement = document.createElement('jsonobject')
+            preElement.style.whiteSpace = 'pre-wrap'
+            preElement.style.wordWrap = 'break-word'
+      
+            // Function to recursively create formatted HTML
+            function formatJSON(obj, indent = 0, isTopLevel = true) {
+              const indentString = '    '.repeat(indent)
+              let html = ''
+      
+              if (Array.isArray(obj)) {
+                html += '[\n'
+                obj.forEach((item, index) => {
+                  html += indentString + '    '
+                  html += formatJSON(item, indent + 1, false)
+                  if (index < obj.length - 1) html += ','
+                  html += '\n'
+                })
+                html += indentString + ']'
+              } else if (typeof obj === 'object' && obj !== null) {
+                html += '{\n'
+                const keys = Object.keys(obj)
+                keys.forEach((key, index) => {
+                  html += indentString + '    '
+                  html += isTopLevel ? `<strong>"${key}"</strong>: ` : `"${key}": `
+                  html += formatJSON(obj[key], indent + 1, false)
+                  if (index < keys.length - 1) html += ','
+                  html += '\n'
+                })
+                html += indentString + '}'
+              } else {
+                html += JSON.stringify(obj)
+              }
+      
+              return html
+            }
+      
+            preElement.innerHTML = formatJSON(jsonObject)
+            jsonObjectElement.appendChild(preElement)
+          } catch (error) {
+            console.error('Error parsing JSON:', error)
+          }
         }
       }
       
-      const messages = document.getElementsByClassName('newlinemessages')
-      for (let message of messages) {
-        try {
-          message.innerHTML = JSON.parse(message.textContent.trim().replace(/\\n/g, '').replace(/'/g, '"')).join('<br>')
-        } catch (error) {
-          console.error('Error formatting messages:', error)
+      // Function to format new line messages from /var/log/messages
+      function formatNewLineMessages() {
+        const messages = document.getElementsByClassName('newlinemessages')
+        for (let message of messages) {
+          try {
+            message.innerHTML = JSON.parse(message.textContent.trim().replace(/\\n/g, '').replace(/'/g, '"')).join('<br>')
+          } catch (error) {
+            console.error('Error formatting messages:', error)
+          }
         }
       }
       
@@ -402,19 +447,23 @@
         return table
       }
       
-      // Call the function to create the table for package version
-      const packageLists = document.getElementsByClassName('packages')
-      for (let packageList of packageLists) {
-        try {
-          table = createPackageTable(packageList.textContent)
-          const packagesContainer = packageList
-          packagesContainer.textContent = '' // Clear the existing content
-          packagesContainer.appendChild(table)
-        } catch (error) {
-          console.error('Error creating package table:', error)
+      // Function to format package list
+      function formatPackageList() {
+        // Call the function to create the table for package version
+        const packageLists = document.getElementsByClassName('packages')
+        for (let packageList of packageLists) {
+          try {
+            table = createPackageTable(packageList.textContent)
+            const packagesContainer = packageList
+            packagesContainer.textContent = '' // Clear the existing content
+            packagesContainer.appendChild(table)
+          } catch (error) {
+            console.error('Error creating package table:', error)
+          }
         }
       }
       
+      // Function to create a table for cluster data
       function createClusterTable(clusterData) {
         const table = document.createElement('table')
         table.className = 'cluster-table'
@@ -468,8 +517,9 @@
           }
         }
       }
-      
-      // Call the function to parse and convert cluster data
+      formatJsonObjects()
+      formatNewLineMessages()
+      formatPackageList()
       parseClusterData()
     </script>
   </body>

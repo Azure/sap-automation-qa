@@ -26,7 +26,7 @@ def filter_logs(start_time, end_time, keywords, log_file="/var/log/messages"):
 
                 if start_dt <= log_time <= end_dt:
                     if any(keyword in line for keyword in keywords):
-                        line.replace("\n", "").replace("'", "")
+                        line.replace("\\n", "").replace("'", "")
                         filtered_logs.append(line)
             except ValueError:
                 continue
