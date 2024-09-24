@@ -30,7 +30,7 @@
                                         "TestCaseDetails": "{{ test_case_details }}",
                                         "DurationSeconds": "{{
                                             ((test_execution_end_time | default(now(utc=true, fmt='%Y-%m-%d %H:%M:%S')) | to_datetime)
-                                            - (test_case_start_time_epoch | default(test_case_start_time_epoch) | to_datetime))
+                                            - (test_execution_start_time | default(test_case_start_time_epoch) | to_datetime))
                                         }}",
                                         "DbFencingType": "{{ database_cluster_type if database_high_availability else 'DB not HA' }}",
                                         "ScsFencingType": "{{ scs_cluster_type if scs_high_availability else 'SCS not HA' }}",
