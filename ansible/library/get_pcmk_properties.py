@@ -635,10 +635,10 @@ def validate_cluster_params(cluster_properties: dict, ansible_os_family: str):
         location_constraints = location_constraints_exists()
         error_messages = []
         if drift_parameters:
-            error_messages.append({"Drift in cluster parameters": drift_parameters})
+            error_messages.append(f"Drift in cluster parameters : {drift_parameters}")
         if location_constraints:
             error_messages.append(
-                {"Location constraints detected": location_constraints}
+                {f"Location constraints detected: {location_constraints}"}
             )
         if error_messages:
             return {
