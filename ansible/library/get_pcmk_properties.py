@@ -81,7 +81,7 @@ CLUSTER_PROPERTIES_SUSE = {
             "pcmk_reboot_timeout": "900",
             "pcmk_delay_max": "15",
             "monitor-interval": "3600",
-            "pcmk_monitor_timeout": "120",
+            "monitor-timeout": "120",
         },
         "health-azure-events": {
             "interleave": "true",
