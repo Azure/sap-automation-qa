@@ -53,12 +53,6 @@ if [ ! -d "../.venv" ]; then
     log "INFO" "Creating and enabling Python virtual environment..."
     if python3 -m venv ../.venv && source ../.venv/bin/activate; then
         log "INFO" "Python virtual environment enabled."
-        log "INFO" "Installing Python packages..."
-        if pip install azure-kusto-data azure-kusto-ingest; then
-            log "INFO" "Python packages installed successfully."
-        else
-            log "ERROR" "Failed to install Python packages."
-        fi
     else
         log "ERROR" "Failed to create or enable Python virtual environment."
     fi
@@ -69,4 +63,11 @@ else
     else
         log "ERROR" "Failed to enable Python virtual environment."
     fi
+fi
+
+log "INFO" "Installing Python packages..."
+if pip install azure-kusto-data azure-kusto-ingest; then
+    log "INFO" "Python packages installed successfully."
+else
+    log "ERROR" "Failed to install Python packages."
 fi
