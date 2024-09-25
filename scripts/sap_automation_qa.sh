@@ -21,12 +21,11 @@ log() {
     local message=$2
 
     if [[ "$severity" == "ERROR" ]]; then
-        printf "${RED}%s${NC}\n" "$message"
+        echo -e "${RED}[ERROR] $message${NC}"
     else
-        printf "${GREEN}%s${NC}\n" "$message"
+        echo -e "${GREEN}[INFO] $message${NC}"
     fi
 }
-
 # Function to validate input parameters from vars.yaml
 validate_params() {
     local missing_params=()
@@ -83,12 +82,12 @@ log "INFO" "Using Authentication Type: $AUTHENTICATION_TYPE."
 check_file_exists "$SYSTEM_HOSTS" "hosts.yaml not found in WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME directory."
 check_file_exists "$SYSTEM_PARAMS" "sap-parameters.yaml not found in WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME directory."
 
-if [ "$sap_function_test_type" = "DatabaseHighAvailability" ]; then
+if [ "$sap_functional_test_type" = "DatabaseHighAvailability" ]; then
     playbook_name="playbook_00_ha_db_functional_tests"
-elif [ "$sap_function_test_type" = "CentralServicesHighAvailability" ]; then
+elif [ "$sap_functional_test_type" = "CentralServicesHighAvailability" ]; then
     playbook_name="playbook_00_ha_scs_functional_tests"
 else
-    echo "Unknown sap_function_test_type: $sap_function_test_type"
+    echo "Unknown sap_functional_test_type: $sap_functional_test_type"
     exit 1
 fi
 
