@@ -82,6 +82,13 @@ log "INFO" "Using Authentication Type: $AUTHENTICATION_TYPE."
 check_file_exists "$SYSTEM_HOSTS" "hosts.yaml not found in WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME directory."
 check_file_exists "$SYSTEM_PARAMS" "sap-parameters.yaml not found in WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME directory."
 
+log "INFO" "Checking if the SSH key or password file exists..."
+if [[ "$AUTHENTICATION_TYPE" == "SSHKEY" ]]; then
+    check_file_exists "../WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME/ssh_key.ppk" "ssh_key.ppk not found in WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME directory."
+else
+    check_file_exists "../WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME/password" "password file not found in WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME directory."
+fi
+
 if [ "$sap_functional_test_type" = "DatabaseHighAvailability" ]; then
     playbook_name="playbook_00_ha_db_functional_tests"
 elif [ "$sap_functional_test_type" = "CentralServicesHighAvailability" ]; then
@@ -90,6 +97,11 @@ else
     echo "Unknown sap_functional_test_type: $sap_functional_test_type"
     exit 1
 fi
+
+log "INFO" "Using playbook: $playbook_name."
+
+log "INFO" "Activate the virtual environment..."
+source ../.venv/bin/activate
 
 if [[ "$AUTHENTICATION_TYPE" == "SSHKEY" ]]; then
     ssh_key="../WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME/ssh_key.ppk"

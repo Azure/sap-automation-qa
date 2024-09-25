@@ -645,7 +645,7 @@ def validate_cluster_params(cluster_properties: dict, ansible_os_family: str):
             "status": SUCCESS_STATUS,
         }
     except Exception as e:
-        return {"Error": str(e), "status": ERROR_STATUS}
+        return {"msg": str(e), "status": ERROR_STATUS}
 
 
 def visualize_cluster_actions(xml_file):
