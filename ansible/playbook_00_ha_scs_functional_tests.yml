@@ -36,7 +36,7 @@
 
     - name:                            "Set the test group name based on the inputs"
       ansible.builtin.set_fact:
-        test_group_name:               "{{ sap_functional_test_type_map | selectattr('name', 'equalto', sap_functional_test_type) | map(attribute='value') | first }}_{{ platform | upper }}"
+        test_group_name:               "{{ sap_functional_test_type_map | selectattr('name', 'equalto', sap_functional_test_type) | map(attribute='value') | first }}"
       run_once: true
 
     - name:                            Set the test group facts
