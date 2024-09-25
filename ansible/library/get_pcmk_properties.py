@@ -388,7 +388,7 @@ def validate_fence_azure_arm(ansible_os_family: str, virtual_machine_name: str):
                 ]
             )
 
-        if msi_value and msi_value.lower() == "true":
+        if msi_value and msi_value.strip().lower() == "true":
             fence_azure_arm_output = run_subprocess(
                 ["fence_azure_arm", "--msi", "--action=list"]
             )
