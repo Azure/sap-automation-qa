@@ -1,4 +1,6 @@
 #!/bin/bash
+log "INFO" "Activate the virtual environment..."
+source ../.venv/bin/activate
 
 set -e
 
@@ -100,8 +102,6 @@ fi
 
 log "INFO" "Using playbook: $playbook_name."
 
-log "INFO" "Activate the virtual environment..."
-source ../.venv/bin/activate
 
 if [[ "$AUTHENTICATION_TYPE" == "SSHKEY" ]]; then
     ssh_key="../WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME/ssh_key.ppk"
