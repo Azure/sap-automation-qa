@@ -17,7 +17,8 @@
           - azure-kusto-data
           - azure-kusto-ingest
 
-- hosts:                               "{{ sap_sid | upper }}_SCS"
+- hosts: "{{ sap_sid | upper }}_SCS:
+    {{ sap_sid | upper }}_ERS"
   name:                                "Host tasks"
   gather_facts:                        true
   vars_files:
