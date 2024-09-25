@@ -632,19 +632,11 @@ def validate_cluster_params(cluster_properties: dict, ansible_os_family: str):
                 },
                 "status": WARNING_STATUS,
             }
-        location_constraints = location_constraints_exists()
-        error_messages = []
         if drift_parameters:
-            error_messages.append(f"Drift in cluster parameters : {drift_parameters}")
-        if location_constraints:
-            error_messages.append(
-                {f"Location constraints detected: {location_constraints}"}
-            )
-        if error_messages:
             return {
                 "msg": {
                     "Validated cluster parameters": valid_parameters,
-                    "Errors": json.dumps(error_messages),
+                    "Drift in cluster parameters": drift_parameters,
                 },
                 "status": ERROR_STATUS,
             }
