@@ -1,6 +1,6 @@
 #!/bin/bash
 log "INFO" "Activate the virtual environment..."
-source ../.venv/bin/activate
+source $(realpath $(dirname $(realpath $0))/..)/.venv/bin/activate
 
 set -e
 

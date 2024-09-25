@@ -1,4 +1,3 @@
-#!/usr/bin/python
 import subprocess
 import json
 from collections import defaultdict
@@ -197,13 +196,26 @@ CLUSTER_PROPERTIES_REDHAT = {
 }
 
 OS_PARAMETERS = {
-    "sysctl": {
-        "net.ipv4.tcp_timestamps": {"expected_value": "1"},
-        "vm.swappiness": {"expected_value": "10"},
+    "REDHAT": {
+        "sysctl": {
+            "net.ipv4.tcp_timestamps": {"expected_value": "1"},
+            "vm.swappiness": {"expected_value": "10"},
+        },
+        "corosync-cmapctl": {
+            "runtime.config.totem.token": {"expected_value": "30000"},
+            "runtime.config.totem.consensus": {"expected_value": "36000"},
+        },
     },
-    "corosync-cmapctl": {
-        "runtime.config.totem.token": {"expected_value": "30000"},
-        "runtime.config.totem.consensus": {"expected_value": "36000"},
+    "SUSE": {
+        "sysctl": {
+            "net.ipv4.tcp_timestamps": {"expected_value": "1"},
+            "vm.swappiness": {"expected_value": "10"},
+        },
+        "corosync-cmapctl": {
+            "runtime.config.totem.token": {"expected_value": "30000"},
+            "runtime.config.totem.consensus": {"expected_value": "36000"},
+            "quorum.expected_votes": {"expected_value": "2"},
+        },
     },
 }
 
@@ -214,7 +226,8 @@ CUSTOM_OS_PARAMETERS = {
             "parameter_name": "Expected votes",
             "command": ["pcs", "quorum", "status"],
         },
-    }
+    },
+    "SUSE": {},
 }
 
 REQUIRED_PARAMETERS = {
@@ -250,8 +263,12 @@ def run_subprocess(command):
         output: The output of the command.
     """
     try:
-        result = subprocess.run(command, capture_output=True, text=True, check=True)
-        return result.stdout
+        with subprocess.Popen(
+            command,
+            stdout=subprocess.PIPE,
+            encoding="utf-8",
+        ) as proc:
+            return proc.stdout.read()
     except subprocess.CalledProcessError as e:
         return str(e)
 
@@ -340,22 +357,37 @@ def validate_fence_azure_arm(ansible_os_family: str, virtual_machine_name: str):
         dict: Fence agent permissions
     """
     try:
-        command = (
-            ["crm", "stonith", "config", "--output-format=json"]
-            if ansible_os_family == "SUSE"
-            else ["pcs", "stonith", "config", "--output-format=json"]
-        )
-        stonith_config = json.loads(run_subprocess(command))
-        msi_value = next(
-            (
-                nvpair.get("value")
-                for nvpair in stonith_config.get("primitives", [])[0]
-                .get("instance_attributes", [])[0]
-                .get("nvpairs", [])
-                if nvpair.get("name") == "msi"
-            ),
-            None,
-        )
+        msi_value = None
+        if ansible_os_family == "REDHAT":
+            stonith_config = json.loads(
+                run_subprocess(
+                    command=["pcs", "stonith", "config", "--output-format=json"]
+                )
+            )
+            msi_value = next(
+                (
+                    nvpair.get("value")
+                    for nvpair in stonith_config.get("primitives", [])[0]
+                    .get("instance_attributes", [])[0]
+                    .get("nvpairs", [])
+                    if nvpair.get("name") == "msi"
+                ),
+                None,
+            )
+        elif ansible_os_family == "SUSE":
+            stonith_device_name = run_subprocess(
+                command=["stonith_admin", "--list-registered"]
+            ).splitlines()[0]
+            msi_value = run_subprocess(
+                command=[
+                    "crm_resource",
+                    "--resource",
+                    f"{stonith_device_name}",
+                    "--get-parameter",
+                    "msi",
+                ]
+            )
+
         if msi_value and msi_value.lower() == "true":
             fence_azure_arm_output = run_subprocess(
                 ["fence_azure_arm", "--msi", "--action=list"]
@@ -417,7 +449,7 @@ def validate_os_parameters(SID: str, ansible_os_family: str):
             else:
                 validated_parameters.append(f"{parameter}: {parameter_value}")
 
-        for stack_name, stack_details in OS_PARAMETERS.items():
+        for stack_name, stack_details in OS_PARAMETERS[ansible_os_family].items():
             base_args = (
                 ["sysctl"] if stack_name == "sysctl" else ["corosync-cmapctl", "-g"]
             )
@@ -645,7 +677,7 @@ def validate_cluster_params(cluster_properties: dict, ansible_os_family: str):
             "status": SUCCESS_STATUS,
         }
     except Exception as e:
-        return {"msg": str(e), "status": ERROR_STATUS}
+        return {"msg": {"Error message": str(e)}, "status": ERROR_STATUS}
 
 
 def visualize_cluster_actions(xml_file):
@@ -716,30 +748,33 @@ def main():
         constraints = validate_constraints(
             SID=module.params.get("sid"), ansible_os_family=ansible_os_family
         )
-        module.exit_json(
-            msg="Cluster parameters validation completed",
-            details={
-                **cluster_result["msg"],
-                **sap_hana_sr_result.get("msg", {}),
-                **os_parameters_result["msg"],
-                **fence_azure_arm_result["msg"],
-                **constraints["msg"],
-            },
-            status=(
-                SUCCESS_STATUS
-                if all(
-                    result["status"] == SUCCESS_STATUS
-                    for result in [
-                        cluster_result,
-                        sap_hana_sr_result,
-                        os_parameters_result,
-                        fence_azure_arm_result,
-                        constraints,
-                    ]
-                )
-                else ERROR_STATUS
-            ),
-        )
+        try:
+            module.exit_json(
+                msg="Cluster parameters validation completed",
+                details={
+                    **cluster_result["msg"],
+                    **sap_hana_sr_result.get("msg", {}),
+                    **os_parameters_result["msg"],
+                    **fence_azure_arm_result["msg"],
+                    **constraints["msg"],
+                },
+                status=(
+                    SUCCESS_STATUS
+                    if all(
+                        result["status"] == SUCCESS_STATUS
+                        for result in [
+                            cluster_result,
+                            sap_hana_sr_result,
+                            os_parameters_result,
+                            fence_azure_arm_result,
+                            constraints,
+                        ]
+                    )
+                    else ERROR_STATUS
+                ),
+            )
+        except Exception as e:
+            module.fail_json(msg=str(e))
     elif action == "visualize":
         if xml_file is None:
             module.fail_json(msg="XML file path is required for visualization.")
