@@ -71,3 +71,7 @@ if pip install azure-kusto-data azure-kusto-ingest; then
 else
     log "ERROR" "Failed to install Python packages."
 fi
+
+log "INFO" "Which Python: $(which python)"
+
+export ANSIBLE_PYTHON_INTERPRETER=$(which python3)
