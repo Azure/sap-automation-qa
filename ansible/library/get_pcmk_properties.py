@@ -399,8 +399,8 @@ def validate_os_parameters(SID: str, ansible_os_family: str):
     Returns:
         dict: SAP VM Parameters
     """
-    drift_parameters = {}
-    validated_parameters = {}
+    drift_parameters = []
+    validated_parameters = []
     try:
         for parameter, details in CUSTOM_OS_PARAMETERS[ansible_os_family].items():
             output = run_subprocess(details["command"]).splitlines()
@@ -413,9 +413,9 @@ def validate_os_parameters(SID: str, ansible_os_family: str):
                 None,
             )
             if parameter_value != details["expected_value"]:
-                drift_parameters[parameter] = parameter_value
+                drift_parameters.append(f"{parameter}: {parameter_value}")
             else:
-                validated_parameters[parameter] = parameter_value
+                validated_parameters.append(f"{parameter}: {parameter_value}")
 
         for stack_name, stack_details in OS_PARAMETERS.items():
             base_args = (
@@ -425,9 +425,9 @@ def validate_os_parameters(SID: str, ansible_os_family: str):
                 output = run_subprocess(base_args + [parameter])
                 parameter_value = output.split("=")[1].strip()
                 if parameter_value != details["expected_value"]:
-                    drift_parameters[parameter] = parameter_value
+                    drift_parameters.append(f"{parameter}: {parameter_value}")
                 else:
-                    validated_parameters[parameter] = parameter_value
+                    validated_parameters.append(f"{parameter}: {parameter_value}")
 
         if drift_parameters:
             return {
@@ -644,7 +644,7 @@ def validate_cluster_params(cluster_properties: dict, ansible_os_family: str):
             return {
                 "msg": {
                     "Validated cluster parameters": valid_parameters,
-                    "Errors": error_messages,
+                    "Errors": json.dumps(error_messages),
                 },
                 "status": ERROR_STATUS,
             }
