@@ -49,6 +49,13 @@ packages=("python3-pip" "ansible" "sshpass" "python3-venv")
 
 install_packages "${packages[@]}"
 
+log "INFO" "Installing Python packages..."
+if pip install azure-kusto-data azure-kusto-ingest; then
+    log "INFO" "Python packages installed successfully."
+else
+    log "ERROR" "Failed to install Python packages."
+fi
+
 if [ ! -d "../.venv" ]; then
     log "INFO" "Creating and enabling Python virtual environment..."
     if python3 -m venv ../.venv && source ../.venv/bin/activate; then
@@ -63,13 +70,6 @@ else
     else
         log "ERROR" "Failed to enable Python virtual environment."
     fi
-fi
-
-log "INFO" "Installing Python packages..."
-if pip install azure-kusto-data azure-kusto-ingest; then
-    log "INFO" "Python packages installed successfully."
-else
-    log "ERROR" "Failed to install Python packages."
 fi
 
 log "INFO" "Which Python: $(which python)"
