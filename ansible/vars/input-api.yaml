@@ -26,7 +26,8 @@ test_groups:
 
   - name:                           HA_SCS
     test_cases:
-      - name:                       ha-config
+      - name:                       HA Parameters Validation
+        task_name:                  ha-config
         description:                This validates the HA configuration
 
 # Commands for HANA DB HA Test Cases based on OS family
