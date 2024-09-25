@@ -158,13 +158,13 @@
                                     Old secondary: {{ cluster_status_pre.secondary_node }} \
                                     New secondary: {{ cluster_status_post.secondary_node }}"
             test_case_details:      {
-                                      "Pre Validations: Remove any location_constraints": "{{ location_constraints_results }}",
-                                      "Pre Validations: Validate HANA DB cluster status": "{{ cluster_status_pre }}",
-                                      "Pre Validations: Check if the AUTOMATED_REGISTER": "{{ automated_register }}",
-                                      "Pre Validations: CleanUp any failed resource": "{{ cleanup_failed_resource_pre }}",
-                                      "Test Execution: Move the resource to the targeted node": "{{ hana_db_resource_migration }}",
-                                      "Post Validations: CleanUp any failed resource": "{{ cleanup_failed_resource_post }}",
-                                      "Post Validations: Validate HANA DB cluster status": "{{ cluster_status_post }}",
+                                      "Pre Validations: Remove any location_constraints": "{{ location_constraints_results | replace('\"', '') }}",
+                                      "Pre Validations: Validate HANA DB cluster status": "{{ cluster_status_pre | replace('\"', '') }}",
+                                      "Pre Validations: Check if the AUTOMATED_REGISTER": "{{ automated_register | replace('\"', '') }}",
+                                      "Pre Validations: CleanUp any failed resource": "{{ cleanup_failed_resource_pre | replace('\"', '') }}",
+                                      "Test Execution: Move the resource to the targeted node": "{{ hana_db_resource_migration | replace('\"', '') }}",
+                                      "Post Validations: CleanUp any failed resource": "{{ cleanup_failed_resource_post | replace('\"', '') }}",
+                                      "Post Validations: Validate HANA DB cluster status": "{{ cluster_status_post | replace('\"', '') }}",
                                     }
 
         - name:                     "Post Telemetry Data"
@@ -180,8 +180,8 @@
         test_case_description:      "{{ item.description }}"
         test_case_status:           "FAILED"
         test_case_hostname:          "{{ virtual_host }}"
-        test_case_message:          "{{ ansible_failed_result.msg }}"
-        test_case_details:          "{{ ansible_failed_result }}"
+        test_case_message:          "{{ ansible_failed_result.msg | replace('\"', '') }}"
+        test_case_details:          "{{ ansible_failed_result | replace('\"', '') }}"
         test_case_var_log_messages: "{{ var_log_messages_output.filtered_logs }}"
 
     - name:                         "Post Telemetry Data"
