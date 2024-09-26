@@ -19,13 +19,12 @@
       register:                         azure_instance_metadata
 
     - name:                             "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} - HA Configuration check for the DB nodes"
-      get_pcmk_properties:
+      get_pcmk_properties_db:
         action:                         get
         sid:                            "{{ db_sid | upper }}"
         instance_number:                "{{ db_instance_number }}"
         ansible_os_family:              "{{ ansible_os_family | upper }}"
         virtual_machine_name:           "{{ azure_instance_metadata.json.compute.name }}"
-        node_tier:                      "db"
       register:                         test_result
 
     - name:                             "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} - Set the test case status to PASSED"

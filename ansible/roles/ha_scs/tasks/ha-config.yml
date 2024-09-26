@@ -19,13 +19,12 @@
       register:                         azure_instance_metadata
 
     - name:                             "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} - HA Configuration check for the SCS nodes"
-      get_pcmk_properties:
+      get_pcmk_properties_scs:
         action:                         get
         sid:                            "{{ sap_sid | upper }}"
         instance_number:                "{{ scs_instance_number }}"
         ansible_os_family:              "{{ ansible_os_family | upper }}"
         virtual_machine_name:           "{{ azure_instance_metadata.json.compute.name }}"
-        node_tier:                      "scs"
       register:                         test_result
 
     - name:                             "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} - Set the test case status to PASSED"
