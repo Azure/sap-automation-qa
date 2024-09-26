@@ -641,7 +641,7 @@ def validate_cluster_params(cluster_properties: dict, ansible_os_family: str):
             )
             if root is not None:
                 root_elements = (
-                    root.findall(".//primitive") if root.tag == "resources" else [root]
+                    root.findall(".//primitive") if resource_operation == "resources" else [root]
                 )
                 for root_element in root_elements:
                     primitive_id = root_element.get("id")
