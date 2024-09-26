@@ -8,34 +8,9 @@ SUCCESS_STATUS = "PASSED"
 ERROR_STATUS = "FAILED"
 WARNING_STATUS = "WARNING"
 
-CLUSTER_PROPERTIES_SUSE = {
-    "crm_config": {
-        "cib-bootstrap-options": {
-            "have-watchdog": "false",
-            "cluster-infrastructure": "corosync",
-            "stonith-enabled": "true",
-            "concurrent-fencing": "true",
-            "stonith-timeout": "900s",
-            "maintenance-mode": "false",
-            "azure-events_globalPullState": "IDLE",
-            "priority-fencing-delay": "30",
-        }
-    },
-    "rsc_defaults": {
-        "build-resource-defaults": {
-            "resource-stickiness": "1",
-            "migration-threshold": "3",
-            "priority": "1",
-        }
-    },
-    "op_defaults": {
-        "op-options": {
-            "timeout": "600",
-            "record-pending": "true",
-        }
-    },
-    "resources": {
-        "rsc_st_azure": {
+CLUSTER_RESOURCES = {
+    "SUSE": {
+        "stonith:fence_azure_arm": {
             "pcmk_monitor_retries": "4",
             "pcmk_action_limit": "3",
             "power_timeout": "240",
@@ -44,19 +19,15 @@ CLUSTER_PROPERTIES_SUSE = {
             "monitor-interval": "3600",
             "pcmk_monitor_timeout": "120",
             "monitor-timeout": "120",
-            "stop-interval": "0s",
-            "stop-timeout": "20s",
-            "start-interval": "0s",
-            "start-timeout": "20s",
         },
-        "health-azure-events": {
+        "ocf:heartbeat:azure-events-az": {
             "interleave": "true",
             "allow-unhealthy-nodes": "true",
             "failure-timeout": "120s",
             "start-start-delay": "60s",
             "monitor-interval": "10s",
         },
-        "nc_SID_ASCS": {
+        "ocf:heartbeat:azure-lb": {
             "monitor-interval": "10",
             "monitor-timeout": "20s",
             "start-interval": "0s",
@@ -64,7 +35,7 @@ CLUSTER_PROPERTIES_SUSE = {
             "stop-interval": "0s",
             "stop-timeout": "20s",
         },
-        "vip_SID_ASCS": {
+        "ocf:heartbeat:IPaddr2": {
             "monitor-interval": "10",
             "monitor-timeout": "20",
             "start-interval": "0s",
@@ -72,15 +43,7 @@ CLUSTER_PROPERTIES_SUSE = {
             "stop-interval": "0s",
             "stop-timeout": "20s",
         },
-        "rsc_sapstartsrv_SID_ASCS_IN": {
-            "monitor-interval": "120s",
-            "monitor-timeout": "20s",
-            "start-interval": "0s",
-            "start-timeout": "60s",
-            "stop-interval": "0s",
-            "stop-timeout": "60s",
-        },
-        "rsc_sap_SID_ASCS_IN": {
+        "ocf:heartbeat:SAPInstance:ASCS": {
             "AUTOMATIC_RECOVER": "false",
             "MINIMAL_PROBE": "true",
             "resource-stickiness": "5000",
@@ -96,8 +59,41 @@ CLUSTER_PROPERTIES_SUSE = {
             "demote-interval": "0s",
             "demote-timeout": "320s",
         },
-        "nc_SID_ERS": {
-            "port": "62010",
+        "ocf:heartbeat:SAPInstance:ERS": {
+            "AUTOMATIC_RECOVER": "false",
+            "IS_ERS": "true",
+            "MINIMAL_PROBE": "true",
+            "monitor-interval": "11",
+            "monitor-timeout": "60",
+            "start-interval": "0s",
+            "start-timeout": "180s",
+            "stop-interval": "0s",
+            "stop-timeout": "240s",
+            "promote-interval": "0s",
+            "promote-timeout": "320s",
+            "demote-interval": "0s",
+            "demote-timeout": "320s",
+        },
+    },
+    "REDHAT": {
+        "stonith:fence_azure_arm": {
+            "pcmk_monitor_retries": "4",
+            "pcmk_action_limit": "3",
+            "power_timeout": "240",
+            "pcmk_reboot_timeout": "900",
+            "pcmk_delay_max": "15",
+            "monitor-interval": "3600",
+            "pcmk_monitor_timeout": "120",
+            "monitor-timeout": "120",
+        },
+        "ocf:heartbeat:azure-events-az": {
+            "interleave": "true",
+            "allow-unhealthy-nodes": "true",
+            "failure-timeout": "120s",
+            "start-start-delay": "60s",
+            "monitor-interval": "10s",
+        },
+        "ocf:heartbeat:azure-lb": {
             "monitor-interval": "10",
             "monitor-timeout": "20s",
             "start-interval": "0s",
@@ -105,7 +101,7 @@ CLUSTER_PROPERTIES_SUSE = {
             "stop-interval": "0s",
             "stop-timeout": "20s",
         },
-        "vip_SID_ERS": {
+        "ocf:heartbeat:IPaddr2": {
             "monitor-interval": "10",
             "monitor-timeout": "20",
             "start-interval": "0s",
@@ -113,15 +109,23 @@ CLUSTER_PROPERTIES_SUSE = {
             "stop-interval": "0s",
             "stop-timeout": "20s",
         },
-        "rsc_sapstartsrv_SID_ERS_IN": {
-            "monitor-interval": "120s",
-            "monitor-timeout": "20s",
+        "ocf:heartbeat:SAPInstance:ASCS": {
+            "AUTOMATIC_RECOVER": "false",
+            "MINIMAL_PROBE": "true",
+            "resource-stickiness": "5000",
+            "priority": "100",
+            "monitor-interval": "11",
+            "monitor-timeout": "60",
             "start-interval": "0s",
-            "start-timeout": "60s",
+            "start-timeout": "180s",
             "stop-interval": "0s",
-            "stop-timeout": "60s",
+            "stop-timeout": "240s",
+            "promote-interval": "0s",
+            "promote-timeout": "320s",
+            "demote-interval": "0s",
+            "demote-timeout": "320s",
         },
-        "rsc_sap_SID_ERS_IN": {
+        "ocf:heartbeat:SAPInstance:ERS": {
             "AUTOMATIC_RECOVER": "false",
             "IS_ERS": "true",
             "MINIMAL_PROBE": "true",
@@ -139,7 +143,8 @@ CLUSTER_PROPERTIES_SUSE = {
     },
 }
 
-CLUSTER_PROPERTIES_REDHAT = {
+
+CLUSTER_PROPERTIES = {
     "crm_config": {
         "cib-bootstrap-options": {
             "have-watchdog": "false",
@@ -149,7 +154,7 @@ CLUSTER_PROPERTIES_REDHAT = {
             "stonith-timeout": "900",
             "maintenance-mode": "false",
             "azure-events_globalPullState": "IDLE",
-            "priority-fencing-delay": "15s",
+            "priority-fencing-delay": "30",
         }
     },
     "rsc_defaults": {
@@ -158,115 +163,6 @@ CLUSTER_PROPERTIES_REDHAT = {
             "migration-threshold": "3",
             "priority": "1",
         }
-    },
-    "op_defaults": {
-        "op-options": {
-            "timeout": "600",
-            "record-pending": "true",
-        }
-    },
-    "resources": {
-        "rsc_st_azure": {
-            "pcmk_monitor_retries": "4",
-            "pcmk_action_limit": "3",
-            "power_timeout": "240",
-            "pcmk_reboot_timeout": "900",
-            "pcmk_delay_max": "15",
-            "monitor-interval": "3600",
-            "pcmk_monitor_timeout": "120",
-            "monitor-timeout": "120",
-            "stop-interval": "0s",
-            "stop-timeout": "20s",
-            "start-interval": "0s",
-            "start-timeout": "20s",
-        },
-        "health-azure-events": {
-            "interleave": "true",
-            "allow-unhealthy-nodes": "true",
-            "failure-timeout": "120s",
-            "start-start-delay": "60s",
-            "monitor-interval": "10s",
-        },
-        "nc_SID_ASCS": {
-            "monitor-interval": "10",
-            "monitor-timeout": "20s",
-            "start-interval": "0s",
-            "start-timeout": "20s",
-            "stop-interval": "0s",
-            "stop-timeout": "20s",
-        },
-        "vip_SID_ASCS": {
-            "monitor-interval": "10",
-            "monitor-timeout": "20",
-            "start-interval": "0s",
-            "start-timeout": "20s",
-            "stop-interval": "0s",
-            "stop-timeout": "20s",
-        },
-        "rsc_sapstartsrv_SID_ASCS_IN": {
-            "monitor-interval": "120s",
-            "monitor-timeout": "20s",
-            "start-interval": "0s",
-            "start-timeout": "60s",
-            "stop-interval": "0s",
-            "stop-timeout": "60s",
-        },
-        "rsc_sap_SID_ASCS_IN": {
-            "AUTOMATIC_RECOVER": "false",
-            "MINIMAL_PROBE": "true",
-            "resource-stickiness": "5000",
-            "priority": "100",
-            "monitor-interval": "11",
-            "monitor-timeout": "60",
-            "start-interval": "0s",
-            "start-timeout": "180s",
-            "stop-interval": "0s",
-            "stop-timeout": "240s",
-            "promote-interval": "0s",
-            "promote-timeout": "320s",
-            "demote-interval": "0s",
-            "demote-timeout": "320s",
-        },
-        "nc_SID_ERS": {
-            "port": "62010",
-            "monitor-interval": "10",
-            "monitor-timeout": "20s",
-            "start-interval": "0s",
-            "start-timeout": "20s",
-            "stop-interval": "0s",
-            "stop-timeout": "20s",
-        },
-        "vip_SID_ERS": {
-            "monitor-interval": "10",
-            "monitor-timeout": "20",
-            "start-interval": "0s",
-            "start-timeout": "20s",
-            "stop-interval": "0s",
-            "stop-timeout": "20s",
-        },
-        "rsc_sapstartsrv_SID_ERS_IN": {
-            "monitor-interval": "120s",
-            "monitor-timeout": "20s",
-            "start-interval": "0s",
-            "start-timeout": "60s",
-            "stop-interval": "0s",
-            "stop-timeout": "60s",
-        },
-        "rsc_sap_SID_ERS_IN": {
-            "AUTOMATIC_RECOVER": "false",
-            "IS_ERS": "true",
-            "MINIMAL_PROBE": "true",
-            "monitor-interval": "11",
-            "monitor-timeout": "60",
-            "start-interval": "0s",
-            "start-timeout": "180s",
-            "stop-interval": "0s",
-            "stop-timeout": "240s",
-            "promote-interval": "0s",
-            "promote-timeout": "320s",
-            "demote-interval": "0s",
-            "demote-timeout": "320s",
-        },
     },
 }
 
@@ -363,36 +259,6 @@ def parse_xml_output(command):
     if xml_output.startswith("<"):
         return ET.fromstring(xml_output)
     return None
-
-
-def define_custom_parameters(module_params, cluster_properties):
-    """Get custom value for certain parameters depending on user input and OS family
-
-    Args:
-        module_params (dict): Ansible module parameters
-        cluster_properties (dict): Dictionary of cluster properties
-
-    Returns:
-        str: Value of the key from the custom dictionary
-    """
-    os_family = module_params.get("ansible_os_family")
-    sid = module_params.get("sid")
-    ascs_instance_number = module_params.get("ascs_instance_number")
-    ers_instance_number = module_params.get("ers_instance_number")
-    for props, details in list(cluster_properties["resources"].items()):
-        new_props = props
-        if "SID" in props:
-            new_props = new_props.replace("SID", sid)
-
-        if "ASCS" in props and "_IN" in props:
-            new_props = new_props.replace("_IN", ascs_instance_number)
-        elif "ERS" in props and "_IN" in props:
-            new_props = new_props.replace("_IN", ers_instance_number)
-
-        cluster_properties["resources"][new_props] = details
-        if new_props != props:
-            del cluster_properties["resources"][props]
-    return cluster_properties
 
 
 def validate_fence_azure_arm(ansible_os_family: str, virtual_machine_name: str):
@@ -623,11 +489,84 @@ def validate_constraints(SID: str, ansible_os_family: str):
         return {"msg": {"Constraints validation": str(e)}, "status": ERROR_STATUS}
 
 
-def validate_cluster_params(cluster_properties: dict, ansible_os_family: str):
+def validate_resource_parameters(
+    ansible_os_family: str, drift_parameters: dict, valid_parameters: dict
+):
+    resource_mapping = {}
+    root = parse_xml_output(["cibadmin", "--query", "--scope", "resources"])
+    for primitive in root.findall(".//primitive"):
+        resource_id = primitive.get("id")
+        resource_class = primitive.get("class")
+        resource_provider = primitive.get("provider", "")
+        resource_type = primitive.get("type")
+        properties = {
+            prop.get("name"): prop.get("value")
+            for prop in primitive.findall(".//nvpair")
+        }
+
+        if resource_provider:
+            resource_full_type = f"{resource_class}:{resource_provider}:{resource_type}"
+        else:
+            resource_full_type = f"{resource_class}:{resource_type}"
+
+        if resource_type == "SAPInstance":
+            if "IS_ERS" in properties and properties["IS_ERS"] == "true":
+                resource_full_type += ":ERS"
+            else:
+                resource_full_type += ":ASCS"
+
+        resource_mapping[resource_full_type] = resource_id
+
+    for resource_type, resource_id in resource_mapping.items():
+        expected_attributes = CLUSTER_RESOURCES[ansible_os_family].get(
+            resource_type, {}
+        )
+        actual_attributes = {}
+
+        primitive = root.find(f".//primitive[@id='{resource_id}']")
+        if primitive is not None:
+            for prop in primitive.findall(".//nvpair"):
+                actual_attributes[prop.get("name")] = prop.get("value")
+
+            for op in primitive.findall(".//op"):
+                name = (
+                    f"{op.get('name')}-{op.get('role', 'NoRole')}-interval"
+                    if op.get("role")
+                    else f"{op.get('name')}-interval"
+                )
+                actual_attributes[name] = op.get("interval")
+                name = (
+                    f"{op.get('name')}-{op.get('role', 'NoRole')}-timeout"
+                    if op.get("role")
+                    else f"{op.get('name')}-timeout"
+                )
+                actual_attributes[name] = op.get("timeout")
+        for name, value in actual_attributes.items():
+            if name in expected_attributes:
+                if value != expected_attributes[name]:
+                    drift_parameters["resources"][resource_id].append(
+                        PARAMETER_VALUE_FORMAT
+                        % (
+                            name,
+                            value,
+                            expected_attributes[name],
+                        )
+                    )
+                else:
+                    valid_parameters["resources"][resource_id].append(
+                        PARAMETER_VALUE_FORMAT
+                        % (
+                            name,
+                            value,
+                            expected_attributes[name],
+                        )
+                    )
+
+
+def validate_cluster_params(ansible_os_family: str):
     """Validate pacemaker cluster parameters for DB and SCS
 
     Args:
-        cluster_properties (dict): Dictionary of recommended values of cluster properties
         ansible_os_family (str): Ansible OS family
     Returns:
         dict: Validated cluster parameters
@@ -635,15 +574,12 @@ def validate_cluster_params(cluster_properties: dict, ansible_os_family: str):
     drift_parameters = defaultdict(lambda: defaultdict(list))
     valid_parameters = defaultdict(lambda: defaultdict(list))
     try:
-        for resource_operation in cluster_properties.keys():
+        for resource_operation in CLUSTER_PROPERTIES.keys():
             root = parse_xml_output(
                 ["cibadmin", "--query", "--scope", resource_operation]
             )
             if root is not None:
-                root_elements = (
-                    root.findall(".//primitive") if resource_operation == "resources" else root
-                )
-                for root_element in root_elements:
+                for root_element in root:
                     primitive_id = root_element.get("id")
                     extracted_values = {
                         primitive_id: {
@@ -651,20 +587,7 @@ def validate_cluster_params(cluster_properties: dict, ansible_os_family: str):
                             for nvpair in root_element.findall(".//nvpair")
                         }
                     }
-                    for op in root_element.findall(".//op"):
-                        name = (
-                            f"{op.get('name')}-{op.get('role', 'NoRole')}-interval"
-                            if op.get("role")
-                            else f"{op.get('name')}-interval"
-                        )
-                        extracted_values[primitive_id][name] = op.get("interval")
-                        name = (
-                            f"{op.get('name')}-{op.get('role', 'NoRole')}-timeout"
-                            if op.get("role")
-                            else f"{op.get('name')}-timeout"
-                        )
-                        extracted_values[primitive_id][name] = op.get("timeout")
-                    recommended_for_primitive = cluster_properties[
+                    recommended_for_primitive = CLUSTER_PROPERTIES[
                         resource_operation
                     ].get(primitive_id, {})
                     for name, value in extracted_values[primitive_id].items():
@@ -691,6 +614,9 @@ def validate_cluster_params(cluster_properties: dict, ansible_os_family: str):
                                         recommended_for_primitive[name],
                                     )
                                 )
+        validate_resource_parameters(
+            ansible_os_family, drift_parameters, valid_parameters
+        )
         valid_parameters_json = json.dumps(valid_parameters)
         missing_parameters = [
             parameter
@@ -735,16 +661,7 @@ def main():
         )
     )
     ansible_os_family = module.params.get("ansible_os_family")
-    cluster_properties = (
-        CLUSTER_PROPERTIES_SUSE
-        if ansible_os_family == "SUSE"
-        else CLUSTER_PROPERTIES_REDHAT
-    )
-    custom_cluster_properties = define_custom_parameters(
-        module.params, cluster_properties
-    )
     cluster_result = validate_cluster_params(
-        cluster_properties=custom_cluster_properties,
         ansible_os_family=ansible_os_family,
     )
     os_parameters_result = validate_os_parameters(
