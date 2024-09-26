@@ -22,7 +22,8 @@
       get_pcmk_properties_scs:
         action:                         get
         sid:                            "{{ sap_sid | upper }}"
-        instance_number:                "{{ scs_instance_number }}"
+        ascs_instance_number:           "{{ scs_instance_number }}"
+        ers_instance_number:            "{{ ers_instance_number }}"
         ansible_os_family:              "{{ ansible_os_family | upper }}"
         virtual_machine_name:           "{{ azure_instance_metadata.json.compute.name }}"
       register:                         test_result
