@@ -282,9 +282,7 @@
                   <tr>
                     <th>Logs from /var/log/messages</th>
                     <td class="newlinemessages">
-                      <details>
-                        {{ test_case_result.TestCaseLogMessagesFromSap }}
-                      </details>
+                      <details>{{ test_case_result.TestCaseLogMessagesFromSap }}</details>
                     </td>
                   </tr>
                 {% endif %}
@@ -463,39 +461,55 @@
         }
       }
       
-      // Function to create a table for cluster data
       function createClusterTable(clusterData) {
         const table = document.createElement('table')
         table.className = 'cluster-table'
       
-        function addRow(key, value, depth = 0) {
-          const row = table.insertRow()
-          const keyCell = row.insertCell()
-          const valueCell = row.insertCell()
-          keyCell.style.paddingLeft = depth * 10 + 'px'
+        // Create table header
+        const header = table.createTHead()
+        const headerRow = header.insertRow()
+        ;['Name', 'Value', 'Expected Value'].forEach((text) => {
+          const th = document.createElement('th')
+          th.textContent = text
+          headerRow.appendChild(th)
+        })
       
-          if (Array.isArray(value)) {
-            keyCell.textContent = key
-            keyCell.style.fontWeight = 'bold'
-            value.forEach((item) => {
-              const [subKey, subValue] = item.split(': ')
-              addRow(subKey, subValue, depth + 1)
-            })
-          } else if (typeof value === 'object' && value !== null) {
-            keyCell.textContent = key
-            keyCell.style.fontWeight = 'bold'
-            for (const [subKey, subValue] of Object.entries(value)) {
-              addRow(subKey, subValue, depth + 1)
-            }
+        const tbody = table.createTBody()
+      
+        function addRow(name, value, expectedValue, depth = 0, isObjectKey = false) {
+          const row = tbody.insertRow()
+          const nameCell = row.insertCell()
+          const valueCell = row.insertCell()
+          const expectedValueCell = row.insertCell()
+      
+          nameCell.style.paddingLeft = depth * 10 + 'px'
+          if (isObjectKey) {
+            nameCell.innerHTML = `<strong>${name}</strong>`
           } else {
-            keyCell.textContent = key
-            valueCell.textContent = value
+            nameCell.textContent = name
+          }
+          valueCell.textContent = value
+          expectedValueCell.textContent = expectedValue
+        }
+      
+        function parseAndAddRows(obj, depth = 0) {
+          for (const [key, value] of Object.entries(obj)) {
+            if (Array.isArray(value)) {
+              addRow(key, '', '', depth, true)
+              value.forEach((item) => {
+                const [name, value, expectedValue] = item.split(', ').map((pair) => pair.split(': ')[1])
+                addRow(name, value, expectedValue, depth + 1)
+              })
+            } else if (typeof value === 'object' && value !== null) {
+              addRow(key, '', '', depth, true)
+              parseAndAddRows(value, depth + 1)
+            } else {
+              addRow(key, value, '', depth, true)
+            }
           }
         }
       
-        for (const [key, value] of Object.entries(clusterData)) {
-          addRow(key, value)
-        }
+        parseAndAddRows(clusterData)
       
         return table
       }
