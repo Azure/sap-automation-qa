@@ -727,11 +727,11 @@ def main():
     """
     module = AnsibleModule(
         argument_spec=dict(
-            sid=dict(type="str"),
-            ascs_instance_number=dict(type="str"),
-            ers_instance_number=dict(type="str"),
-            ansible_os_family=dict(type="str"),
-            virtual_machine_name=dict(type="str"),
+            sid=dict(type="str", required=True),
+            ascs_instance_number=dict(type="str", required=True),
+            ers_instance_number=dict(type="str", required=True),
+            ansible_os_family=dict(type="str", required=True),
+            virtual_machine_name=dict(type="str", required=True),
         )
     )
     ansible_os_family = module.params.get("ansible_os_family")
