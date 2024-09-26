@@ -3,32 +3,50 @@ from ansible.module_utils.basic import AnsibleModule
 import json
 
 
-def filter_logs(start_time, end_time, keywords, log_file="/var/log/messages"):
+def filter_logs(
+    start_time, end_time, keywords, ansible_os_family, log_file="/var/log/messages"
+):
     """
     Filters logs from the specified log file based on start time, end time, and keywords.
 
     :param start_time: Start time in the format 'YYYY-MM-DD HH:MM:SS'
     :param end_time: End time in the format 'YYYY-MM-DD HH:MM:SS'
-    :param keywords: List of keywords to filter logs
+    :param keywords: Set of keywords to filter logs
+    :param ansible_os_family: The OS family of the target host
     :param log_file: Path to the log file
     :return: List of filtered log lines
     """
-    start_dt = datetime.datetime.strptime(start_time, "%Y-%m-%d %H:%M:%S")
-    end_dt = datetime.datetime.strptime(end_time, "%Y-%m-%d %H:%M:%S")
+    date_format = (
+        "%Y-%m-%dT%H:%M:%S" if ansible_os_family == "SUSE" else "%Y-%m-%d %H:%M:%S"
+    )
+
+    start_dt = datetime.datetime.strptime(start_time, date_format)
+    end_dt = datetime.datetime.strptime(end_time, date_format)
     filtered_logs = []
 
     with open(log_file, "r") as file:
         for line in file:
             try:
-                log_time_str = " ".join(line.split()[:3])
-                log_time = datetime.datetime.strptime(log_time_str, "%b %d %H:%M:%S")
-                log_time = log_time.replace(year=start_dt.year)
+                if ansible_os_family == "REDHAT":
+                    log_time_str = " ".join(line.split()[:3])
+                    log_time = datetime.datetime.strptime(
+                        log_time_str, "%b %d %H:%M:%S"
+                    )
+                    log_time = log_time.replace(year=start_dt.year)
+                elif ansible_os_family == "SUSE":
+                    log_time_str = line.split(".")[0]
+                    log_time = datetime.datetime.strptime(
+                        log_time_str, "%Y-%m-%dT%H:%M:%S"
+                    )
+                else:
+                    continue
 
-                if start_dt <= log_time <= end_dt:
-                    if any(keyword in line for keyword in keywords):
-                        filtered_logs.append(
-                            line.replace("\\n", "").replace('"', "").replace("'", "")
-                        )
+                if start_dt <= log_time <= end_dt and any(
+                    keyword in line for keyword in keywords
+                ):
+                    filtered_logs.append(
+                        line.translate(str.maketrans({"\\": "", '"': "", "'": ""}))
+                    )
             except ValueError:
                 continue
 
@@ -53,6 +71,7 @@ def run_module():
         end_time=dict(type="str", required=True),
         log_file=dict(type="str", required=False, default="/var/log/messages"),
         keywords=dict(type="list", required=False, default=[]),
+        ansible_os_family=dict(type="str", required=True),
     )
 
     result = dict(
@@ -67,10 +86,11 @@ def run_module():
     )
 
     module = AnsibleModule(argument_spec=module_args, supports_check_mode=True)
+    ansible_os_family = module.params["ansible_os_family"]
 
     start_time = module.params["start_time"]
     end_time = module.params["end_time"]
-    pacemaker_keywords = [
+    pacemaker_keywords = {
         "LogAction",
         "LogNodeActions",
         "pacemaker-fenced",
@@ -87,8 +107,8 @@ def run_module():
         "-is-managed",
         "-maintenance",
         "-standby",
-    ]
-    system_keywords = [
+    }
+    system_keywords = {
         "SAPHana",
         "SAPHanaController",
         "SAPHanaTopology",
@@ -102,15 +122,17 @@ def run_module():
         "corosync",
         "Result of",
         "reboot",
-    ]
-    keywords = pacemaker_keywords + system_keywords
+    }
+    keywords = pacemaker_keywords | system_keywords
 
     try:
         result["start"] = datetime.datetime.now()
         result["start_time"] = start_time
         result["end_time"] = end_time
-        result["keywords"] = keywords
-        result["filtered_logs"] = filter_logs(start_time, end_time, keywords)
+        result["keywords"] = list(keywords)
+        result["filtered_logs"] = filter_logs(
+            start_time, end_time, keywords, ansible_os_family
+        )
         result["end"] = datetime.datetime.now()
         module.exit_json(**result)
     except Exception as e:

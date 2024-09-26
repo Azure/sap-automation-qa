@@ -40,7 +40,6 @@ CLUSTER_PROPERTIES_SUSE = {
             "target-role": "Started",
             "interleave": "true",
             "SID": "SID",
-            "InstanceNumber": "XX",
             "InstanceNumber": "00",
             "monitor-interval": "10",
             "monitor-timeout": "600",
@@ -252,6 +251,8 @@ CONSTRAINTS = {
     },
 }
 
+PARAMETER_VALUE_FORMAT = "Name: {}, Value: {}, Expected Value: {}".format
+
 
 def run_subprocess(command):
     """Run a subprocess command and return the output.
@@ -445,9 +446,15 @@ def validate_os_parameters(SID: str, ansible_os_family: str):
                 None,
             )
             if parameter_value != details["expected_value"]:
-                drift_parameters.append(f"{parameter}: {parameter_value}")
+                drift_parameters.append(
+                    PARAMETER_VALUE_FORMAT
+                    % (parameter, parameter_value, details["expected_value"])
+                )
             else:
-                validated_parameters.append(f"{parameter}: {parameter_value}")
+                validated_parameters.append(
+                    PARAMETER_VALUE_FORMAT
+                    % (parameter, parameter_value, details["expected_value"])
+                )
 
         for stack_name, stack_details in OS_PARAMETERS[ansible_os_family].items():
             base_args = (
@@ -457,9 +464,15 @@ def validate_os_parameters(SID: str, ansible_os_family: str):
                 output = run_subprocess(base_args + [parameter])
                 parameter_value = output.split("=")[1].strip()
                 if parameter_value != details["expected_value"]:
-                    drift_parameters.append(f"{parameter}: {parameter_value}")
+                    drift_parameters.append(
+                        PARAMETER_VALUE_FORMAT
+                        % (parameter, parameter_value, details["expected_value"])
+                    )
                 else:
-                    validated_parameters.append(f"{parameter}: {parameter_value}")
+                    validated_parameters.append(
+                        PARAMETER_VALUE_FORMAT
+                        % (parameter, parameter_value, details["expected_value"])
+                    )
 
         if drift_parameters:
             return {
@@ -504,11 +517,21 @@ def validate_constraints(SID: str, ansible_os_family: str):
                         if key in cluster_properties[constraint_type]:
                             if value != cluster_properties[constraint_type][key]:
                                 drift_parameters[constraint_type][constraint_id].append(
-                                    f"{key}: {value}"
+                                    PARAMETER_VALUE_FORMAT
+                                    % (
+                                        key,
+                                        value,
+                                        cluster_properties[constraint_type][key],
+                                    )
                                 )
                             else:
                                 valid_parameters[constraint_type][constraint_id].append(
-                                    f"{key}: {value}"
+                                    PARAMETER_VALUE_FORMAT
+                                    % (
+                                        key,
+                                        value,
+                                        cluster_properties[constraint_type][key],
+                                    )
                                 )
                     for child in constraint:
                         for key, value in child.attrib.items():
@@ -516,11 +539,25 @@ def validate_constraints(SID: str, ansible_os_family: str):
                                 if value != cluster_properties[constraint_type][key]:
                                     drift_parameters[constraint_type][
                                         constraint_id
-                                    ].append(f"{key}: {value}")
+                                    ].append(
+                                        PARAMETER_VALUE_FORMAT
+                                        % (
+                                            key,
+                                            value,
+                                            cluster_properties[constraint_type][key],
+                                        )
+                                    )
                                 else:
                                     valid_parameters[constraint_type][
                                         constraint_id
-                                    ].append(f"{key}: {value}")
+                                    ].append(
+                                        PARAMETER_VALUE_FORMAT
+                                        % (
+                                            key,
+                                            value,
+                                            cluster_properties[constraint_type][key],
+                                        )
+                                    )
         if drift_parameters:
             return {
                 "msg": {
@@ -644,11 +681,21 @@ def validate_cluster_params(cluster_properties: dict, ansible_os_family: str):
                         if name in recommended_for_root:
                             if value != recommended_for_root[name]:
                                 drift_parameters[resource_operation][root_id].append(
-                                    f"{name}: {value}"
+                                    PARAMETER_VALUE_FORMAT
+                                    % (
+                                        name,
+                                        value,
+                                        recommended_for_root[name],
+                                    )
                                 )
                             else:
                                 valid_parameters[resource_operation][root_id].append(
-                                    f"{name}: {value}"
+                                    PARAMETER_VALUE_FORMAT
+                                    % (
+                                        name,
+                                        value,
+                                        recommended_for_root[name],
+                                    )
                                 )
         valid_parameters_json = json.dumps(valid_parameters)
         missing_parameters = [
