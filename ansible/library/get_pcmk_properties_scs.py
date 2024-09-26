@@ -727,7 +727,6 @@ def main():
     """
     module = AnsibleModule(
         argument_spec=dict(
-            xml_file=dict(type="str"),
             sid=dict(type="str"),
             ascs_instance_number=dict(type="str"),
             ers_instance_number=dict(type="str"),
@@ -735,7 +734,6 @@ def main():
             virtual_machine_name=dict(type="str"),
         )
     )
-    xml_file = module.params.get("xml_file")
     ansible_os_family = module.params.get("ansible_os_family")
     cluster_properties = (
         CLUSTER_PROPERTIES_SUSE

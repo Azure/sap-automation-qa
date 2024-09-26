@@ -20,7 +20,6 @@
 
     - name:                             "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} - HA Configuration check for the SCS nodes"
       get_pcmk_properties_scs:
-        action:                         get
         sid:                            "{{ sap_sid | upper }}"
         ascs_instance_number:           "{{ scs_instance_number }}"
         ers_instance_number:            "{{ ers_instance_number }}"
