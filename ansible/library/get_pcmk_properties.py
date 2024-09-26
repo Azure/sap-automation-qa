@@ -251,7 +251,7 @@ CONSTRAINTS = {
     },
 }
 
-PARAMETER_VALUE_FORMAT = "Name: {}, Value: {}, Expected Value: {}".format
+PARAMETER_VALUE_FORMAT = "Name: %s, Value: %s, Expected Value: %s"
 
 
 def run_subprocess(command):
