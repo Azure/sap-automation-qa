@@ -20,8 +20,11 @@ def filter_logs(
         "%Y-%m-%dT%H:%M:%S" if ansible_os_family == "SUSE" else "%Y-%m-%d %H:%M:%S"
     )
 
-    start_dt = datetime.strptime(start_time, date_format)
-    end_dt = datetime.strptime(end_time, date_format)
+    start_dt = datetime.strptime(start_time, "%Y-%m-%d %H:%M:%S")
+    end_dt = datetime.strptime(end_time, "%Y-%m-%d %H:%M:%S")
+
+    formatted_start_dt = start_dt.strftime(date_format)
+    formatted_end_dt = end_dt.strftime(date_format)
     filtered_logs = []
 
     with open(log_file, "r") as file:
@@ -31,13 +34,13 @@ def filter_logs(
                     log_time = datetime.strptime(
                         " ".join(line.split()[:3]), "%b %d %H:%M:%S"
                     )
-                    log_time = log_time.replace(year=start_dt.year)
+                    log_time = log_time.replace(year=formatted_start_dt.year)
                 elif ansible_os_family == "SUSE":
                     log_time = datetime.strptime(line.split(".")[0], date_format)
                 else:
                     continue
 
-                if start_dt <= log_time <= end_dt and any(
+                if formatted_start_dt <= log_time <= formatted_end_dt and any(
                     keyword in line for keyword in keywords
                 ):
                     filtered_logs.append(
