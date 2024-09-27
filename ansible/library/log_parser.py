@@ -20,24 +20,20 @@ def filter_logs(
         "%Y-%m-%dT%H:%M:%S" if ansible_os_family == "SUSE" else "%Y-%m-%d %H:%M:%S"
     )
 
-    start_dt = datetime.datetime.strptime(start_time, date_format)
-    end_dt = datetime.datetime.strptime(end_time, date_format)
+    start_dt = datetime.strptime(start_time, date_format)
+    end_dt = datetime.strptime(end_time, date_format)
     filtered_logs = []
 
     with open(log_file, "r") as file:
         for line in file:
             try:
                 if ansible_os_family == "REDHAT":
-                    log_time_str = " ".join(line.split()[:3])
-                    log_time = datetime.datetime.strptime(
-                        log_time_str, "%b %d %H:%M:%S"
+                    log_time = datetime.strptime(
+                        " ".join(line.split()[:3]), "%b %d %H:%M:%S"
                     )
                     log_time = log_time.replace(year=start_dt.year)
                 elif ansible_os_family == "SUSE":
-                    log_time_str = line.split(".")[0]
-                    log_time = datetime.datetime.strptime(
-                        log_time_str, "%Y-%m-%dT%H:%M:%S"
-                    )
+                    log_time = datetime.strptime(line.split(".")[0], date_format)
                 else:
                     continue
 
@@ -136,7 +132,7 @@ def run_module():
         result["end"] = datetime.datetime.now()
         module.exit_json(**result)
     except Exception as e:
-        result["error"] = str(e)
+        result["msg"] = str(e)
         module.fail_json(**result)
 
 
