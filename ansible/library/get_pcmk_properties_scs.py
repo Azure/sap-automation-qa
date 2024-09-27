@@ -143,7 +143,6 @@ CLUSTER_RESOURCES = {
     },
 }
 
-
 CLUSTER_PROPERTIES = {
     "crm_config": {
         "cib-bootstrap-options": {
@@ -492,6 +491,13 @@ def validate_constraints(SID: str, ansible_os_family: str):
 def validate_resource_parameters(
     ansible_os_family: str, drift_parameters: dict, valid_parameters: dict
 ):
+    """Validate resource parameters.
+
+    Args:
+        ansible_os_family (str): Ansible OS family
+        drift_parameters (dict): Dictionary to store drift parameters
+        valid_parameters (dict): Dictionary to store valid parameters
+    """
     resource_mapping = {}
     root = parse_xml_output(["cibadmin", "--query", "--scope", "resources"])
     for primitive in root.findall(".//primitive"):

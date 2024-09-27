@@ -8,7 +8,128 @@ SUCCESS_STATUS = "PASSED"
 ERROR_STATUS = "FAILED"
 WARNING_STATUS = "WARNING"
 
-CLUSTER_PROPERTIES_SUSE = {
+CLUSTER_RESOURCES = {
+    "SUSE": {
+        "ocf:heartbeat:SAPHanaTopology": {
+            "clone-node-max": "1",
+            "target-role": "Started",
+            "interleave": "true",
+            "monitor-interval": "10",
+            "monitor-timeout": "600",
+            "start-interval": "0",
+            "start-timeout": "600",
+            "stop-interval": "0",
+            "stop-timeout": "300",
+        },
+        "ocf:heartbeat:SAPHana": {
+            "notify": "true",
+            "clone-max": "2",
+            "clone-node-max": "1",
+            "target-role": "Started",
+            "interleave": "true",
+            "PREFER_SITE_TAKEOVER": "true",
+            "DUPLICATE_PRIMARY_TIMEOUT": "7200",
+            "AUTOMATED_REGISTER": "true",
+            "start-interval": "0",
+            "start-timeout": "3600",
+            "stop-interval": "0",
+            "stop-timeout": "3600",
+            "promote-interval": "0",
+            "promote-timeout": "3600",
+            "monitor-Master-interval": "60",
+            "monitor-Master-timeout": "700",
+            "monitor-Slave-interval": "61",
+            "monitor-Slave-timeout": "700",
+            "demote-interval": "0s",
+            "demote-timeout": "320",
+        },
+        "stonith:fence_azure_arm": {
+            "pcmk_monitor_retries": "4",
+            "pcmk_action_limit": "3",
+            "power_timeout": "240",
+            "pcmk_reboot_timeout": "900",
+            "pcmk_delay_max": "15",
+            "monitor-interval": "3600",
+            "monitor-timeout": "120",
+        },
+        "ocf:heartbeat:azure-events-az": {
+            "interleave": "true",
+            "allow-unhealthy-nodes": "true",
+            "failure-timeout": "120s",
+            "start-start-delay": "60s",
+            "monitor-interval": "10s",
+        },
+        "ocf:heartbeat:azure-lb": {
+            "monitor-interval": "10s",
+            "monitor-timeout": "20s",
+            "resource-stickiness": "0",
+        },
+        "ocf:heartbeat:IPaddr2": {
+            "monitor-interval": "10s",
+            "monitor-timeout": "20s",
+        },
+    },
+    "REDHAT": {
+        "ocf:heartbeat:SAPHanaTopology": {
+            "clone-node-max": "1",
+            "target-role": "Started",
+            "interleave": "true",
+            "monitor-interval": "10",
+            "monitor-timeout": "600",
+            "start-interval": "0s",
+            "start-timeout": "600",
+            "stop-interval": "0s",
+            "stop-timeout": "300",
+        },
+        "ocf:heartbeat:SAPHana": {
+            "notify": "true",
+            "clone-max": "2",
+            "clone-node-max": "1",
+            "target-role": "Started",
+            "interleave": "true",
+            "PREFER_SITE_TAKEOVER": "true",
+            "DUPLICATE_PRIMARY_TIMEOUT": "7200",
+            "AUTOMATED_REGISTER": "true",
+            "start-interval": "0s",
+            "start-timeout": "3600",
+            "stop-interval": "0s",
+            "stop-timeout": "3600",
+            "promote-interval": "0s",
+            "promote-timeout": "3600",
+            "monitor-Master-interval": "59",
+            "monitor-Master-timeout": "700",
+            "monitor-Slave-interval": "61",
+            "monitor-Slave-timeout": "700",
+            "demote-interval": "0s",
+            "demote-timeout": "3600",
+        },
+        "stonith:fence_azure_arm": {
+            "pcmk_monitor_retries": "4",
+            "pcmk_action_limit": "3",
+            "power_timeout": "240",
+            "pcmk_reboot_timeout": "900",
+            "pcmk_delay_max": "15s",
+            "monitor-interval": "3600",
+            "pcmk_monitor_timeout": "120",
+        },
+        "ocf:heartbeat:azure-events-az": {
+            "interleave": "true",
+            "allow-unhealthy-nodes": "true",
+            "failure-timeout": "120s",
+            "start-start-delay": "60s",
+            "monitor-interval": "10s",
+        },
+        "ocf:heartbeat:azure-lb": {
+            "monitor-interval": "10s",
+            "monitor-timeout": "20s",
+        },
+        "ocf:heartbeat:IPaddr2": {
+            "monitor-interval": "10s",
+            "monitor-timeout": "20s",
+        },
+    },
+}
+CLUSTER_PROPERTIES = {
     "crm_config": {
         "cib-bootstrap-options": {
             "have-watchdog": "false",
@@ -33,164 +154,6 @@ CLUSTER_PROPERTIES_SUSE = {
             "timeout": "600",
             "record-pending": "true",
         }
-    },
-    "resources": {
-        "cln_SAPHanaTopology": {
-            "clone-node-max": "1",
-            "target-role": "Started",
-            "interleave": "true",
-            "SID": "SID",
-            "InstanceNumber": "00",
-            "monitor-interval": "10",
-            "monitor-timeout": "600",
-            "start-interval": "0",
-            "start-timeout": "600",
-            "stop-interval": "0",
-            "stop-timeout": "300",
-        },
-        "msl_SAPHana": {
-            "notify": "true",
-            "clone-max": "2",
-            "clone-node-max": "1",
-            "target-role": "Started",
-            "interleave": "true",
-            "SID": "SID",
-            "InstanceNumber": "XX",
-            "PREFER_SITE_TAKEOVER": "true",
-            "DUPLICATE_PRIMARY_TIMEOUT": "7200",
-            "AUTOMATED_REGISTER": "true",
-            "start-interval": "0",
-            "start-timeout": "3600",
-            "stop-interval": "0",
-            "stop-timeout": "3600",
-            "promote-interval": "0",
-            "promote-timeout": "3600",
-            "monitor-Master-interval": "60",
-            "monitor-Master-timeout": "700",
-            "monitor-Slave-interval": "61",
-            "monitor-Slave-timeout": "700",
-            "demote-interval": "0s",
-            "demote-timeout": "320",
-        },
-        "rsc_st_azure": {
-            "pcmk_monitor_retries": "4",
-            "pcmk_action_limit": "3",
-            "power_timeout": "240",
-            "pcmk_reboot_timeout": "900",
-            "pcmk_delay_max": "15",
-            "monitor-interval": "3600",
-            "monitor-timeout": "120",
-        },
-        "health-azure-events": {
-            "interleave": "true",
-            "allow-unhealthy-nodes": "true",
-            "failure-timeout": "120s",
-            "start-start-delay": "60s",
-            "monitor-interval": "10s",
-        },
-        "g_ip_": {
-            "monitor-interval": "10s",
-            "monitor-timeout": "20s",
-            "resource-stickiness": "0",
-        },
-    },
-}
-
-CLUSTER_PROPERTIES_REDHAT = {
-    "crm_config": {
-        "cib-bootstrap-options": {
-            "have-watchdog": "false",
-            "cluster-infrastructure": "corosync",
-            "stonith-enabled": "true",
-            "concurrent-fencing": "true",
-            "stonith-timeout": "900",
-            "maintenance-mode": "false",
-            "azure-events_globalPullState": "IDLE",
-            "priority-fencing-delay": "15s",
-        }
-    },
-    "rsc_defaults": {
-        "build-resource-defaults": {
-            "resource-stickiness": "1000",
-            "migration-threshold": "5000",
-            "priority": "1",
-        }
-    },
-    "op_defaults": {
-        "op-options": {
-            "timeout": "600",
-            "record-pending": "true",
-        }
-    },
-    "constraints": {
-        "rsc_colocation": {
-            "score": "4000",
-            "rsc-role": "Started",
-        },
-        "rsc_order": {
-            "first-action": "start",
-            "then-action": "start",
-        },
-    },
-    "resources": {
-        "SAPHanaTopology": {
-            "clone-node-max": "1",
-            "target-role": "Started",
-            "interleave": "true",
-            "SID": "SID",
-            "InstanceNumber": "XX",
-            "InstanceNumber": "00",
-            "monitor-interval": "10",
-            "monitor-timeout": "600",
-            "start-interval": "0s",
-            "start-timeout": "600",
-            "stop-interval": "0s",
-            "stop-timeout": "300",
-        },
-        "SAPHana_": {
-            "notify": "true",
-            "clone-max": "2",
-            "clone-node-max": "1",
-            "target-role": "Started",
-            "interleave": "true",
-            "SID": "SID",
-            "InstanceNumber": "XX",
-            "PREFER_SITE_TAKEOVER": "true",
-            "DUPLICATE_PRIMARY_TIMEOUT": "7200",
-            "AUTOMATED_REGISTER": "true",
-            "start-interval": "0s",
-            "start-timeout": "3600",
-            "stop-interval": "0s",
-            "stop-timeout": "3600",
-            "promote-interval": "0s",
-            "promote-timeout": "3600",
-            "monitor-Master-interval": "59",
-            "monitor-Master-timeout": "700",
-            "monitor-Slave-interval": "61",
-            "monitor-Slave-timeout": "700",
-            "demote-interval": "0s",
-            "demote-timeout": "3600",
-        },
-        "rsc_st_azure": {
-            "pcmk_monitor_retries": "4",
-            "pcmk_action_limit": "3",
-            "power_timeout": "240",
-            "pcmk_reboot_timeout": "900",
-            "pcmk_delay_max": "15s",
-            "monitor-interval": "3600",
-            "pcmk_monitor_timeout": "120",
-        },
-        "health-azure-events": {
-            "interleave": "true",
-            "allow-unhealthy-nodes": "true",
-            "failure-timeout": "120s",
-            "start-start-delay": "60s",
-            "monitor-interval": "10s",
-        },
-        "g_ip_": {
-            "monitor-interval": "10s",
-            "monitor-timeout": "20s",
-        },
     },
 }
 
@@ -312,38 +275,6 @@ def location_constraints_exists():
         return False
     except Exception as ex:
         return False
-
-
-def define_custom_parameters(module_params, cluster_properties):
-    """Get custom value for certain parameters depending on user input and OS family
-
-    Args:
-        module_params (dict): Ansible module parameters
-        cluster_properties (dict): Dictionary of cluster properties
-
-    Returns:
-        str: Value of the key from the custom dictionary
-    """
-    os_family = module_params.get("ansible_os_family")
-    sid = module_params.get("sid")
-    instance_number = module_params.get("instance_number")
-    if os_family == "SUSE":
-        cluster_properties["resources"]["msl_SAPHana"]["SID"] = sid
-        cluster_properties["resources"]["msl_SAPHana"][
-            "InstanceNumber"
-        ] = instance_number
-        cluster_properties["resources"]["cln_SAPHanaTopology"]["SID"] = sid
-        cluster_properties["resources"]["cln_SAPHanaTopology"][
-            "InstanceNumber"
-        ] = instance_number
-    else:
-        cluster_properties["resources"]["SAPHana_"]["SID"] = sid
-        cluster_properties["resources"]["SAPHana_"]["InstanceNumber"] = instance_number
-        cluster_properties["resources"]["SAPHanaTopology"]["SID"] = sid
-        cluster_properties["resources"]["SAPHanaTopology"][
-            "InstanceNumber"
-        ] = instance_number
-    return cluster_properties
 
 
 def validate_fence_azure_arm(ansible_os_family: str, virtual_machine_name: str):
@@ -574,6 +505,81 @@ def validate_constraints(SID: str, ansible_os_family: str):
         return {"msg": {"Constraints validation": str(e)}, "status": ERROR_STATUS}
 
 
+def validate_resource_parameters(
+    ansible_os_family: str, drift_parameters: dict, valid_parameters: dict
+):
+    """Validate resource parameters.
+
+    Args:
+        ansible_os_family (str): Ansible OS family
+        drift_parameters (dict): Dictionary to store drift parameters
+        valid_parameters (dict): Dictionary to store valid parameters
+    """
+    resource_mapping = {}
+    root = parse_xml_output(["cibadmin", "--query", "--scope", "resources"])
+    for primitive in root.findall(".//primitive"):
+        resource_id = primitive.get("id")
+        resource_class = primitive.get("class")
+        resource_provider = primitive.get("provider", "")
+        resource_type = primitive.get("type")
+        properties = {
+            prop.get("name"): prop.get("value")
+            for prop in primitive.findall(".//nvpair")
+        }
+
+        if resource_provider:
+            resource_full_type = f"{resource_class}:{resource_provider}:{resource_type}"
+        else:
+            resource_full_type = f"{resource_class}:{resource_type}"
+
+        resource_mapping[resource_full_type] = resource_id
+
+    for resource_type, resource_id in resource_mapping.items():
+        expected_attributes = CLUSTER_RESOURCES[ansible_os_family].get(
+            resource_type, {}
+        )
+        actual_attributes = {}
+
+        primitive = root.find(f".//primitive[@id='{resource_id}']")
+        if primitive is not None:
+            for prop in primitive.findall(".//nvpair"):
+                actual_attributes[prop.get("name")] = prop.get("value")
+
+            for op in primitive.findall(".//op"):
+                name = (
+                    f"{op.get('name')}-{op.get('role', 'NoRole')}-interval"
+                    if op.get("role")
+                    else f"{op.get('name')}-interval"
+                )
+                actual_attributes[name] = op.get("interval")
+                name = (
+                    f"{op.get('name')}-{op.get('role', 'NoRole')}-timeout"
+                    if op.get("role")
+                    else f"{op.get('name')}-timeout"
+                )
+                actual_attributes[name] = op.get("timeout")
+        for name, value in actual_attributes.items():
+            if name in expected_attributes:
+                if value != expected_attributes[name]:
+                    drift_parameters["resources"][resource_id].append(
+                        PARAMETER_VALUE_FORMAT
+                        % (
+                            name,
+                            value,
+                            expected_attributes[name],
+                        )
+                    )
+                else:
+                    valid_parameters["resources"][resource_id].append(
+                        PARAMETER_VALUE_FORMAT
+                        % (
+                            name,
+                            value,
+                            expected_attributes[name],
+                        )
+                    )
+
+
 def validate_global_ini_properties(SID: str, ansible_os_family: str):
     """Validate SAPHanaSR properties in global.ini file.
 
@@ -631,11 +637,10 @@ def validate_global_ini_properties(SID: str, ansible_os_family: str):
         }
 
 
-def validate_cluster_params(cluster_properties: dict, ansible_os_family: str):
+def validate_cluster_params(ansible_os_family: str):
     """Validate pacemaker cluster parameters for DB and SCS
 
     Args:
-        cluster_properties (dict): Dictionary of recommended values of cluster properties
         ansible_os_family (str): Ansible OS family
     Returns:
         dict: Validated cluster parameters
@@ -643,60 +648,49 @@ def validate_cluster_params(cluster_properties: dict, ansible_os_family: str):
     drift_parameters = defaultdict(lambda: defaultdict(list))
     valid_parameters = defaultdict(lambda: defaultdict(list))
     try:
-        for resource_operation in cluster_properties.keys():
+        for resource_operation in CLUSTER_PROPERTIES.keys():
             root = parse_xml_output(
                 ["cibadmin", "--query", "--scope", resource_operation]
             )
             if root is not None:
                 for root_element in root:
-                    root_id = root_element.get("id")
+                    primitive_id = root_element.get("id")
                     extracted_values = {
-                        root_id: {
+                        primitive_id: {
                             nvpair.get("name"): nvpair.get("value")
                             for nvpair in root_element.findall(".//nvpair")
                         }
                     }
-                    for op in root_element.findall(".//op"):
-                        name = (
-                            f"{op.get('name')}-{op.get('role', 'NoRole')}-interval"
-                            if op.get("role")
-                            else f"{op.get('name')}-interval"
-                        )
-                        extracted_values[root_id][name] = op.get("interval")
-                        name = (
-                            f"{op.get('name')}-{op.get('role', 'NoRole')}-timeout"
-                            if op.get("role")
-                            else f"{op.get('name')}-timeout"
-                        )
-                        extracted_values[root_id][name] = op.get("timeout")
-                    recommended_for_root = next(
-                        (
-                            cluster_properties[resource_operation][key]
-                            for key in cluster_properties[resource_operation].keys()
-                            if root_id.startswith(key)
-                        ),
-                        {},
-                    )
-                    for name, value in extracted_values[root_id].items():
-                        if name in recommended_for_root:
-                            if value != recommended_for_root[name]:
-                                drift_parameters[resource_operation][root_id].append(
+                    recommended_for_primitive = CLUSTER_PROPERTIES[
+                        resource_operation
+                    ].get(primitive_id, {})
+                    for name, value in extracted_values[primitive_id].items():
+                        if name in recommended_for_primitive:
+                            if value != recommended_for_primitive[name]:
+                                drift_parameters[resource_operation][
+                                    primitive_id
+                                ].append(
                                     PARAMETER_VALUE_FORMAT
                                     % (
                                         name,
                                         value,
-                                        recommended_for_root[name],
+                                        recommended_for_primitive[name],
                                     )
                                 )
                             else:
-                                valid_parameters[resource_operation][root_id].append(
+                                valid_parameters[resource_operation][
+                                    primitive_id
+                                ].append(
                                     PARAMETER_VALUE_FORMAT
                                     % (
                                         name,
                                         value,
-                                        recommended_for_root[name],
+                                        recommended_for_primitive[name],
                                     )
                                 )
+        validate_resource_parameters(
+            ansible_os_family, drift_parameters, valid_parameters
+        )
         valid_parameters_json = json.dumps(valid_parameters)
         missing_parameters = [
             parameter
@@ -766,17 +760,8 @@ def main():
     action = module.params["action"]
     xml_file = module.params.get("xml_file")
     ansible_os_family = module.params.get("ansible_os_family")
-    cluster_properties = (
-        CLUSTER_PROPERTIES_SUSE
-        if ansible_os_family == "SUSE"
-        else CLUSTER_PROPERTIES_REDHAT
-    )
-    custom_cluster_properties = define_custom_parameters(
-        module.params, cluster_properties
-    )
     if action == "get":
         cluster_result = validate_cluster_params(
-            cluster_properties=custom_cluster_properties,
             ansible_os_family=ansible_os_family,
         )
         sap_hana_sr_result = validate_global_ini_properties(
