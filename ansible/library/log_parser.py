@@ -1,4 +1,4 @@
-import datetime
+from datetime import datetime
 from ansible.module_utils.basic import AnsibleModule
 import json
 
