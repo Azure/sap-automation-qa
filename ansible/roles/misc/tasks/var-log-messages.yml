@@ -10,4 +10,5 @@
       log_parser:
         start_time:                     "{{ test_execution_start | default(test_case_start_time_epoch) }}"
         end_time:                       "{{ now(utc=true, fmt='%Y-%m-%d %H:%M:%S') }}"
+        ansible_os_family:              "{{ ansible_os_family | upper }}"
       register:                         var_log_messages_output
