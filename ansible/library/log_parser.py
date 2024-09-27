@@ -122,14 +122,14 @@ def run_module():
     keywords = pacemaker_keywords | system_keywords
 
     try:
-        result["start"] = datetime.datetime.now()
+        result["start"] = datetime.now()
         result["start_time"] = start_time
         result["end_time"] = end_time
         result["keywords"] = list(keywords)
         result["filtered_logs"] = filter_logs(
             start_time, end_time, keywords, ansible_os_family
         )
-        result["end"] = datetime.datetime.now()
+        result["end"] = datetime.now()
         module.exit_json(**result)
     except Exception as e:
         result["msg"] = str(e)
