@@ -10,7 +10,7 @@ sap_functional_test_type_map:
     value:                          HA_SCS
 
 test_groups:
-  - name:                           HA_DB_HANA_AFA
+  - name:                           HA_DB_HANA
     test_cases:
       - name:                       HA Parameters Validation
         task_name:                  ha-config
