@@ -111,7 +111,9 @@ def run_module():
                 )
                 < 2
             ):
-                return {"error": "Minimum 2 nodes are required in the cluster"}
+                result["msg"] = (
+                    "Pacemaker cluster is not stable and does not have primary node or secondary node"
+                )
 
             nodes = cluster_status_xml.find("nodes")
             for node in nodes:
