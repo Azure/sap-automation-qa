@@ -3,6 +3,7 @@
 #                       Task to setup telemetry information for each test case           #
 ##########################################################################################
 - name:                               "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} Ensure a list of package version is available for logging"
+  no_log:                             true
   ansible.builtin.package_facts:
 
 - name:                               "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} Create package dictionary for telemetry data"

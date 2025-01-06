@@ -78,7 +78,6 @@ def run_module():
         "cluster_status": None,
         "primary_node": "",
         "secondary_node": "",
-        "count": 0,
         "start": datetime.now(),
         "end": datetime.now(),
         "msg": "",
@@ -88,11 +87,8 @@ def run_module():
     database_sid = module.params["database_sid"]
 
     try:
-        count = 0
-        while result["primary_node"] is "" and count < 5:
+        while result["primary_node"] is "":
             cluster_status = subprocess.check_output(["crm_mon", "--output-as=xml"])
-            count += 1
-            result["count"] = count
             result["cluster_status"] = cluster_status.decode("utf-8").strip()
             cluster_status_xml = ET.fromstring(cluster_status)
             pacemaker_status = subprocess.check_output(
