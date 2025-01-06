@@ -65,6 +65,11 @@
           changed_when:             firewall_rule_created == 0
           failed_when:              firewall_rule_created.rc != 0
 
+        # This is required because the cluster reports incorrect location constraints after the location constraints is removed.
+        - name:                     "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} - Test Execution: Wait for 100 seconds to cluster to stabilize and show the correct status"
+          ansible.builtin.wait_for:
+            timeout:                100
+
         - name:                     "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} - Test Execution: Validate HANA DB cluster status after the network block"
           get_cluster_status:
             operation_step:         "test_execution"
@@ -82,7 +87,7 @@
           ansible.builtin.command:  "crm_resource --cleanup"
           register:                 cleanup_failed_resource_post
           changed_when:             cleanup_failed_resource_post.rc == 0
-        
+
         - name:                     "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} - Test Execution: Remove the firewall rule on on primary node."
           become:                   true
           ansible.builtin.shell:    "iptables -D INPUT -s {{ secondary_node_ip }} -j DROP; iptables -D OUTPUT -d {{ secondary_node_ip }} -j DROP"
