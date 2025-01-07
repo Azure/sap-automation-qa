@@ -75,18 +75,10 @@
             operation_step:         "test_execution"
             database_sid:           "{{ db_sid | lower }}"
           register:                 cluster_status_test_execution
-          retries:                  40
-          delay:                    10
-          until:                    cluster_status_test_execution.primary_node == cluster_status_pre.primary_node and cluster_status_test_execution.secondary_node == ""
 
         - name:                     "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} - Test Execution: Stop timer"
           ansible.builtin.set_fact:
             test_execution_end:     "{{ now(utc=true, fmt='%Y-%m-%d %H:%M:%S') }}"
-
-        - name:                     "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} - Test Execution: CleanUp any failed resource"
-          ansible.builtin.command:  "crm_resource --cleanup"
-          register:                 cleanup_failed_resource_post
-          changed_when:             cleanup_failed_resource_post.rc == 0
 
         - name:                     "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} - Test Execution: Remove the firewall rule on on primary node."
           become:                   true
