@@ -65,16 +65,14 @@
           changed_when:             firewall_rule_created == 0
           failed_when:              firewall_rule_created.rc != 0
 
-        # This is required because the cluster reports incorrect location constraints after the location constraints is removed.
-        - name:                     "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} - Test Execution: Wait for 100 seconds to cluster to stabilize and show the correct status"
-          ansible.builtin.wait_for:
-            timeout:                100
-
         - name:                     "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} - Test Execution: Validate HANA DB cluster status after the network block"
           get_cluster_status:
             operation_step:         "test_execution"
             database_sid:           "{{ db_sid | lower }}"
           register:                 cluster_status_test_execution
+          retries:                  40
+          delay:                    10
+          until:                    cluster_status_test_execution.primary_node == cluster_status_pre.primary_node and cluster_status_test_execution.secondary_node == ""
 
         - name:                     "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} - Test Execution: Stop timer"
           ansible.builtin.set_fact:
