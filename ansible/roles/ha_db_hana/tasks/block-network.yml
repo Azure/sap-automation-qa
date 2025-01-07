@@ -108,8 +108,8 @@
         - name:                     "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} - Post Validations: Set test case status"
           delegate_to:              localhost
           failed_when:
-            - cluster_status_pre.primary_node != cluster_status_post.secondary_node
-            - cluster_status_pre.secondary_node != cluster_status_post.primary_node
+            - cluster_status_pre.primary_node != cluster_status_post.primary_node
+            - cluster_status_pre.secondary_node != cluster_status_post.secondary_node
           ansible.builtin.set_fact:
             test_case_name:         "{{ item.name }}: {{ virtual_host }}"
             test_case_description:  "{{ item.description }}"
@@ -145,7 +145,7 @@
         test_case_hostname:         "{{ virtual_host }}"
         test_case_description:      "{{ item.description }}"
         test_case_status:           "FAILED"
-        test_case_message:          "{{ ansible_failed_result }}"
+        test_case_message:          "Functional Test case failed"
         test_case_details:          "{{ ansible_failed_result }}"
         test_case_var_log_messages: "{{ var_log_messages_output.filtered_logs }}"
 

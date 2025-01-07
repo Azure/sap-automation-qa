@@ -20,9 +20,9 @@ test_groups:
         task_name:                  block-network
         description:                This runs a functional test for blocking network communication
       
-      # - name:                       HA Functional Test- Crash index server on primary node
-      #   task_name:                  crash-index
-      #   description:                This runs a functional test for crashing index server on primary node
+      - name:                       HA Functional Test- Crash index server on primary node
+        task_name:                  crash-index
+        description:                This runs a functional test for crashing index server on primary node
 
   - name:                           HA_SCS
     test_cases:
