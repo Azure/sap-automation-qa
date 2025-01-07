@@ -110,13 +110,11 @@ def run_module():
                 result["msg"] = (
                     "Pacemaker cluster is not stable and does not have primary node or secondary node"
                 )
-                module.fail_json(**result)
 
             nodes = cluster_status_xml.find("nodes")
             for node in nodes:
                 if node.attrib["online"] != "true":
                     result["msg"] = "Node {} is not online".format(node.attrib["name"])
-                    module.fail_json(**result)
 
             node_attributes = cluster_status_xml.find("node_attributes")
             with concurrent.futures.ThreadPoolExecutor() as executor:
