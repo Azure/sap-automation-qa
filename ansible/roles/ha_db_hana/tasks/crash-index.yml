@@ -1,6 +1,6 @@
 # /*---------------------------------------------------------------------------
 # |                                                                            |
-# |                          Block Network Communication                       |
+# |               Crash Index Server on the Primary Instance                   |
 # |                                                                            |
 # +--------------------------------------------------------------------------*/
 - name:                             "Test Setup Tasks"
@@ -20,21 +20,22 @@
         ansible_os_family:          "{{ ansible_os_family | upper}}"
       register:                     location_constraints_results
 
-    - name:                         "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} - Pre Validations: Validate HANA DB cluster status before blocking the network"
+    - name:                         "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} - Pre Validations: Validate HANA DB cluster status before crashing the index server on the Primary"
       get_cluster_status:
         operation_step:             "pre_failover"
         database_sid:               "{{ db_sid | lower }}"
       register:                     cluster_status_pre
       failed_when:                  cluster_status_pre.primary_node == "" or cluster_status_pre.secondary_node == ""
-    
-    - name:                         "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} - Pre Validations: Get the IP address of the secondary node"
-      ansible.builtin.set_fact:
-        secondary_node_ip:          "{{ hostvars[cluster_status_pre.secondary_node].ansible_host }}"
-      when:                         cluster_status_pre.secondary_node != ""
 
     - name:                         "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} - Pre Validations on the primary node"
       when:                         ansible_hostname == cluster_status_pre.primary_node
       block:
+        - name:                     "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} - Pre Validations: Check if the AUTOMATED_REGISTER parameter is set to true"
+          ansible.builtin.shell:
+            cmd:                    "{{ commands | selectattr('name', 'equalto', 'automated_register_cmd') | map(attribute=(ansible_os_family | upper)) | first }}"
+          register:                 automated_register
+          changed_when:             false
+          when:                     cluster_status_pre is defined
 
         - name:                     "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} - Pre Validations: CleanUp any failed resource"
           ansible.builtin.command:  "crm_resource --cleanup"
@@ -47,7 +48,7 @@
 # /*---------------------------------------------------------------------------
 # |                          Test Execution
 # /*---------------------------------------------------------------------------
-    - name:                         "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} - Test Execution: Block the network communication between primary and secondary node"
+    - name:                         "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} - Test Execution: Crash the primary node."
       when:
         - cluster_status_pre.primary_node != "" and cluster_status_pre.secondary_node != ""
         - ansible_hostname == cluster_status_pre.primary_node
@@ -58,49 +59,62 @@
           ansible.builtin.set_fact:
             test_execution_start:   "{{ now(utc=true, fmt='%Y-%m-%d %H:%M:%S') }}"
 
-        - name:                     "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} - Test Execution: Create a firewall on primary node to block the incoming and outgoing traffic to secondary node."
+        - name:                     "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} - Test Execution: Stop the HANA DB"
           become:                   true
-          ansible.builtin.shell:    "iptables -A INPUT -s {{ secondary_node_ip }} -j DROP; iptables -A OUTPUT -d {{ secondary_node_ip }} -j DROP"
-          register:                 firewall_rule_created
-          changed_when:             firewall_rule_created == 0
-          failed_when:              firewall_rule_created.rc != 0
+          ansible.builtin.command:  "killall -9 {{ db_sid | lower }}indexserver"
+          register:                 index_server_result
+          changed_when:             index_server_result == 0
+          failed_when:              index_server_result.rc != 0
 
-        - name:                     "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} - Test Execution: Validate HANA DB cluster status after the network block"
+        - name:                     "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} - Test Execution: Validate HANA DB cluster status during stop operation."
+          when:
+            automated_register.stdout != ""
           get_cluster_status:
             operation_step:         "test_execution"
             database_sid:           "{{ db_sid | lower }}"
           register:                 cluster_status_test_execution
           retries:                  40
           delay:                    10
-          until:                    cluster_status_test_execution.primary_node == cluster_status_pre.primary_node and cluster_status_test_execution.secondary_node == ""
+          until:                    cluster_status_test_execution.primary_node == cluster_status_pre.secondary_node and cluster_status_test_execution.secondary_node == cluster_status_pre.primary_node
 
         - name:                     "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} - Test Execution: Stop timer"
           ansible.builtin.set_fact:
             test_execution_end:     "{{ now(utc=true, fmt='%Y-%m-%d %H:%M:%S') }}"
 
-        - name:                     "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} - Test Execution: Remove the firewall rule on on primary node."
+        - name:                     "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} - Test Execution: Register Failed Resource"
           become:                   true
-          ansible.builtin.shell:    "iptables -D INPUT -s {{ secondary_node_ip }} -j DROP; iptables -D OUTPUT -d {{ secondary_node_ip }} -j DROP"
-          register:                 firewall_rule_deleted
-          changed_when:             firewall_rule_deleted == 0
-          failed_when:              firewall_rule_deleted.rc != 0
+          become_user:              "{{ db_sid | lower }}adm"
+          when:
+            - automated_register.stdout == ""
+          ansible.builtin.command: |
+                                    hdbnsutil -sr_register \
+                                    --remoteHost={{ cluster_status_pre.secondary_node }} \
+                                    --remoteInstance={{ db_instance_number }} \
+                                    --replicationMode=sync --name=SITEB
+          register:                 hana_db_register_failed_resource
+          changed_when:             hana_db_register_failed_resource.rc == 0
+
+        - name:                     "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} - Test Execution: CleanUp any failed resource"
+          ansible.builtin.command:  "crm_resource --cleanup"
+          register:                 cleanup_failed_resource_post
+          changed_when:             cleanup_failed_resource_post.rc == 0
 
 # /*---------------------------------------------------------------------------
 # |                          Post Validations
 # /*---------------------------------------------------------------------------
-    - name:                         "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} - Post Validations: HA cluster status after removing the firewall rule"
+    - name:                         "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} - Post Validations: HA cluster status after stopping the HANA DB"
       when:
         - ansible_hostname == cluster_status_pre.primary_node
         - cluster_status_pre is defined
       block:
-        - name:                     "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} - Post Validations: Validate HANA DB cluster status after removing the firewall rule"
+        - name:                     "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} - Post Validations: Validate HANA DB cluster status after stopping the HANA DB"
           get_cluster_status:
             operation_step:         "post_failover"
             database_sid:           "{{ db_sid | lower }}"
           register:                 cluster_status_post
           retries:                  40
           delay:                    10
-          until:                    cluster_status_post.primary_node == cluster_status_pre.primary_node and cluster_status_post.secondary_node == cluster_status_pre.secondary_node
+          until:                    cluster_status_post.primary_node == cluster_status_pre.secondary_node and cluster_status_post.secondary_node == cluster_status_pre.primary_node
 
         - name:                     "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} Read var log messages by importing role"
           ansible.builtin.include_tasks: "roles/misc/tasks/var-log-messages.yml"
@@ -125,10 +139,10 @@
             test_case_details:      {
                                       "Pre Validations: Remove any location_constraints": "{{ location_constraints_results }}",
                                       "Pre Validations: Validate HANA DB cluster status": "{{ cluster_status_pre }}",
+                                      "Pre Validations: Check if the AUTOMATED_REGISTER": "{{ automated_register }}",
                                       "Pre Validations: CleanUp any failed resource": "{{ cleanup_failed_resource_pre }}",
-                                      "Test Execution: Firewall Rule Created": "{{ firewall_rule_created }}",
-                                      "Test Execution: Cluster Status after the network blocked": "{{ cluster_status_test_execution }}",
-                                      "Test Execution: Firewall Rule Removed": "{{ firewall_rule_deleted }}",
+                                      "Test Execution: Index Server Crash": "{{ index_server_result }}",
+                                      "Post Validations: CleanUp any failed resource": "{{ cleanup_failed_resource_post }}",
                                       "Post Validations: Validate HANA DB cluster status": "{{ cluster_status_post }}",
                                     }
 
