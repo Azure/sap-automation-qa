@@ -61,14 +61,13 @@
           ansible.builtin.shell:    "echo b > /proc/sysrq-trigger"
           register:                 index_server_result
 
-        - name:                     "Wait for the node to reboot"
-          wait_for:
-            host:                   "{{ ansible_hostname }}"
-            port:                   22
-            delay:                  60
-            retries:                10
-            state:                  started
-
+    - name:                         "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} - Test Execution: Crash the primary node."
+      when:
+        - cluster_status_pre.primary_node != "" and cluster_status_pre.secondary_node != ""
+        - ansible_hostname == cluster_status_pre.secondary_node
+        - cluster_status_pre.status == "running"
+        - cluster_status_pre is defined
+      block:
         - name:                     "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} - Test Execution: Validate HANA DB cluster status during stop operation."
           when:
             automated_register.stdout != ""
@@ -77,7 +76,7 @@
             database_sid:           "{{ db_sid | lower }}"
           register:                 cluster_status_test_execution
           retries:                  40
-          delay:                    10
+          delay:                    20
           until:                    cluster_status_test_execution.primary_node == cluster_status_pre.secondary_node and cluster_status_test_execution.secondary_node == cluster_status_pre.primary_node
 
     - name:                         "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} - Test Execution: Crash the primary node."
