@@ -61,6 +61,21 @@
           ansible.builtin.shell:    nohup bash -c "echo b > /proc/sysrq-trigger" > /dev/null 2>&1 &
           ignore_errors:            true
 
+        - name: Wait for the node to go offline
+          wait_for:
+            host:                   "{{ ansible_hostname }}"
+            port: 22
+            state: absent
+            timeout: 60  # Adjust to the time it takes for the node to go offline
+
+        - name: Wait for the node to reboot and come back online
+          wait_for:
+            host:                   "{{ ansible_hostname }}"
+            port: 22
+            state: started
+            delay: 10  # Wait a few seconds before checking for the node
+            timeout: 600  # Adjust to the expected reboot time
+
     - name:                         "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} - Test Execution: Crash the primary node."
       when:
         - cluster_status_pre.primary_node != "" and cluster_status_pre.secondary_node != ""
