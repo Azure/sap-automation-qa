@@ -87,7 +87,7 @@ def run_module():
     database_sid = module.params["database_sid"]
 
     try:
-        while result["primary_node"] is "":
+        while result["primary_node"] == "":
             cluster_status = subprocess.check_output(["crm_mon", "--output-as=xml"])
             result["cluster_status"] = cluster_status.decode("utf-8").strip()
             cluster_status_xml = ET.fromstring(cluster_status)
@@ -110,13 +110,13 @@ def run_module():
                 result["msg"] = (
                     "Pacemaker cluster is not stable and does not have primary node or secondary node"
                 )
+                module.fail_json(**result)
 
             nodes = cluster_status_xml.find("nodes")
             for node in nodes:
                 if node.attrib["online"] != "true":
-                    return {
-                        "error": "Node {} is not online".format(node.attrib["name"])
-                    }
+                    result["msg"] = "Node {} is not online".format(node.attrib["name"])
+                    module.fail_json(**result)
 
             node_attributes = cluster_status_xml.find("node_attributes")
             with concurrent.futures.ThreadPoolExecutor() as executor:
