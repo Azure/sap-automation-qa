@@ -58,7 +58,7 @@
 
         - name:                     "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} - Test Execution: Stop the HANA DB"
           become:                   true
-          ansible.builtin.shell:    "echo b > /proc/sysrq-trigger"
+          ansible.builtin.shell:    nohup bash -c "echo b > /proc/sysrq-trigger" > /dev/null 2>&1 &
           ignore_errors:            true
 
     - name:                         "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} - Test Execution: Crash the primary node."
