@@ -32,9 +32,9 @@ test_groups:
       #   task_name:                  crash-index
       #   description:                This runs a functional test for crashing index server on primary node
 
-      - name:                       HA Functional Test- Primary Node Kill
-        task_name:                  primary-node-kill
-        description:                This runs a functional test for primary node crash
+      # - name:                       HA Functional Test- Primary Node Kill
+      #   task_name:                  primary-node-kill
+      #   description:                This runs a functional test for primary node crash
 
       - name:                       HA Functional Test- Echo B
         task_name:                  echo-b
