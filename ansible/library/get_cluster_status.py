@@ -129,7 +129,6 @@ def run_module():
             result["msg"] = (
                 "Pacemaker cluster is not stable and does not have primary node or secondary node"
             )
-            module.fail_json(**result)
     except Exception as e:
         result["msg"] = str(e)
         module.fail_json(**result)
