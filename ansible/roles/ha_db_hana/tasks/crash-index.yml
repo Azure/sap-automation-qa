@@ -66,6 +66,13 @@
           changed_when:             index_server_result == 0
           failed_when:              index_server_result.rc != 0
 
+    - name:                         "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} - Test Execution: Crash the primary node."
+      when:
+        - cluster_status_pre.primary_node != "" and cluster_status_pre.secondary_node != ""
+        - ansible_hostname == cluster_status_pre.secondary_node
+        - cluster_status_pre.status == "running"
+        - cluster_status_pre is defined
+      block:
         - name:                     "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} - Test Execution: Validate HANA DB cluster status during stop operation."
           when:
             automated_register.stdout != ""
