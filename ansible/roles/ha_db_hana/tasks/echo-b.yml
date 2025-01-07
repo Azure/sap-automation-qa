@@ -58,7 +58,7 @@
 
         - name:                     "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} - Test Execution: Stop the HANA DB"
           become:                   true
-          ansible.builtin.command:  echo b > /proc/sysrq-trigger
+          ansible.builtin.command:  "echo b > /proc/sysrq-trigger"
           register:                 index_server_result
           changed_when:             index_server_result == 0
           failed_when:              index_server_result.rc != 0
