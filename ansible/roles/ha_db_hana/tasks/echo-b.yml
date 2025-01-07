@@ -61,12 +61,12 @@
           ansible.builtin.shell:    "echo b > /proc/sysrq-trigger"
           register:                 index_server_result
 
-        - name: "Wait for the node to reboot"
+        - name:                     "Wait for the node to reboot"
           wait_for:
             host:                   "{{ ansible_hostname }}"
             port:                   22
-            delay:                  10
-            retries:                30
+            delay:                  60
+            retries:                10
             state:                  started
 
         - name:                     "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} - Test Execution: Validate HANA DB cluster status during stop operation."
