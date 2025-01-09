@@ -1,6 +1,8 @@
 """Custom ansible module for formatting the packages list"""
 
+from typing import Dict, Any
 from ansible.module_utils.basic import AnsibleModule
+
 
 PACKAGE_LIST = [
     {"name": "Corosync Lib", "key": "corosynclib"},
@@ -18,36 +20,61 @@ PACKAGE_LIST = [
 ]
 
 
-def run_module():
+class PackageListFormatter:
     """
-    Sets up and runs the package list module with the specified arguments.
+    Class to format the package list based on the provided package facts list.
+    """
 
-    :param package_facts_list: The package facts list from the target host.
+    def __init__(self, package_facts_list: Dict[str, Any]):
+        self.package_facts_list = package_facts_list
+        self.result = {
+            "changed": False,
+            "packages_list": [],
+            "msg": "",
+        }
+
+    def format_packages(self) -> Dict[str, Any]:
+        """
+        Formats the package list based on the provided package facts list.
+
+        :return: A dictionary containing the formatted package list.
+        """
+        self.result["packages_list"] = [
+            {
+                package["name"]: {
+                    "version": self.package_facts_list[package["key"]][0].get(
+                        "version"
+                    ),
+                    "release": self.package_facts_list[package["key"]][0].get(
+                        "release"
+                    ),
+                    "architecture": self.package_facts_list[package["key"]][0].get(
+                        "arch"
+                    ),
+                }
+            }
+            for package in PACKAGE_LIST
+            if package["key"] in self.package_facts_list
+        ]
+
+        return self.result
+
+
+def main() -> None:
+    """
+    Entry point of the module.
     """
     module_args = dict(
         package_facts_list=dict(type="dict", required=True),
     )
-    result = dict(packages_list=[])
-    module = AnsibleModule(argument_spec=module_args, supports_check_mode=True)
-    package_list = module.params["package_facts_list"]
 
-    result["packages_list"] = [
-        {
-            package["name"]: {
-                "version": package_list[package["key"]][0].get("version"),
-                "release": package_list[package["key"]][0].get("release"),
-                "architecture": package_list[package["key"]][0].get("arch"),
-            }
-        }
-        for package in PACKAGE_LIST
-        if package["key"] in package_list
-    ]
+    module = AnsibleModule(argument_spec=module_args, supports_check_mode=True)
+    package_facts_list = module.params["package_facts_list"]
+
+    formatter = PackageListFormatter(package_facts_list)
+    result = formatter.format_packages()
 
     module.exit_json(**result)
-
-
-def main():
-    run_module()
 
 
 if __name__ == "__main__":

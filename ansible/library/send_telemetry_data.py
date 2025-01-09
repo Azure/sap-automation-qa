@@ -1,199 +1,228 @@
-"""Module to send telemetry data to Kusto Cluster/Log Analyics Workspace and create a HTML report.
+"""
+Module to send telemetry data to Kusto Cluster/Log Analytics Workspace and create an HTML report.
 """
 
 import os
 from datetime import datetime
-from ansible.module_utils.basic import AnsibleModule
+from typing import Dict, Any
+import base64
+import hashlib
+import hmac
 import json
 import requests
-import base64, hashlib, hmac
-from datetime import datetime
-import sys
 from azure.kusto.data import KustoConnectionStringBuilder
 from azure.kusto.data.data_format import DataFormat
-from azure.kusto.ingest import (
-    QueuedIngestClient,
-    IngestionProperties,
-    ReportLevel,
-)
+from azure.kusto.ingest import QueuedIngestClient, IngestionProperties, ReportLevel
+from ansible.module_utils.basic import AnsibleModule
+
 
 LAWS_RESOURCE = "/api/logs"
 LAWS_METHOD = "POST"
 LAWS_CONTENT_TYPE = "application/json"
 
 
-def get_authorization_for_log_analytics(
-    workspace_id,
-    workspace_shared_key,
-    content_length,
-    datetime,
-):
+class TelemetryDataSender:
     """
-    Builds the authorization header for Azure Log Analytics.
-
-    Args:
-        workspace_id (str): Workspace ID for Azure Log Analytics.
-        workspace_shared_key (str): Workspace Key for Azure Log Analytics.
-        content_length (int): Length of the payload.
-        date (datetime): Date and time of the request.
-
-    Returns:
-        str: Authorization header.
+    Class to send telemetry data to Kusto Cluster/Log Analytics Workspace and create an HTML report.
     """
 
-    string_to_hash = (
-        LAWS_METHOD
-        + "\n"
-        + str(content_length)
-        + "\n"
-        + LAWS_CONTENT_TYPE
-        + "\n"
-        + "x-ms-date:"
-        + datetime
-        + "\n"
-        + LAWS_RESOURCE
-    )
-    encoded_hash = base64.b64encode(
-        hmac.new(
-            base64.b64decode(workspace_shared_key),
-            bytes(string_to_hash, "UTF-8"),
-            digestmod=hashlib.sha256,
-        ).digest()
-    ).decode("utf-8")
-    return "SharedKey {}:{}".format(workspace_id, encoded_hash)
+    def __init__(self, module_params: Dict[str, Any]):
+        self.module_params = module_params
+        self.result = {
+            "changed": False,
+            "telemetry_data": module_params["test_group_json_data"],
+            "telemetry_data_destination": module_params["telemetry_data_destination"],
+            "status": None,
+            "start": datetime.now(),
+            "end": datetime.now(),
+        }
 
+    def get_authorization_for_log_analytics(
+        self,
+        workspace_id: str,
+        workspace_shared_key: str,
+        content_length: int,
+        date: str,
+    ) -> str:
+        """
+        Builds the authorization header for Azure Log Analytics.
 
-def send_telemetry_data_to_azuredataexplorer(telemetry_json_data, module_params):
-    """
-    Sends telemetry data to Azure Data Explorer.
-
-    Args:
-        telemetry_json_data (JSON): The JSON data to be sent to Azure Data Explorer.
-        module_params (dict): The parameters for the Ansible module.
-
-    Raises:
-        Exception: If an error occurs during the process.
-
-    Returns:
-        IngestKustoResponse: The response from the Kusto API.
-    """
-    try:
-        import pandas
-
-        telemetry_json_data = json.loads(telemetry_json_data)
-
-        data_frame = pandas.DataFrame(
-            [telemetry_json_data.values()],
-            columns=telemetry_json_data.keys(),
+        :param workspace_id: Workspace ID for Azure Log Analytics.
+        :param workspace_shared_key: Workspace Key for Azure Log Analytics.
+        :param content_length: Length of the payload.
+        :param date: Date and time of the request.
+        :return: Authorization header.
+        """
+        string_to_hash = (
+            f"{LAWS_METHOD}\n{content_length}\n{LAWS_CONTENT_TYPE}\nx-ms-date:"
+            + f"{date}\n{LAWS_RESOURCE}"
         )
-        ingestion_properties = IngestionProperties(
-            database=module_params["adx_database_name"],
-            table=module_params["telemetry_table_name"],
-            data_format=DataFormat.JSON,
-            report_level=ReportLevel.FailuresAndSuccesses,
-        )
-        kcsb = KustoConnectionStringBuilder.with_aad_managed_service_identity_authentication(
-            connection_string=module_params["adx_cluster_fqdn"],
-            client_id=module_params["adx_client_id"],
-        )
-        client = QueuedIngestClient(kcsb)
-        response = client.ingest_from_dataframe(data_frame, ingestion_properties)
-        return response
-    except Exception as ex:
-        raise ex
+        encoded_hash = base64.b64encode(
+            hmac.new(
+                base64.b64decode(workspace_shared_key),
+                bytes(string_to_hash, "UTF-8"),
+                digestmod=hashlib.sha256,
+            ).digest()
+        ).decode("utf-8")
+        return f"SharedKey {workspace_id}:{encoded_hash}"
 
+    def send_telemetry_data_to_azuredataexplorer(self, telemetry_json_data: str) -> Any:
+        """
+        Sends telemetry data to Azure Data Explorer.
 
-def validate_params(module_params):
-    """
-    Validate the telemetry data destination parameters.
+        :param telemetry_json_data: The JSON data to be sent to Azure Data Explorer.
+        :return: The response from the Kusto API.
+        """
+        try:
+            import pandas as pd
 
-    Args:
-        module_params (Ansible Module Parameters): The parameters for the Ansible module.
+            telemetry_json_data = json.loads(telemetry_json_data)
+            data_frame = pd.DataFrame(
+                [telemetry_json_data.values()], columns=telemetry_json_data.keys()
+            )
+            ingestion_properties = IngestionProperties(
+                database=self.module_params["adx_database_name"],
+                table=self.module_params["telemetry_table_name"],
+                data_format=DataFormat.JSON,
+                report_level=ReportLevel.FailuresAndSuccesses,
+            )
+            kcsb = KustoConnectionStringBuilder.with_aad_managed_service_identity_authentication(
+                connection_string=self.module_params["adx_cluster_fqdn"],
+                client_id=self.module_params["adx_client_id"],
+            )
+            client = QueuedIngestClient(kcsb)
+            response = client.ingest_from_dataframe(data_frame, ingestion_properties)
+            return response
+        except Exception as ex:
+            raise
 
-    Returns:
-        boolean: True if the parameters are valid, False otherwise.F
-    """
-    telemetry_data_destination = module_params.get("telemetry_data_destination")
+    def send_telemetry_data_to_azureloganalytics(
+        self, telemetry_json_data: str
+    ) -> requests.Response:
+        """
+        Sends telemetry data to Azure Log Analytics Workspace.
 
-    if telemetry_data_destination == "azureloganalytics":
-        if (
-            "laws_workspace_id" not in module_params
-            or "laws_shared_key" not in module_params
-        ):
-            return False
-    elif telemetry_data_destination == "azuredataexplorer":
-        required_params = [
-            "adx_database_name",
-            "telemetry_table_name",
-            "adx_cluster_fqdn",
-            "adx_client_id",
-        ]
-        missing_params = [
-            param for param in required_params if param not in module_params
-        ]
-        if missing_params:
-            return False
-    return True
+        :param telemetry_json_data: JSON data to be sent to Log Analytics.
+        :return: Response from the Log Analytics API.
+        """
+        try:
+            utc_datetime = datetime.now().strftime("%a, %d %b %Y %H:%M:%S GMT")
+            authorization_header = self.get_authorization_for_log_analytics(
+                workspace_id=self.module_params["laws_workspace_id"],
+                workspace_shared_key=self.module_params["laws_shared_key"],
+                content_length=len(telemetry_json_data),
+                date=utc_datetime,
+            )
 
+            response = requests.post(
+                url=f"https://{self.module_params['laws_workspace_id']}.ods.opinsights.azure.com"
+                + f"{LAWS_RESOURCE}?api-version=2016-04-01",
+                data=telemetry_json_data,
+                headers={
+                    "content-type": LAWS_CONTENT_TYPE,
+                    "Authorization": authorization_header,
+                    "Log-Type": self.module_params["telemetry_table_name"],
+                    "x-ms-date": utc_datetime,
+                },
+                timeout=30,
+            )
+            return response
+        except Exception as ex:
+            raise
 
-def send_telemetry_data_to_azureloganalytics(telemetry_json_data, module_params):
-    """
-    Sends telemetry data to Azure Log Analytics Workspace.
+    def validate_params(self) -> bool:
+        """
+        Validate the telemetry data destination parameters.
 
-    Args:
-        telemetry_json_data (json): JSON data to be sent to Log Analytics.
-        module_params (dict): Module parameters.
-
-    Returns:
-        response: Response from the Log Analytics API.
-    """
-    try:
-        utc_datetime = datetime.now().strftime("%a, %d %b %Y %H:%M:%S GMT")
-        authorization_header = get_authorization_for_log_analytics(
-            workspace_id=module_params["laws_workspace_id"],
-            workspace_shared_key=module_params["laws_shared_key"],
-            content_length=len(telemetry_json_data),
-            datetime=utc_datetime,
+        :return: True if the parameters are valid, False otherwise.
+        """
+        telemetry_data_destination = self.module_params.get(
+            "telemetry_data_destination"
         )
 
-        response = requests.post(
-            url=f"https://{module_params['laws_workspace_id']}.ods.opinsights.azure.com{LAWS_RESOURCE}?api-version=2016-04-01",
-            data=telemetry_json_data,
-            headers={
-                "content-type": LAWS_CONTENT_TYPE,
-                "Authorization": authorization_header,
-                "Log-Type": module_params["telemetry_table_name"],
-                "x-ms-date": utc_datetime,
-            },
-        )
-        return response
-    except Exception as ex:
-        raise ex
+        if telemetry_data_destination == "azureloganalytics":
+            if (
+                "laws_workspace_id" not in self.module_params
+                or "laws_shared_key" not in self.module_params
+            ):
+                return False
+        elif telemetry_data_destination == "azuredataexplorer":
+            required_params = [
+                "adx_database_name",
+                "telemetry_table_name",
+                "adx_cluster_fqdn",
+                "adx_client_id",
+            ]
+            missing_params = [
+                param for param in required_params if param not in self.module_params
+            ]
+            if missing_params:
+                return False
+        return True
+
+    def write_log_file(self) -> None:
+        """
+        Writes the telemetry data to a log file.
+        """
+        try:
+            log_folder = os.path.join(self.module_params["workspace_directory"], "logs")
+            os.makedirs(log_folder, exist_ok=True)
+            log_file_path = os.path.join(
+                log_folder,
+                f"{self.result['telemetry_data']['TestGroupInvocationId']}.log",
+            )
+            with open(log_file_path, "a", encoding="utf-8") as log_file:
+                log_file.write(json.dumps(self.result["telemetry_data"]))
+                log_file.write("\n")
+        except Exception as e:
+            self.result["status"] = f"Error writing to log file: {e}"
+            raise
+
+    def send_telemetry_data(self) -> None:
+        """
+        Sends telemetry data to the specified destination.
+        """
+        if self.module_params["telemetry_data_destination"] in [
+            "azureloganalytics",
+            "azuredataexplorer",
+        ]:
+            if not self.validate_params():
+                self.result["status"] = (
+                    "Invalid parameters for telemetry data destination. Data will not be sent."
+                )
+                return
+
+            try:
+                method_name = (
+                    "send_telemetry_data_to_"
+                    + f"{self.module_params['telemetry_data_destination']}"
+                )
+                response = getattr(self, method_name)(
+                    json.dumps(self.result["telemetry_data"])
+                )
+                self.result["status"] = f"Response: {response}"
+            except Exception as e:
+                self.result["status"] = f"Error sending telemetry data: {e}"
+                raise
+        else:
+            self.result["status"] = (
+                "Telemetry data destination not provided. HTML report will be generated."
+            )
+
+    def get_result(self) -> Dict[str, Any]:
+        """
+        Returns the result dictionary.
+
+        :return: The result dictionary containing the status of the operation.
+        :rtype: dict
+        """
+        self.result["end"] = datetime.now()
+        return self.result
 
 
-def run_module():
+def run_module() -> None:
     """
-    This function is the entry point for the Ansible module. It is responsible for executing the module logic.
-
-    Parameters:
-    - test_group_json_data (dict): The JSON data for the test group.
-    - telemetry_data_destination (str): The destination where the telemetry data will be sent.
-    - laws_workspace_id (str, optional): The workspace ID for the Laws service.
-    - laws_shared_key (str, optional): The shared key for the Laws service.
-    - telemetry_table_name (str): The name of the telemetry table.
-    - adx_database_name (str, optional): The name of the Azure Data Explorer database.
-    - adx_cluster_fqdn (str, optional): The fully qualified domain name of the Azure Data Explorer cluster.
-    - adx_client_id (str, optional): The client ID for accessing the Azure Data Explorer cluster.
-    - workspace_directory (str): The directory where the workspace is located.
-
-    Returns:
-    - dict: A dictionary containing the module execution result. The dictionary has the following keys:
-        - "changed" (bool): Indicates whether the module made any changes.
-        - "telemetry_data" (dict): The telemetry data.
-        - "telemetry_data_destination" (str): The destination where the telemetry data was sent.
-        - "status" (str): The status of the telemetry data sending process.
-        - "start" (datetime): The start time of the module execution.
-        - "end" (datetime): The end time of the module execution.
+    Sets up and runs the telemetry data sending module with the specified arguments.
     """
     module_args = dict(
         test_group_json_data=dict(type="dict", required=True),
@@ -206,55 +235,25 @@ def run_module():
         adx_client_id=dict(type="str", required=False),
         workspace_directory=dict(type="str", required=True),
     )
+
     module = AnsibleModule(argument_spec=module_args, supports_check_mode=True)
-    telemetry_data = module.params["test_group_json_data"]
-    result = {
-        "changed": False,
-        "telemetry_data": telemetry_data,
-        "telemetry_data_destination": module.params["telemetry_data_destination"],
-        "status": None,
-        "start": datetime.now(),
-        "end": datetime.now(),
-    }
+    sender = TelemetryDataSender(module.params)
 
-    # Create log files named invocation id for the test group invocation and
-    # append all the test case result to the file
     try:
-        log_folder = f"{module.params['workspace_directory']}/logs"
-        os.makedirs(log_folder, exist_ok=True)
-        with open(
-            f"{log_folder}/{telemetry_data['TestGroupInvocationId']}.log", "a"
-        ) as log_file:
-            log_file.write(json.dumps(telemetry_data))
-            log_file.write("\n")
+        sender.write_log_file()
+        sender.send_telemetry_data()
     except Exception as e:
-        result["status"] = f"Error writing to log file {e}"
-        module.fail_json(msg=f"Error writing to log file {e}", **result)
+        module.fail_json(msg=str(e), **sender.get_result())
 
-    # Send telemetry data to the destination
-    if module.params["telemetry_data_destination"] in ["azureloganalytics", "azuredataexplorer"]:
-        if not validate_params(module.params):
-            result["status"] = (
-                "Invalid parameters for telemetry data destination. Data will not be sent."
-            )
-        try:
-            method_name = (
-                "send_telemetry_data_to_" + module.params["telemetry_data_destination"]
-            )
-            response = getattr(
-                sys.modules[__name__],
-                method_name,
-            )(json.dumps(telemetry_data), module.params)
-            result["status"] = f"Response: {response}"
-        except Exception as e:
-            result["status"] = f"Error sending telemetry data {e}"
-            module.fail_json(msg=f"Error sending telemetry data {e}", **result)
-    else:
-        result["status"] = (
-            "Telemetry data destination not provided. HTML report will be generated."
-        )
-    module.exit_json(**result)
+    module.exit_json(**sender.get_result())
+
+
+def main() -> None:
+    """
+    Entry point of the script.
+    """
+    run_module()
 
 
 if __name__ == "__main__":
-    run_module()
+    main()
