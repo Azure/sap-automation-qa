@@ -62,14 +62,16 @@
           async:                    1
           poll:                     0
           ignore_errors:            true
+          register:                 echo_b_result
 
-    - name:                         "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} - Test Execution: Crash the primary node."
-      when:
-        - cluster_status_pre.primary_node != "" and cluster_status_pre.secondary_node != ""
-        - ansible_hostname == cluster_status_pre.secondary_node
-        - cluster_status_pre.status == "running"
-        - cluster_status_pre is defined
-      block:
+        - name:                     "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} - Test Execution: Wait for the HANA DB to come back"
+          become:                   true
+          wait_for:
+            host:                   "{{ cluster_status_pre.primary_node }}"
+            port:                   22
+            delay:                  10
+            retries:                60
+
         - name:                     "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} - Test Execution: Validate HANA DB cluster status during stop operation."
           when:
             automated_register.stdout != ""
@@ -81,13 +83,6 @@
           delay:                    20
           until:                    cluster_status_test_execution.primary_node == cluster_status_pre.secondary_node and cluster_status_test_execution.secondary_node == cluster_status_pre.primary_node
 
-    - name:                         "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} - Test Execution: Crash the primary node."
-      when:
-        - cluster_status_pre.primary_node != "" and cluster_status_pre.secondary_node != ""
-        - ansible_hostname == cluster_status_pre.primary_node
-        - cluster_status_pre.status == "running"
-        - cluster_status_pre is defined
-      block:
         - name:                     "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} - Test Execution: Stop timer"
           ansible.builtin.set_fact:
             test_execution_end:     "{{ now(utc=true, fmt='%Y-%m-%d %H:%M:%S') }}"
@@ -152,7 +147,7 @@
                                       "Pre Validations: Validate HANA DB cluster status": "{{ cluster_status_pre }}",
                                       "Pre Validations: Check if the AUTOMATED_REGISTER": "{{ automated_register }}",
                                       "Pre Validations: CleanUp any failed resource": "{{ cleanup_failed_resource_pre }}",
-                                      "Test Execution: Index Server Crash": "{{ index_server_result }}",
+                                      "Test Execution: Echo b results": "{{ echo_b_result }}",
                                       "Post Validations: CleanUp any failed resource": "{{ cleanup_failed_resource_post }}",
                                       "Post Validations: Validate HANA DB cluster status": "{{ cluster_status_post }}",
                                     }
