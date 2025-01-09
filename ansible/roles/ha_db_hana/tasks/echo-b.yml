@@ -64,11 +64,11 @@
           ignore_errors:            true
           register:                 echo_b_result
 
-    - name:                         "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} - Test Execution: Crash the primary node."
-      when:
-        - ansible_hostname == cluster_status_pre.secondary_node
-        - cluster_status_pre is defined
-      block:
+        - name:                     "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} - Test Execution: Wait for connection to the primary node"
+          ansible.builtin.wait_for_connection:
+            delay:                  10
+            sleep:                  5
+
         - name:                     "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} - Test Execution: Validate HANA DB cluster status during stop operation."
           when:
             automated_register.stdout != ""
@@ -97,10 +97,6 @@
           register:                 hana_db_register_failed_resource
           changed_when:             hana_db_register_failed_resource.rc == 0
 
-        - name:                     "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} - Test Execution: CleanUp any failed resource"
-          ansible.builtin.command:  "crm_resource --cleanup"
-          register:                 cleanup_failed_resource_post
-          changed_when:             cleanup_failed_resource_post.rc == 0
 
 # /*---------------------------------------------------------------------------
 # |                          Post Validations
@@ -145,7 +141,6 @@
                                       "Pre Validations: Check if the AUTOMATED_REGISTER": "{{ automated_register }}",
                                       "Pre Validations: CleanUp any failed resource": "{{ cleanup_failed_resource_pre }}",
                                       "Test Execution: Echo b results": "{{ echo_b_result }}",
-                                      "Post Validations: CleanUp any failed resource": "{{ cleanup_failed_resource_post }}",
                                       "Post Validations: Validate HANA DB cluster status": "{{ cluster_status_post }}",
                                     }
 
