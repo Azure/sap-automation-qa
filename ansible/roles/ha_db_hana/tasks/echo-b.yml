@@ -68,10 +68,9 @@
           wait_for:
             host:                   "{{ inventory_hostname }}"
             port:                   22
-            delay:                  30
+            delay:                  300
             state:                  started
             timeout:                300
-            retries:                10
 
         - name:                     "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} - Test Execution: Validate HANA DB cluster status during stop operation."
           when:
