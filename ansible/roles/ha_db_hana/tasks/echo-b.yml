@@ -64,22 +64,26 @@
           ignore_errors:            true
           register:                 echo_b_result
 
-        - name:                     "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} - Test Execution: Wait for connection to the primary node"
-          ansible.builtin.wait_for_connection:
-            delay:                  30
-            sleep:                  5
-
+    - name:                         "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} - Test Execution: Crash the primary node."
+      when:
+        - ansible_hostname == cluster_status_pre.secondary_node
+        - cluster_status_pre is defined
+      block:
         - name:                     "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} - Test Execution: Validate HANA DB cluster status during stop operation."
           when:
             automated_register.stdout != ""
           get_cluster_status:
             operation_step:         "test_execution"
             database_sid:           "{{ db_sid | lower }}"
-          register:                 cluster_status_test_execution
           retries:                  40
           delay:                    20
           until:                    cluster_status_test_execution.primary_node == cluster_status_pre.secondary_node and cluster_status_test_execution.secondary_node == cluster_status_pre.primary_node
 
+    - name:                         "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} - Test Execution: Crash the primary node."
+      when:
+        - ansible_hostname == cluster_status_pre.primary_node
+        - cluster_status_pre is defined
+      block:
         - name:                     "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} - Test Execution: Stop timer"
           ansible.builtin.set_fact:
             test_execution_end:     "{{ now(utc=true, fmt='%Y-%m-%d %H:%M:%S') }}"
