@@ -69,8 +69,8 @@
           wait_for:
             host:                   "{{ cluster_status_pre.primary_node }}"
             port:                   22
-            delay:                  10
-            retries:                60
+            delay:                  30
+            retries:                120
 
         - name:                     "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} - Test Execution: Validate HANA DB cluster status during stop operation."
           when:
