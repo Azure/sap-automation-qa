@@ -61,3 +61,4 @@ urllib3==2.2.2
 wcmatch==8.5.2
 yamllint==1.35.1
 zipp==3.19.2
+pytest=8.3.4
