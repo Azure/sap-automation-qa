@@ -76,7 +76,9 @@ class LocationConstraintsManager:
         xml_output = self._run_command(
             ["cibadmin", "--query", "--scope", "constraints"]
         )
-        constraints = ET.fromstring(xml_output).findall(".//rsc_location")
+        constraints = (
+            ET.fromstring(xml_output).findall(".//rsc_location") if xml_output else None
+        )
         return constraints if constraints is not None else []
 
     def get_result(self) -> Dict[str, Any]:
