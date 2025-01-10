@@ -76,9 +76,7 @@ def test_location_constraints_exists_success(
     assert loc_constraints[0].attrib["id"] == location_constraints_xml[0].attrib["id"]
 
 
-def test_location_constraints_exists_failure(
-    mocker, location_constraints_manager, location_constraints_string
-):
+def test_location_constraints_exists_failure(mocker, location_constraints_manager):
     """
     Test the location_constraints_exists method for finding no constraints.
 
@@ -86,8 +84,6 @@ def test_location_constraints_exists_failure(
     :type mocker: pytest_mock.MockerFixture
     :param location_constraints_manager: The LocationConstraintsManager instance
     :type location_constraints_manager: LocationConstraintsManager
-    :param location_constraints_str: The location constraints string
-    :type location_constraints_str: str
     """
     mock_run_command = mocker.patch.object(location_constraints_manager, "_run_command")
     mock_run_command.return_value = None
