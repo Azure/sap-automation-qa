@@ -6,6 +6,7 @@
   when:                             node_tier == "hana"
   block:
     - name:                         "Pre Validations: Remove any location_constraints"
+      become:                       true
       location_constraints:
         action:                     "remove"
         ansible_os_family:          "{{ ansible_os_family | upper}}"
