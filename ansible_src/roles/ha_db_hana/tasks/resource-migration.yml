@@ -10,7 +10,6 @@
 # +--------------------------------------------------------------------------*/
 - name:                             "Pre Validations: HANA DB Nodes"
   ansible.builtin.include_tasks:    "roles/misc/tasks/pre-validations.yml"
-  run_once:                         true
 
 # /*---------------------------------------------------------------------------
 # |                          Test Execution                                   |
