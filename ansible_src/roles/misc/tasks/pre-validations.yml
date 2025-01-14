@@ -3,7 +3,6 @@
 # /*---------------------------------------------------------------------------|
 
 - name:                             "Pre Validations: HANA DB Nodes"
-  become:                           true
   when:                             node_tier == "hana"
   block:
     - name:                         "Pre Validations: Remove any location_constraints"
@@ -13,16 +12,18 @@
       register:                     location_constraints_results
 
     - name:                         "Pre Validations: Validate HANA DB cluster status on primary node"
+      become:                       true
       get_cluster_status:
         operation_step:             "pre_failover"
         database_sid:               "{{ db_sid | lower }}"
       register:                     cluster_status_pre
       failed_when:
-        - cluster_status_pre.primary_node | default('') == ""
-        - cluster_status_pre.secondary_node | default('') == ""
+        - cluster_status_pre.primary_node == ""
+        - cluster_status_pre.secondary_node == ""
 
     - name:                         "Pre Validations: Check if the AUTOMATED_REGISTER parameter
                                     is set to true"
+      become:                       true
       ansible.builtin.shell: >
                                     "{{ commands
                                     | selectattr('name', 'equalto', 'automated_register_cmd')
@@ -32,6 +33,7 @@
       when:                         cluster_status_pre is defined
 
     - name:                         "Pre Validations: CleanUp any failed resource"
+      become:                       true
       ansible.builtin.command:      "crm_resource --cleanup"
       register:                     cleanup_failed_resource_pre
       timeout:                      10
