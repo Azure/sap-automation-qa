@@ -98,9 +98,9 @@
       ansible.builtin.set_fact:
         test_case_message_from_test_case: |
                                     "Old primary: {{ cluster_status_pre.primary_node }} \
-                                    New primary: {{ cluster_status_post.primary_node }} \
+                                    New primary: {{ cluster_status_test_execution_1.primary_node }} \
                                     Old secondary: {{ cluster_status_pre.secondary_node }} \
-                                    New secondary: {{ cluster_status_post.secondary_node }}"
+                                    New secondary: {{ cluster_status_test_execution_1.secondary_node }}"
         test_case_details_from_test_case: |
                                 {
                                   "Pre Validations: Remove any location_constraints": "{{ location_constraints_results }}",
@@ -108,8 +108,7 @@
                                   "Pre Validations: Check if the AUTOMATED_REGISTER": "{{ automated_register }}",
                                   "Pre Validations: CleanUp any failed resource": "{{ cleanup_failed_resource_pre }}",
                                   "Test Execution: Resource Migration": "{{ hana_db_resource_migration }}",
-                                  "Post Validations: CleanUp any failed resource": "{{ cleanup_failed_resource_post }}",
-                                  "Post Validations: Validate HANA DB cluster status": "{{ cluster_status_post }}",
+                                  "Post Validations: Validate HANA DB cluster status": "{{ cluster_status_test_execution_1 }}",
                                 }
       run_once:                     true
     - name:                         "Post Validations Tasks"

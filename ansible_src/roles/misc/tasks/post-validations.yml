@@ -15,8 +15,8 @@
       retries:                  40
       delay:                    10
       until: > 
-                                cluster_status_post.primary_node == cluster_status_pre.secondary_node
-                                and cluster_status_post.secondary_node == cluster_status_pre.primary_node
+                                - cluster_status_post.primary_node == cluster_status_pre.secondary_node
+                                - cluster_status_post.secondary_node == cluster_status_pre.primary_node
 
     - name:                     "Read var log messages by importing role"
       ansible.builtin.include_tasks: "roles/misc/tasks/var-log-messages.yml"
