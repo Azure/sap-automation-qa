@@ -30,8 +30,7 @@
             test_execution_start:   "{{ now(utc=true, fmt='%Y-%m-%d %H:%M:%S') }}"
 
         - name:                     "Test Execution: Move the resource to the targeted node"
-          ansible.builtin.command: >
-                                    "{{ commands | selectattr(
+          ansible.builtin.command:  "{{ commands | selectattr(
                                     'name', 'equalto', 'resource_migration_cmd') | map(
                                     attribute=(ansible_os_family | upper)) | first }}"
           register:                 hana_db_resource_migration

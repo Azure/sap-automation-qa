@@ -25,8 +25,7 @@
     - name:                         "Pre Validations: Check if the AUTOMATED_REGISTER parameter
                                     is set to true"
       become:                       true
-      ansible.builtin.shell: >
-                                    "{{ commands
+      ansible.builtin.shell:        "{{ commands
                                     | selectattr('name', 'equalto', 'automated_register_cmd')
                                     | map(attribute=(ansible_os_family | upper)) | first }}"
       register:                     automated_register
