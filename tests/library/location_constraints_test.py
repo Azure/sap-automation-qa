@@ -9,11 +9,8 @@ from ansible_src.library.location_constraints import LocationConstraintsManager
 
 LC_STR = """
 <constraints>
-    <rsc_location id="loc_azure_health" rsc-pattern="!health-.*">
-        <rule score-attribute="#health-azure" id="loc_azure_health-rule">
-        <expression operation="defined" attribute="#uname" id="loc_azure_health-rule-expression"/>
-        </rule>
-    </rsc_location>
+    <rsc_location id="location-rsc_SAPHana_HDB_HA1" rsc="rsc_SAPHana_HDB_HA1" node="node1" score="INFINITY"/>
+    <rsc_location id="location-rsc_SAPHana_HDB_HA1" rsc="rsc_SAPHana_HDB_HA1" node="node2" score="-INFINITY"/>
 </constraints>
 """
 
@@ -90,3 +87,23 @@ def test_location_constraints_exists_failure(mocker, location_constraints_manage
     loc_constraints = location_constraints_manager.location_constraints_exists()
 
     assert loc_constraints == []
+
+
+def test_remove_location_constraints_success(
+    mocker, location_constraints_manager, location_constraints_xml
+):
+    """
+    Test the remove_location_constraints method for removing constraints successfully.
+
+    :param mocker: The mocker fixture
+    :type mocker: pytest_mock.MockerFixture
+    :param location_constraints_manager: The LocationConstraintsManager instance
+    :type location_constraints_manager: LocationConstraintsManager
+    :param location_constraints_xml: The location constraints XML
+    :type location_constraints_xml: xml.etree.ElementTree.Element
+    """
+    mock_run_command = mocker.patch.object(location_constraints_manager, "_run_command")
+    mock_run_command.return_value = "Deleted: loc_azure"
+    location_constraints_manager.remove_location_constraints(location_constraints_xml)
+
+    assert location_constraints_manager.result["location_constraint_removed"] is True

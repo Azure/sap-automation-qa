@@ -1,0 +1,41 @@
+# /*---------------------------------------------------------------------------|
+# |            Pre Validations Tasks for HANA DB Tests                         |
+# /*---------------------------------------------------------------------------|
+
+- name:                             "Pre Validations: HANA DB Nodes"
+  become:                           true
+  when:                             node_tier == "hana"
+  block:
+    - name:                         "Pre Validations: Remove any location_constraints"
+      location_constraints:
+        action:                     "remove"
+        ansible_os_family:          "{{ ansible_os_family | upper}}"
+      register:                     location_constraints_results
+
+    - name:                         "Pre Validations: Validate HANA DB cluster status on primary node"
+      get_cluster_status:
+        operation_step:             "pre_failover"
+        database_sid:               "{{ db_sid | lower }}"
+      register:                     cluster_status_pre
+      failed_when:
+        - cluster_status_pre.primary_node | default('') == ""
+        - cluster_status_pre.secondary_node | default('') == ""
+
+    - name:                         "Pre Validations: Check if the AUTOMATED_REGISTER parameter
+                                    is set to true"
+      ansible.builtin.shell: >
+                                    "{{ commands
+                                    | selectattr('name', 'equalto', 'automated_register_cmd')
+                                    | map(attribute=(ansible_os_family | upper)) | first }}"
+      register:                     automated_register
+      changed_when:                 false
+      when:                         cluster_status_pre is defined
+
+    - name:                         "Pre Validations: CleanUp any failed resource"
+      ansible.builtin.command:      "crm_resource --cleanup"
+      register:                     cleanup_failed_resource_pre
+      timeout:                      10
+      retries:                      3
+      until:                        cleanup_failed_resource_pre.rc == 0
+      changed_when:                 cleanup_failed_resource_pre.rc == 0
+      failed_when:                  cleanup_failed_resource_pre.rc != 0

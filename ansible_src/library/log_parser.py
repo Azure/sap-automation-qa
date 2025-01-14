@@ -103,6 +103,8 @@ class LogParser:
                         continue
 
             self.result["filtered_logs"] = json.dumps(self.result["filtered_logs"])
+        except FileNotFoundError as ex:
+            self.result["error"] = str(ex)
         except Exception as e:
             self.result["error"] = str(e)
 

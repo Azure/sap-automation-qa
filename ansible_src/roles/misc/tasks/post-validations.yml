@@ -1,0 +1,41 @@
+###############################################################################
+# Description: This script will run post validations for the test cases       #
+###############################################################################
+
+- name:                         "Post Validations: HA cluster status after test execution"
+  when:
+                                - ansible_hostname == cluster_status_pre.primary_node
+                                - cluster_status_pre is defined
+  block:
+    - name:                     "Post Validations: Validate HANA DB cluster status after test execution"
+      get_cluster_status:
+        operation_step:         "post_failover"
+        database_sid:           "{{ db_sid | lower }}"
+      register:                 cluster_status_post
+      retries:                  40
+      delay:                    10
+      until: > 
+                                cluster_status_post.primary_node == cluster_status_pre.secondary_node
+                                and cluster_status_post.secondary_node == cluster_status_pre.primary_node
+
+    - name:                     "Read var log messages by importing role"
+      ansible.builtin.include_tasks: "roles/misc/tasks/var-log-messages.yml"
+
+    - name:                     "Post Validations: Set test case status"
+      delegate_to:              localhost
+      failed_when:
+                                - cluster_status_pre.primary_node != cluster_status_post.secondary_node
+                                - cluster_status_pre.secondary_node != cluster_status_post.primary_node
+      ansible.builtin.set_fact:
+        test_case_name:         "{{ item.name }}: {{ virtual_host }}"
+        test_case_description:  "{{ item.description }}"
+        test_case_status:       "PASSED"
+        test_execution_start_time: "{{ test_execution_start }}"
+        test_case_hostname:     "{{ virtual_host }}"
+        test_execution_end_time: "{{ test_execution_end }}"
+        test_case_var_log_messages: "{{ var_log_messages_output.filtered_logs }}"
+        test_case_message:      {{ test_case_message }}
+        test_case_details:      {{ test_case_details }}
+
+    - name:                     "Post Telemetry Data"
+      ansible.builtin.include_tasks: "roles/misc/tasks/post-telemetry-data.yml"

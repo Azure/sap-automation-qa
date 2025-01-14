@@ -1,93 +1,76 @@
 # /*---------------------------------------------------------------------------
-# |                                                                            |
-# |                          Primary Node Crash                                |
-# |                                                                            |
+# |               Kill SBD Inquisitor                                         |
 # +--------------------------------------------------------------------------*/
 - name:                             "Test Setup Tasks"
   ansible.builtin.include_tasks:    "roles/misc/tasks/test-case-setup.yml"
   run_once:                         true
 
 # /*---------------------------------------------------------------------------
-# |                          Pre Validations
+# |                          Pre Validations                                  |
+# +--------------------------------------------------------------------------*/
+- name:                             "Pre Validations: HANA DB Nodes"
+  ansible.builtin.include_tasks:    "roles/misc/tasks/pre-validations.yml"
+  run_once:                         true
+
 # /*---------------------------------------------------------------------------
-- name:                             "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} - Pre Validations: DB Nodes"
+# |                          Test Execution                                   |
+# +--------------------------------------------------------------------------*/
+- name:                             "Test Execution: SBD Inquisitor kill"
   become:                           true
   when:                             node_tier == "hana"
   block:
-    - name:                         "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} - Pre Validations: Remove any location_constraints"
-      location_constraints:
-        action:                     "remove"
-        ansible_os_family:          "{{ ansible_os_family | upper}}"
-      register:                     location_constraints_results
-
-    - name:                         "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} - Pre Validations: Validate HANA DB cluster status before stopping the HANA DB"
-      get_cluster_status:
-        operation_step:             "pre_failover"
-        database_sid:               "{{ db_sid | lower }}"
-      register:                     cluster_status_pre
-      failed_when:                  cluster_status_pre.primary_node == "" or cluster_status_pre.secondary_node == ""
-
-    - name:                         "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} - Pre Validations on the primary node"
-      when:                         ansible_hostname == cluster_status_pre.primary_node
-      block:
-        - name:                     "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} - Pre Validations: Check if the AUTOMATED_REGISTER parameter is set to true"
-          ansible.builtin.shell:
-            cmd:                    "{{ commands | selectattr('name', 'equalto', 'automated_register_cmd') | map(attribute=(ansible_os_family | upper)) | first }}"
-          register:                 automated_register
-          changed_when:             false
-          when:                     cluster_status_pre is defined
-
-        - name:                     "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} - Pre Validations: CleanUp any failed resource"
-          ansible.builtin.command:  "crm_resource --cleanup"
-          register:                 cleanup_failed_resource_pre
-          timeout:                  10
-          retries:                  3
-          changed_when:             cleanup_failed_resource_pre.rc == 0
-          failed_when:              cleanup_failed_resource_pre.rc != 0
-
-# /*---------------------------------------------------------------------------
-# |                          Test Execution
-# /*---------------------------------------------------------------------------
-    - name:                         "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} - Test Execution: Crash the primary node."
+    - name:                         "Test Execution: SBD Inquisitor kill init"
       when:
         - cluster_status_pre.primary_node != "" and cluster_status_pre.secondary_node != ""
         - ansible_hostname == cluster_status_pre.primary_node
         - cluster_status_pre.status == "running"
         - cluster_status_pre is defined
       block:
-        - name:                     "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} - Test Execution: Start timer"
+        - name:                     "Test Execution: Start timer"
           ansible.builtin.set_fact:
             test_execution_start:   "{{ now(utc=true, fmt='%Y-%m-%d %H:%M:%S') }}"
 
-        - name:                     "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} - Test Execution:  Find the port of inquisitor process"
+        - name:                     "Test Execution:  Find the port of inquisitor process"
           become:                   true
-          ansible.builtin.command:  ps aux | grep -i "sbd: inquisitor" | awk '{print $2}'
+          ansible.builtin.shell:    "pgrep -f 'sbd: inquisitor' | head -n 1"
           register:                 inquisitor_port
-          failed_when:              inquisitor_port.stdout == "No Inquisitor"
+          failed_when:              inquisitor_port.rc != 0
 
-        - name:                     "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} - Test Execution: Kill the inquisitor process"
+        - name:                     "Test Execution: Kill the inquisitor process"
           become:                   true
-          ansible.builtin.command:  kill -9 $(pgrep -f inquisitor)
+          ansible.builtin.shell:    "kill -9 {{ inquisitor_port.stdout }}"
+          async:                    1
+          poll:                     0
           register:                 inquisitor_kill
           failed_when:              inquisitor_kill.rc != 0
-        
 
-        - name:                     "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} - Test Execution: Validate HANA DB cluster status during stop operation."
-          when:
-            automated_register.stdout != ""
+    - name:                         "Test Execution: Wait for the failover to happen"
+      when:
+        - ansible_hostname == cluster_status_pre.secondary_node
+        - cluster_status_pre is defined
+      block:
+        - name:                     "Test Execution: Validate HANA DB cluster status during stop operation."
+          when:                     automated_register.stdout != ""
           get_cluster_status:
             operation_step:         "test_execution"
             database_sid:           "{{ db_sid | lower }}"
-          register:                 cluster_status_test_execution
           retries:                  40
-          delay:                    10
-          until:                    cluster_status_test_execution.primary_node == cluster_status_pre.secondary_node and cluster_status_test_execution.secondary_node == cluster_status_pre.primary_node
+          delay:                    30
+          register:                 cluster_status_test_execution
+          until: >
+                                    - cluster_status_test_execution.primary_node == cluster_status_pre.secondary_node
+                                    - cluster_status_test_execution.secondary_node == cluster_status_pre.primary_node
 
-        - name:                     "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} - Test Execution: Stop timer"
+    - name:                         "Test Execution: SBD Inquisitor kill manual fail over"
+      when:
+        - ansible_hostname == cluster_status_pre.primary_node
+        - cluster_status_pre is defined
+      block:
+        - name:                     "Test Execution: Stop timer"
           ansible.builtin.set_fact:
             test_execution_end:     "{{ now(utc=true, fmt='%Y-%m-%d %H:%M:%S') }}"
 
-        - name:                     "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} - Test Execution: Register Failed Resource"
+        - name:                     "Test Execution: Register Failed Resource"
           become:                   true
           become_user:              "{{ db_sid | lower }}adm"
           when:
@@ -100,75 +83,13 @@
           register:                 hana_db_register_failed_resource
           changed_when:             hana_db_register_failed_resource.rc == 0
 
-        - name:                     "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} - Test Execution: CleanUp any failed resource"
-          ansible.builtin.command:  "crm_resource --cleanup"
-          register:                 cleanup_failed_resource_post
-          changed_when:             cleanup_failed_resource_post.rc == 0
 
 # /*---------------------------------------------------------------------------
-# |                          Post Validations
-# /*---------------------------------------------------------------------------
-    - name:                         "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} - Post Validations: HA cluster status after stopping the HANA DB"
-      when:
-        - ansible_hostname == cluster_status_pre.primary_node
-        - cluster_status_pre is defined
-      block:
-        - name:                     "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} - Post Validations: Validate HANA DB cluster status after stopping the HANA DB"
-          get_cluster_status:
-            operation_step:         "post_failover"
-            database_sid:           "{{ db_sid | lower }}"
-          register:                 cluster_status_post
-          retries:                  40
-          delay:                    10
-          until:                    cluster_status_post.primary_node == cluster_status_pre.secondary_node and cluster_status_post.secondary_node == cluster_status_pre.primary_node
-
-        - name:                     "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} Read var log messages by importing role"
-          ansible.builtin.include_tasks: "roles/misc/tasks/var-log-messages.yml"
-
-        - name:                     "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} - Post Validations: Set test case status"
-          delegate_to:              localhost
-          failed_when:
-            - cluster_status_pre.primary_node != cluster_status_post.secondary_node
-            - cluster_status_pre.secondary_node != cluster_status_post.primary_node
-          ansible.builtin.set_fact:
-            test_case_name:         "{{ item.name }}: {{ virtual_host }}"
-            test_case_description:  "{{ item.description }}"
-            test_case_status:       "PASSED"
-            test_execution_start_time: "{{ test_execution_start }}"
-            test_case_hostname:     "{{ virtual_host }}"
-            test_execution_end_time: "{{ test_execution_end }}"
-            test_case_var_log_messages: "{{ var_log_messages_output.filtered_logs }}"
-            test_case_message:      "Old primary: {{ cluster_status_pre.primary_node }} \
-                                    New primary: {{ cluster_status_post.primary_node }} \
-                                    Old secondary: {{ cluster_status_pre.secondary_node }} \
-                                    New secondary: {{ cluster_status_post.secondary_node }}"
-            test_case_details:      {
-                                      "Pre Validations: Remove any location_constraints": "{{ location_constraints_results }}",
-                                      "Pre Validations: Validate HANA DB cluster status": "{{ cluster_status_pre }}",
-                                      "Pre Validations: Check if the AUTOMATED_REGISTER": "{{ automated_register }}",
-                                      "Pre Validations: CleanUp any failed resource": "{{ cleanup_failed_resource_pre }}",
-                                      "Test Execution: Primary node crash": "{{ hana_db_stop_results }}",
-                                      "Post Validations: CleanUp any failed resource": "{{ cleanup_failed_resource_post }}",
-                                      "Post Validations: Validate HANA DB cluster status": "{{ cluster_status_post }}",
-                                    }
-
-        - name:                     "Post Telemetry Data"
-          ansible.builtin.include_tasks: "roles/misc/tasks/post-telemetry-data.yml"
+# |                          Post Validations                                 |
+# +--------------------------------------------------------------------------*/
+    - name:                         "Post Validations Tasks"
+      ansible.builtin.include_tasks: "roles/misc/tasks/post-validations.yml"
 
   rescue:
-    - name:                         "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} Read var log messages by importing role"
-      ansible.builtin.include_tasks: "roles/misc/tasks/var-log-messages.yml"
-
-    - name:                         "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} - Post Validations: Set test case status"
-      ansible.builtin.set_fact:
-        test_case_name:             "{{ item.name }}: {{ virtual_host }}"
-        test_case_hostname:         "{{ virtual_host }}"
-        test_case_description:      "{{ item.description }}"
-        test_case_status:           "FAILED"
-        test_case_message:          "{{ ansible_failed_result.msg }}"
-        test_case_details:          "{{ ansible_failed_result }}"
-        test_case_var_log_messages: "{{ var_log_messages_output.filtered_logs }}"
-
-    - name:                         "Post Telemetry Data"
-      ansible.builtin.include_tasks: "roles/misc/tasks/post-telemetry-data.yml"
-      run_once:                     true
+    - name:                         "Rescue operation"
+      ansible.builtin.include_tasks: "roles/misc/tasks/rescue.yml"
