@@ -34,8 +34,8 @@
         test_case_hostname:     "{{ virtual_host }}"
         test_execution_end_time: "{{ test_execution_end }}"
         test_case_var_log_messages: "{{ var_log_messages_output.filtered_logs }}"
-        test_case_message:      "{{ test_case_message_from_test_case, default('') }}"
-        test_case_details:      "{{ test_case_details_from_test_case, default('')  }}"
+        test_case_message:      "{{ test_case_message_from_test_case | default('') }}"
+        test_case_details:      "{{ test_case_details_from_test_case | default('')  }}"
 
     - name:                     "Post Telemetry Data"
       ansible.builtin.include_tasks: "roles/misc/tasks/post-telemetry-data.yml"

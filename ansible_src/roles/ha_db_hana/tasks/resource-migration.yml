@@ -70,9 +70,9 @@
 
         # This is required because the cluster reports incorrect location constraints
         # after the location constraints is removed.
-        - name:                     "Test Execution: Wait for 100 seconds"
+        - name:                     "Test Execution: Wait for 200 seconds"
           ansible.builtin.wait_for:
-            timeout:                200
+            timeout:                100
 
         - name:                     "Test Execution: Validate HANA DB cluster status"
           get_cluster_status:
