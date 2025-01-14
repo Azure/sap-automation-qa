@@ -83,7 +83,7 @@
           register:                 cluster_status_test_execution_1
           retries:                  30
           delay:                    10
-          until:
+          until: |
                                     - cluster_status_test_execution_1.primary_node == cluster_status_pre.secondary_node
                                     - cluster_status_test_execution_1.secondary_node == cluster_status_pre.primary_node
 
