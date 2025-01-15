@@ -17,14 +17,15 @@
 # +--------------------------------------------------------------------------*/
 - name:                             "Test Execution: SBD Inquisitor kill"
   become:                           true
-  when:                             node_tier == "hana"
+  when:
+    - node_tier == "hana"
+    - cluster_status_pre.primary_node != "" and cluster_status_pre.secondary_node != ""
+    - cluster_status_pre.status == "running"
+    - cluster_status_pre is defined
   block:
     - name:                         "Test Execution: SBD Inquisitor kill init"
       when:
-        - cluster_status_pre.primary_node != "" and cluster_status_pre.secondary_node != ""
         - ansible_hostname == cluster_status_pre.primary_node
-        - cluster_status_pre.status == "running"
-        - cluster_status_pre is defined
       block:
         - name:                     "Test Execution: Start timer"
           ansible.builtin.set_fact:
@@ -47,7 +48,6 @@
     - name:                         "Test Execution: Wait for the failover to happen"
       when:
         - ansible_hostname == cluster_status_pre.secondary_node
-        - cluster_status_pre is defined
       block:
         - name:                     "Test Execution: Validate HANA DB cluster status during stop operation."
           when:                     automated_register.stdout != ""
@@ -57,19 +57,14 @@
           retries:                  40
           delay:                    30
           register:                 cluster_status_test_execution
-          until: >
+          until: |
                                     - cluster_status_test_execution.primary_node == cluster_status_pre.secondary_node
                                     - cluster_status_test_execution.secondary_node == cluster_status_pre.primary_node
 
     - name:                         "Test Execution: SBD Inquisitor kill manual fail over"
       when:
         - ansible_hostname == cluster_status_pre.primary_node
-        - cluster_status_pre is defined
       block:
-        - name:                     "Test Execution: Stop timer"
-          ansible.builtin.set_fact:
-            test_execution_end:     "{{ now(utc=true, fmt='%Y-%m-%d %H:%M:%S') }}"
-
         - name:                     "Test Execution: Register Failed Resource"
           become:                   true
           become_user:              "{{ db_sid | lower }}adm"
@@ -83,7 +78,24 @@
           register:                 hana_db_register_failed_resource
           changed_when:             hana_db_register_failed_resource.rc == 0
 
+        - name:                     "Test Execution: Stop timer"
+          ansible.builtin.set_fact:
+            test_execution_end:     "{{ now(utc=true, fmt='%Y-%m-%d %H:%M:%S') }}"
 
+        - name:                     "Set test case message and details"
+          ansible.builtin.set_fact:
+            test_case_message_from_test_case: "Old primary: {{ cluster_status_pre.primary_node }} \
+                                      New primary: {{ cluster_status_test_execution.primary_node }} \
+                                      Old secondary: {{ cluster_status_pre.secondary_node }} \
+                                      New secondary: {{ cluster_status_test_execution.secondary_node }}"
+            test_case_details_from_test_case: {
+                                      "Pre Validations: Remove any location_constraints": "{{ location_constraints_results }}",
+                                      "Pre Validations: Validate HANA DB cluster status": "{{ cluster_status_pre }}",
+                                      "Pre Validations: Check if the AUTOMATED_REGISTER": "{{ automated_register }}",
+                                      "Pre Validations: CleanUp any failed resource": "{{ cleanup_failed_resource_pre }}",
+                                      "Test Execution: Kill inquisitor results": "{{ inquisitor_kill }}",
+                                      "Post Validations: Validate HANA DB cluster status": "{{ cluster_status_test_execution }}",
+                                    }
 # /*---------------------------------------------------------------------------
 # |                          Post Validations                                 |
 # +--------------------------------------------------------------------------*/

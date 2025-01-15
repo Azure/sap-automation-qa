@@ -2,7 +2,7 @@
 ##########################################################################################
 #                       Tasks for sending telemetry data to the data explorer            #
 ##########################################################################################
-- name:                               "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} Create the telemetry JSON object for the test case"
+- name:                               "Create the telemetry JSON object for the test case"
   failed_when :                       false
   become:                             true
   delegate_to:                        localhost

@@ -53,7 +53,9 @@
           retries:                  40
           delay:                    20
           register:                 cluster_status_test_execution
-          until:                    cluster_status_test_execution.primary_node == cluster_status_pre.secondary_node and cluster_status_test_execution.secondary_node == cluster_status_pre.primary_node
+          until: |
+                                    cluster_status_test_execution.primary_node == cluster_status_pre.secondary_node and
+                                    cluster_status_test_execution.secondary_node == cluster_status_pre.primary_node
 
     - name:                         "Test Execution: Switch back to primary node"
       when:
