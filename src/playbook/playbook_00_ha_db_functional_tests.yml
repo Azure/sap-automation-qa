@@ -33,7 +33,7 @@
 
     - name:                            Parse JSON and extract network information
       ansible.builtin.set_fact:
-        network_info_parsed:           "{{ lookup('template', 'interfaces.j2', wantlist=True) | flatten(levels=1) }}"
+        network_info_parsed:           "{{ lookup('template', 'templates/interfaces.j2', wantlist=True) | flatten(levels=1) }}"
 
     - name:                            Display the variable
       ansible.builtin.debug:
