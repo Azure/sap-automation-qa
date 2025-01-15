@@ -65,6 +65,10 @@
           changed_when:             firewall_rule_deleted == 0
           failed_when:              firewall_rule_deleted.rc != 0
 
+        - name:                     "Test Execution: Wait for the cluster to be in a stable state"
+          ansible.builtin.wait_for:
+            timeout:                60
+
         - name:                     "Test Execution: Validate HANA DB cluster status"
           get_cluster_status:
             operation_step:         "test_execution"
