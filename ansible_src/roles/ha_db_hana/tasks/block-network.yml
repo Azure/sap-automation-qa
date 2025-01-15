@@ -35,9 +35,7 @@
 
         - name:                     "Test Execution: Create a firewall on primary node"
           become:                   true
-          ansible.builtin.shell: >
-                                    "iptables -A INPUT -s {{ secondary_node_ip }} -j DROP; \
-                                    iptables -A OUTPUT -d {{ secondary_node_ip }} -j DROP"
+          ansible.builtin.shell:    "iptables -A INPUT -s {{ secondary_node_ip }} -j DROP; iptables -A OUTPUT -d {{ secondary_node_ip }} -j DROP"
           register:                 firewall_rule_created
           changed_when:             firewall_rule_created == 0
           failed_when:              firewall_rule_created.rc != 0
@@ -59,9 +57,7 @@
 
         - name:                     "Test Execution: Remove the firewall rule on on primary node."
           become:                   true
-          ansible.builtin.shell: >
-                                    "iptables -D INPUT -s {{ secondary_node_ip }} -j DROP; \
-                                    iptables -D OUTPUT -d {{ secondary_node_ip }} -j DROP"
+          ansible.builtin.shell:    "iptables -D INPUT -s {{ secondary_node_ip }} -j DROP; iptables -D OUTPUT -d {{ secondary_node_ip }} -j DROP"
           register:                 firewall_rule_deleted
           changed_when:             firewall_rule_deleted == 0
           failed_when:              firewall_rule_deleted.rc != 0
