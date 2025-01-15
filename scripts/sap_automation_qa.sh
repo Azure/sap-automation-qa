@@ -109,10 +109,10 @@ log "INFO" "Using playbook: $playbook_name."
 if [[ "$AUTHENTICATION_TYPE" == "SSHKEY" ]]; then
     ssh_key="../WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME/ssh_key.ppk"
     log "INFO" "Using SSH key: $ssh_key."
-    command="ansible-playbook ../ansible_src/$playbook_name.yml -i $SYSTEM_HOSTS --private-key $ssh_key -e @$VARS_FILE -e @$SYSTEM_PARAMS -e '_workspace_directory=$SYSTEM_CONFIG_FOLDER'"
+    command="ansible-playbook ../src/$playbook_name.yml -i $SYSTEM_HOSTS --private-key $ssh_key -e @$VARS_FILE -e @$SYSTEM_PARAMS -e '_workspace_directory=$SYSTEM_CONFIG_FOLDER'"
 else
     log "INFO" "Using password authentication."
-    command="ansible-playbook ../ansible_src/$playbook_name.yml -i $SYSTEM_HOSTS --extra-vars \"ansible_ssh_pass=$(cat ../WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME/password)\" --extra-vars @$VARS_FILE -e @$SYSTEM_PARAMS -e '_workspace_directory=$SYSTEM_CONFIG_FOLDER'"
+    command="ansible-playbook ../src/$playbook_name.yml -i $SYSTEM_HOSTS --extra-vars \"ansible_ssh_pass=$(cat ../WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME/password)\" --extra-vars @$VARS_FILE -e @$SYSTEM_PARAMS -e '_workspace_directory=$SYSTEM_CONFIG_FOLDER'"
 fi
 
 log "INFO" "Running ansible playbook..."

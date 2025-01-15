@@ -31,7 +31,7 @@ def test_main(mocker, package_facts_list):
     :type package_facts_list: dict
     """
     mock_ansible_module = mocker.patch(
-        "ansible_src.library.get_package_list.AnsibleModule"
+        "src.library.get_package_list.AnsibleModule"
     )
     mock_ansible_module.return_value.params = {"package_facts_list": package_facts_list}
 

@@ -48,7 +48,7 @@ def test_run_primary_node(mocker, cluster_status_checker):
     ]
 
     mock_ansible_module = mocker.patch(
-        "ansible_src.library.get_cluster_status.AnsibleModule"
+        "src.library.get_cluster_status.AnsibleModule"
     )
     mock_ansible_module.return_value.params = {
         "operation_step": "check",
@@ -95,7 +95,7 @@ def test_run_secondary_node(mocker, cluster_status_checker):
         b"active",
     ]
     mock_ansible_module = mocker.patch(
-        "ansible_src.library.get_cluster_status.AnsibleModule"
+        "src.library.get_cluster_status.AnsibleModule"
     )
     mock_ansible_module.return_value.params = {
         "operation_step": "check",

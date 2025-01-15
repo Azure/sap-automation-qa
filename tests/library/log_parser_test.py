@@ -95,7 +95,7 @@ def test_main(mocker):
     :param mocker: The mocker fixture
     :type mocker: pytest_mock.MockerFixture
     """
-    mock_ansible_module = mocker.patch("ansible_src.library.log_parser.AnsibleModule")
+    mock_ansible_module = mocker.patch("src.library.log_parser.AnsibleModule")
     mock_ansible_module.return_value.params = {
         "start_time": "2023-01-01 00:00:00",
         "end_time": "2023-01-01 23:59:59",

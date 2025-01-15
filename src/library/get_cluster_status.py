@@ -114,13 +114,6 @@ class ClusterStatusChecker:
 
         :return: A dictionary containing the result of the cluster status checks.
         """
-        module_args = dict(
-            operation_step=dict(type="str", required=True),
-            database_sid=dict(type="str", required=True),
-        )
-
-        module = AnsibleModule(argument_spec=module_args, supports_check_mode=True)
-        self.database_sid = module.params["database_sid"]
 
         try:
             while self.result["primary_node"] == "":

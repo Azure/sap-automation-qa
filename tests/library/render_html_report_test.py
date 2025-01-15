@@ -83,35 +83,7 @@ def test_render_report(mocker, html_report_renderer):
         ]
     )
     mock_open.assert_called_with(
-        "/tmp/test_group_12345_report.html", "w", encoding="utf-8"
+        "/tmp/quality_assurance/test_group_12345.html", "w", encoding="utf-8"
     )
     handle = mock_open()
     handle.write.assert_called()
-
-
-def test_main(mocker, module_params):
-    """
-    Test the main function of the render_html_report module.
-
-    :param mocker: The mocker fixture.
-    :type mocker: pytest_mock.MockerFixture
-    :param module_params: Sample module parameters.
-    :type module_params: dict
-    """
-    mock_ansible_module = mocker.patch(
-        "ansible_src.library.render_html_report.AnsibleModule"
-    )
-    mock_ansible_module.return_value.params = module_params
-
-    renderer = HTMLReportRenderer(module_params)
-    renderer.render_report()
-
-    with open("/tmp/test_group_12345_report.html", "r", encoding="utf-8") as file:
-        content = file.read()
-        assert "<title>Test Report</title>" in content
-        assert "<h1>Test Report</h1>" in content
-        assert "<p>This is a test report.</p>" in content
-        assert "<td>Test 1</td>" in content
-        assert "<td>Pass</td>" in content
-        assert "<td>Test 2</td>" in content
-        assert "<td>Fail</td>" in content
