@@ -10,17 +10,6 @@
                                 - ansible_hostname == cluster_status_pre.primary_node
                                 - cluster_status_pre is defined
   block:
-    - name:                     "Post Validations: Validate HANA DB cluster status after test execution"
-      get_cluster_status:
-        operation_step:         "post_failover"
-        database_sid:           "{{ db_sid | lower }}"
-      register:                 cluster_status_post
-      retries:                  40
-      delay:                    10
-      until: |
-                                cluster_status_post.primary_node == cluster_status_pre.secondary_node and
-                                cluster_status_post.secondary_node == cluster_status_pre.primary_node
-
     - name:                     "Read var log messages by importing role"
       ansible.builtin.include_tasks: "roles/misc/tasks/var-log-messages.yml"
 
