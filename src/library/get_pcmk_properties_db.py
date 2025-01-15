@@ -9,7 +9,7 @@ import json
 from collections import defaultdict
 import xml.etree.ElementTree as ET
 from ansible.module_utils.basic import AnsibleModule
-from src.library.constants import (
+from .constants import (
     SUCCESS_STATUS,
     ERROR_STATUS,
     WARNING_STATUS,

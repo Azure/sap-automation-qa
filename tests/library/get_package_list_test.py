@@ -3,7 +3,6 @@ Unit tests for the get_package_list module.
 """
 
 import pytest
-from ansible.module_utils.basic import AnsibleModule
 from src.library.get_package_list import PackageListFormatter
 
 
