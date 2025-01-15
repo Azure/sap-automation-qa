@@ -90,9 +90,9 @@ class HTMLReportRenderer:
         return self.result
 
 
-def main() -> None:
+def run_module() -> None:
     """
-    Entry point of the script.
+    Entry point of the module.
     Sets up and runs the HTML report rendering module with the specified arguments.
     """
     module_args = dict(
@@ -119,6 +119,13 @@ def main() -> None:
         module.fail_json(msg="Failed to render report", **renderer.get_result())
 
     module.exit_json(**renderer.get_result())
+
+
+def main() -> None:
+    """
+    Entry point of the script.
+    """
+    run_module()
 
 
 if __name__ == "__main__":

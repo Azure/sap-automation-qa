@@ -101,7 +101,7 @@ class ClusterStatusChecker:
         )
         return pacemaker_status.decode("utf-8").strip() == "active"
 
-    def run(self) -> None:
+    def run(self) -> Dict[str, str]:
         """
         Main function that runs the Ansible module and performs the cluster status checks.
 
@@ -111,6 +111,8 @@ class ClusterStatusChecker:
         - Checks if the minimum required number of nodes are configured in the cluster.
         - Checks if all nodes in the cluster are online.
         - Checks the attributes of each node in the cluster.
+
+        :return: A dictionary containing the result of the cluster status checks.
         """
         module_args = dict(
             operation_step=dict(type="str", required=True),
@@ -162,14 +164,14 @@ class ClusterStatusChecker:
                 )
         except Exception as e:
             self.result["msg"] = str(e)
-            module.fail_json(**self.result)
         self.result["end"] = datetime.now()
-        module.exit_json(**self.result)
+
+        return self.result
 
 
-def main() -> None:
+def run_module() -> None:
     """
-    Entry point of the script.
+    Entry point of the module.
     """
     module_args = dict(
         operation_step=dict(type="str", required=True),
@@ -180,7 +182,16 @@ def main() -> None:
     database_sid = module.params["database_sid"]
 
     checker = ClusterStatusChecker(database_sid)
-    checker.run()
+    result = checker.run()
+
+    module.exit_json(**result)
+
+
+def main() -> None:
+    """
+    Entry point of the script.
+    """
+    run_module()
 
 
 if __name__ == "__main__":

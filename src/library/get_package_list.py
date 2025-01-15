@@ -65,7 +65,7 @@ class PackageListFormatter:
         return self.result
 
 
-def main() -> None:
+def run_module() -> None:
     """
     Entry point of the module.
     """
@@ -80,6 +80,13 @@ def main() -> None:
     result = formatter.format_packages()
 
     module.exit_json(**result)
+
+
+def main() -> None:
+    """
+    Entry point of the script.
+    """
+    run_module()
 
 
 if __name__ == "__main__":

@@ -749,7 +749,7 @@ def visualize_cluster_actions(xml_file):
         return {"error": str(e)}
 
 
-def main():
+def run_module():
     """
     Main function to parse, validate and visualize pacemaker cluster parameters.
     """
@@ -818,6 +818,13 @@ def main():
             if "error" in result:
                 module.fail_json(msg=result["error"])
             module.exit_json(changed=True, msg=result["msg"])
+
+
+def main() -> None:
+    """
+    Entry point of the script.
+    """
+    run_module()
 
 
 if __name__ == "__main__":

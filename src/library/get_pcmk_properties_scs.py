@@ -659,7 +659,7 @@ def validate_cluster_params(ansible_os_family: str):
         return {"msg": {"Error message": str(e)}, "status": ERROR_STATUS}
 
 
-def main():
+def run_module():
     """
     Main function to parse, validate and visualize pacemaker cluster parameters.
     """
@@ -711,6 +711,13 @@ def main():
         )
     except Exception as e:
         module.fail_json(msg=str(e))
+
+
+def main() -> None:
+    """
+    Entry point of the script.
+    """
+    run_module()
 
 
 if __name__ == "__main__":

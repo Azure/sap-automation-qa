@@ -123,7 +123,7 @@ class LogParser:
         return self.result
 
 
-def main() -> None:
+def run_module() -> None:
     """
     Entry point of the script.
     Sets up and runs the log parsing module with the specified arguments.
@@ -151,6 +151,13 @@ def main() -> None:
         module.fail_json(msg=result["error"], **result)
     else:
         module.exit_json(**result)
+
+
+def main() -> None:
+    """
+    Entry point of the script.
+    """
+    run_module()
 
 
 if __name__ == "__main__":
