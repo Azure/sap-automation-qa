@@ -9,7 +9,6 @@ import json
 from collections import defaultdict
 import xml.etree.ElementTree as ET
 from ansible.module_utils.basic import AnsibleModule
-from ansible_runner import run_command
 from constants import (
     SUCCESS_STATUS,
     ERROR_STATUS,
@@ -33,8 +32,15 @@ def run_subprocess(command):
     Returns:
         output: The output of the command.
     """
-    output, error, _ = run_command(executable_cmd=command)
-    return error or output
+    try:
+        with subprocess.Popen(
+            command,
+            stdout=subprocess.PIPE,
+            encoding="utf-8",
+        ) as proc:
+            return proc.stdout.read()
+    except subprocess.CalledProcessError as e:
+        return str(e)
 
 
 def parse_xml_output(command):
