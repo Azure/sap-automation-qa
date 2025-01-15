@@ -54,10 +54,6 @@
                                     cluster_status_test_execution.primary_node == cluster_status_pre.primary_node and
                                     cluster_status_test_execution.secondary_node == ""
 
-        - name:                     "Test Execution: Stop timer"
-          ansible.builtin.set_fact:
-            test_execution_end:     "{{ now(utc=true, fmt='%Y-%m-%d %H:%M:%S') }}"
-
         - name:                     "Test Execution: Remove the firewall rule on on primary node."
           become:                   true
           ansible.builtin.shell:    "iptables -D INPUT -s {{ secondary_node_ip }} -j DROP; iptables -D OUTPUT -d {{ secondary_node_ip }} -j DROP"
@@ -79,6 +75,10 @@
           until: |
                                     cluster_status_post.primary_node == cluster_status_pre.primary_node and
                                     cluster_status_post.secondary_node == cluster_status_pre.secondary_node
+
+        - name:                     "Test Execution: Stop timer"
+          ansible.builtin.set_fact:
+            test_execution_end:     "{{ now(utc=true, fmt='%Y-%m-%d %H:%M:%S') }}"
 
         - name:                     "Set test case message and details"
           ansible.builtin.set_fact:
