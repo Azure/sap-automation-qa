@@ -1,5 +1,8 @@
-"""Python script to get and validate the status of a cluster.
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
 
+"""
+Python script to get and validate the status of a cluster.
 This script uses the `crm_mon` command-line tool to retrieve the status of a cluster and performs
 various validations on the cluster status.
 
@@ -7,7 +10,6 @@ Methods:
     check_node(node, database_sid)
     run_module()
     main()
-
 """
 
 import subprocess

@@ -1,4 +1,6 @@
----
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+
 ################################################################################################
 #                      Read the log file /var/log/messages for given time period               #
 ################################################################################################

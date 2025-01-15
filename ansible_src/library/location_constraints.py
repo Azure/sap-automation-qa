@@ -1,4 +1,9 @@
-"""Custom ansible module for location constraints"""
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+
+"""
+Custom ansible module for location constraints
+"""
 
 import subprocess
 import xml.etree.ElementTree as ET

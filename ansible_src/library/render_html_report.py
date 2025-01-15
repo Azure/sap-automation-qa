@@ -1,4 +1,9 @@
-"""Module to render the HTML report for the test group invocation."""
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+
+"""
+Module to render the HTML report for the test group invocation.
+"""
 
 import json
 import logging

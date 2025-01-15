@@ -1,3 +1,6 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+
 #!/bin/bash
 log "INFO" "Activate the virtual environment..."
 source $(realpath $(dirname $(realpath $0))/..)/.venv/bin/activate

@@ -1,6 +1,8 @@
-# DONOT CHANGE
-# Test group variables
-# Description: This contains the test groups and test cases that will be executed by the quality assurance playbook
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+
+# Description: This contains the test groups and test cases that 
+# will be executed by the quality assurance playbook
 
 # Map of functional type name and actual values
 sap_functional_test_type_map:
@@ -24,9 +26,9 @@ test_groups:
       #   task_name:                  primary-node-crash
       #   description:                This runs a functional test for primary node crash
 
-      - name:                       HA Functional Test- Block Network Communication
-        task_name:                  block-network
-        description:                This runs a functional test for blocking network communication
+      # - name:                       HA Functional Test- Block Network Communication
+      #   task_name:                  block-network
+      #   description:                This runs a functional test for blocking network communication
       
       # - name:                       HA Functional Test- Crash index server on primary node
       #   task_name:                  crash-index
@@ -36,9 +38,9 @@ test_groups:
       #   task_name:                  primary-node-kill
       #   description:                This runs a functional test for primary node crash
 
-      # - name:                       HA Functional Test- Echo B
-      #   task_name:                  echo-b
-      #   description:                This runs a functional test to immediately reboot the system without properly shutting it down.
+      - name:                       HA Functional Test- Echo B
+        task_name:                  echo-b
+        description:                This runs a functional test to immediately reboot the system without properly shutting it down.
 
   - name:                           HA_SCS
     test_cases:

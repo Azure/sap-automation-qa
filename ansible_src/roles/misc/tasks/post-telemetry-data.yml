@@ -1,4 +1,6 @@
----
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+
 ##########################################################################################
 #                       Tasks for sending telemetry data to the data explorer            #
 ##########################################################################################

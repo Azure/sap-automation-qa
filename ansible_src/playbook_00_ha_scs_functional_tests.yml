@@ -1,3 +1,5 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
 
 # /*---------------------------------------------------------------------------8
 # |                                                                            |
@@ -9,13 +11,6 @@
   name:                                "Setup deployer for HA Testing Framework"
   vars_files:
     - "./vars/input-api.yaml"
-  tasks:
-    - name:                            "Install python azure pacakges required for rendering azure telemetry data"
-      become:                          true
-      ansible.builtin.pip:
-        name:
-          - azure-kusto-data
-          - azure-kusto-ingest
 
 - hosts: "{{ sap_sid | upper }}_SCS:
     {{ sap_sid | upper }}_ERS"
@@ -24,12 +19,6 @@
   vars_files:
     - "./vars/input-api.yaml"
   tasks:
-    - name:                            Install ACL package for the DB node
-      become:                          true
-      ansible.builtin.package:
-        name:                          acl
-        state:                         present
-
     - name:                            "Enable profile_tasks callback plugin"
       ansible.builtin.set_fact:
         ansible_callbacks:

@@ -1,4 +1,6 @@
----
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+
 ##########################################################################################
 #                   Task to get the cluster report from the primary instance             #
 #                 after all the test cases have been executed.                           #

@@ -1,4 +1,9 @@
-"""Custom ansible module for formatting the packages list"""
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+
+"""
+Custom ansible module for formatting the packages list
+"""
 
 from typing import Dict, Any
 from ansible.module_utils.basic import AnsibleModule

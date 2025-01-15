@@ -1,3 +1,9 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+
+"""
+Python script to get and validate the cluster configuration in SCS node.
+"""
 import subprocess
 import json
 from collections import defaultdict

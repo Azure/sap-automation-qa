@@ -1,4 +1,9 @@
-"""Custom ansible module for log parsing"""
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+
+"""
+Custom ansible module for log parsing
+"""
 
 import json
 from datetime import datetime

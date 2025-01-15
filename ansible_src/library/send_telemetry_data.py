@@ -1,3 +1,6 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+
 """
 Module to send telemetry data to Kusto Cluster/Log Analytics Workspace and create an HTML report.
 """
