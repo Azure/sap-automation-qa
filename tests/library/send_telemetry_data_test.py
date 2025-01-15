@@ -5,7 +5,7 @@ Unit tests for the send_telemetry_data module.
 import base64
 import pytest
 import json
-from ansible_src.library.send_telemetry_data import TelemetryDataSender
+from src.library.send_telemetry_data import TelemetryDataSender
 
 
 @pytest.fixture

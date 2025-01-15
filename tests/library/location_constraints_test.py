@@ -5,7 +5,7 @@ Unit tests for the location_constraints module.
 import pytest
 import subprocess
 import xml.etree.ElementTree as ET
-from ansible_src.library.location_constraints import LocationConstraintsManager
+from src.library.location_constraints import LocationConstraintsManager
 
 LC_STR = """
 <constraints>

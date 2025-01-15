@@ -3,7 +3,7 @@ Unit tests for the get_cluster_status module.
 """
 
 import pytest
-from ansible_src.library.get_cluster_status import ClusterStatusChecker
+from src.library.get_cluster_status import ClusterStatusChecker
 
 
 @pytest.fixture

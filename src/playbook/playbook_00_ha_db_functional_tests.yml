@@ -12,8 +12,7 @@
   vars_files:
     - "./vars/input-api.yaml"
 
-- hosts: "{{ sap_sid | upper }}_SCS:
-    {{ sap_sid | upper }}_ERS"
+- hosts:                               "{{ sap_sid | upper }}_DB"
   name:                                "Host tasks"
   gather_facts:                        true
   vars_files:
@@ -24,9 +23,32 @@
         ansible_callbacks:
           profile_tasks:               true
 
+    - name:                            "SAP OS configuration playbook: - Get the IP information from instance meta data service"
+      ansible.builtin.uri:
+        url:                           http://169.254.169.254/metadata/instance/network/interface?api-version=2021-02-01&format=json
+        use_proxy:                     false
+        headers:
+          Metadata:                    true
+      register:                        azure_network_metadata
+
+    - name:                            Parse JSON and extract network information
+      ansible.builtin.set_fact:
+        network_info_parsed:           "{{ lookup('template', 'interfaces.j2', wantlist=True) | flatten(levels=1) }}"
+
+    - name:                            Display the variable
+      ansible.builtin.debug:
+        msg: 
+          - "network_data_1:           {{ network_info_parsed }}"
+      failed_when:                     false
+
+    - name:                            Display extracted information
+      ansible.builtin.debug:
+        msg:                           "ipAddress: {{ item.ipAddress }} | interfaceName: {{ item.interfaceName }} | Subnet: {{ item.subnet }}"
+      loop:                            "{{ network_info_parsed | list }}"
+
     - name:                            "Set the test group name based on the inputs"
       ansible.builtin.set_fact:
-        test_group_name:               "{{ sap_functional_test_type_map | selectattr('name', 'equalto', sap_functional_test_type) | map(attribute='value') | first }}"
+        test_group_name:               "{{ sap_functional_test_type_map | selectattr('name', 'equalto', sap_functional_test_type) | map(attribute='value') | first }}_{{ platform | upper }}"
       run_once: true
 
     - name:                            Set the test group facts
@@ -37,7 +59,7 @@
       run_once: true
 
     - name:                            "Run test cases by including them as roles"
-      ansible.builtin.include_tasks:   "./roles/{{ test_group_name | lower }}/tasks/{{ item.task_name }}.yml"
+      ansible.builtin.include_tasks:   "../roles/{{ test_group_name | lower }}/tasks/{{ item.task_name }}.yml"
       loop:                            "{{ test_cases | list }}"
       vars:
         group_invocation_id:           "{{ test_group_invocation_id }}"
@@ -46,8 +68,12 @@
       when:
         - test_group_name is defined
 
-    - name:                            "Run test cases by including them as roles"
-      ansible.builtin.include_tasks:   "./roles/misc/tasks/render-html-report.yml"
+    - name:                            "Cluster report from the HA cluster"
+      ansible.builtin.include_tasks:   "../roles/misc/tasks/cluster-report.yml"
       when:
         - test_group_name is defined
 
+    - name:                            "Run test cases by including them as roles"
+      ansible.builtin.include_tasks:   "../roles/misc/tasks/render-html-report.yml"
+      when:
+        - test_group_name is defined

@@ -4,7 +4,7 @@ Unit tests for the get_package_list module.
 
 import pytest
 from ansible.module_utils.basic import AnsibleModule
-from ansible_src.library.get_package_list import PackageListFormatter
+from src.library.get_package_list import PackageListFormatter
 
 
 @pytest.fixture

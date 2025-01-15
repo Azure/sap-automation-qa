@@ -4,7 +4,7 @@ Unit tests for the log_parser module.
 
 import json
 import pytest
-from ansible_src.library.log_parser import LogParser
+from src.library.log_parser import LogParser
 from datetime import datetime
 
 

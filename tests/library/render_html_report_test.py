@@ -4,7 +4,7 @@ Unit tests for the render_html_report module.
 
 import pytest
 from ansible.module_utils.basic import AnsibleModule
-from ansible_src.library.render_html_report import HTMLReportRenderer
+from src.library.render_html_report import HTMLReportRenderer
 
 
 @pytest.fixture
