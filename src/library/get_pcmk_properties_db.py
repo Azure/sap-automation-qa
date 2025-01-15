@@ -22,6 +22,7 @@ from .constants import (
     PARAMETER_VALUE_FORMAT,
 )
 
+
 def run_subprocess(command):
     """Run a subprocess command and return the output.
 
