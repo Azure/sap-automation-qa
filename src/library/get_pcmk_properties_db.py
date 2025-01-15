@@ -79,7 +79,7 @@ def location_constraints_exists():
                 if health_location is None:
                     return root.find(".//rsc_location")
         return False
-    except Exception as ex:
+    except Exception:
         return False
 
 
