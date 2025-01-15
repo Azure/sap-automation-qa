@@ -82,7 +82,9 @@
           register:                 cluster_status_post
           retries:                  40
           delay:                    10
-          until:                    cluster_status_post.primary_node == cluster_status_pre.secondary_node and cluster_status_post.secondary_node == cluster_status_pre.primary_node
+          until: |
+                                    cluster_status_post.primary_node == cluster_status_pre.secondary_node and
+                                    cluster_status_post.secondary_node == cluster_status_pre.primary_node
 
         - name:                     "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} Read var log messages by importing role"
           ansible.builtin.include_tasks: "roles/misc/tasks/var-log-messages.yml"

@@ -85,6 +85,17 @@
           ansible.builtin.set_fact:
             test_execution_end:     "{{ now(utc=true, fmt='%Y-%m-%d %H:%M:%S') }}"
 
+        - name:                     "Test Execution: Validate HANA DB cluster status"
+          get_cluster_status:
+            operation_step:         "test_execution"
+            database_sid:           "{{ db_sid | lower }}"
+          register:                 cluster_status_test_execution_1
+          retries:                  30
+          delay:                    10
+          until: |
+                                    cluster_status_test_execution_1.primary_node == cluster_status_pre.secondary_node and
+                                    cluster_status_test_execution_1.secondary_node == cluster_status_pre.primary_node
+
         - name:                     "Set test case message and details"
           ansible.builtin.set_fact:
             test_case_message_from_test_case: "Old primary: {{ cluster_status_pre.primary_node }} \
@@ -97,7 +108,7 @@
                                       "Pre Validations: Check if the AUTOMATED_REGISTER": "{{ automated_register }}",
                                       "Pre Validations: CleanUp any failed resource": "{{ cleanup_failed_resource_pre }}",
                                       "Test Execution: Kill inquisitor results": "{{ inquisitor_kill }}",
-                                      "Post Validations: Validate HANA DB cluster status": "{{ cluster_status_test_execution }}",
+                                      "Post Validations: Validate HANA DB cluster status": "{{ cluster_status_test_execution_1 }}",
                                     }
 # /*---------------------------------------------------------------------------
 # |                          Post Validations                                 |
