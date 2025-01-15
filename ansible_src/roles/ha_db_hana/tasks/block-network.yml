@@ -76,7 +76,7 @@
                                     cluster_status_post.primary_node == cluster_status_pre.primary_node and
                                     cluster_status_post.secondary_node == cluster_status_pre.secondary_node
 
-        - name:                         "Set test case message and details"
+        - name:                     "Set test case message and details"
           ansible.builtin.set_fact:
             test_case_message_from_test_case: "Old primary: {{ cluster_status_pre.primary_node }} \
                                       New primary: {{ cluster_status_post.primary_node }} \

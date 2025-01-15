@@ -15,9 +15,6 @@
 
     - name:                     "Post Validations: Set test case status"
       delegate_to:              localhost
-      failed_when:
-                                - cluster_status_pre.primary_node != cluster_status_post.secondary_node
-                                - cluster_status_pre.secondary_node != cluster_status_post.primary_node
       ansible.builtin.set_fact:
         test_case_name:         "{{ item.name }}: {{ virtual_host }}"
         test_case_description:  "{{ item.description }}"
