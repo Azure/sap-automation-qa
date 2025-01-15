@@ -224,14 +224,14 @@ CONSTRAINTS = {
 PARAMETER_VALUE_FORMAT = "Name: %s, Value: %s, Expected Value: %s"
 
 
-def run_subprocess(command):
-    """Run a subprocess command and return the output.
+def run_subprocess(command) -> str:
+    """
+    Run a subprocess command and return the output.
 
-    Args:
-        command (list[str]): The command to run.
-
-    Returns:
-        output: The output of the command.
+    :param command: The command to run.
+    :type command: list[str]
+    :return: The output of the command.
+    :rtype: str
     """
     try:
         with subprocess.Popen(
@@ -244,14 +244,14 @@ def run_subprocess(command):
         return str(e)
 
 
-def parse_xml_output(command):
-    """Parse the XML output of a command.
+def parse_xml_output(command) -> ET.Element:
+    """
+    Parse the XML output of a command.
 
-    Args:
-        command (list[str]): The command to run.
-
-    Returns:
-        xml: The parsed XML output.
+    :param command: The command to run.
+    :type command: list[str]
+    :return: The parsed XML output.
+    :rtype: xml.etree.ElementTree.Element or None
     """
     xml_output = run_subprocess(command)
     if xml_output.startswith("<"):
@@ -259,16 +259,17 @@ def parse_xml_output(command):
     return None
 
 
-def location_constraints_exists():
-    """Check if location constraints exist in the pacemaker cluster.
+def location_constraints_exists() -> bool:
+    """
+    Check if location constraints exist in the pacemaker cluster.
 
     This function checks if there are any location constraints defined in the
     pacemaker cluster. It uses the `cibadmin` command-line tool to query the
     cluster's constraints and parses the XML output to determine if any
     location constraints are present.
 
-    Returns:
-        bool: True if location constraints exist, False otherwise.
+    :returns: True if location constraints exist, False otherwise.
+    :rtype: bool
     """
     try:
         root = parse_xml_output(["cibadmin", "--query", "--scope", "constraints"])
@@ -284,16 +285,16 @@ def location_constraints_exists():
         return False
 
 
-def validate_fence_azure_arm(ansible_os_family: str, virtual_machine_name: str):
+def validate_fence_azure_arm(ansible_os_family: str, virtual_machine_name: str) -> dict:
     """
     Validate the permissions of the fence agent in Azure ARM.
 
-    Args:
-        ansible_os_family (str): Ansible OS family
-        virtual_machine_name (str): Virtual machine name
-
-    Returns:
-        dict: Fence agent permissions
+    :param ansible_os_family: Ansible OS family
+    :type ansible_os_family: str
+    :param virtual_machine_name: Virtual machine name
+    :type virtual_machine_name: str
+    :return: Fence agent permissions
+    :rtype: dict
     """
     try:
         msi_value = None
@@ -360,15 +361,16 @@ def validate_fence_azure_arm(ansible_os_family: str, virtual_machine_name: str):
         return {"msg": {"Fence agent permissions": str(e)}, "status": "FAILED"}
 
 
-def validate_os_parameters(SID: str, ansible_os_family: str):
-    """Validate SAP OS parameters.
+def validate_os_parameters(SID: str, ansible_os_family: str) -> dict:
+    """
+    Validate SAP OS parameters.
 
-    Args:
-        SID (str): Database SID
-        ansible_os_family (str): Ansible OS family
-
-    Returns:
-        dict: SAP VM Parameters
+    :param SID: Database SID
+    :type SID: str
+    :param ansible_os_family: Ansible OS family
+    :type ansible_os_family: str
+    :return: SAP VM Parameters
+    :rtype: dict
     """
     drift_parameters = []
     validated_parameters = []
@@ -431,15 +433,16 @@ def validate_os_parameters(SID: str, ansible_os_family: str):
         }
 
 
-def validate_constraints(SID: str, ansible_os_family: str):
+def validate_constraints(SID: str, ansible_os_family: str) -> dict:
     """
     Validate constraints in the pacemaker cluster.
 
-    Args:
-        SID (str): Database SID
-        ansible_os_family (str): Ansible OS family
-    Returns:
-        dict: Validated constraints
+    :param SID: Database SID
+    :type SID: str
+    :param ansible_os_family: Ansible OS family
+    :type ansible_os_family: str
+    :return: Validated constraints
+    :rtype: dict
     """
     drift_parameters = defaultdict(lambda: defaultdict(list))
     valid_parameters = defaultdict(lambda: defaultdict(list))
@@ -514,13 +517,16 @@ def validate_constraints(SID: str, ansible_os_family: str):
 
 def validate_resource_parameters(
     ansible_os_family: str, drift_parameters: dict, valid_parameters: dict
-):
-    """Validate resource parameters.
+) -> None:
+    """
+    Validate resource parameters.
 
-    Args:
-        ansible_os_family (str): Ansible OS family
-        drift_parameters (dict): Dictionary to store drift parameters
-        valid_parameters (dict): Dictionary to store valid parameters
+    :param ansible_os_family: Ansible OS family
+    :type ansible_os_family: str
+    :param drift_parameters: Dictionary to store drift parameters
+    :type drift_parameters: dict
+    :param valid_parameters: Dictionary to store valid parameters
+    :type valid_parameters: dict
     """
     resource_mapping = {}
     root = parse_xml_output(["cibadmin", "--query", "--scope", "resources"])
@@ -587,15 +593,16 @@ def validate_resource_parameters(
                     )
 
 
-def validate_global_ini_properties(SID: str, ansible_os_family: str):
-    """Validate SAPHanaSR properties in global.ini file.
+def validate_global_ini_properties(SID: str, ansible_os_family: str) -> dict:
+    """
+    Validate SAPHanaSR properties in global.ini file.
 
-    Args:
-        SID (str): Database SID
-        anible_os_family (str): Ansible OS family
-
-    Returns:
-        dict: SAPHanaSR Properties
+    :param SID: Database SID
+    :type SID: str
+    :param ansible_os_family: Ansible OS family
+    :type ansible_os_family: str
+    :return: SAPHanaSR Properties
+    :rtype: dict
     """
     try:
         global_ini_file_path = f"/usr/sap/{SID}/SYS/global/hdb/custom/config/global.ini"
@@ -644,13 +651,14 @@ def validate_global_ini_properties(SID: str, ansible_os_family: str):
         }
 
 
-def validate_cluster_params(ansible_os_family: str):
-    """Validate pacemaker cluster parameters for DB and SCS
+def validate_cluster_params(ansible_os_family: str) -> dict:
+    """
+    Validate pacemaker cluster parameters for DB and SCS.
 
-    Args:
-        ansible_os_family (str): Ansible OS family
-    Returns:
-        dict: Validated cluster parameters
+    :param ansible_os_family: Ansible OS family
+    :type ansible_os_family: str
+    :returns: Validated cluster parameters
+    :rtype: dict
     """
     drift_parameters = defaultdict(lambda: defaultdict(list))
     valid_parameters = defaultdict(lambda: defaultdict(list))
@@ -729,10 +737,11 @@ def validate_cluster_params(ansible_os_family: str):
 
 
 def visualize_cluster_actions(xml_file):
-    """Visualize cluster actions using crm_simulate.
+    """
+    Visualize cluster actions using crm_simulate.
 
-    Args:
-        xml_file (string): XML string
+    :param xml_file: XML string
+    :type xml_file: str
     """
     dot_file = f"{xml_file}.dot"
     try:
