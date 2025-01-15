@@ -5,11 +5,6 @@
 Python script to get and validate the cluster configuration in HANA DB node.
 """
 
-import sys
-import os
-
-sys.path.append(os.path.join(os.path.dirname(__file__), "../.."))
-
 import subprocess
 import json
 from collections import defaultdict
