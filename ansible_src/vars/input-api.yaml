@@ -20,17 +20,17 @@ test_groups:
       #   task_name:                  resource-migration
       #   description:                This runs a functional test for resource migration
 
-      - name:                       HA Functional Test- Primary Node Crash
-        task_name:                  primary-node-crash
-        description:                This runs a functional test for primary node crash
+      # - name:                       HA Functional Test- Primary Node Crash
+      #   task_name:                  primary-node-crash
+      #   description:                This runs a functional test for primary node crash
 
       # - name:                       HA Functional Test- Block Network Communication
       #   task_name:                  block-network
       #   description:                This runs a functional test for blocking network communication
       
-      # - name:                       HA Functional Test- Crash index server on primary node
-      #   task_name:                  crash-index
-      #   description:                This runs a functional test for crashing index server on primary node
+      - name:                       HA Functional Test- Crash index server on primary node
+        task_name:                  crash-index
+        description:                This runs a functional test for crashing index server on primary node
 
       # - name:                       HA Functional Test- Primary Node Kill
       #   task_name:                  primary-node-kill
