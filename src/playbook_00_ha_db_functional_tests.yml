@@ -15,6 +15,7 @@
       become:                          true
       ansible.builtin.pip:
         name:
+          - ansible-runner
           - azure-kusto-data
           - azure-kusto-ingest
 
