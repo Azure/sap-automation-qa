@@ -82,7 +82,7 @@
           register:                 cleanup_failed_resource_post
           changed_when:             cleanup_failed_resource_post.rc == 0
 
-        - name:                     "Test Execution: Validate HANA DB cluster status after stopping the HANA DB"
+        - name:                     "Test Execution: Validate HANA DB cluster status"
           get_cluster_status:
             operation_step:         "post_failover"
             database_sid:           "{{ db_sid | lower }}"
