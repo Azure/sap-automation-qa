@@ -9,15 +9,13 @@
 - hosts:                               localhost
   gather_facts:                        true
   name:                                "Setup deployer for HA Testing Framework"
-  vars_files:
-    - "./vars/input-api.yaml"
+  vars_files:                          "./vars/input-api.yaml"
 
 - hosts: "{{ sap_sid | upper }}_SCS:
     {{ sap_sid | upper }}_ERS"
   name:                                "Host tasks"
   gather_facts:                        true
-  vars_files:
-    - "./vars/input-api.yaml"
+  vars_files:                          "./vars/input-api.yaml"
   tasks:
     - name:                            "Enable profile_tasks callback plugin"
       ansible.builtin.set_fact:
@@ -27,27 +25,25 @@
     - name:                            "Set the test group name based on the inputs"
       ansible.builtin.set_fact:
         test_group_name:               "{{ sap_functional_test_type_map | selectattr('name', 'equalto', sap_functional_test_type) | map(attribute='value') | first }}"
-      run_once: true
+      run_once:                        true
 
     - name:                            Set the test group facts
       ansible.builtin.set_fact:
         test_group_start_time:         "{{ now(utc=true,fmt='%Y-%m-%d %H:%M:%S') }}"
         test_group_invocation_id:      "{{ lookup('pipe', 'uuidgen') }}"
         test_cases:                    "{{ test_groups | selectattr('name', 'equalto', test_group_name) | map(attribute='test_cases') | list | flatten(levels=1) }}"
-      run_once: true
+      run_once:                        true
 
     - name:                            "Run test cases by including them as roles"
-      ansible.builtin.include_tasks:   "../roles/{{ test_group_name | lower }}/tasks/{{ item.task_name }}.yml"
+      ansible.builtin.include_tasks:   "./roles/{{ test_group_name | lower }}/tasks/{{ item.task_name }}.yml"
       loop:                            "{{ test_cases | list }}"
       vars:
         group_invocation_id:           "{{ test_group_invocation_id }}"
         group_start_time:              "{{ test_group_start_time }}"
         group_name:                    "{{ sap_functional_test_type }}"
-      when:
-        - test_group_name is defined
+      when:                            test_group_name is defined
 
     - name:                            "Run test cases by including them as roles"
-      ansible.builtin.include_tasks:   "../roles/misc/tasks/render-html-report.yml"
-      when:
-        - test_group_name is defined
+      ansible.builtin.include_tasks:   "./roles/misc/tasks/render-html-report.yml"
+      when:                            test_group_name is defined
 
