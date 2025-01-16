@@ -579,66 +579,66 @@
       function createClusterTable(clusterData) {
         const table = document.createElement('table')
         table.className = 'cluster-table'
-      
+  
         // Create table header
         const header = table.createTHead()
         const headerRow = header.insertRow()
-        ;['Name', 'Value', 'Expected Value'].forEach((text) => {
-          const th = document.createElement('th')
-          th.textContent = text
-          headerRow.appendChild(th)
-        })
-      
+          ;['Category', 'Name', 'Value', 'Expected Value', 'Status'].forEach((text) => {
+            const th = document.createElement('th')
+            th.textContent = text
+            headerRow.appendChild(th)
+          })
+  
         const tbody = table.createTBody()
-      
-        function addRow(name, value, expectedValue, depth = 0, isObjectKey = false) {
+  
+        function addRow(category, type, name, value, expectedValue, status) {
           const row = tbody.insertRow()
+          const categoryCell = row.insertCell()
           const nameCell = row.insertCell()
           const valueCell = row.insertCell()
           const expectedValueCell = row.insertCell()
-      
-          nameCell.style.paddingLeft = depth * 10 + 'px'
-          if (isObjectKey) {
-            nameCell.innerHTML = `<strong>${name}</strong>`
-          } else {
-            nameCell.textContent = name
-          }
+          const statusCell = row.insertCell()
+  
+          categoryCell.textContent = category
+          nameCell.textContent = name
           valueCell.textContent = value
           expectedValueCell.textContent = expectedValue
+          statusCell.textContent = status
         }
-      
-        function parseAndAddRows(obj, depth = 0) {
-          for (const [key, value] of Object.entries(obj)) {
-            if (Array.isArray(value)) {
-              addRow(key, '', '', depth, true)
-              value.forEach((item) => {
-                const [name, value, expectedValue] = item.split(', ').map((pair) => pair.split(': ')[1])
-                addRow(name, value, expectedValue, depth + 1)
-              })
-            } else if (typeof value === 'object' && value !== null) {
-              addRow(key, '', '', depth, true)
-              parseAndAddRows(value, depth + 1)
-            } else {
-              addRow(key, value, '', depth, true)
-            }
-          }
-        }
-      
-        parseAndAddRows(clusterData)
-      
+  
+        clusterData.parameters.forEach(param => {
+          addRow(param.category, param.name, param.value, param['expected value'], param.status)
+        })
+  
         return table
       }
-      
+  
+      // Function to parse and convert cluster data to tables
+      function formatClusterData() {
+        const clusterDataElements = document.getElementsByClassName('cluster-data')
+        for (let clusterDataElement of clusterDataElements) {
+          try {
+            const clusterData = JSON.parse(clusterDataElement.textContent)
+            const table = createClusterTable(clusterData)
+            clusterDataElement.textContent = '' // Clear the existing content
+            clusterDataElement.appendChild(table)
+          } catch (error) {
+            console.error('Error creating cluster table:', error)
+          }
+        }
+      }
+  
       // Function to parse and convert cluster data to tables
       function parseClusterData() {
         const clusterElements = document.getElementsByClassName('cluster')
         for (let clusterElement of clusterElements) {
           try {
-            const clusterText = clusterElement.textContent.trim()
-            const fixedClusterText = clusterText.replace(/'/g, '"').replace(/False/g, 'false').replace(/True/g, 'true')
-            const clusterData = JSON.parse(fixedClusterText)
+            let clusterText = clusterElement.textContent.trim()
+            // Replace single quotes with double quotes and remove control characters
+            clusterText = clusterText.replace(/'/g, '"').replace(/[\x00-\x1F\x7F]/g, "")
+            const clusterData = JSON.parse(clusterText)
             const clusterTable = createClusterTable(clusterData)
-      
+  
             clusterElement.textContent = '' // Clear the existing content
             clusterElement.appendChild(clusterTable)
           } catch (error) {

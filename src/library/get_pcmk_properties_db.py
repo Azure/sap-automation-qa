@@ -20,6 +20,7 @@ class Status(Enum):
     SUCCESS = "PASSED"
     ERROR = "FAILED"
     WARNING = "WARNING"
+    INFO = "INFO"
 
 
 CLUSTER_RESOURCES = {
@@ -771,7 +772,6 @@ class ResultAggregator:
     def _categorize_parameter(self, category: str, key: str, value: str) -> None:
         param_entry = {
             "category": category,
-            "type": key,
         }
 
         if "Name:" in value:
@@ -789,7 +789,7 @@ class ResultAggregator:
         else:
             # Handle informational parameters
             param_entry["value"] = value
-            param_entry["status"] = Status.WARNING.value
+            param_entry["status"] = Status.INFO.value
 
         self.parameters.append(param_entry)
 
