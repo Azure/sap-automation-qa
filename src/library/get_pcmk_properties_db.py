@@ -250,7 +250,6 @@ PARAMETER_VALUE_FORMAT = "Name: %s, Value: %s, Expected Value: %s"
 
 class CommandExecutor:
     @staticmethod
-    @lru_cache(maxsize=32)
     def run_subprocess(command: Union[List[str], str]) -> str:
         try:
             with subprocess.Popen(
