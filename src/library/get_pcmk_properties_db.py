@@ -745,9 +745,15 @@ class ClusterParamValidator(ValidatorBase, ParameterValidatorMixin):
 
 @dataclass
 class ResultAggregator:
-    validated_parameters: List[str] = field(default_factory=list)
-    drift_parameters: List[str] = field(default_factory=list)
-    informational_parameters: List[str] = field(default_factory=list)
+    drift_parameters: Dict[str, List[Dict[str, str]]] = field(
+        default_factory=lambda: defaultdict(list)
+    )
+    informational_parameters: Dict[str, List[str]] = field(
+        default_factory=lambda: defaultdict(list)
+    )
+    validated_parameters: Dict[str, Dict[str, List[str]]] = field(
+        default_factory=lambda: defaultdict(lambda: defaultdict(list))
+    )
     error_message: str = ""
     message: str = "Cluster parameters validation completed"
 
@@ -755,28 +761,51 @@ class ResultAggregator:
         result_dict = result.to_dict()
 
         for key, value in result_dict.get("msg", {}).items():
-            self._process_value(f"{category}.{key}", value)
+            self._process_value(category, key, value)
 
         if result.status == Status.ERROR and not self.error_message:
             self.error_message = f"Error in {category} validation"
 
-    def _process_value(self, category: str, value: Any) -> None:
+    def _process_value(self, category: str, key: str, value: Any) -> None:
         if isinstance(value, dict):
             for sub_key, sub_value in value.items():
-                self._process_value(f"{category}.{sub_key}", sub_value)
+                self._process_value(category, f"{key}.{sub_key}", sub_value)
         elif isinstance(value, list):
             for item in value:
-                self._categorize_parameter(category, str(item))
+                self._categorize_parameter(category, key, str(item))
         else:
-            self._categorize_parameter(category, str(value))
+            self._categorize_parameter(category, key, str(value))
 
-    def _categorize_parameter(self, category: str, value: str) -> None:
-        if "Drift" in category or "FAILED" in value:
-            self.drift_parameters.append(f"{category}: {value}")
-        elif "Valid" in category or "PASSED" in value:
-            self.validated_parameters.append(f"{category}: {value}")
+    def _categorize_parameter(self, category: str, key: str, value: str) -> None:
+        if "Drift" in key:
+            # Parse the parameter string into a dictionary
+            if "Name:" in value:
+                parts = value.split(", ")
+                param_dict = {}
+                for part in parts:
+                    name, val = part.split(": ", 1)
+                    param_dict[name.lower()] = val
+                self.drift_parameters[category].append(param_dict)
+        elif "Valid" in key:
+            # For validated parameters, maintain hierarchy
+            if "Name:" in value:
+                subcategory = key.split(".")[-1]  # Get the last part of the key
+                self.validated_parameters[category][subcategory].append(value)
         else:
-            self.informational_parameters.append(f"{category}: {value}")
+            # For informational parameters, store as simple strings
+            self.informational_parameters[category].append(value)
+
+    def to_dict(self) -> Dict:
+        result = {
+            "drift_parameters": dict(self.drift_parameters),
+            "informational_parameters": dict(self.informational_parameters),
+            "validated_parameters": dict(self.validated_parameters),
+        }
+
+        if self.error_message:
+            result["error_message"] = self.error_message
+
+        return result
 
 
 class ClusterManager:
@@ -830,7 +859,7 @@ class ClusterManager:
 
         self.module.exit_json(
             msg=self.result_aggregator.message,
-            details=asdict(self.result_aggregator),
+            details=self.result_aggregator.to_dict(),
             status=status.value,
         )
 
