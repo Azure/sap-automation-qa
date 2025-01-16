@@ -583,7 +583,7 @@
         // Create table header
         const header = table.createTHead()
         const headerRow = header.insertRow()
-          ;['Category', 'Name', 'Value', 'Expected Value', 'Status'].forEach((text) => {
+          ;['Category', 'Type', 'Name', 'Value', 'Expected Value', 'Status'].forEach((text) => {
             const th = document.createElement('th')
             th.textContent = text
             headerRow.appendChild(th)
@@ -594,12 +594,14 @@
         function addRow(category, type, name, value, expectedValue, status) {
           const row = tbody.insertRow()
           const categoryCell = row.insertCell()
+          const typeCell = row.insertCell()
           const nameCell = row.insertCell()
           const valueCell = row.insertCell()
           const expectedValueCell = row.insertCell()
           const statusCell = row.insertCell()
   
           categoryCell.textContent = category
+          typeCell.textContent = type
           nameCell.textContent = name
           valueCell.textContent = value
           expectedValueCell.textContent = expectedValue
@@ -607,7 +609,7 @@
         }
   
         clusterData.parameters.forEach(param => {
-          addRow(param.category, param.name, param.value, param['expected value'], param.status)
+          addRow(param.category, param.type, param.name, param.value, param['expected value'], param.status)
         })
   
         return table

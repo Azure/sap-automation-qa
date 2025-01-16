@@ -770,8 +770,10 @@ class ResultAggregator:
             self._categorize_parameter(category, key, str(value))
 
     def _categorize_parameter(self, category: str, key: str, value: str) -> None:
+        parent_key = key.split(".")[-2]
         param_entry = {
             "category": category,
+            "type": parent_key,
         }
 
         if "Name:" in value:
@@ -834,9 +836,9 @@ class ClusterManager:
     def _create_validators(self) -> Dict[str, ValidatorBase]:
         return {
             "cluster": ClusterParamValidator(self.context),
-            "sap_hana": GlobalIniValidator(self.context),
+            "sap_hana_sr": GlobalIniValidator(self.context),
             "os_parameters": OSParameterValidator(self.context),
-            "fence": FenceValidator(self.context),
+            "fence_agent": FenceValidator(self.context),
             "constraints": ConstraintValidator(self.context),
         }
 
