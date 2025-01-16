@@ -770,7 +770,7 @@ class ResultAggregator:
             self._categorize_parameter(category, key, str(value))
 
     def _categorize_parameter(self, category: str, key: str, value: str) -> None:
-        parent_key = key.split(".")[-2]
+        parent_key = key.split(".")[-1]
         param_entry = {
             "category": category,
             "type": parent_key,
