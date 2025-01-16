@@ -745,15 +745,7 @@ class ClusterParamValidator(ValidatorBase, ParameterValidatorMixin):
 
 @dataclass
 class ResultAggregator:
-    drift_parameters: Dict[str, List[Dict[str, str]]] = field(
-        default_factory=lambda: defaultdict(list)
-    )
-    informational_parameters: Dict[str, List[str]] = field(
-        default_factory=lambda: defaultdict(list)
-    )
-    validated_parameters: Dict[str, Dict[str, List[str]]] = field(
-        default_factory=lambda: defaultdict(lambda: defaultdict(list))
-    )
+    parameters: List[Dict[str, str]] = field(default_factory=list)
     error_message: str = ""
     message: str = "Cluster parameters validation completed"
 
@@ -777,29 +769,33 @@ class ResultAggregator:
             self._categorize_parameter(category, key, str(value))
 
     def _categorize_parameter(self, category: str, key: str, value: str) -> None:
-        if "Drift" in key:
-            # Parse the parameter string into a dictionary
-            if "Name:" in value:
-                parts = value.split(", ")
-                param_dict = {}
-                for part in parts:
-                    name, val = part.split(": ", 1)
-                    param_dict[name.lower()] = val
-                self.drift_parameters[category].append(param_dict)
-        elif "Valid" in key:
-            # For validated parameters, maintain hierarchy
-            if "Name:" in value:
-                subcategory = key.split(".")[-1]  # Get the last part of the key
-                self.validated_parameters[category][subcategory].append(value)
+        param_entry = {
+            "category": category,
+            "type": key,
+        }
+
+        if "Name:" in value:
+            # Parse structured parameter values
+            parts = value.split(", ")
+            for part in parts:
+                name, val = part.split(": ", 1)
+                param_entry[name.lower()] = val
+
+            # Set status based on the parameter type
+            if "Drift" in key:
+                param_entry["status"] = Status.ERROR.value
+            elif "Valid" in key:
+                param_entry["status"] = Status.SUCCESS.value
         else:
-            # For informational parameters, store as simple strings
-            self.informational_parameters[category].append(value)
+            # Handle informational parameters
+            param_entry["value"] = value
+            param_entry["status"] = Status.WARNING.value
+
+        self.parameters.append(param_entry)
 
     def to_dict(self) -> Dict:
         result = {
-            "drift_parameters": dict(self.drift_parameters),
-            "informational_parameters": dict(self.informational_parameters),
-            "validated_parameters": dict(self.validated_parameters),
+            "parameters": self.parameters,
         }
 
         if self.error_message:
@@ -850,11 +846,15 @@ class ClusterManager:
             self.result_aggregator.add_validation_result(name, result)
 
     def _process_results(self) -> None:
+        has_errors = any(
+            param["status"] == Status.ERROR.value
+            for param in self.result_aggregator.parameters
+        )
+
         status = (
-            Status.SUCCESS
-            if not self.result_aggregator.drift_parameters
-            and not self.result_aggregator.error_message
-            else Status.ERROR
+            Status.ERROR
+            if (has_errors or self.result_aggregator.error_message)
+            else Status.SUCCESS
         )
 
         self.module.exit_json(
