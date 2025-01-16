@@ -314,34 +314,23 @@
           <div class="system-info-container">
             <h2 class="system-info-heading">System Information</h2>
             <div class="system-info-columns">
-              {% for i in range(0, test_case_results|length, 3) %}
+              {% set properties = [
+                {'label': 'Test Group Name', 'value': test_case_results.0.TestGroupName},
+                {'label': 'DB SID', 'value': test_case_results.0.DbSid},
+                {'label': 'SAP SID', 'value': test_case_results.0.SapSid},
+                {'label': 'DB Fencing Agent', 'value': test_case_results.0.DbFencingType},
+                {'label': 'SCS Fencing Agent', 'value': test_case_results.0.ScsFencingType},
+                {'label': 'DB Type', 'value': test_case_results.0.DBType},
+                {'label': 'OS Version', 'value': test_case_results.0.OsVersion},
+                {'label': 'Hostnames', 'value': test_case_results|map(attribute='TestCaseHostname')|unique|join(', ')}
+              ] %}
+              
+              {% for i in range(0, properties|length, 3) %}
                 <div class="system-info-column">
                   {% for j in range(i, i+3) %}
-                    {% if test_case_results|length > j %}
+                    {% if properties|length > j %}
                       <p>
-                        <strong>Test Group Name:</strong> {{ test_case_results[j].TestGroupName }}
-                      </p>
-                      <p>
-                        <strong>DB SID:</strong> {{ test_case_results[j].DbSid }}
-                      </p>
-                      <p>
-                        <strong>SAP SID:</strong> {{ test_case_results[j].SapSid }}
-                      </p>
-                      <p>
-                        <strong>DB Fencing Agent:</strong> {{ test_case_results[j].DbFencingType }}
-                      </p>
-                      <p>
-                        <strong>SCS Fencing Agent:</strong> {{ test_case_results[j].ScsFencingType }}
-                      </p>
-                      <p>
-                        <strong>DB Type:</strong> {{ test_case_results[j].DBType }}
-                      </p>
-                      <p>
-                        <strong>OS Version:</strong> {{ test_case_results[j].OsVersion }}
-                      </p>
-                      <p>
-                        <strong>Hostnames:</strong>
-                        {{ test_case_results[j].TestCaseHostname }}
+                        <strong>{{ properties[j].label }}:</strong> {{ properties[j].value }}
                       </p>
                     {% endif %}
                   {% endfor %}
