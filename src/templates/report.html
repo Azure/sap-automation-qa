@@ -309,110 +309,111 @@
     </div>
     <div class="main-content">
       <div class="container">
-        <div class="system-info-container">
-          <h2 class="system-info-heading">System Information</h2>
-          <div class="system-info-columns">
-            <div class="system-info-column">
-              <p>
-                <strong>Test Group Name:</strong> {{ test_case_results.0.TestGroupName }}
-              </p>
-              <p>
-                <strong>DB SID:</strong> {{ test_case_results.0.DbSid }}
-              </p>
-              <p>
-                <strong>SAP SID:</strong> {{ test_case_results.0.SapSid }}
-              </p>
-            </div>
-            <div class="system-info-column">
-              <p>
-                <strong>DB Fencing Agent:</strong> {{ test_case_results.0.DbFencingType }}
-              </p>
-              <p>
-                <strong>SCS Fencing Agent:</strong> {{ test_case_results.0.ScsFencingType }}
-              </p>
-              <p>
-                <strong>DB Type:</strong> {{ test_case_results.0.DBType }}
-              </p>
-            </div>
-            <div class="system-info-column">
-              <p>
-                <strong>OS Version:</strong> {{ test_case_results.0.OsVersion }}
-              </p>
-              <p>
-                <strong>Hostnames:</strong>
-                {{ test_case_results|map(attribute='TestCaseHostname')|unique|join(', ') }}
-              </p>
-            </div>
-            <div class="system-info-column">
-              <div class="pie" id="testResults" style="position: relative; z-index: 2;"
-              data-results="{{ test_case_results|map(attribute='TestCaseStatus')|list|tojson|safe }}">
-                <span style="position: relative; z-index: 3;">0/0</span>
+        <div class="left-bar">
+          <div class="system-info-container">
+            <h2 class="system-info-heading">System Information</h2>
+            <div class="system-info-columns">
+              <div class="system-info-column">
+                <p>
+                  <strong>Test Group Name:</strong> {{ test_case_results.0.TestGroupName }}
+                </p>
+                <p>
+                  <strong>DB SID:</strong> {{ test_case_results.0.DbSid }}
+                </p>
+                <p>
+                  <strong>SAP SID:</strong> {{ test_case_results.0.SapSid }}
+                </p>
+              </div>
+              <div class="system-info-column">
+                <p>
+                  <strong>DB Fencing Agent:</strong> {{ test_case_results.0.DbFencingType }}
+                </p>
+                <p>
+                  <strong>SCS Fencing Agent:</strong> {{ test_case_results.0.ScsFencingType }}
+                </p>
+                <p>
+                  <strong>DB Type:</strong> {{ test_case_results.0.DBType }}
+                </p>
+              </div>
+              <div class="system-info-column">
+                <p>
+                  <strong>OS Version:</strong> {{ test_case_results.0.OsVersion }}
+                </p>
+                <p>
+                  <strong>Hostnames:</strong>
+                  {{ test_case_results|map(attribute='TestCaseHostname')|unique|join(', ') }}
+                </p>
+              </div>
+              <div class="system-info-column">
+                <div class="pie" id="testResults" style="position: relative; z-index: 2;" data-results='{{ test_case_results|map(attribute='TestCaseStatus')|list|tojson|safe }}'>
+                  <span style="position: relative; z-index: 3;">0/0</span>
+                </div>
               </div>
             </div>
           </div>
-        </div>
-        {% for test_case_result in test_case_results %}
-          <div class="test-case {{ test_case_result.TestCaseStatus|lower }}">
-            <div class="title" onclick="toggleDetails(this)">
-              <span class="name">{{ test_case_result.TestCaseName }}</span>
-              <span class="duration">&#x1F550; {{ test_case_result.DurationSeconds }}</span>
-            </div>
-            <table class="details">
-              <tr>
-                <th>Test Description</th>
-                <td>{{ test_case_result.TestCaseDescription }}</td>
-              </tr>
-              <tr>
-                <th>Invocation ID</th>
-                <td>{{ test_case_result.TestCaseInvocationId }}</td>
-              </tr>
-              <tr>
-                <th>Start Time</th>
-                <td>{{ test_case_result.TestCaseStartTime }}</td>
-              </tr>
-              <tr>
-                <th>End Time</th>
-                <td>{{ test_case_result.TestCaseEndTime }}</td>
-              </tr>
-              {% if test_case_result.TestExecutionStartTime %}
+          {% for test_case_result in test_case_results %}
+            <div class="test-case {{ test_case_result.TestCaseStatus|lower }}">
+              <div class="title" onclick="toggleDetails(this)">
+                <span class="name">{{ test_case_result.TestCaseName }}</span>
+                <span class="duration">&#x1F550; {{ test_case_result.DurationSeconds }}</span>
+              </div>
+              <table class="details">
                 <tr>
-                  <th>Test Execution Start Time</th>
-                  <td>{{ test_case_result.TestExecutionStartTime }}</td>
+                  <th>Test Description</th>
+                  <td>{{ test_case_result.TestCaseDescription }}</td>
                 </tr>
-              {% endif %}
-              {% if test_case_result.TestExecutionEndTime %}
                 <tr>
-                  <th>Test Execution End Time</th>
-                  <td>{{ test_case_result.TestExecutionEndTime }}</td>
+                  <th>Invocation ID</th>
+                  <td>{{ test_case_result.TestCaseInvocationId }}</td>
                 </tr>
-              {% endif %}
-              <tr>
-                <th>Message</th>
-                <td>{{ test_case_result.TestCaseMessage }}</td>
-              </tr>
-              <tr>
-                <th>Package Versions</th>
-                <td class="packages">{{ test_case_result.PackageVersions }}</td>
-              </tr>
-              <tr>
-                <th>Test Case Details (Logs)</th>
-                {% if 'HA Parameters Validation' in test_case_result.TestCaseName %}
-                  <td class="cluster">{{ test_case_result.TestCaseDetails }}</td>
-                {% else %}
-                  <td class="jsonobject">{{ test_case_result.TestCaseDetails }}</td>
+                <tr>
+                  <th>Start Time</th>
+                  <td>{{ test_case_result.TestCaseStartTime }}</td>
+                </tr>
+                <tr>
+                  <th>End Time</th>
+                  <td>{{ test_case_result.TestCaseEndTime }}</td>
+                </tr>
+                {% if test_case_result.TestExecutionStartTime %}
+                  <tr>
+                    <th>Test Execution Start Time</th>
+                    <td>{{ test_case_result.TestExecutionStartTime }}</td>
+                  </tr>
                 {% endif %}
-              </tr>
-              {% if test_case_result.TestCaseLogMessagesFromSap %}
+                {% if test_case_result.TestExecutionEndTime %}
+                  <tr>
+                    <th>Test Execution End Time</th>
+                    <td>{{ test_case_result.TestExecutionEndTime }}</td>
+                  </tr>
+                {% endif %}
                 <tr>
-                  <th>Logs from /var/log/messages</th>
-                  <td class="newlinemessages">
-                    <details>{{ test_case_result.TestCaseLogMessagesFromSap }}</details>
-                  </td>
+                  <th>Message</th>
+                  <td>{{ test_case_result.TestCaseMessage }}</td>
                 </tr>
-              {% endif %}
-            </table>
-          </div>
-        {% endfor %}
+                <tr>
+                  <th>Package Versions</th>
+                  <td class="packages">{{ test_case_result.PackageVersions }}</td>
+                </tr>
+                <tr>
+                  <th>Test Case Details (Logs)</th>
+                  {% if 'HA Parameters Validation' in test_case_result.TestCaseName %}
+                    <td class="cluster">{{ test_case_result.TestCaseDetails }}</td>
+                  {% else %}
+                    <td class="jsonobject">{{ test_case_result.TestCaseDetails }}</td>
+                  {% endif %}
+                </tr>
+                {% if test_case_result.TestCaseLogMessagesFromSap %}
+                  <tr>
+                    <th>Logs from /var/log/messages</th>
+                    <td class="newlinemessages">
+                      <details>{{ test_case_result.TestCaseLogMessagesFromSap }}</details>
+                    </td>
+                  </tr>
+                {% endif %}
+              </table>
+            </div>
+          {% endfor %}
+        </div>
       </div>
     </div>
     <div class="footer">Report generated on: {{ report_generation_time }}</div>
@@ -685,22 +686,22 @@
           let gradient
           if (progress <= percentages.PASSED) {
             gradient = `conic-gradient(
-                      var(--passed) 0% ${progress}%,
-                      transparent ${progress}% 100%
-                  )`
+                            var(--passed) 0% ${progress}%,
+                            transparent ${progress}% 100%
+                        )`
           } else if (progress <= percentages.PASSED + percentages.FAILED) {
             gradient = `conic-gradient(
-                      var(--passed) 0% ${percentages.PASSED}%,
-                      var(--failed) ${percentages.PASSED}% ${progress}%,
-                      transparent ${progress}% 100%
-                  )`
+                            var(--passed) 0% ${percentages.PASSED}%,
+                            var(--failed) ${percentages.PASSED}% ${progress}%,
+                            transparent ${progress}% 100%
+                        )`
           } else {
             gradient = `conic-gradient(
-                      var(--passed) 0% ${percentages.PASSED}%,
-                      var(--failed) ${percentages.PASSED}% ${percentages.PASSED + percentages.FAILED}%,
-                      var(--warning) ${percentages.PASSED + percentages.FAILED}% ${progress}%,
-                      transparent ${progress}% 100%
-                  )`
+                            var(--passed) 0% ${percentages.PASSED}%,
+                            var(--failed) ${percentages.PASSED}% ${percentages.PASSED + percentages.FAILED}%,
+                            var(--warning) ${percentages.PASSED + percentages.FAILED}% ${progress}%,
+                            transparent ${progress}% 100%
+                        )`
           }
       
           pie.style.background = gradient
