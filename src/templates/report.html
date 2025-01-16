@@ -3,6 +3,7 @@
   <head>
     <title>SAP Automation QA Results</title>
     <style>
+      /* Base Styles */
       html,
       body {
         height: 100%;
@@ -10,21 +11,24 @@
         display: flex;
         flex-direction: column;
         font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
-        background-color: #f2f2f2; /* Microsoft's Light Gray */
+        background-color: #f2f2f2;
       }
       
+      /* Layout Components */
       .navbar {
         display: flex;
-        justify-content: center; /* Centers the content horizontally */
+        justify-content: center;
         align-items: center;
         padding: 10px;
-        background-color: #0078d7; /* Microsoft's Blue */
-        color: #ffffff; /* White for contrast */
+        background-color: #0078d7;
+        color: #ffffff;
         transition: all 0.3s ease;
+        font-size: 22px;
       }
       
       .main-content {
         flex: 1;
+        padding: 20px;
       }
       
       .navbar .system-id {
@@ -37,12 +41,12 @@
       }
       
       .left-bar {
-        flex: 1; /* take up 1/3 of the space */
+        flex: 1;
         padding: 20px;
       }
       
       .right-content {
-        flex: 2; /* take up 2/3 of the space */
+        flex: 2;
         padding: 20px;
       }
       
@@ -51,32 +55,97 @@
         color: #323130; /* Microsoft's Dark Gray */
       }
       
-      .system-info {
+      /* System Info Styles */
+      .system-info-container {
         background-color: #fff;
         border-radius: 5px;
         box-shadow: 0px 0px 10px 0px rgba(0, 0, 0, 0.1);
         padding: 20px;
-        display: flex;
-        flex-direction: column;
-        align-items: start;
-      }
-      
-      .system-info h2 {
-        color: #333;
         margin-bottom: 20px;
-        font-size: 24px;
+        position: relative;
       }
       
-      .system-info p {
+      .system-info-heading {
+        width: 100%;
+        text-align: left;
+        margin-bottom: 20px;
+      }
+      
+      .system-info-columns {
+        display: flex;
+        justify-content: space-between;
+      }
+      
+      .system-info-column {
+        width: 40%;
+        position: relative;
+        flex-direction: column;
+        display: flex;
+        align-items: flex-start;
+      }
+      
+      .system-info-column:last-child {
+        align-items: center;
+      }
+      
+      .system-info-container h2 {
+        color: #666;
+        margin-bottom: 20px;
+        font-size: 18px;
+      }
+      
+      .system-info-container p {
         color: #666;
         margin-bottom: 10px;
       }
       
       .system-info p strong {
-        color: #333;
+        color: #666;
         font-weight: 600;
       }
       
+      /* Pie Chart Styles */
+      .pie {
+        --passed: #2a882e; /* Adjusted green to be brighter */
+        --failed: #df3d3d; /* Kept red but slightly adjusted */
+        --warning: #fcd116;
+        --size: 150px;
+        --thickness: 12px;
+        --progress: 0;
+      
+        width: var(--size);
+        height: var(--size);
+        border-radius: 50%;
+        background: conic-gradient(transparent calc(var(--progress) * 1%), transparent 0);
+        position: relative;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 22px;
+        font-weight: bold;
+        color: #666;
+        margin: 10px;
+      }
+      
+      .pie::before {
+        content: '';
+        position: absolute;
+        width: calc(100% - var(--thickness) * 2);
+        height: calc(100% - var(--thickness) * 2);
+        background: white;
+        border-radius: 50%;
+        z-index: 1;
+      }
+      
+      .pie span {
+        position: relative;
+        z-index: 2;
+        opacity: 0;
+        animation: countUp 0.5s ease-out forwards;
+        animation-delay: 1.5s;
+      }
+      
+      /* Test Case Styles */
       .test-case {
         margin-bottom: 10px;
       }
@@ -94,6 +163,7 @@
       .test-case .title:hover {
         background-color: #dee2e6;
       }
+      
       .test-case .title .name,
       .test-case .title .duration {
         display: inline-block;
@@ -106,13 +176,24 @@
         border-radius: 5px;
       }
       
-      .cluster-table,
-      .package-table {
-        width: 100%;
-        border-collapse: collapse;
-        table-layout: fixed;
+      .test-case.failed .title {
+        background-color: #df3d3d;
+        color: white;
       }
       
+      .test-case.passed .title {
+        background-color: #2a882e;
+        color: white;
+      }
+      
+      .test-case.warning .title {
+        background-color: #fcd116;
+        color: white;
+      }
+      
+      /* Table Styles */
+      .cluster-table,
+      .package-table,
       .details {
         width: 100%;
         border-collapse: collapse;
@@ -141,32 +222,64 @@
         background-color: #ddd;
       }
       
-      .test-case.failed .title {
-        background-color: #df3d3d; /* Softer Red */
-        color: white;
+      /* Legend Styles */
+      .legend {
+        position: absolute;
+        top: 20px;
+        right: 20px;
+        background: white;
+        padding: 15px;
+        border-radius: 8px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
       }
       
-      .test-case.passed .title {
-        background-color: #2a882e; /* Softer Green */
-        color: white;
+      .legend-item {
+        display: flex;
+        align-items: center;
+        margin: 5px 0;
       }
       
-      .test-case.warning .title {
-        background-color: #fcd116; /* Softer yellow  */
-        color: white;
+      .legend-color {
+        width: 20px;
+        height: 20px;
+        border-radius: 4px;
+        margin-right: 8px;
       }
       
+      .passed-color {
+        background: var(--passed);
+      }
+      .failed-color {
+        background: var(--failed);
+      }
+      .warning-color {
+        background: var(--warning);
+      }
+      
+      /* Footer Styles */
       .footer {
         bottom: 0;
         width: 100%;
-        height: 40px; /* Set the fixed height of the footer here */
+        height: 40px;
         padding: 10px;
         text-align: center;
-        background-color: #0078d7; /* Microsoft's Blue */
-        color: #ffffff; /* White for contrast */
-        font-family: Arial, sans-serif;
+        background-color: #0078d7;
+        color: #ffffff;
       }
       
+      /* Animations */
+      @keyframes countUp {
+        from {
+          opacity: 0;
+          transform: translateY(20px);
+        }
+        to {
+          opacity: 1;
+          transform: translateY(0);
+        }
+      }
+      
+      /* Media Queries */
       @media only screen and (max-width: 600px) {
         .container {
           max-width: 100%;
@@ -196,100 +309,110 @@
     </div>
     <div class="main-content">
       <div class="container">
-        <div class="left-bar">
-          <div class="system-info">
-            <h2>System Information</h2>
-            <p>
-              <strong>Test Group Name:</strong> {{ test_case_results.0.TestGroupName }}
-            </p>
-            <p>
-              <strong>DB SID:</strong> {{ test_case_results.0.DbSid }}
-            </p>
-            <p>
-              <strong>SAP SID:</strong> {{ test_case_results.0.SapSid }}
-            </p>
-            <p>
-              <strong>DB Fencing Agent:</strong> {{ test_case_results.0.DbFencingType }}
-            </p>
-            <p>
-              <strong>SCS Fencing Agent:</strong> {{ test_case_results.0.ScsFencingType }}
-            </p>
-            <p>
-              <strong>DB Type:</strong> {{ test_case_results.0.DBType }}
-            </p>
-            <p>
-              <strong>OS Version:</strong> {{ test_case_results.0.OsVersion }}
-            </p>
-            <p>
-              <strong>Hostnames:</strong>
-              {{ test_case_results|map(attribute='TestCaseHostname')|unique|join(', ') }}
-            </p>
+        <div class="system-info-container">
+          <h2 class="system-info-heading">System Information</h2>
+          <div class="system-info-columns">
+            <div class="system-info-column">
+              <p>
+                <strong>Test Group Name:</strong> {{ test_case_results.0.TestGroupName }}
+              </p>
+              <p>
+                <strong>DB SID:</strong> {{ test_case_results.0.DbSid }}
+              </p>
+              <p>
+                <strong>SAP SID:</strong> {{ test_case_results.0.SapSid }}
+              </p>
+            </div>
+            <div class="system-info-column">
+              <p>
+                <strong>DB Fencing Agent:</strong> {{ test_case_results.0.DbFencingType }}
+              </p>
+              <p>
+                <strong>SCS Fencing Agent:</strong> {{ test_case_results.0.ScsFencingType }}
+              </p>
+              <p>
+                <strong>DB Type:</strong> {{ test_case_results.0.DBType }}
+              </p>
+            </div>
+            <div class="system-info-column">
+              <p>
+                <strong>OS Version:</strong> {{ test_case_results.0.OsVersion }}
+              </p>
+              <p>
+                <strong>Hostnames:</strong>
+                {{ test_case_results|map(attribute='TestCaseHostname')|unique|join(', ') }}
+              </p>
+            </div>
+            <div class="system-info-column">
+              <div class="pie" id="testResults" style="position: relative; z-index: 2;"
+              data-results="{{ test_case_results|map(attribute='TestCaseStatus')|list|tojson|safe }}">
+                <span style="position: relative; z-index: 3;">0/0</span>
+              </div>
+            </div>
           </div>
         </div>
-        <div class="right-content">
-          {% for test_case_result in test_case_results %}
-            <div class="test-case {{ test_case_result.TestCaseStatus|lower }}">
-              <div class="title" onclick="toggleDetails(this)">
-                <span class="name">{{ test_case_result.TestCaseName }}</span>
-                <span class="duration">&#x1F550; {{ test_case_result.DurationSeconds }}</span>
-              </div>
-              <table class="details">
-                <tr>
-                  <th>Test Description</th>
-                  <td>{{ test_case_result.TestCaseDescription }}</td>
-                </tr>
-                <tr>
-                  <th>Invocation ID</th>
-                  <td>{{ test_case_result.TestCaseInvocationId }}</td>
-                </tr>
-                <tr>
-                  <th>Start Time</th>
-                  <td>{{ test_case_result.TestCaseStartTime }}</td>
-                </tr>
-                <tr>
-                  <th>End Time</th>
-                  <td>{{ test_case_result.TestCaseEndTime }}</td>
-                </tr>
-                {% if test_case_result.TestExecutionStartTime %}
-                  <tr>
-                    <th>Test Execution Start Time</th>
-                    <td>{{ test_case_result.TestExecutionStartTime }}</td>
-                  </tr>
-                {% endif %}
-                {% if test_case_result.TestExecutionEndTime %}
-                  <tr>
-                    <th>Test Execution End Time</th>
-                    <td>{{ test_case_result.TestExecutionEndTime }}</td>
-                  </tr>
-                {% endif %}
-                <tr>
-                  <th>Message</th>
-                  <td>{{ test_case_result.TestCaseMessage }}</td>
-                </tr>
-                <tr>
-                  <th>Package Versions</th>
-                  <td class="packages">{{ test_case_result.PackageVersions }}</td>
-                </tr>
-                <tr>
-                  <th>Test Case Details (Logs)</th>
-                  {% if 'HA Parameters Validation' in test_case_result.TestCaseName %}
-                    <td class="cluster">{{ test_case_result.TestCaseDetails }}</td>
-                  {% else %}
-                    <td class="jsonobject">{{ test_case_result.TestCaseDetails }}</td>
-                  {% endif %}
-                </tr>
-                {% if test_case_result.TestCaseLogMessagesFromSap %}
-                  <tr>
-                    <th>Logs from /var/log/messages</th>
-                    <td class="newlinemessages">
-                      <details>{{ test_case_result.TestCaseLogMessagesFromSap }}</details>
-                    </td>
-                  </tr>
-                {% endif %}
-              </table>
+        {% for test_case_result in test_case_results %}
+          <div class="test-case {{ test_case_result.TestCaseStatus|lower }}">
+            <div class="title" onclick="toggleDetails(this)">
+              <span class="name">{{ test_case_result.TestCaseName }}</span>
+              <span class="duration">&#x1F550; {{ test_case_result.DurationSeconds }}</span>
             </div>
-          {% endfor %}
-        </div>
+            <table class="details">
+              <tr>
+                <th>Test Description</th>
+                <td>{{ test_case_result.TestCaseDescription }}</td>
+              </tr>
+              <tr>
+                <th>Invocation ID</th>
+                <td>{{ test_case_result.TestCaseInvocationId }}</td>
+              </tr>
+              <tr>
+                <th>Start Time</th>
+                <td>{{ test_case_result.TestCaseStartTime }}</td>
+              </tr>
+              <tr>
+                <th>End Time</th>
+                <td>{{ test_case_result.TestCaseEndTime }}</td>
+              </tr>
+              {% if test_case_result.TestExecutionStartTime %}
+                <tr>
+                  <th>Test Execution Start Time</th>
+                  <td>{{ test_case_result.TestExecutionStartTime }}</td>
+                </tr>
+              {% endif %}
+              {% if test_case_result.TestExecutionEndTime %}
+                <tr>
+                  <th>Test Execution End Time</th>
+                  <td>{{ test_case_result.TestExecutionEndTime }}</td>
+                </tr>
+              {% endif %}
+              <tr>
+                <th>Message</th>
+                <td>{{ test_case_result.TestCaseMessage }}</td>
+              </tr>
+              <tr>
+                <th>Package Versions</th>
+                <td class="packages">{{ test_case_result.PackageVersions }}</td>
+              </tr>
+              <tr>
+                <th>Test Case Details (Logs)</th>
+                {% if 'HA Parameters Validation' in test_case_result.TestCaseName %}
+                  <td class="cluster">{{ test_case_result.TestCaseDetails }}</td>
+                {% else %}
+                  <td class="jsonobject">{{ test_case_result.TestCaseDetails }}</td>
+                {% endif %}
+              </tr>
+              {% if test_case_result.TestCaseLogMessagesFromSap %}
+                <tr>
+                  <th>Logs from /var/log/messages</th>
+                  <td class="newlinemessages">
+                    <details>{{ test_case_result.TestCaseLogMessagesFromSap }}</details>
+                  </td>
+                </tr>
+              {% endif %}
+            </table>
+          </div>
+        {% endfor %}
       </div>
     </div>
     <div class="footer">Report generated on: {{ report_generation_time }}</div>
@@ -531,10 +654,73 @@
           }
         }
       }
+      
+      // Function to update the pie chart with the test results
+      function initializeTestResults(testResults) {
+        const pie = document.getElementById('testResults')
+        const percentSpan = pie.querySelector('span')
+      
+        const total = testResults.length
+        const counts = {
+          PASSED: testResults.filter((r) => r === 'PASSED').length,
+          FAILED: testResults.filter((r) => r === 'FAILED').length,
+          WARNING: testResults.filter((r) => r === 'WARNING').length
+        }
+      
+        const percentages = {
+          PASSED: (counts.PASSED / total) * 100,
+          FAILED: (counts.FAILED / total) * 100,
+          WARNING: (counts.WARNING / total) * 100
+        }
+      
+        const duration = 1500
+        const steps = 60
+        const stepDuration = duration / steps
+        let currentStep = 0
+      
+        const animateChart = setInterval(() => {
+          currentStep++
+          const progress = (currentStep / steps) * 100
+      
+          let gradient
+          if (progress <= percentages.PASSED) {
+            gradient = `conic-gradient(
+                      var(--passed) 0% ${progress}%,
+                      transparent ${progress}% 100%
+                  )`
+          } else if (progress <= percentages.PASSED + percentages.FAILED) {
+            gradient = `conic-gradient(
+                      var(--passed) 0% ${percentages.PASSED}%,
+                      var(--failed) ${percentages.PASSED}% ${progress}%,
+                      transparent ${progress}% 100%
+                  )`
+          } else {
+            gradient = `conic-gradient(
+                      var(--passed) 0% ${percentages.PASSED}%,
+                      var(--failed) ${percentages.PASSED}% ${percentages.PASSED + percentages.FAILED}%,
+                      var(--warning) ${percentages.PASSED + percentages.FAILED}% ${progress}%,
+                      transparent ${progress}% 100%
+                  )`
+          }
+      
+          pie.style.background = gradient
+      
+          if (currentStep >= steps) {
+            clearInterval(animateChart)
+          }
+        }, stepDuration)
+      
+        percentSpan.textContent = `${counts.PASSED}/${total}`
+      }
       formatJsonObjects()
       formatNewLineMessages()
       formatPackageList()
       parseClusterData()
+      document.addEventListener('DOMContentLoaded', () => {
+        const testResultsElement = document.getElementById('testResults')
+        const testResults = JSON.parse(testResultsElement.dataset.results || '[]')
+        initializeTestResults(testResults)
+      })
     </script>
   </body>
 </html>
