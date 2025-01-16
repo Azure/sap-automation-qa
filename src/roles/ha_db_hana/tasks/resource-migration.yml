@@ -106,7 +106,6 @@
                                       "Test Execution: Resource Migration": "{{ hana_db_resource_migration }}",
                                       "Post Validations: Validate HANA DB cluster status": "{{ cluster_status_test_execution_1 }}",
                                     }
-          run_once:                     true
 
 # /*---------------------------------------------------------------------------
 # |                          Post Validations                                 |

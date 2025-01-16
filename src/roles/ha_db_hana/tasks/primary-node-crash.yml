@@ -104,7 +104,6 @@
                                       "Post Validations: CleanUp any failed resource": "{{ cleanup_failed_resource_post }}",
                                       "Post Validations: Validate HANA DB cluster status": "{{ cluster_status_post }}",
                                     }
-          run_once:                     true
 
 # /*---------------------------------------------------------------------------
 # |                          Post Validations                                 |

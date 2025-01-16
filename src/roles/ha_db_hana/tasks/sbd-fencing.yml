@@ -110,6 +110,7 @@
                                       "Test Execution: Kill inquisitor results": "{{ inquisitor_kill }}",
                                       "Post Validations: Validate HANA DB cluster status": "{{ cluster_status_test_execution_1 }}",
                                     }
+
 # /*---------------------------------------------------------------------------
 # |                          Post Validations                                 |
 # +--------------------------------------------------------------------------*/
