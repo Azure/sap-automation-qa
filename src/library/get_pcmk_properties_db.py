@@ -797,25 +797,100 @@ class ClusterManager:
             self.params["virtual_machine_name"],
         )
 
-        results = {
-            "cluster": validator.validate_cluster_params(),
-            "sap_hana": validator.validate_global_ini(),
-            "os_parameters": validator.validate_os_parameters(),
-            "fence": validator.validate_fence_azure_arm(),
-            "constraints": validator.validate_constraints(),
+        consolidated_results = {
+            "validated_parameters": [],
+            "drift_parameters": [],
+            "informational_parameters": [],
+            "error_message": "",
+            "message": "Cluster parameters validation completed",
         }
 
-        overall_status = (
-            Status.SUCCESS
-            if all(r.status == Status.SUCCESS for r in results.values())
-            else Status.ERROR
-        )
+        try:
+            validations = {
+                "cluster": validator.validate_cluster_params(),
+                "sap_hana_sr": validator.validate_global_ini(),
+                "os_parameters": validator.validate_os_parameters(),
+                "fence": validator.validate_fence_azure_arm(),
+                "constraints": validator.validate_constraints(),
+            }
 
-        self.module.exit_json(
-            msg="Cluster parameters validation completed",
-            details={k: v.to_dict() for k, v in results.items()},
-            status=overall_status.value,
-        )
+            for validation_name, result in validations.items():
+                self._process_validation_result(
+                    consolidated_results, validation_name, result
+                )
+
+            overall_status = (
+                Status.SUCCESS
+                if not consolidated_results["drift_parameters"]
+                and not consolidated_results["error_message"]
+                else Status.ERROR
+            )
+
+            self.module.exit_json(
+                msg=consolidated_results["message"],
+                details=consolidated_results,
+                status=overall_status.value,
+            )
+
+        except Exception as e:
+            consolidated_results["error_message"] = str(e)
+            self.module.fail_json(msg=str(e), details=consolidated_results)
+
+    def _process_validation_result(
+        self, consolidated_results: dict, validation_name: str, result: ValidationResult
+    ) -> None:
+        result_dict = result.to_dict()
+
+        # Process messages from the validation result
+        for key, value in result_dict.get("msg", {}).items():
+            if isinstance(value, list):
+                # Handle list values
+                for item in value:
+                    self._categorize_parameter(
+                        consolidated_results, f"{validation_name}.{key}", item
+                    )
+            elif isinstance(value, dict):
+                # Handle nested dictionaries
+                for sub_key, sub_value in value.items():
+                    if isinstance(sub_value, list):
+                        for item in sub_value:
+                            self._categorize_parameter(
+                                consolidated_results,
+                                f"{validation_name}.{key}.{sub_key}",
+                                item,
+                            )
+                    else:
+                        self._categorize_parameter(
+                            consolidated_results,
+                            f"{validation_name}.{key}.{sub_key}",
+                            str(sub_value),
+                        )
+            else:
+                # Handle simple values
+                self._categorize_parameter(
+                    consolidated_results, f"{validation_name}.{key}", str(value)
+                )
+
+        # Process any error messages
+        if (
+            result.status == Status.ERROR
+            and "error_message" not in consolidated_results
+        ):
+            consolidated_results["error_message"] = (
+                f"Error in {validation_name} validation"
+            )
+
+    def _categorize_parameter(
+        self, consolidated_results: dict, category: str, value: str
+    ) -> None:
+        if "Drift" in category or "FAILED" in value:
+            consolidated_results["drift_parameters"].append(f"{category}: {value}")
+        elif "Valid" in category or "PASSED" in value:
+            consolidated_results["validated_parameters"].append(f"{category}: {value}")
+        else:
+            consolidated_results["informational_parameters"].append(
+                f"{category}: {value}"
+            )
 
 
 def main() -> None:
