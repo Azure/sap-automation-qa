@@ -36,17 +36,18 @@
       }
       
       .container {
-        display: flex;
-        align-items: flex-start;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(auto, 1400px) minmax(0, 1fr);
+        gap: 20px;
       }
-      
+
       .left-bar {
-        flex: 1;
+        grid-column: 2;
         padding: 20px;
       }
-      
+
       .right-content {
-        flex: 2;
+        grid-column: 2;
         padding: 20px;
       }
       
@@ -313,37 +314,39 @@
           <div class="system-info-container">
             <h2 class="system-info-heading">System Information</h2>
             <div class="system-info-columns">
-              <div class="system-info-column">
-                <p>
-                  <strong>Test Group Name:</strong> {{ test_case_results.0.TestGroupName }}
-                </p>
-                <p>
-                  <strong>DB SID:</strong> {{ test_case_results.0.DbSid }}
-                </p>
-                <p>
-                  <strong>SAP SID:</strong> {{ test_case_results.0.SapSid }}
-                </p>
-              </div>
-              <div class="system-info-column">
-                <p>
-                  <strong>DB Fencing Agent:</strong> {{ test_case_results.0.DbFencingType }}
-                </p>
-                <p>
-                  <strong>SCS Fencing Agent:</strong> {{ test_case_results.0.ScsFencingType }}
-                </p>
-                <p>
-                  <strong>DB Type:</strong> {{ test_case_results.0.DBType }}
-                </p>
-              </div>
-              <div class="system-info-column">
-                <p>
-                  <strong>OS Version:</strong> {{ test_case_results.0.OsVersion }}
-                </p>
-                <p>
-                  <strong>Hostnames:</strong>
-                  {{ test_case_results|map(attribute='TestCaseHostname')|unique|join(', ') }}
-                </p>
-              </div>
+              {% for i in range(0, test_case_results|length, 3) %}
+                <div class="system-info-column">
+                  {% for j in range(i, i+3) %}
+                    {% if test_case_results|length > j %}
+                      <p>
+                        <strong>Test Group Name:</strong> {{ test_case_results[j].TestGroupName }}
+                      </p>
+                      <p>
+                        <strong>DB SID:</strong> {{ test_case_results[j].DbSid }}
+                      </p>
+                      <p>
+                        <strong>SAP SID:</strong> {{ test_case_results[j].SapSid }}
+                      </p>
+                      <p>
+                        <strong>DB Fencing Agent:</strong> {{ test_case_results[j].DbFencingType }}
+                      </p>
+                      <p>
+                        <strong>SCS Fencing Agent:</strong> {{ test_case_results[j].ScsFencingType }}
+                      </p>
+                      <p>
+                        <strong>DB Type:</strong> {{ test_case_results[j].DBType }}
+                      </p>
+                      <p>
+                        <strong>OS Version:</strong> {{ test_case_results[j].OsVersion }}
+                      </p>
+                      <p>
+                        <strong>Hostnames:</strong>
+                        {{ test_case_results[j].TestCaseHostname }}
+                      </p>
+                    {% endif %}
+                  {% endfor %}
+                </div>
+              {% endfor %}
               <div class="system-info-column">
                 <div class="pie" id="testResults" style="position: relative; z-index: 2;" data-results='{{ test_case_results|map(attribute='TestCaseStatus')|list|tojson|safe }}'>
                   <span style="position: relative; z-index: 3;">0/0</span>
