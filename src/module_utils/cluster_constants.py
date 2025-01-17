@@ -10,18 +10,19 @@ Constants module for SAP HANA cluster configuration.
 This module contains all the constant values used for cluster validation
 and configuration.
 """
+from typing import Dict, Any
+from __future__ import absolute_import, division, print_function
 
-from __future__ import (absolute_import, division, print_function)
 __metaclass__ = type
 
-DOCUMENTATION = r'''
+DOCUMENTATION = r"""
 module_utils:
     cluster_constants:
         description: Constants for SAP HANA cluster configuration
         version_added: "1.0.0"
         author: 
             - "SDAF Core Team (@sdafcoreteam)"
-'''
+"""
 
 CLUSTER_RESOURCES = {
     "SUSE": {
