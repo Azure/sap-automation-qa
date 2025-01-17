@@ -14,12 +14,12 @@ import xml.etree.ElementTree as ET
 from collections import defaultdict
 from ansible.module_utils.basic import AnsibleModule
 from ansible.module_utils.cluster_constants import (
-        CLUSTER_RESOURCES,
-        CLUSTER_PROPERTIES,
-        OS_PARAMETERS,
-        CUSTOM_OS_PARAMETERS,
-        CONSTRAINTS,
-        REQUIRED_PARAMETERS
+    CLUSTER_RESOURCES,
+    CLUSTER_PROPERTIES,
+    OS_PARAMETERS,
+    CUSTOM_OS_PARAMETERS,
+    CONSTRAINTS,
+    REQUIRED_PARAMETERS,
 )
 
 

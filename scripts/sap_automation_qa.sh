@@ -1,21 +1,23 @@
+#!/bin/bash
+
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
-#!/bin/bash
-log "INFO" "Activate the virtual environment..."
-source $(realpath $(dirname $(realpath $0))/..)/.venv/bin/activate
+source "$(realpath $(dirname $(realpath $0))/..)/.venv/bin/activate"
 
-set -e
+cmd_dir="$(dirname "$(readlink -e "${BASH_SOURCE[0]}")")"
+
+# Set the environment variables
+export           ANSIBLE_COLLECTIONS_PATH=/opt/ansible/collections:${ANSIBLE_COLLECTIONS_PATH:+${ANSIBLE_COLLECTIONS_PATH}}
+export           ANSIBLE_CONFIG="${cmd_dir}/ansible.cfg"
+export           ANSIBLE_MODULE_UTILS="${cmd_dir}/src/module_utils:${ANSIBLE_MODULE_UTILS:+${ANSIBLE_MODULE_UTILS}}"
+export           ANSIBLE_HOST_KEY_CHECKING=False
+
 
 # Define the path to the vars.yaml file
 VARS_FILE="../vars.yaml"
 
-# Function to check if a command exists
-command_exists() {
-    command -v "$1" &> /dev/null
-}
-export ANSIBLE_HOST_KEY_CHECKING=False
-
+# colors for error messages
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 NC='\033[0m'
@@ -31,6 +33,17 @@ log() {
         echo -e "${GREEN}[INFO] $message${NC}"
     fi
 }
+
+log "INFO" "Activate the virtual environment..."
+
+
+set -e
+
+# Function to check if a command exists
+command_exists() {
+    command -v "$1" &> /dev/null
+}
+
 # Function to validate input parameters from vars.yaml
 validate_params() {
     local missing_params=()
