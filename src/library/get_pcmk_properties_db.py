@@ -12,7 +12,6 @@ import subprocess
 import json
 import xml.etree.ElementTree as ET
 from collections import defaultdict
-from dataclasses import dataclass
 from ansible.module_utils.basic import AnsibleModule
 
 
@@ -238,11 +237,28 @@ PARAMETER_VALUE_FORMAT = "Name: %s, Value: %s, Expected Value: %s"
 
 @dataclass
 class ValidationResult:
+    """
+    Represents the result of a validation.
+
+    :param status: Status of the validation.
+    :type status: Status
+    :param messages: Messages related to the validation.
+    :type messages: Dict[str, Any]
+    :param details: Optional additional details about the validation.
+    :type details: Optional[Dict]
+    """
+
     status: Status
     messages: Dict[str, Any]
     details: Optional[Dict] = None
 
     def to_dict(self) -> Dict:
+        """
+        Converts the validation result to a dictionary.
+
+        :return: Dictionary representation of the validation result.
+        :rtype: Dict
+        """
         return {
             "msg": self.messages,
             "status": self.status.value,
@@ -251,8 +267,20 @@ class ValidationResult:
 
 
 class CommandExecutor:
+    """
+    Executes system commands and parses XML output.
+    """
+
     @staticmethod
     def run_subprocess(command: Union[List[str], str]) -> str:
+        """
+        Runs a subprocess command and returns its output.
+
+        :param command: Command to run.
+        :type command: Union[List[str], str]
+        :return: Output of the command.
+        :rtype: str
+        """
         try:
             with subprocess.Popen(
                 command,
@@ -265,6 +293,14 @@ class CommandExecutor:
 
     @classmethod
     def parse_xml_output(cls, command: List[str]) -> Optional[ET.Element]:
+        """
+        Parses the XML output of a command.
+
+        :param command: Command to run.
+        :type command: List[str]
+        :return: Root element of the XML output.
+        :rtype: Optional[ET.Element]
+        """
         xml_output = cls.run_subprocess(command)
         if xml_output.startswith("<"):
             return ET.fromstring(xml_output)
@@ -273,6 +309,19 @@ class CommandExecutor:
 
 @dataclass
 class ValidationContext:
+    """
+    Context for validation, containing necessary parameters and command executor.
+
+    :param ansible_os_family: OS family for Ansible.
+    :type ansible_os_family: str
+    :param sid: System ID.
+    :type sid: str
+    :param vm_name: Virtual machine name.
+    :type vm_name: str
+    :param cmd_executor: Command executor instance.
+    :type cmd_executor: Optional[CommandExecutor]
+    """
+
     ansible_os_family: str
     sid: str = ""
     vm_name: str = ""
@@ -280,18 +329,50 @@ class ValidationContext:
 
 
 class ValidatorBase(ABC):
+    """
+    Abstract base class for validators.
+    """
+
     def __init__(self, context: ValidationContext):
+        """
+        Initializes the validator with the given context.
+
+        :param context: Validation context.
+        :type context: ValidationContext
+        """
         self.context = context
 
     @abstractmethod
     def validate(self) -> ValidationResult:
+        """
+        Abstract method to perform validation.
+
+        :return: Validation result.
+        :rtype: ValidationResult
+        """
         pass
 
     def _format_parameter_result(self, name: str, value: str, expected: str) -> str:
+        """
+        Formats the parameter result for reporting.
+
+        :param name: Parameter name.
+        :type name: str
+        :param value: Actual parameter value.
+        :type value: str
+        :param expected: Expected parameter value.
+        :type expected: str
+        :return: Formatted parameter result.
+        :rtype: str
+        """
         return f"Name: {name}, Value: {value}, Expected Value: {expected}"
 
 
 class ParameterValidatorMixin:
+    """
+    Mixin class for parameter validation.
+    """
+
     def _check_and_add_parameter(
         self,
         key: str,
@@ -302,13 +383,41 @@ class ParameterValidatorMixin:
         drift_parameters: dict,
         valid_parameters: dict,
     ) -> None:
+        """
+        Checks and adds the parameter to the appropriate list based on comparison.
+
+        :param key: Parameter key.
+        :type key: str
+        :param value: Actual parameter value.
+        :type value: str
+        :param expected: Expected parameter value.
+        :type expected: str
+        :param category: Category of the parameter.
+        :type category: str
+        :param identifier: Identifier for the parameter.
+        :type identifier: str
+        :param drift_parameters: Dictionary to store drift parameters.
+        :type drift_parameters: dict
+        :param valid_parameters: Dictionary to store valid parameters.
+        :type valid_parameters: dict
+        """
         result = self._format_parameter_result(key, value, expected)
         target_dict = drift_parameters if value != expected else valid_parameters
         target_dict[category][identifier].append(result)
 
 
 class OSParameterValidator(ValidatorBase, ParameterValidatorMixin):
+    """
+    Validates the OS parameters by comparing actual and expected values.
+    """
+
     def validate(self) -> ValidationResult:
+        """
+        Validates the OS parameters.
+
+        :return: Validation result containing the status and messages.
+        :rtype: ValidationResult
+        """
         drift_parameters = []
         validated_parameters = []
 
@@ -342,6 +451,18 @@ class OSParameterValidator(ValidatorBase, ParameterValidatorMixin):
         drift_parameters: List,
         validated_parameters: List,
     ) -> None:
+        """
+        Validates the standard and custom OS parameters.
+
+        :param standard_params: Dictionary of standard OS parameters.
+        :type standard_params: Dict
+        :param custom_params: Dictionary of custom OS parameters.
+        :type custom_params: Dict
+        :param drift_parameters: List to store drift parameters.
+        :type drift_parameters: List
+        :param validated_parameters: List to store validated parameters.
+        :type validated_parameters: List
+        """
         for param_type, params in standard_params.items():
             base_args = (
                 ["sysctl"] if param_type == "sysctl" else ["corosync-cmapctl", "-g"]
@@ -369,6 +490,16 @@ class OSParameterValidator(ValidatorBase, ParameterValidatorMixin):
             )
 
     def _extract_custom_param_value(self, output: str, details: Dict) -> str:
+        """
+        Extracts the value of a custom parameter from the command output.
+
+        :param output: Command output.
+        :type output: str
+        :param details: Details of the custom parameter.
+        :type details: Dict
+        :return: Extracted parameter value.
+        :rtype: str
+        """
         for line in output.splitlines():
             if details["parameter_name"] in line:
                 return line.split(":")[1].strip()
@@ -382,13 +513,37 @@ class OSParameterValidator(ValidatorBase, ParameterValidatorMixin):
         drift_parameters: List,
         validated_parameters: List,
     ) -> None:
+        """
+        Adds the parameter result to the appropriate list based on comparison.
+
+        :param name: Parameter name.
+        :type name: str
+        :param value: Actual parameter value.
+        :type value: str
+        :param expected: Expected parameter value.
+        :type expected: str
+        :param drift_parameters: List to store drift parameters.
+        :type drift_parameters: List
+        :param validated_parameters: List to store validated parameters.
+        :type validated_parameters: List
+        """
         result = self._format_parameter_result(name, value, expected)
         target_list = drift_parameters if value != expected else validated_parameters
         target_list.append(result)
 
 
 class FenceValidator(ValidatorBase):
+    """
+    Validates the fence agent permissions.
+    """
+
     def validate(self) -> ValidationResult:
+        """
+        Validates the fence agent permissions.
+
+        :return: Validation result containing the status and messages.
+        :rtype: ValidationResult
+        """
         try:
             msi_value = self._get_msi_value()
             if msi_value and msi_value.strip().lower() == "true":
@@ -403,6 +558,12 @@ class FenceValidator(ValidatorBase):
             return ValidationResult(Status.ERROR, {"Fence agent permissions": str(e)})
 
     def _get_msi_value(self) -> Optional[str]:
+        """
+        Gets the MSI value based on the OS family.
+
+        :return: MSI value.
+        :rtype: Optional[str]
+        """
         if self.context.ansible_os_family == "REDHAT":
             return self._get_redhat_msi_value()
         elif self.context.ansible_os_family == "SUSE":
@@ -410,6 +571,12 @@ class FenceValidator(ValidatorBase):
         return None
 
     def _get_redhat_msi_value(self) -> Optional[str]:
+        """
+        Gets the MSI value for Red Hat OS.
+
+        :return: MSI value.
+        :rtype: Optional[str]
+        """
         stonith_config = json.loads(
             self.context.cmd_executor.run_subprocess(
                 ["pcs", "stonith", "config", "--output-format=json"]
@@ -427,6 +594,12 @@ class FenceValidator(ValidatorBase):
         )
 
     def _get_suse_msi_value(self) -> str:
+        """
+        Gets the MSI value for SUSE OS.
+
+        :return: MSI value.
+        :rtype: str
+        """
         stonith_device_name = self.context.cmd_executor.run_subprocess(
             ["stonith_admin", "--list-registered"]
         ).splitlines()[0]
@@ -441,6 +614,12 @@ class FenceValidator(ValidatorBase):
         )
 
     def _validate_fence_permissions(self) -> ValidationResult:
+        """
+        Validates the fence agent permissions using the MSI value.
+
+        :return: Validation result containing the status and messages.
+        :rtype: ValidationResult
+        """
         fence_output = self.context.cmd_executor.run_subprocess(
             ["fence_azure_arm", "--msi", "--action=list"]
         )
@@ -459,7 +638,17 @@ class FenceValidator(ValidatorBase):
 
 
 class ConstraintValidator(ValidatorBase, ParameterValidatorMixin):
+    """
+    Validates the constraints in the cluster configuration.
+    """
+
     def validate(self) -> ValidationResult:
+        """
+        Validates the constraints.
+
+        :return: Validation result containing the status and messages.
+        :rtype: ValidationResult
+        """
         drift_parameters = defaultdict(lambda: defaultdict(list))
         valid_parameters = defaultdict(lambda: defaultdict(list))
 
@@ -487,6 +676,16 @@ class ConstraintValidator(ValidatorBase, ParameterValidatorMixin):
     def _validate_constraints(
         self, root: ET.Element, drift_parameters: dict, valid_parameters: dict
     ) -> None:
+        """
+        Validates the constraints from the XML root element.
+
+        :param root: Root element of the XML output.
+        :type root: ET.Element
+        :param drift_parameters: Dictionary to store drift parameters.
+        :type drift_parameters: dict
+        :param valid_parameters: Dictionary to store valid parameters.
+        :type valid_parameters: dict
+        """
         for constraint in root:
             constraint_type = constraint.tag
             if constraint_type in CONSTRAINTS:
@@ -501,6 +700,18 @@ class ConstraintValidator(ValidatorBase, ParameterValidatorMixin):
         drift_parameters: dict,
         valid_parameters: dict,
     ) -> None:
+        """
+        Validates the attributes of a constraint.
+
+        :param constraint: Constraint element from the XML output.
+        :type constraint: ET.Element
+        :param constraint_type: Type of the constraint.
+        :type constraint_type: str
+        :param drift_parameters: Dictionary to store drift parameters.
+        :type drift_parameters: dict
+        :param valid_parameters: Dictionary to store valid parameters.
+        :type valid_parameters: dict
+        """
         constraint_id = constraint.attrib.get("id", "")
         expected_attrs = CONSTRAINTS[constraint_type]
 
@@ -531,7 +742,17 @@ class ConstraintValidator(ValidatorBase, ParameterValidatorMixin):
 
 
 class GlobalIniValidator(ValidatorBase):
+    """
+    Validates the global.ini properties for SAPHanaSR.
+    """
+
     def validate(self) -> ValidationResult:
+        """
+        Validates the global.ini properties.
+
+        :return: Validation result containing the status and messages.
+        :rtype: ValidationResult
+        """
         try:
             properties = self._read_global_ini_properties()
             expected_properties = self._get_expected_properties()
@@ -543,7 +764,7 @@ class GlobalIniValidator(ValidatorBase):
             return ValidationResult(
                 Status.ERROR,
                 {
-                    "SAPHanaSR Properties validation failed with the expected properties": properties
+                    "SAPHanaSR Properties validation failed with expected properties": properties
                 },
             )
         except FileNotFoundError as e:
@@ -556,10 +777,17 @@ class GlobalIniValidator(ValidatorBase):
             )
 
     def _read_global_ini_properties(self) -> dict:
+        """
+        Reads the global.ini properties.
+
+        :return: Dictionary of global.ini properties.
+        :rtype: dict
+        :raises ValueError: If parsing the global.ini file fails.
+        """
         global_ini_path = (
             f"/usr/sap/{self.context.sid}/SYS/global/hdb/custom/config/global.ini"
         )
-        with open(global_ini_path, "r") as file:
+        with open(global_ini_path, "r", encoding="utf-8") as file:
             global_ini = [line.strip() for line in file.readlines()]
 
         try:
@@ -574,6 +802,12 @@ class GlobalIniValidator(ValidatorBase):
             raise ValueError(f"Failed to parse global.ini: {str(e)}")
 
     def _get_expected_properties(self) -> dict:
+        """
+        Gets the expected properties for the global.ini file based on the OS family.
+
+        :return: Dictionary of expected properties.
+        :rtype: dict
+        """
         expected_properties = {
             "SUSE": {
                 "provider": "SAPHanaSR",
@@ -590,7 +824,17 @@ class GlobalIniValidator(ValidatorBase):
 
 
 class ClusterParamValidator(ValidatorBase, ParameterValidatorMixin):
+    """
+    Validates cluster parameters by comparing actual and expected values.
+    """
+
     def validate(self) -> ValidationResult:
+        """
+        Validates the cluster parameters.
+
+        :return: Validation result containing the status and messages.
+        :rtype: ValidationResult
+        """
         drift_parameters = defaultdict(lambda: defaultdict(list))
         valid_parameters = defaultdict(lambda: defaultdict(list))
 
@@ -605,6 +849,14 @@ class ClusterParamValidator(ValidatorBase, ParameterValidatorMixin):
     def _validate_cluster_properties(
         self, drift_parameters: dict, valid_parameters: dict
     ) -> None:
+        """
+        Validates the cluster properties.
+
+        :param drift_parameters: Dictionary to store drift parameters.
+        :type drift_parameters: dict
+        :param valid_parameters: Dictionary to store valid parameters.
+        :type valid_parameters: dict
+        """
         for resource_operation in CLUSTER_PROPERTIES.keys():
             root = self.context.cmd_executor.parse_xml_output(
                 ["cibadmin", "--query", "--scope", resource_operation]
@@ -621,6 +873,18 @@ class ClusterParamValidator(ValidatorBase, ParameterValidatorMixin):
         drift_parameters: dict,
         valid_parameters: dict,
     ) -> None:
+        """
+        Processes the cluster properties.
+
+        :param root: Root element of the XML output.
+        :type root: ET.Element
+        :param resource_operation: Resource operation being validated.
+        :type resource_operation: str
+        :param drift_parameters: Dictionary to store drift parameters.
+        :type drift_parameters: dict
+        :param valid_parameters: Dictionary to store valid parameters.
+        :type valid_parameters: dict
+        """
         for root_element in root:
             primitive_id = root_element.get("id")
             extracted_values = {
@@ -643,6 +907,14 @@ class ClusterParamValidator(ValidatorBase, ParameterValidatorMixin):
     def _validate_resource_parameters(
         self, drift_parameters: dict, valid_parameters: dict
     ) -> None:
+        """
+        Validates the resource parameters.
+
+        :param drift_parameters: Dictionary to store drift parameters.
+        :type drift_parameters: dict
+        :param valid_parameters: Dictionary to store valid parameters.
+        :type valid_parameters: dict
+        """
         root = self.context.cmd_executor.parse_xml_output(
             ["cibadmin", "--query", "--scope", "resources"]
         )
@@ -652,6 +924,16 @@ class ClusterParamValidator(ValidatorBase, ParameterValidatorMixin):
     def _process_resources(
         self, root: ET.Element, drift_parameters: dict, valid_parameters: dict
     ) -> None:
+        """
+        Processes the resource parameters.
+
+        :param root: Root element of the XML output.
+        :type root: ET.Element
+        :param drift_parameters: Dictionary to store drift parameters.
+        :type drift_parameters: dict
+        :param valid_parameters: Dictionary to store valid parameters.
+        :type valid_parameters: dict
+        """
         for primitive in root.findall(".//primitive"):
             resource_id = primitive.get("id")
             resource_type = self._get_resource_type(primitive)
@@ -672,6 +954,14 @@ class ClusterParamValidator(ValidatorBase, ParameterValidatorMixin):
                 )
 
     def _get_resource_type(self, primitive: ET.Element) -> str:
+        """
+        Gets the resource type from the primitive element.
+
+        :param primitive: Primitive element from the XML output.
+        :type primitive: ET.Element
+        :return: Resource type.
+        :rtype: str
+        """
         resource_class = primitive.get("class")
         resource_provider = primitive.get("provider", "")
         resource_type = primitive.get("type")
@@ -681,6 +971,14 @@ class ClusterParamValidator(ValidatorBase, ParameterValidatorMixin):
         return f"{resource_class}:{resource_type}"
 
     def _get_actual_attributes(self, primitive: ET.Element) -> dict:
+        """
+        Gets the actual attributes from the primitive element.
+
+        :param primitive: Primitive element from the XML output.
+        :type primitive: ET.Element
+        :return: Dictionary of actual attributes.
+        :rtype: dict
+        """
         attributes = {}
         for prop in primitive.findall(".//nvpair"):
             attributes[prop.get("name")] = prop.get("value")
@@ -699,6 +997,22 @@ class ClusterParamValidator(ValidatorBase, ParameterValidatorMixin):
         drift_parameters: dict,
         valid_parameters: dict,
     ) -> None:
+        """
+        Compares the actual and expected parameters.
+
+        :param actual: Dictionary of actual parameters.
+        :type actual: dict
+        :param expected: Dictionary of expected parameters.
+        :type expected: dict
+        :param operation: Operation being validated.
+        :type operation: str
+        :param resource_id: Resource ID being validated.
+        :type resource_id: str
+        :param drift_parameters: Dictionary to store drift parameters.
+        :type drift_parameters: dict
+        :param valid_parameters: Dictionary to store valid parameters.
+        :type valid_parameters: dict
+        """
         for name, value in actual.items():
             if name in expected:
                 self._check_and_add_parameter(
@@ -714,6 +1028,16 @@ class ClusterParamValidator(ValidatorBase, ParameterValidatorMixin):
     def _create_validation_result(
         self, valid_parameters: dict, drift_parameters: dict
     ) -> ValidationResult:
+        """
+        Creates the validation result.
+
+        :param valid_parameters: Dictionary of valid parameters.
+        :type valid_parameters: dict
+        :param drift_parameters: Dictionary of drift parameters.
+        :type drift_parameters: dict
+        :return: Validation result containing the status and messages.
+        :rtype: ValidationResult
+        """
         valid_parameters_json = json.dumps(valid_parameters)
         missing_parameters = [
             parameter
@@ -746,11 +1070,30 @@ class ClusterParamValidator(ValidatorBase, ParameterValidatorMixin):
 
 @dataclass
 class ResultAggregator:
+    """
+    Aggregates the results of the cluster parameter validations.
+
+    :param parameters: List of validation parameters.
+    :type parameters: List[Dict[str, str]]
+    :param error_message: Error message if any validation fails.
+    :type error_message: str
+    :param message: General message about the validation process.
+    :type message: str
+    """
+
     parameters: List[Dict[str, str]] = field(default_factory=list)
     error_message: str = ""
     message: str = "Cluster parameters validation completed"
 
     def add_validation_result(self, category: str, result: ValidationResult) -> None:
+        """
+        Adds a validation result to the aggregator.
+
+        :param category: Category of the validation.
+        :type category: str
+        :param result: Validation result object.
+        :type result: ValidationResult
+        """
         result_dict = result.to_dict()
 
         for key, value in result_dict.get("msg", {}).items():
@@ -760,6 +1103,16 @@ class ResultAggregator:
             self.error_message = f"Error in {category} validation"
 
     def _process_value(self, category: str, key: str, value: Any) -> None:
+        """
+        Processes a value from the validation result.
+
+        :param category: Category of the validation.
+        :type category: str
+        :param key: Key of the validation result.
+        :type key: str
+        :param value: Value of the validation result.
+        :type value: Any
+        """
         if isinstance(value, dict):
             for sub_key, sub_value in value.items():
                 self._process_value(category, f"{key}.{sub_key}", sub_value)
@@ -770,7 +1123,17 @@ class ResultAggregator:
             self._categorize_parameter(category, key, str(value))
 
     def _categorize_parameter(self, category: str, key: str, value: str) -> None:
-        parent_key = key.split(".")[-1]
+        """
+        Categorizes a parameter from the validation result.
+
+        :param category: Category of the validation.
+        :type category: str
+        :param key: Key of the validation result.
+        :type key: str
+        :param value: Value of the validation result.
+        :type value: str
+        """
+        parent_key = key.split(".")[-1] if category != "os_parameters" else key
         param_entry = {
             "category": category,
             "type": parent_key,
@@ -796,6 +1159,12 @@ class ResultAggregator:
         self.parameters.append(param_entry)
 
     def to_dict(self) -> Dict:
+        """
+        Converts the aggregated results to a dictionary.
+
+        :return: Dictionary of aggregated results.
+        :rtype: Dict
+        """
         result = {
             "parameters": self.parameters,
         }
@@ -807,7 +1176,17 @@ class ResultAggregator:
 
 
 class ClusterManager:
+    """
+    Manages the cluster operations and validations.
+    """
+
     def __init__(self, module: AnsibleModule):
+        """
+        Initializes the ClusterManager with the given Ansible module.
+
+        :param module: Ansible module instance containing parameters, methods for module execution.
+        :type module: AnsibleModule
+        """
         self.module = module
         self.context = ValidationContext(
             ansible_os_family=module.params["ansible_os_family"],
@@ -818,6 +1197,9 @@ class ClusterManager:
         self.result_aggregator = ResultAggregator()
 
     def run(self) -> None:
+        """
+        Executes the main logic based on the action parameter.
+        """
         try:
             if self.module.params["action"] == "get":
                 self._handle_get_action()
@@ -825,6 +1207,9 @@ class ClusterManager:
             self.module.fail_json(msg=str(e))
 
     def _handle_get_action(self) -> None:
+        """
+        Handles the 'get' action by running validations and processing results.
+        """
         try:
             validators = self._create_validators()
             self._run_validations(validators)
@@ -834,6 +1219,12 @@ class ClusterManager:
             self.module.fail_json(msg=str(e), details=asdict(self.result_aggregator))
 
     def _create_validators(self) -> Dict[str, ValidatorBase]:
+        """
+        Creates a dictionary of validators for different cluster parameters.
+
+        :return: Dictionary of validators.
+        :rtype: Dict[str, ValidatorBase]
+        """
         return {
             "cluster": ClusterParamValidator(self.context),
             "sap_hana_sr": GlobalIniValidator(self.context),
@@ -843,11 +1234,20 @@ class ClusterManager:
         }
 
     def _run_validations(self, validators: Dict[str, ValidatorBase]) -> None:
+        """
+        Runs the validations using the provided validators.
+
+        :param validators: Dictionary of validators.
+        :type validators: Dict[str, ValidatorBase]
+        """
         for name, validator in validators.items():
             result = validator.validate()
             self.result_aggregator.add_validation_result(name, result)
 
     def _process_results(self) -> None:
+        """
+        Processes the validation results and exits the module with the appropriate status.
+        """
         has_errors = any(
             param["status"] == Status.ERROR.value
             for param in self.result_aggregator.parameters
@@ -867,6 +1267,9 @@ class ClusterManager:
 
 
 def main() -> None:
+    """
+    Main entry point for the Ansible module.
+    """
     module = AnsibleModule(
         argument_spec=dict(
             action=dict(type="str", choices=["get", "visualize"], required=True),
