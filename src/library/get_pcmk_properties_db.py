@@ -932,24 +932,31 @@ class ClusterParamValidator(ValidatorBase, ParameterValidatorMixin):
         :param valid_parameters: Dictionary to store valid parameters.
         :type valid_parameters: dict
         """
+        cluster_resources = CLUSTER_RESOURCES[self.context.ansible_os_family]
+
+        def compare_and_store_parameters(element, element_id, resource_key):
+            expected_attrs = cluster_resources[resource_key]
+            actual_attrs = self._get_actual_attributes(element)
+            self._compare_parameters(
+                actual_attrs,
+                expected_attrs,
+                "resources",
+                element_id,
+                drift_parameters,
+                valid_parameters,
+            )
+
         for primitive in root.findall(".//primitive"):
             resource_id = primitive.get("id")
             resource_type = self._get_resource_type(primitive)
+            if resource_type in cluster_resources:
+                compare_and_store_parameters(primitive, resource_id, resource_type)
 
-            if resource_type in CLUSTER_RESOURCES[self.context.ansible_os_family]:
-                expected_attrs = CLUSTER_RESOURCES[self.context.ansible_os_family][
-                    resource_type
-                ]
-                actual_attrs = self._get_actual_attributes(primitive)
-
-                self._compare_parameters(
-                    actual_attrs,
-                    expected_attrs,
-                    "resources",
-                    resource_id,
-                    drift_parameters,
-                    valid_parameters,
-                )
+        for meta in root.findall(".//meta_attributes"):
+            meta_id = meta.get("id")
+            matching_keys = [key for key in cluster_resources if key in meta_id]
+            for key in matching_keys:
+                compare_and_store_parameters(meta, meta_id, key)
 
     def _get_resource_type(self, primitive: ET.Element) -> str:
         """
