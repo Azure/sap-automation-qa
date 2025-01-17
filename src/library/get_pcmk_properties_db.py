@@ -24,7 +24,7 @@ class Status(Enum):
 
 CLUSTER_RESOURCES = {
     "SUSE": {
-        "ocf:heartbeat:SAPHanaTopology": {
+        "ocf:suse:SAPHanaTopology": {
             "clone-node-max": "1",
             "target-role": "Started",
             "interleave": "true",
@@ -35,7 +35,7 @@ CLUSTER_RESOURCES = {
             "stop-interval": "0",
             "stop-timeout": "300",
         },
-        "ocf:heartbeat:SAPHana": {
+        "ocf:suse:SAPHana": {
             "notify": "true",
             "clone-max": "2",
             "clone-node-max": "1",
@@ -227,12 +227,6 @@ CONSTRAINTS = {
         "attribute": "#uname",
     },
 }
-
-PARAMETER_VALUE_FORMAT = "Name: %s, Value: %s, Expected Value: %s"
-
-# [Previous imports and constants remain unchanged]
-
-# [Previous imports and constants remain unchanged]
 
 
 @dataclass
@@ -1140,19 +1134,16 @@ class ResultAggregator:
         }
 
         if "Name:" in value:
-            # Parse structured parameter values
             parts = value.split(", ")
             for part in parts:
                 name, val = part.split(": ", 1)
                 param_entry[name.lower()] = val
 
-            # Set status based on the parameter type
             if "Drift" in key:
                 param_entry["status"] = Status.ERROR.value
             elif "Valid" in key:
                 param_entry["status"] = Status.SUCCESS.value
         else:
-            # Handle informational parameters
             param_entry["value"] = value
             param_entry["status"] = Status.INFO.value
 
