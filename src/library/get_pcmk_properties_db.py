@@ -24,10 +24,12 @@ class Status(Enum):
 
 CLUSTER_RESOURCES = {
     "SUSE": {
-        "ocf:suse:SAPHanaTopology": {
+        "cln_SAPHanaTopology": {
             "clone-node-max": "1",
             "target-role": "Started",
             "interleave": "true",
+        },
+        "ocf:suse:SAPHanaTopology": {
             "monitor-interval": "10",
             "monitor-timeout": "600",
             "start-interval": "0",
@@ -35,12 +37,14 @@ CLUSTER_RESOURCES = {
             "stop-interval": "0",
             "stop-timeout": "300",
         },
-        "ocf:suse:SAPHana": {
+        "msl_SAPHana": {
             "notify": "true",
             "clone-max": "2",
             "clone-node-max": "1",
             "target-role": "Started",
             "interleave": "true",
+        },
+        "ocf:suse:SAPHana": {
             "PREFER_SITE_TAKEOVER": "true",
             "DUPLICATE_PRIMARY_TIMEOUT": "7200",
             "AUTOMATED_REGISTER": "true",
