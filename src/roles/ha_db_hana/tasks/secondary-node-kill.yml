@@ -17,7 +17,7 @@
 # /*---------------------------------------------------------------------------
 # |                          Test Execution                                   |
 # +--------------------------------------------------------------------------*/
-- name:                             "Test Execution: Primary Node Kill"
+- name:                             "Test Execution: Secondary Node Kill"
   become:                           true
   when:
                                     - node_tier == "hana"
@@ -25,14 +25,14 @@
                                     - cluster_status_pre.status == "running"
                                     - cluster_status_pre is defined
   block:
-    - name:                         "Test Execution: Kill the primary node."
+    - name:                         "Test Execution: Kill the secondary node."
       when:                         ansible_hostname == cluster_status_pre.primary_node
       block:
         - name:                     "Test Execution: Start timer"
           ansible.builtin.set_fact:
             test_execution_start:   "{{ now(utc=true, fmt='%Y-%m-%d %H:%M:%S') }}"
 
-    - name:                         "Test Execution: Kill the primary node."
+    - name:                         "Test Execution: Kill the secondary node."
       when:                         ansible_hostname == cluster_status_pre.secondary_node
       block:
         - name:                     "Test Execution: Kill the HANA DB"
@@ -43,7 +43,7 @@
           changed_when:             hana_db_kill_results == 0
           failed_when:              hana_db_kill_results.rc != 0
 
-    - name:                         "Test Execution: Kill the primary node."
+    - name:                         "Test Execution: Kill the secondary node cont."
       when:                         ansible_hostname == cluster_status_pre.primary_node
       block:
         - name:                     "Test Execution: Validate HANA DB cluster status"
