@@ -70,12 +70,11 @@
           register:                 hana_db_register_failed_resource
           changed_when:             hana_db_register_failed_resource.rc == 0
 
-        - name:                     "Test Execution: Stop timer"
-          ansible.builtin.set_fact:
-            test_execution_end:     "{{ now(utc=true, fmt='%Y-%m-%d %H:%M:%S') }}"
-
         - name:                     "Test Execution: CleanUp any failed resource"
-          ansible.builtin.command:  "crm_resource --cleanup"
+          ansible.builtin.command: | 
+                                    crm_resource --resource \
+                                    msl_SAPHana_{{ db_sid | upper }}_HDB{{ db_instance_number }} \
+                                    --cleanup --node {{ cluster_status_pre.secondary_node }}
           register:                 cleanup_failed_resource_post
           changed_when:             cleanup_failed_resource_post.rc == 0
 
@@ -89,6 +88,10 @@
           until: |
                                     cluster_status_post.primary_node == cluster_status_pre.primary_node and
                                     cluster_status_post.secondary_node == cluster_status_pre.secondary_node
+
+        - name:                     "Test Execution: Stop timer"
+          ansible.builtin.set_fact:
+            test_execution_end:     "{{ now(utc=true, fmt='%Y-%m-%d %H:%M:%S') }}"
 
         - name:                     "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} Read var log messages by importing role"
           ansible.builtin.include_tasks: "roles/misc/tasks/var-log-messages.yml"

@@ -74,10 +74,6 @@
           register:                    hana_db_register_failed_resource
           changed_when:                hana_db_register_failed_resource.rc == 0
 
-        - name:                        "Test Execution: Stop timer"
-          ansible.builtin.set_fact:
-            test_execution_end:        "{{ now(utc=true, fmt='%Y-%m-%d %H:%M:%S') }}"
-
         - name:                        "Test Execution: Validate HANA DB cluster status"
           get_cluster_status:
             operation_step:            "post_failover"
@@ -88,6 +84,10 @@
           until: |
                                        cluster_status_post.primary_node == cluster_status_pre.primary_node and
                                        cluster_status_post.secondary_node == cluster_status_pre.secondary_node
+
+        - name:                        "Test Execution: Stop timer"
+          ansible.builtin.set_fact:
+            test_execution_end:        "{{ now(utc=true, fmt='%Y-%m-%d %H:%M:%S') }}"
 
         - name:                        "Set test case message and details"
           ansible.builtin.set_fact:

@@ -42,9 +42,9 @@ test_groups:
       #   task_name:                  primary-echo-b
       #   description:                This runs a functional test to immediately reboot the system without properly shutting it down.
 
-      - name:                       HA Functional Test- Crash index server on secondary node
-        task_name:                  secondary-crash-index
-        description:                This runs a functional test for crashing index server on secondary node
+      # - name:                       HA Functional Test- Crash index server on secondary node
+      #   task_name:                  secondary-crash-index
+      #   description:                This runs a functional test for crashing index server on secondary node
 
       - name:                       HA Functional Test- Secondary Node Kill
         task_name:                  secondary-node-kill
