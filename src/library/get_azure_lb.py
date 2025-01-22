@@ -50,7 +50,6 @@ class AzureLoadBalancer:
             load_balancers = self.network_client.load_balancers.list(
                 self.module.params["resource_group_name"]
             )
-            self.result["load_balancer"] = load_balancers
             return [lb.as_dict() for lb in load_balancers]
         except Exception as e:
             self.result["error"] = str(e)
