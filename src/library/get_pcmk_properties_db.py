@@ -13,14 +13,218 @@ import json
 import xml.etree.ElementTree as ET
 from collections import defaultdict
 from ansible.module_utils.basic import AnsibleModule
-from ansible.module_utils.cluster_constants import (
-    CLUSTER_RESOURCES,
-    CLUSTER_PROPERTIES,
-    OS_PARAMETERS,
-    CUSTOM_OS_PARAMETERS,
-    CONSTRAINTS,
-    REQUIRED_PARAMETERS,
-)
+
+
+CLUSTER_RESOURCES = {
+    "SUSE": {
+        "cln_SAPHanaTopology": {
+            "clone-node-max": "1",
+            "target-role": "Started",
+            "interleave": "true",
+        },
+        "ocf:suse:SAPHanaTopology": {
+            "monitor-interval": "10",
+            "monitor-timeout": "600",
+            "start-interval": "0",
+            "start-timeout": "600",
+            "stop-interval": "0",
+            "stop-timeout": "300",
+        },
+        "msl_SAPHana": {
+            "notify": "true",
+            "clone-max": "2",
+            "clone-node-max": "1",
+            "target-role": "Started",
+            "interleave": "true",
+        },
+        "ocf:suse:SAPHana": {
+            "PREFER_SITE_TAKEOVER": "true",
+            "DUPLICATE_PRIMARY_TIMEOUT": "7200",
+            "AUTOMATED_REGISTER": "true",
+            "start-interval": "0",
+            "start-timeout": "3600",
+            "stop-interval": "0",
+            "stop-timeout": "3600",
+            "promote-interval": "0",
+            "promote-timeout": "3600",
+            "monitor-Master-interval": "60",
+            "monitor-Master-timeout": "700",
+            "monitor-Slave-interval": "61",
+            "monitor-Slave-timeout": "700",
+            "demote-interval": "0s",
+            "demote-timeout": "320",
+        },
+        "stonith:fence_azure_arm": {
+            "pcmk_monitor_retries": "4",
+            "pcmk_action_limit": "3",
+            "power_timeout": "240",
+            "pcmk_reboot_timeout": "900",
+            "pcmk_delay_max": "15",
+            "monitor-interval": "3600",
+            "monitor-timeout": "120",
+        },
+        "ocf:heartbeat:azure-events-az": {
+            "interleave": "true",
+            "allow-unhealthy-nodes": "true",
+            "failure-timeout": "120s",
+            "start-start-delay": "60s",
+            "monitor-interval": "10s",
+        },
+        "ocf:heartbeat:azure-lb": {
+            "monitor-interval": "10s",
+            "monitor-timeout": "20s",
+            "resource-stickiness": "0",
+        },
+        "ocf:heartbeat:IPaddr2": {
+            "monitor-interval": "10s",
+            "monitor-timeout": "20s",
+        },
+    },
+    "REDHAT": {
+        "ocf:heartbeat:SAPHanaTopology": {
+            "clone-node-max": "1",
+            "target-role": "Started",
+            "interleave": "true",
+            "monitor-interval": "10",
+            "monitor-timeout": "600",
+            "start-interval": "0s",
+            "start-timeout": "600",
+            "stop-interval": "0s",
+            "stop-timeout": "300",
+        },
+        "ocf:heartbeat:SAPHana": {
+            "notify": "true",
+            "clone-max": "2",
+            "clone-node-max": "1",
+            "target-role": "Started",
+            "interleave": "true",
+            "PREFER_SITE_TAKEOVER": "true",
+            "DUPLICATE_PRIMARY_TIMEOUT": "7200",
+            "AUTOMATED_REGISTER": "true",
+            "start-interval": "0s",
+            "start-timeout": "3600",
+            "stop-interval": "0s",
+            "stop-timeout": "3600",
+            "promote-interval": "0s",
+            "promote-timeout": "3600",
+            "monitor-Master-interval": "59",
+            "monitor-Master-timeout": "700",
+            "monitor-Slave-interval": "61",
+            "monitor-Slave-timeout": "700",
+            "demote-interval": "0s",
+            "demote-timeout": "3600",
+        },
+        "stonith:fence_azure_arm": {
+            "pcmk_monitor_retries": "4",
+            "pcmk_action_limit": "3",
+            "power_timeout": "240",
+            "pcmk_reboot_timeout": "900",
+            "pcmk_delay_max": "15s",
+            "monitor-interval": "3600",
+            "pcmk_monitor_timeout": "120",
+        },
+        "ocf:heartbeat:azure-events-az": {
+            "interleave": "true",
+            "allow-unhealthy-nodes": "true",
+            "failure-timeout": "120s",
+            "start-start-delay": "60s",
+            "monitor-interval": "10s",
+        },
+        "ocf:heartbeat:azure-lb": {
+            "monitor-interval": "10s",
+            "monitor-timeout": "20s",
+        },
+        "ocf:heartbeat:IPaddr2": {
+            "monitor-interval": "10s",
+            "monitor-timeout": "20s",
+        },
+    },
+}
+
+CLUSTER_PROPERTIES = {
+    "crm_config": {
+        "cib-bootstrap-options": {
+            "have-watchdog": "false",
+            "cluster-infrastructure": "corosync",
+            "stonith-enabled": "true",
+            "concurrent-fencing": "true",
+            "stonith-timeout": "900s",
+            "maintenance-mode": "false",
+            "azure-events_globalPullState": "IDLE",
+            "priority-fencing-delay": "30",
+        }
+    },
+    "rsc_defaults": {
+        "build-resource-defaults": {
+            "resource-stickiness": "1000",
+            "migration-threshold": "5000",
+            "priority": "1",
+        }
+    },
+    "op_defaults": {
+        "op-options": {
+            "timeout": "600",
+            "record-pending": "true",
+        }
+    },
+}
+
+OS_PARAMETERS = {
+    "REDHAT": {
+        "sysctl": {
+            "net.ipv4.tcp_timestamps": {"expected_value": "1"},
+            "vm.swappiness": {"expected_value": "10"},
+        },
+        "corosync-cmapctl": {
+            "runtime.config.totem.token": {"expected_value": "30000"},
+            "runtime.config.totem.consensus": {"expected_value": "36000"},
+        },
+    },
+    "SUSE": {
+        "sysctl": {
+            "net.ipv4.tcp_timestamps": {"expected_value": "1"},
+            "vm.swappiness": {"expected_value": "10"},
+        },
+        "corosync-cmapctl": {
+            "runtime.config.totem.token": {"expected_value": "30000"},
+            "runtime.config.totem.consensus": {"expected_value": "36000"},
+            "quorum.expected_votes": {"expected_value": "2"},
+        },
+    },
+}
+
+CUSTOM_OS_PARAMETERS = {
+    "REDHAT": {
+        "quorum.expected_votes": {
+            "expected_value": "2",
+            "parameter_name": "Expected votes",
+            "command": ["pcs", "quorum", "status"],
+        },
+    },
+    "SUSE": {},
+}
+
+REQUIRED_PARAMETERS = {
+    "priority-fencing-delay",
+}
+
+CONSTRAINTS = {
+    "rsc_colocation": {
+        "score": "4000",
+        "rsc-role": "Started",
+        "with-rsc-role": "Promoted",
+    },
+    "rsc_order": {
+        "first-action": "start",
+        "then-action": "start",
+        "symmetrical": "false",
+    },
+    "rsc_location": {
+        "score-attribute": "#health-azure",
+        "operation": "defined",
+        "attribute": "#uname",
+    },
+}
 
 
 class Status(Enum):
@@ -34,13 +238,6 @@ class Status(Enum):
 class ValidationResult:
     """
     Represents the result of a validation.
-
-    :param status: Status of the validation.
-    :type status: Status
-    :param messages: Messages related to the validation.
-    :type messages: Dict[str, Any]
-    :param details: Optional additional details about the validation.
-    :type details: Optional[Dict]
     """
 
     status: Status
@@ -70,11 +267,6 @@ class CommandExecutor:
     def run_subprocess(command: Union[List[str], str]) -> str:
         """
         Runs a subprocess command and returns its output.
-
-        :param command: Command to run.
-        :type command: Union[List[str], str]
-        :return: Output of the command.
-        :rtype: str
         """
         try:
             with subprocess.Popen(
@@ -90,11 +282,6 @@ class CommandExecutor:
     def parse_xml_output(cls, command: List[str]) -> Optional[ET.Element]:
         """
         Parses the XML output of a command.
-
-        :param command: Command to run.
-        :type command: List[str]
-        :return: Root element of the XML output.
-        :rtype: Optional[ET.Element]
         """
         xml_output = cls.run_subprocess(command)
         if xml_output.startswith("<"):
@@ -106,15 +293,6 @@ class CommandExecutor:
 class ValidationContext:
     """
     Context for validation, containing necessary parameters and command executor.
-
-    :param ansible_os_family: OS family for Ansible.
-    :type ansible_os_family: str
-    :param sid: System ID.
-    :type sid: str
-    :param vm_name: Virtual machine name.
-    :type vm_name: str
-    :param cmd_executor: Command executor instance.
-    :type cmd_executor: Optional[CommandExecutor]
     """
 
     ansible_os_family: str
@@ -131,9 +309,6 @@ class ValidatorBase(ABC):
     def __init__(self, context: ValidationContext):
         """
         Initializes the validator with the given context.
-
-        :param context: Validation context.
-        :type context: ValidationContext
         """
         self.context = context
 
@@ -141,24 +316,12 @@ class ValidatorBase(ABC):
     def validate(self) -> ValidationResult:
         """
         Abstract method to perform validation.
-
-        :return: Validation result.
-        :rtype: ValidationResult
         """
         pass
 
     def _format_parameter_result(self, name: str, value: str, expected: str) -> str:
         """
         Formats the parameter result for reporting.
-
-        :param name: Parameter name.
-        :type name: str
-        :param value: Actual parameter value.
-        :type value: str
-        :param expected: Expected parameter value.
-        :type expected: str
-        :return: Formatted parameter result.
-        :rtype: str
         """
         return f"Name: {name}, Value: {value}, Expected Value: {expected}"
 
@@ -180,21 +343,6 @@ class ParameterValidatorMixin:
     ) -> None:
         """
         Checks and adds the parameter to the appropriate list based on comparison.
-
-        :param key: Parameter key.
-        :type key: str
-        :param value: Actual parameter value.
-        :type value: str
-        :param expected: Expected parameter value.
-        :type expected: str
-        :param category: Category of the parameter.
-        :type category: str
-        :param identifier: Identifier for the parameter.
-        :type identifier: str
-        :param drift_parameters: Dictionary to store drift parameters.
-        :type drift_parameters: dict
-        :param valid_parameters: Dictionary to store valid parameters.
-        :type valid_parameters: dict
         """
         result = self._format_parameter_result(key, value, expected)
         target_dict = drift_parameters if value != expected else valid_parameters
@@ -209,9 +357,6 @@ class OSParameterValidator(ValidatorBase, ParameterValidatorMixin):
     def validate(self) -> ValidationResult:
         """
         Validates the OS parameters.
-
-        :return: Validation result containing the status and messages.
-        :rtype: ValidationResult
         """
         drift_parameters = []
         validated_parameters = []
@@ -248,15 +393,6 @@ class OSParameterValidator(ValidatorBase, ParameterValidatorMixin):
     ) -> None:
         """
         Validates the standard and custom OS parameters.
-
-        :param standard_params: Dictionary of standard OS parameters.
-        :type standard_params: Dict
-        :param custom_params: Dictionary of custom OS parameters.
-        :type custom_params: Dict
-        :param drift_parameters: List to store drift parameters.
-        :type drift_parameters: List
-        :param validated_parameters: List to store validated parameters.
-        :type validated_parameters: List
         """
         for param_type, params in standard_params.items():
             base_args = (
@@ -287,13 +423,6 @@ class OSParameterValidator(ValidatorBase, ParameterValidatorMixin):
     def _extract_custom_param_value(self, output: str, details: Dict) -> str:
         """
         Extracts the value of a custom parameter from the command output.
-
-        :param output: Command output.
-        :type output: str
-        :param details: Details of the custom parameter.
-        :type details: Dict
-        :return: Extracted parameter value.
-        :rtype: str
         """
         for line in output.splitlines():
             if details["parameter_name"] in line:
@@ -310,17 +439,6 @@ class OSParameterValidator(ValidatorBase, ParameterValidatorMixin):
     ) -> None:
         """
         Adds the parameter result to the appropriate list based on comparison.
-
-        :param name: Parameter name.
-        :type name: str
-        :param value: Actual parameter value.
-        :type value: str
-        :param expected: Expected parameter value.
-        :type expected: str
-        :param drift_parameters: List to store drift parameters.
-        :type drift_parameters: List
-        :param validated_parameters: List to store validated parameters.
-        :type validated_parameters: List
         """
         result = self._format_parameter_result(name, value, expected)
         target_list = drift_parameters if value != expected else validated_parameters
@@ -335,9 +453,6 @@ class FenceValidator(ValidatorBase):
     def validate(self) -> ValidationResult:
         """
         Validates the fence agent permissions.
-
-        :return: Validation result containing the status and messages.
-        :rtype: ValidationResult
         """
         try:
             msi_value = self._get_msi_value()
@@ -355,9 +470,6 @@ class FenceValidator(ValidatorBase):
     def _get_msi_value(self) -> Optional[str]:
         """
         Gets the MSI value based on the OS family.
-
-        :return: MSI value.
-        :rtype: Optional[str]
         """
         if self.context.ansible_os_family == "REDHAT":
             return self._get_redhat_msi_value()
@@ -368,9 +480,6 @@ class FenceValidator(ValidatorBase):
     def _get_redhat_msi_value(self) -> Optional[str]:
         """
         Gets the MSI value for Red Hat OS.
-
-        :return: MSI value.
-        :rtype: Optional[str]
         """
         stonith_config = json.loads(
             self.context.cmd_executor.run_subprocess(
@@ -391,9 +500,6 @@ class FenceValidator(ValidatorBase):
     def _get_suse_msi_value(self) -> str:
         """
         Gets the MSI value for SUSE OS.
-
-        :return: MSI value.
-        :rtype: str
         """
         stonith_device_name = self.context.cmd_executor.run_subprocess(
             ["stonith_admin", "--list-registered"]
@@ -411,9 +517,6 @@ class FenceValidator(ValidatorBase):
     def _validate_fence_permissions(self) -> ValidationResult:
         """
         Validates the fence agent permissions using the MSI value.
-
-        :return: Validation result containing the status and messages.
-        :rtype: ValidationResult
         """
         fence_output = self.context.cmd_executor.run_subprocess(
             ["fence_azure_arm", "--msi", "--action=list"]
@@ -440,9 +543,6 @@ class ConstraintValidator(ValidatorBase, ParameterValidatorMixin):
     def validate(self) -> ValidationResult:
         """
         Validates the constraints.
-
-        :return: Validation result containing the status and messages.
-        :rtype: ValidationResult
         """
         drift_parameters = defaultdict(lambda: defaultdict(list))
         valid_parameters = defaultdict(lambda: defaultdict(list))
@@ -473,13 +573,6 @@ class ConstraintValidator(ValidatorBase, ParameterValidatorMixin):
     ) -> None:
         """
         Validates the constraints from the XML root element.
-
-        :param root: Root element of the XML output.
-        :type root: ET.Element
-        :param drift_parameters: Dictionary to store drift parameters.
-        :type drift_parameters: dict
-        :param valid_parameters: Dictionary to store valid parameters.
-        :type valid_parameters: dict
         """
         for constraint in root:
             constraint_type = constraint.tag
@@ -497,15 +590,6 @@ class ConstraintValidator(ValidatorBase, ParameterValidatorMixin):
     ) -> None:
         """
         Validates the attributes of a constraint.
-
-        :param constraint: Constraint element from the XML output.
-        :type constraint: ET.Element
-        :param constraint_type: Type of the constraint.
-        :type constraint_type: str
-        :param drift_parameters: Dictionary to store drift parameters.
-        :type drift_parameters: dict
-        :param valid_parameters: Dictionary to store valid parameters.
-        :type valid_parameters: dict
         """
         constraint_id = constraint.attrib.get("id", "")
         expected_attrs = CONSTRAINTS[constraint_type]
@@ -544,9 +628,6 @@ class GlobalIniValidator(ValidatorBase):
     def validate(self) -> ValidationResult:
         """
         Validates the global.ini properties.
-
-        :return: Validation result containing the status and messages.
-        :rtype: ValidationResult
         """
         try:
             properties = self._read_global_ini_properties()
@@ -574,10 +655,6 @@ class GlobalIniValidator(ValidatorBase):
     def _read_global_ini_properties(self) -> dict:
         """
         Reads the global.ini properties.
-
-        :return: Dictionary of global.ini properties.
-        :rtype: dict
-        :raises ValueError: If parsing the global.ini file fails.
         """
         global_ini_path = (
             f"/usr/sap/{self.context.sid}/SYS/global/hdb/custom/config/global.ini"
@@ -599,9 +676,6 @@ class GlobalIniValidator(ValidatorBase):
     def _get_expected_properties(self) -> dict:
         """
         Gets the expected properties for the global.ini file based on the OS family.
-
-        :return: Dictionary of expected properties.
-        :rtype: dict
         """
         expected_properties = {
             "SUSE": {
@@ -626,9 +700,6 @@ class ClusterParamValidator(ValidatorBase, ParameterValidatorMixin):
     def validate(self) -> ValidationResult:
         """
         Validates the cluster parameters.
-
-        :return: Validation result containing the status and messages.
-        :rtype: ValidationResult
         """
         drift_parameters = defaultdict(lambda: defaultdict(list))
         valid_parameters = defaultdict(lambda: defaultdict(list))
@@ -646,11 +717,6 @@ class ClusterParamValidator(ValidatorBase, ParameterValidatorMixin):
     ) -> None:
         """
         Validates the cluster properties.
-
-        :param drift_parameters: Dictionary to store drift parameters.
-        :type drift_parameters: dict
-        :param valid_parameters: Dictionary to store valid parameters.
-        :type valid_parameters: dict
         """
         for resource_operation in CLUSTER_PROPERTIES.keys():
             root = self.context.cmd_executor.parse_xml_output(
@@ -670,15 +736,6 @@ class ClusterParamValidator(ValidatorBase, ParameterValidatorMixin):
     ) -> None:
         """
         Processes the cluster properties.
-
-        :param root: Root element of the XML output.
-        :type root: ET.Element
-        :param resource_operation: Resource operation being validated.
-        :type resource_operation: str
-        :param drift_parameters: Dictionary to store drift parameters.
-        :type drift_parameters: dict
-        :param valid_parameters: Dictionary to store valid parameters.
-        :type valid_parameters: dict
         """
         for root_element in root:
             primitive_id = root_element.get("id")
@@ -704,11 +761,6 @@ class ClusterParamValidator(ValidatorBase, ParameterValidatorMixin):
     ) -> None:
         """
         Validates the resource parameters.
-
-        :param drift_parameters: Dictionary to store drift parameters.
-        :type drift_parameters: dict
-        :param valid_parameters: Dictionary to store valid parameters.
-        :type valid_parameters: dict
         """
         root = self.context.cmd_executor.parse_xml_output(
             ["cibadmin", "--query", "--scope", "resources"]
@@ -721,13 +773,6 @@ class ClusterParamValidator(ValidatorBase, ParameterValidatorMixin):
     ) -> None:
         """
         Processes the resource parameters.
-
-        :param root: Root element of the XML output.
-        :type root: ET.Element
-        :param drift_parameters: Dictionary to store drift parameters.
-        :type drift_parameters: dict
-        :param valid_parameters: Dictionary to store valid parameters.
-        :type valid_parameters: dict
         """
         cluster_resources = CLUSTER_RESOURCES[self.context.ansible_os_family]
 
@@ -758,11 +803,6 @@ class ClusterParamValidator(ValidatorBase, ParameterValidatorMixin):
     def _get_resource_type(self, primitive: ET.Element) -> str:
         """
         Gets the resource type from the primitive element.
-
-        :param primitive: Primitive element from the XML output.
-        :type primitive: ET.Element
-        :return: Resource type.
-        :rtype: str
         """
         resource_class = primitive.get("class")
         resource_provider = primitive.get("provider", "")
@@ -775,11 +815,6 @@ class ClusterParamValidator(ValidatorBase, ParameterValidatorMixin):
     def _get_actual_attributes(self, primitive: ET.Element) -> dict:
         """
         Gets the actual attributes from the primitive element.
-
-        :param primitive: Primitive element from the XML output.
-        :type primitive: ET.Element
-        :return: Dictionary of actual attributes.
-        :rtype: dict
         """
         attributes = {}
         for prop in primitive.findall(".//nvpair"):
@@ -801,19 +836,6 @@ class ClusterParamValidator(ValidatorBase, ParameterValidatorMixin):
     ) -> None:
         """
         Compares the actual and expected parameters.
-
-        :param actual: Dictionary of actual parameters.
-        :type actual: dict
-        :param expected: Dictionary of expected parameters.
-        :type expected: dict
-        :param operation: Operation being validated.
-        :type operation: str
-        :param resource_id: Resource ID being validated.
-        :type resource_id: str
-        :param drift_parameters: Dictionary to store drift parameters.
-        :type drift_parameters: dict
-        :param valid_parameters: Dictionary to store valid parameters.
-        :type valid_parameters: dict
         """
         for name, value in actual.items():
             if name in expected:
@@ -832,13 +854,6 @@ class ClusterParamValidator(ValidatorBase, ParameterValidatorMixin):
     ) -> ValidationResult:
         """
         Creates the validation result.
-
-        :param valid_parameters: Dictionary of valid parameters.
-        :type valid_parameters: dict
-        :param drift_parameters: Dictionary of drift parameters.
-        :type drift_parameters: dict
-        :return: Validation result containing the status and messages.
-        :rtype: ValidationResult
         """
         valid_parameters_json = json.dumps(valid_parameters)
         missing_parameters = [
@@ -874,13 +889,6 @@ class ClusterParamValidator(ValidatorBase, ParameterValidatorMixin):
 class ResultAggregator:
     """
     Aggregates the results of the cluster parameter validations.
-
-    :param parameters: List of validation parameters.
-    :type parameters: List[Dict[str, str]]
-    :param error_message: Error message if any validation fails.
-    :type error_message: str
-    :param message: General message about the validation process.
-    :type message: str
     """
 
     parameters: List[Dict[str, str]] = field(default_factory=list)
@@ -890,11 +898,6 @@ class ResultAggregator:
     def add_validation_result(self, category: str, result: ValidationResult) -> None:
         """
         Adds a validation result to the aggregator.
-
-        :param category: Category of the validation.
-        :type category: str
-        :param result: Validation result object.
-        :type result: ValidationResult
         """
         result_dict = result.to_dict()
 
@@ -907,13 +910,6 @@ class ResultAggregator:
     def _process_value(self, category: str, key: str, value: Any) -> None:
         """
         Processes a value from the validation result.
-
-        :param category: Category of the validation.
-        :type category: str
-        :param key: Key of the validation result.
-        :type key: str
-        :param value: Value of the validation result.
-        :type value: Any
         """
         if isinstance(value, dict):
             for sub_key, sub_value in value.items():
@@ -927,13 +923,6 @@ class ResultAggregator:
     def _categorize_parameter(self, category: str, key: str, value: str) -> None:
         """
         Categorizes a parameter from the validation result.
-
-        :param category: Category of the validation.
-        :type category: str
-        :param key: Key of the validation result.
-        :type key: str
-        :param value: Value of the validation result.
-        :type value: str
         """
         parent_key = key.split(".")[-1] if category != "os_parameters" else key
         param_entry = {
@@ -960,9 +949,6 @@ class ResultAggregator:
     def to_dict(self) -> Dict:
         """
         Converts the aggregated results to a dictionary.
-
-        :return: Dictionary of aggregated results.
-        :rtype: Dict
         """
         result = {
             "parameters": self.parameters,
@@ -982,9 +968,6 @@ class ClusterManager:
     def __init__(self, module: AnsibleModule):
         """
         Initializes the ClusterManager with the given Ansible module.
-
-        :param module: Ansible module instance containing parameters, methods for module execution.
-        :type module: AnsibleModule
         """
         self.module = module
         self.context = ValidationContext(
@@ -1020,9 +1003,6 @@ class ClusterManager:
     def _create_validators(self) -> Dict[str, ValidatorBase]:
         """
         Creates a dictionary of validators for different cluster parameters.
-
-        :return: Dictionary of validators.
-        :rtype: Dict[str, ValidatorBase]
         """
         return {
             "cluster": ClusterParamValidator(self.context),
@@ -1035,9 +1015,6 @@ class ClusterManager:
     def _run_validations(self, validators: Dict[str, ValidatorBase]) -> None:
         """
         Runs the validations using the provided validators.
-
-        :param validators: Dictionary of validators.
-        :type validators: Dict[str, ValidatorBase]
         """
         for name, validator in validators.items():
             result = validator.validate()

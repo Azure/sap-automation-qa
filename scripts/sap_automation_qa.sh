@@ -3,21 +3,21 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
+# Activate the virtual environment
 source "$(realpath $(dirname $(realpath $0))/..)/.venv/bin/activate"
 
 cmd_dir="$(dirname "$(readlink -e "${BASH_SOURCE[0]}")")"
 
 # Set the environment variables
-export           ANSIBLE_COLLECTIONS_PATH=/opt/ansible/collections:${ANSIBLE_COLLECTIONS_PATH:+${ANSIBLE_COLLECTIONS_PATH}}
-export           ANSIBLE_CONFIG="${cmd_dir}/ansible.cfg"
-export           ANSIBLE_MODULE_UTILS="${cmd_dir}/src/module_utils:${ANSIBLE_MODULE_UTILS:+${ANSIBLE_MODULE_UTILS}}"
-export           ANSIBLE_HOST_KEY_CHECKING=False
-
+export ANSIBLE_COLLECTIONS_PATH=/opt/ansible/collections:${ANSIBLE_COLLECTIONS_PATH:+${ANSIBLE_COLLECTIONS_PATH}}
+export ANSIBLE_CONFIG="${cmd_dir}/ansible.cfg"
+export ANSIBLE_MODULE_UTILS="${cmd_dir}/src/module_utils:${ANSIBLE_MODULE_UTILS:+${ANSIBLE_MODULE_UTILS}}
+export ANSIBLE_HOST_KEY_CHECKING=False
 
 # Define the path to the vars.yaml file
 VARS_FILE="../vars.yaml"
 
-# colors for error messages
+# Colors for error messages
 RED='\033[0;31m'
 GREEN='\033[0;32m'
 NC='\033[0m'
@@ -33,11 +33,6 @@ log() {
         echo -e "${GREEN}[INFO] $message${NC}"
     fi
 }
-
-log "INFO" "Activate the virtual environment..."
-
-
-set -e
 
 # Function to check if a command exists
 command_exists() {
@@ -84,54 +79,91 @@ check_file_exists() {
     fi
 }
 
-# Validate parameters
-validate_params
+# Function to determine the playbook name based on the sap_functional_test_type
+get_playbook_name() {
+    local test_type=$1
 
-# Check if the SYSTEM_HOSTS and SYSTEM_PARAMS directory exists inside the WORKSPACES/SYSTEM folder
-SYSTEM_CONFIG_FOLDER="../WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME"
-SYSTEM_HOSTS="$SYSTEM_CONFIG_FOLDER/hosts.yaml"
-SYSTEM_PARAMS="$SYSTEM_CONFIG_FOLDER/sap-parameters.yaml"
-TEST_TIER=$(echo "$TEST_TIER" | tr '[:upper:]' '[:lower:]')
+    case "$test_type" in
+        "DatabaseHighAvailability")
+            echo "playbook_00_ha_db_functional_tests"
+            ;;
+        "CentralServicesHighAvailability")
+            echo "playbook_00_ha_scs_functional_tests"
+            ;;
+        *)
+            log "ERROR" "Unknown sap_functional_test_type: $test_type"
+            exit 1
+            ;;
+    esac
+}
 
-log "INFO" "Using inventory: $SYSTEM_HOSTS."
-log "INFO" "Using SAP parameters: $SYSTEM_PARAMS."
-log "INFO" "Using Authentication Type: $AUTHENTICATION_TYPE."
+# Function to run the ansible playbook
+run_ansible_playbook() {
+    local playbook_name=$1
+    local system_hosts=$2
+    local system_params=$3
+    local auth_type=$4
+    local system_config_folder=$5
 
-check_file_exists "$SYSTEM_HOSTS" "hosts.yaml not found in WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME directory."
-check_file_exists "$SYSTEM_PARAMS" "sap-parameters.yaml not found in WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME directory."
+    if [[ "$auth_type" == "SSHKEY" ]]; then
+        local ssh_key="../WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME/ssh_key.ppk"
+        log "INFO" "Using SSH key: $ssh_key."
+        command="ansible-playbook ../src/$playbook_name.yml -i $system_hosts --private-key $ssh_key \
+        -e @$VARS_FILE -e @$system_params -e '_workspace_directory=$system_config_folder'"
+    else
+        log "INFO" "Using password authentication."
+        command="ansible-playbook ../src/$playbook_name.yml -i $system_hosts \
+        --extra-vars \"ansible_ssh_pass=$(cat ../WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME/password)\" \
+        --extra-vars @$VARS_FILE -e @$system_params -e '_workspace_directory=$system_config_folder'"
+    fi
 
-log "INFO" "Checking if the SSH key or password file exists..."
-if [[ "$AUTHENTICATION_TYPE" == "SSHKEY" ]]; then
-    check_file_exists "../WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME/ssh_key.ppk" "ssh_key.ppk not found in WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME directory."
-else
-    check_file_exists "../WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME/password" "password file not found in WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME directory."
-fi
+    log "INFO" "Running ansible playbook..."
+    log "INFO" "Executing: $command"
+    eval $command
+    return_code=$?
+    log "INFO" "Ansible playbook execution completed with return code: $return_code"
 
-if [ "$sap_functional_test_type" = "DatabaseHighAvailability" ]; then
-    playbook_name="playbook_00_ha_db_functional_tests"
-elif [ "$sap_functional_test_type" = "CentralServicesHighAvailability" ]; then
-    playbook_name="playbook_00_ha_scs_functional_tests"
-else
-    echo "Unknown sap_functional_test_type: $sap_functional_test_type"
-    exit 1
-fi
+    exit $return_code
+}
 
-log "INFO" "Using playbook: $playbook_name."
+# Main script execution
+main() {
+    log "INFO" "Activate the virtual environment..."
+    set -e
 
+    # Validate parameters
+    validate_params
 
-if [[ "$AUTHENTICATION_TYPE" == "SSHKEY" ]]; then
-    ssh_key="../WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME/ssh_key.ppk"
-    log "INFO" "Using SSH key: $ssh_key."
-    command="ansible-playbook ../src/$playbook_name.yml -i $SYSTEM_HOSTS --private-key $ssh_key -e @$VARS_FILE -e @$SYSTEM_PARAMS -e '_workspace_directory=$SYSTEM_CONFIG_FOLDER'"
-else
-    log "INFO" "Using password authentication."
-    command="ansible-playbook ../src/$playbook_name.yml -i $SYSTEM_HOSTS --extra-vars \"ansible_ssh_pass=$(cat ../WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME/password)\" --extra-vars @$VARS_FILE -e @$SYSTEM_PARAMS -e '_workspace_directory=$SYSTEM_CONFIG_FOLDER'"
-fi
+    # Check if the SYSTEM_HOSTS and SYSTEM_PARAMS directory exists inside WORKSPACES/SYSTEM folder
+    SYSTEM_CONFIG_FOLDER="../WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME"
+    SYSTEM_HOSTS="$SYSTEM_CONFIG_FOLDER/hosts.yaml"
+    SYSTEM_PARAMS="$SYSTEM_CONFIG_FOLDER/sap-parameters.yaml"
+    TEST_TIER=$(echo "$TEST_TIER" | tr '[:upper:]' '[:lower:]')
 
-log "INFO" "Running ansible playbook..."
-log "INFO" "Executing: $command"
-eval $command
-return_code=$?
-log "INFO" "Ansible playbook execution completed with return code: $return_code"
+    log "INFO" "Using inventory: $SYSTEM_HOSTS."
+    log "INFO" "Using SAP parameters: $SYSTEM_PARAMS."
+    log "INFO" "Using Authentication Type: $AUTHENTICATION_TYPE."
 
-exit $return_code
+    check_file_exists "$SYSTEM_HOSTS" \
+        "hosts.yaml not found in WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME directory."
+    check_file_exists "$SYSTEM_PARAMS" \
+        "sap-parameters.yaml not found in WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME directory."
+
+    log "INFO" "Checking if the SSH key or password file exists..."
+    if [[ "$AUTHENTICATION_TYPE" == "SSHKEY" ]]; then
+        check_file_exists "../WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME/ssh_key.ppk" \
+            "ssh_key.ppk not found in WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME directory."
+    else
+        check_file_exists "../WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME/password" \
+            "password file not found in WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME directory."
+    fi
+
+    playbook_name=$(get_playbook_name "$sap_functional_test_type")
+    log "INFO" "Using playbook: $playbook_name."
+
+    run_ansible_playbook "$playbook_name" \
+        "$SYSTEM_HOSTS" "$SYSTEM_PARAMS" "$AUTHENTICATION_TYPE" "$SYSTEM_CONFIG_FOLDER"
+}
+
+# Execute the main function
+main
