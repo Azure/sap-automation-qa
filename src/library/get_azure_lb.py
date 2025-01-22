@@ -74,6 +74,8 @@ class AzureLoadBalancer:
         required_load_balancer_ip = self.module.params["load_balancer_ip"]
         required_load_balancer = None
 
+        self.result["load_balancer"] = load_balancers
+
         required_load_balancer = next(
             (
                 lb
