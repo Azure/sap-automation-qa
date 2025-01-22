@@ -105,38 +105,43 @@ class AzureLoadBalancer:
             ),
             None,
         )
-        drift_parameters = defaultdict(lambda: defaultdict(list))
-        valid_parameters = defaultdict(lambda: defaultdict(list))
+        parameters = []
 
-        def check_parameters(
-            entity, entity_name, parameters, drift_parameters, valid_parameters
-        ):
-            for key, value in parameters.items():
-                if entity[key] != value:
-                    drift_parameters[entity_name][key].append(
-                        self._format_parameter_result(key, entity[key], value)
-                    )
-                else:
-                    valid_parameters[entity_name][key].append(
-                        self._format_parameter_result(key, entity[key], value)
-                    )
+        def check_parameters(entity, entity_name, parameters_dict, entity_type):
+            for key, value in parameters_dict.items():
+                status = "PASSED" if entity[key] == value else "FAILED"
+                parameters.append(
+                    {
+                        "category": entity_name,
+                        "type": entity_type,
+                        "name": key,
+                        "value": entity[key],
+                        "expected value": value,
+                        "status": status,
+                    }
+                )
 
         try:
             if required_load_balancer:
                 for rule in required_load_balancer["load_balancing_rules"]:
                     check_parameters(
-                        rule, rule["name"], RULES, drift_parameters, valid_parameters
+                        rule,
+                        required_load_balancer["name"],
+                        RULES,
+                        "load_balancing_rule",
                     )
 
                 for probe in required_load_balancer["probes"]:
                     check_parameters(
-                        probe, probe["name"], PROBES, drift_parameters, valid_parameters
+                        probe, required_load_balancer["name"], PROBES, "probes"
                     )
 
-            if drift_parameters:
-                self.result["status"] = "FAILED"
-            self.result["status"] = "PASSED"
-            self.result["details"] = {**drift_parameters, **valid_parameters}
+            self.result["status"] = (
+                "PASSED"
+                if all(param["status"] == "PASSED" for param in parameters)
+                else "FAILED"
+            )
+            self.result["details"] = {"parameters": parameters}
         except Exception as e:
             self.result["error"] = str(e)
 
