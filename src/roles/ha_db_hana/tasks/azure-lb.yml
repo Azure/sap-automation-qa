@@ -45,6 +45,7 @@
         test_case_name:                 "{{ item.name }}: {{ virtual_host }}"
         test_case_details:              "{{ test_result.load_balancer }}"
         test_case_hostname:             "{{ virtual_host }}"
+        test_case_status:               "{{ test_result.status }}"
 
   rescue:
     - name:                             "Test case failed"
