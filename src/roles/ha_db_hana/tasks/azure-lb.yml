@@ -22,7 +22,7 @@
     - name:                             "Azure Load Balancer check for the DB nodes"
       get_azure_lb:
         subscription_id:                "{{ azure_instance_metadata.json.compute.subscriptionId }}"
-        resource_group:                 "{{ azure_instance_metadata.json.compute.resourceGroupName }}"
+        resource_group_name:            "{{ azure_instance_metadata.json.compute.resourceGroupName }}"
         load_balancer_ip:               "{{ database_loadbalancer_ip }}"
       register:                         test_result
 

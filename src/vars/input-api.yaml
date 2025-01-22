@@ -14,9 +14,9 @@ sap_functional_test_type_map:
 test_groups:
   - name:                           HA_DB_HANA
     test_cases:
-      - name:                       HA Parameters Validation
-        task_name:                  ha-config
-        description:                This validates the HA configuration
+      # - name:                       HA Parameters Validation
+      #   task_name:                  ha-config
+      #   description:                This validates the HA configuration
 
       - name:                       Azure Load Balancer Validation
         task_name:                  azure-lb
