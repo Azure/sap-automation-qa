@@ -8,6 +8,19 @@ Custom ansible module for getting Azure Load Balancer details
 from ansible.module_utils.basic import AnsibleModule
 from azure.identity import ManagedIdentityCredential
 from azure.mgmt.network import NetworkManagementClient
+from collections import defaultdict
+
+PROBES = {
+    "probe_threshold": 2,
+    "interval_in_seconds": 5,
+    "number_of_probes": 2,
+}
+
+RULES = {
+    "idle_timeout_in_minutes": 4,
+    "enable_floating_ip": True,
+    "enable_tcp_reset": False,
+}
 
 
 class AzureLoadBalancer:
@@ -18,6 +31,7 @@ class AzureLoadBalancer:
     def __init__(self, module: AnsibleModule):
         self.result = {
             "load_balancer": [],
+            "status": None,
             "error": None,
         }
         self.credential = None
@@ -47,13 +61,21 @@ class AzureLoadBalancer:
         :rtype: list
         """
         try:
-            load_balancers = self.network_client.load_balancers.list(
-                self.module.params["resource_group_name"]
-            )
-            return [lb.as_dict() for lb in load_balancers]
+            return [
+                lb.as_dict()
+                for lb in self.network_client.load_balancers.list(
+                    self.module.params["resource_group_name"]
+                )
+            ]
         except Exception as e:
             self.result["error"] = str(e)
             return []
+
+    def _format_parameter_result(self, name: str, value: str, expected: str) -> str:
+        """
+        Formats the parameter result for reporting.
+        """
+        return f"Name: {name}, Value: {value}, Expected Value: {expected}"
 
     def get_load_balancers_details(self) -> dict:
         """
@@ -83,42 +105,38 @@ class AzureLoadBalancer:
             ),
             None,
         )
+        drift_parameters = defaultdict(lambda: defaultdict(list))
+        valid_parameters = defaultdict(lambda: defaultdict(list))
+
+        def check_parameters(
+            entity, entity_name, parameters, drift_parameters, valid_parameters
+        ):
+            for key, value in parameters.items():
+                if entity[key] != value:
+                    drift_parameters[entity_name][key].append(
+                        self._format_parameter_result(key, entity[key], value)
+                    )
+                else:
+                    valid_parameters[entity_name][key].append(
+                        self._format_parameter_result(key, entity[key], value)
+                    )
+
         try:
             if required_load_balancer:
-                self.result["load_balancer"].append(
-                    {
-                        "name": required_load_balancer["name"],
-                        "location": required_load_balancer["location"],
-                        "frontend_ip_configurations": required_load_balancer.get(
-                            "frontend_ip_configurations", []
-                        ),
-                        "probes": [
-                            {
-                                "name": probe["name"],
-                                "protocol": probe["protocol"],
-                                "port": probe["port"],
-                                "interval_in_seconds": probe["interval_in_seconds"],
-                                "number_of_probes": probe["number_of_probes"],
-                            }
-                            for probe in required_load_balancer.get("probes", [])
-                        ],
-                        "rules": [
-                            {
-                                "name": rule["name"],
-                                "protocol": rule["protocol"],
-                                "frontend_port": rule["frontend_port"],
-                                "backend_port": rule["backend_port"],
-                                "idle_timeout_in_minutes": rule[
-                                    "idle_timeout_in_minutes"
-                                ],
-                                "enable_floating_ip": rule["enable_floating_ip"],
-                            }
-                            for rule in required_load_balancer.get(
-                                "load_balancing_rules", []
-                            )
-                        ],
-                    }
-                )
+                for rule in required_load_balancer["load_balancing_rules"]:
+                    check_parameters(
+                        rule, rule["name"], RULES, drift_parameters, valid_parameters
+                    )
+
+                for probe in required_load_balancer["probes"]:
+                    check_parameters(
+                        probe, probe["name"], PROBES, drift_parameters, valid_parameters
+                    )
+
+            if drift_parameters:
+                self.result["status"] = "FAILED"
+            self.result["status"] = "PASSED"
+            self.result["load_balancer"] = {**drift_parameters, **valid_parameters}
         except Exception as e:
             self.result["error"] = str(e)
 
