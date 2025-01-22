@@ -35,7 +35,7 @@
     - name:                            "Test Execution: Validate HANA DB cluster status"
       when:                            ansible_hostname == cluster_status_pre.secondary_node
       block:
-        - name:                        "Test Execution: Crash the index server on primary node"
+        - name:                        "Test Execution: Crash the index server on secondary node"
           become:                      true
           ansible.builtin.command:     "killall -9 {{ db_sid | lower }}indexserver"
           register:                    index_server_result
@@ -72,10 +72,7 @@
 
         - name:                        "Test Execution: CleanUp any failed resource"
           become:                      true
-          ansible.builtin.command: |
-                                       crm_resource --cleanup \
-                                       msl_SAPHana_{{ db_sid | upper }}_HDB{{ db_instance_number }} \
-                                       {{ cluster_status_pre.secondary_node | default('') }}
+          ansible.builtin.command:     crm_resource --cleanup
           register:                    cleanup_failed_resource_post
           changed_when:                cleanup_failed_resource_post.rc == 0
 
