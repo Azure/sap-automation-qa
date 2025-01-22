@@ -1,0 +1,45 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+
+# /*---------------------------------------------------------------------------
+# |                          Azure Load Balancer Validation                   |
+# +--------------------------------------------------------------------------*/
+- name:                                 "Test Setup Tasks"
+  ansible.builtin.include_tasks:        "roles/misc/tasks/test-case-setup.yml"
+
+- name:                                 "Pre Validations: Validate the Azure Load Balancer config"
+  become:                               true
+  become_user:                          root
+  block:
+    - name:                             "Retrieve Subscription ID and Resource Group Name"
+      ansible.builtin.uri:
+        url:                            http://169.254.169.254/metadata/instance?api-version=2021-02-01
+        use_proxy:                      false
+        headers:
+          Metadata:                     true
+      register:                         azure_instance_metadata
+
+    - name:                             "Azure Load Balancer check for the DB nodes"
+      get_azure_lb:
+        subscription_id:                "{{ azure_instance_metadata.json.compute.subscriptionId }}"
+        resource_group:                 "{{ azure_instance_metadata.json.compute.resourceGroupName }}"
+        load_balancer_ip:               "{{ database_loadbalancer_ip }}"
+      register:                         test_result
+
+    - name:                             "Set the test case status to PASSED"
+      ansible.builtin.set_fact:
+        test_case_name:                 "{{ item.name }}: {{ virtual_host }}"
+        test_case_details:              "{{ test_result.load_balancer }}"
+        test_case_hostname:             "{{ virtual_host }}"
+
+  rescue:
+    - name:                             "Test case failed"
+      ansible.builtin.set_fact:
+          test_case_name:               "{{ item.name }}: {{ virtual_host }}"
+          test_case_status:             "FAILED"
+          test_case_details:            "{{ test_result }}"
+          test_case_message:            "{{ ansible_failed_result }}"
+          test_case_hostname:           "{{ virtual_host }}"
+
+- name:                                 "Post Telemetry Data"
+  ansible.builtin.include_tasks:        "roles/misc/tasks/post-telemetry-data.yml"
