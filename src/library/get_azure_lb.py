@@ -35,8 +35,10 @@ class AzureLoadBalancer:
             self.network_client = NetworkManagementClient(
                 self.credential, self.module.params["subscription_id"]
             )
-        except Exception:
-            self.result["error"] = "Failed to get the MSI credential object."
+        except Exception as e:
+            self.result["error"] = (
+                "Failed to get the MSI credential object or network client. " + str(e)
+            )
 
     def get_load_balancers(self) -> list:
         """

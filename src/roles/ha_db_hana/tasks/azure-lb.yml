@@ -10,6 +10,7 @@
 - name:                                 "Pre Validations: Validate the Azure Load Balancer config"
   become:                               true
   become_user:                          root
+  delegate_to:                          localhost
   block:
     - name:                             "Retrieve Subscription ID and Resource Group Name"
       ansible.builtin.uri:
