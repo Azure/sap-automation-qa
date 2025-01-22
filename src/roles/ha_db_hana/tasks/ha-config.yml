@@ -7,7 +7,17 @@
 - name:                                 "Test Setup Tasks"
   ansible.builtin.include_tasks:        "roles/misc/tasks/test-case-setup.yml"
 
-- name:                                 "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} - Pre Validations: Validate parameters for the DB nodes"
+- name:                                 "Ensure a list of package version is available for logging"
+  no_log:                               true
+  ansible.builtin.package_facts:
+
+- name:                                 "Create package dictionary for telemetry data"
+  become:                               true
+  get_package_list:
+    package_facts_list:                 "{{ ansible_facts.packages }}"
+  register:                             packages_list
+
+- name:                                 "Pre Validations: Validate parameters for the DB nodes"
   become:                               true
   become_user:                          root
   block:
@@ -19,7 +29,7 @@
           Metadata:                     true
       register:                         azure_instance_metadata
 
-    - name:                             "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} - HA Configuration check for the DB nodes"
+    - name:                             "HA Configuration check for the DB nodes"
       get_pcmk_properties_db:
         action:                         get
         sid:                            "{{ db_sid | upper }}"
@@ -28,21 +38,24 @@
         virtual_machine_name:           "{{ azure_instance_metadata.json.compute.name }}"
       register:                         test_result
 
-    - name:                             "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} - Set the test case status to PASSED"
+    - name:                             "Set the test case status to PASSED"
       ansible.builtin.set_fact:
         test_case_name:                 "{{ item.name }}: {{ virtual_host }}"
         test_case_status:               "{{ test_result.status }}"
         test_case_message:              "{{ test_result.msg }}"
         test_case_details:              "{{ test_result.details }}"
         test_case_hostname:             "{{ virtual_host }}"
+        package_versions:               "{{ packages_list.packages_list }}"
+
   rescue:
-    - name:                             "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} - Test case failed"
+    - name:                             "Test case failed"
       ansible.builtin.set_fact:
           test_case_name:               "{{ item.name }}: {{ virtual_host }}"
           test_case_status:             "FAILED"
           test_case_details:            "{{ test_result }}"
           test_case_message:            "{{ ansible_failed_result }}"
           test_case_hostname:           "{{ virtual_host }}"
+          package_versions:             "{{ packages_list.packages_list }}"
 
 - name:                                 "Post Telemetry Data"
   ansible.builtin.include_tasks:        "roles/misc/tasks/post-telemetry-data.yml"

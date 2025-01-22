@@ -382,10 +382,12 @@
                   <th>Message</th>
                   <td>{{ test_case_result.TestCaseMessage }}</td>
                 </tr>
+                {% if test_case_result.PackageVersions %}
                 <tr>
-                  <th>Package Versions</th>
-                  <td class="packages">{{ test_case_result.PackageVersions }}</td>
+                    <th>Package Versions</th>
+                    <td class="packages">{{ test_case_result.PackageVersions }}</td>
                 </tr>
+                {% endif %}
                 <tr>
                   <th>Test Case Details (Logs)</th>
                   {% if 'HA Parameters Validation' in test_case_result.TestCaseName %}
@@ -428,6 +430,7 @@
                 }
                 return `: "${value}"`
               })
+              .replace(/\\x[0-9A-Fa-f]{2}/g, '')
               .replace(/'([^']*)'(?=\s*[\],])/g, function (match, value) {
                 if (value === '') {
                   return '""'
