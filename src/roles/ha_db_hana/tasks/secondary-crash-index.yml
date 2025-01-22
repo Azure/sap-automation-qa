@@ -70,11 +70,8 @@
           register:                    hana_db_register_failed_resource
           changed_when:                hana_db_register_failed_resource.rc == 0
 
-        - name:                        "Test Execution: Stop timer"
-          ansible.builtin.set_fact:
-            test_execution_end:        "{{ now(utc=true, fmt='%Y-%m-%d %H:%M:%S') }}"
-
         - name:                        "Test Execution: CleanUp any failed resource"
+          become:                      true
           ansible.builtin.command: |
                                        crm_resource --cleanup \
                                        msl_SAPHana_{{ db_sid | upper }}_HDB{{ db_instance_number }} \
@@ -92,6 +89,10 @@
           until: |
                                        cluster_status_post.primary_node == cluster_status_pre.primary_node and
                                        cluster_status_post.secondary_node == cluster_status_pre.secondary_node
+
+        - name:                        "Test Execution: Stop timer"
+          ansible.builtin.set_fact:
+            test_execution_end:        "{{ now(utc=true, fmt='%Y-%m-%d %H:%M:%S') }}"
 
         - name:                        "Set test case message and details"
           ansible.builtin.set_fact:
