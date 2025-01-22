@@ -30,7 +30,7 @@ class AzureLoadBalancer:
 
     def __init__(self, module: AnsibleModule):
         self.result = {
-            "load_balancer": [],
+            "details": [],
             "status": None,
             "error": None,
         }
@@ -136,7 +136,7 @@ class AzureLoadBalancer:
             if drift_parameters:
                 self.result["status"] = "FAILED"
             self.result["status"] = "PASSED"
-            self.result["load_balancer"] = {**drift_parameters, **valid_parameters}
+            self.result["details"] = {**drift_parameters, **valid_parameters}
         except Exception as e:
             self.result["error"] = str(e)
 
@@ -161,7 +161,9 @@ def run_module():
     if result["error"]:
         module.fail_json(msg=result["error"], **result)
     else:
-        module.exit_json(**result)
+        module.exit_json(
+            msg="Load balancer details are fetched successfully.", **result
+        )
 
 
 def main():
