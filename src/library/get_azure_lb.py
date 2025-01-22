@@ -115,8 +115,8 @@ class AzureLoadBalancer:
                         "category": entity_name,
                         "type": entity_type,
                         "name": key,
-                        "value": entity[key],
-                        "expected value": value,
+                        "value": str(entity[key]),
+                        "expected value": str,
                         "status": status,
                     }
                 )
