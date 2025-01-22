@@ -10,7 +10,6 @@
 - name:                                 "Pre Validations: Validate the Azure Load Balancer config"
   become:                               true
   become_user:                          root
-  delegate_to:                          localhost
   run_once:                             true
   block:
     - name:                             "Install azure management network package"
@@ -25,12 +24,20 @@
         headers:
           Metadata:                     true
       register:                         azure_instance_metadata
+    
+    - name:                             "Get the Azure Load Balancer IP"
+      ansible.builtin.uri:
+        url:                            http://169.254.169.254:80/metadata/loadbalancer?api-version=2020-10-01
+        use_proxy:                      false
+        headers:
+          Metadata:                     true
+      register:                         azure_loadbalancer_metadata
 
     - name:                             "Azure Load Balancer check for the DB nodes"
       get_azure_lb:
         subscription_id:                "{{ azure_instance_metadata.json.compute.subscriptionId }}"
         resource_group_name:            "{{ azure_instance_metadata.json.compute.resourceGroupName }}"
-        load_balancer_ip:               "{{ database_loadbalancer_ip }}"
+        load_balancer_ip:               "{{ azure_loadbalancer_metadata.json.loadbalancer.inboundRules[0].privateIpAddress }}"
       register:                         test_result
 
     - name:                             "Set the test case status to PASSED"

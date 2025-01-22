@@ -89,7 +89,6 @@ class AzureLoadBalancer:
                 self.result["load_balancer"].append(
                     {
                         "name": required_load_balancer["name"],
-                        "resource_group": required_load_balancer["resource_group"],
                         "location": required_load_balancer["location"],
                         "frontend_ip_configurations": required_load_balancer.get(
                             "frontend_ip_configurations", []
