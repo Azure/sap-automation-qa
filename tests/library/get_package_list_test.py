@@ -3,7 +3,7 @@ Unit tests for the get_package_list module.
 """
 
 import pytest
-from src.library.get_package_list import PackageListFormatter
+from src.modules.get_package_list import PackageListFormatter
 
 
 @pytest.fixture

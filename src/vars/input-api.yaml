@@ -18,9 +18,9 @@ test_groups:
       #   task_name:                  ha-config
       #   description:                This validates the HA configuration
 
-      - name:                       Azure Load Balancer Validation
-        task_name:                  azure-lb
-        description:                This validates the Azure Load Balancer configuration
+      # - name:                       Azure Load Balancer Validation
+      #   task_name:                  azure-lb
+      #   description:                This validates the Azure Load Balancer configuration
 
       # - name:                       HA Functional Test- Resource Migration
       #   task_name:                  resource-migration
@@ -57,6 +57,14 @@ test_groups:
       # - name:                       HA Functional Test- Echo B on Secondary Node
       #   task_name:                  secondary-echo-b
       #   description:                This runs a functional test to immediately reboot the system without properly shutting it down.
+
+      - name:                       HA Functional Test- Freeze File System on Primary Node
+        task_name:                  fs-freeze
+        description:                This runs a functional test for freezing file system on primary node
+
+      # - name:                       HA Functional Test- Test SBD Inquisitor kill
+      #   task_name:                  sbd-fencing
+      #   description:                This runs a functional test for SBD Inquisitor kill
 
   - name:                           HA_SCS
     test_cases:
