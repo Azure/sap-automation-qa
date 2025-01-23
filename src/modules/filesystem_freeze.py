@@ -29,14 +29,17 @@ class FileSystemFreeze:
 
         :param filesystem_path: The path of the filesystem to change.
         """
-        command = f"mount -o ro {filesystem_path} /hana/shared"
+        command = ["mount", "-o", "ro", filesystem_path, "/hana/shared"]
         try:
             with subprocess.Popen(
                 command,
                 stdout=subprocess.PIPE,
                 encoding="utf-8",
             ) as proc:
-                return proc.stdout.read()
+                stdout, stderr = proc.communicate()
+                if proc.returncode != 0:
+                    return stderr
+                return stdout
         except subprocess.CalledProcessError as e:
             return str(e)
 
