@@ -15,7 +15,6 @@
 - name:                             "Pre Validations: HANA DB Nodes"
   when:                             database_cluster_type == "ISCSI"
   ansible.builtin.include_tasks:    "roles/misc/tasks/pre-validations.yml"
-  run_once:                         true
 
 # /*---------------------------------------------------------------------------
 # |                          Test Execution                                   |
@@ -62,8 +61,8 @@
           delay:                    30
           register:                 cluster_status_test_execution
           until: |
-                                    - cluster_status_test_execution.primary_node == cluster_status_pre.secondary_node
-                                    - cluster_status_test_execution.secondary_node == cluster_status_pre.primary_node
+                                    cluster_status_post.primary_node == cluster_status_pre.secondary_node and
+                                    cluster_status_post.secondary_node == cluster_status_pre.primary_node
 
     - name:                         "Test Execution: SBD Inquisitor kill manual fail over"
       when:                         ansible_hostname == cluster_status_pre.primary_node
