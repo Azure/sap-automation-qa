@@ -73,7 +73,9 @@
         group_invocation_id:           "{{ test_group_invocation_id }}"
         group_start_time:              "{{ test_group_start_time }}"
         group_name:                    "{{ sap_functional_test_type }}"
-      when:                            test_group_name is defined
+      when:
+                                       - test_group_name is defined
+                                       - item.enabled | default(true)
 
     - name:                            "Cluster report from the HA cluster"
       ansible.builtin.include_tasks:   "./roles/misc/tasks/cluster-report.yml"
