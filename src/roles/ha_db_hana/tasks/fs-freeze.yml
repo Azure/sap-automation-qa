@@ -40,6 +40,7 @@
           become:                   true
           filesystem_freeze:
             nfs_provider:           "{{ NFS_provider }}"
+          register:                 freeze_fs_results
 
     - name:                         "Test Execution: Freeze File System on Primary Node init"
       when:                         ansible_hostname == cluster_status_pre.secondary_node
@@ -56,7 +57,7 @@
             database_sid:           "{{ db_sid | lower }}"
           register:                 cluster_status_test_execution
           retries:                  40
-          delay:                    10
+          delay:                    20
           until: |
                                     cluster_status_test_execution.primary_node == cluster_status_pre.secondary_node and
                                     cluster_status_test_execution.secondary_node == cluster_status_pre.primary_node
