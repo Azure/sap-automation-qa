@@ -58,13 +58,13 @@ test_groups:
       #   task_name:                  secondary-echo-b
       #   description:                This runs a functional test to immediately reboot the system without properly shutting it down.
 
-      - name:                       HA Functional Test- Freeze File System on Primary Node
-        task_name:                  fs-freeze
-        description:                This runs a functional test for freezing file system on primary node
+      # - name:                       HA Functional Test- Freeze File System on Primary Node
+      #   task_name:                  fs-freeze
+      #   description:                This runs a functional test for freezing file system on primary node
 
-      # - name:                       HA Functional Test- Test SBD Inquisitor kill
-      #   task_name:                  sbd-fencing
-      #   description:                This runs a functional test for SBD Inquisitor kill
+      - name:                       HA Functional Test- Test SBD Inquisitor kill
+        task_name:                  sbd-fencing
+        description:                This runs a functional test for SBD Inquisitor kill
 
   - name:                           HA_SCS
     test_cases:
