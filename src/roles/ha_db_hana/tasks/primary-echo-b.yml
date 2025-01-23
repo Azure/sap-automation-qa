@@ -8,7 +8,6 @@
   ansible.builtin.include_tasks:       "roles/misc/tasks/test-case-setup.yml"
   run_once:                            true
 
-
 # /*---------------------------------------------------------------------------
 # |                          Pre Validations                                  |
 # +--------------------------------------------------------------------------*/
@@ -27,8 +26,7 @@
                                        - cluster_status_pre is defined
   block:
     - name:                            "Test Execution: Crash the primary node with echo b init"
-      when:
-                                       - ansible_hostname == cluster_status_pre.primary_node
+      when:                            ansible_hostname == cluster_status_pre.primary_node
       block:
         - name:                        "Test Execution: Start timer"
           ansible.builtin.set_fact:

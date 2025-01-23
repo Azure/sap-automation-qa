@@ -19,14 +19,14 @@
 # +--------------------------------------------------------------------------*/
 - name:                                "Test Execution: Block Network Communication"
   become:                              true
-  when:                                node_tier == "hana"
-  block:
-    - name:                            "Test Execution: Block the network communication init"
-      when:
+  when:
+                                       - node_tier == "hana"
                                        - cluster_status_pre.primary_node != "" and cluster_status_pre.secondary_node != ""
-                                       - ansible_hostname == cluster_status_pre.primary_node
                                        - cluster_status_pre.status == "running"
                                        - cluster_status_pre is defined
+  block:
+    - name:                            "Test Execution: Block Network Communication"
+      when:                            ansible_hostname == cluster_status_pre.primary_node
       block:
         - name:                        "Test Execution: Start timer"
           ansible.builtin.set_fact:
@@ -104,7 +104,7 @@
                                        "Test Execution: Cluster Status after the network blocked": "{{ cluster_status_test_execution }}",
                                        "Test Execution: Firewall Rule Removed": "{{ firewall_rule_deleted }}",
                                        "Post Validations: Validate HANA DB cluster status": "{{ cluster_status_post }}",
-                                    }
+                                       }
 
       # /*---------------------------------------------------------------------------
       # |                          Post Validations                                 |
