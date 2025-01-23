@@ -30,9 +30,9 @@ test_groups:
       #   task_name:                  primary-node-crash
       #   description:                This runs a functional test for primary node crash
 
-      # - name:                       HA Functional Test- Block Network Communication
-      #   task_name:                  block-network
-      #   description:                This runs a functional test for blocking network communication
+      - name:                       HA Functional Test- Block Network Communication
+        task_name:                  block-network
+        description:                This runs a functional test for blocking network communication
       
       # - name:                       HA Functional Test- Crash index server on primary node
       #   task_name:                  primary-crash-index
@@ -58,9 +58,9 @@ test_groups:
       #   task_name:                  secondary-echo-b
       #   description:                This runs a functional test to immediately reboot the system without properly shutting it down.
 
-      - name:                       HA Functional Test- Freeze File System on Primary Node
-        task_name:                  fs-freeze
-        description:                This runs a functional test for freezing file system on primary node
+      # - name:                       HA Functional Test- Freeze File System on Primary Node
+      #   task_name:                  fs-freeze
+      #   description:                This runs a functional test for freezing file system on primary node
 
       # - name:                       HA Functional Test- Test SBD Inquisitor kill
       #   task_name:                  sbd-fencing
