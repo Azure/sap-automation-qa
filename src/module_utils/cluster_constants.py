@@ -233,3 +233,15 @@ CONSTRAINTS = {
         "attribute": "#uname",
     },
 }
+
+PROBES = {
+    "probe_threshold": 2,
+    "interval_in_seconds": 5,
+    "number_of_probes": 2,
+}
+
+RULES = {
+    "idle_timeout_in_minutes": 4,
+    "enable_floating_ip": True,
+    "enable_tcp_reset": False,
+}
