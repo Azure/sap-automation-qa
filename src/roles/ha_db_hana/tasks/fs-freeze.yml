@@ -38,8 +38,8 @@
 
         - name:                     "Test Execution: Freeze the file system"
           become:                   true
-          file_system_freeze:
-            nfs_provider:           NFS_provider
+          filesystem_freeze:
+            nfs_provider:           "{{ NFS_provider }}"
 
     - name:                         "Test Execution: Freeze File System on Primary Node init"
       when:                         ansible_hostname == cluster_status_pre.secondary_node
