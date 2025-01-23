@@ -34,6 +34,7 @@
       register:                         azure_loadbalancer_metadata
 
     - name:                             "Azure Load Balancer check for the DB nodes"
+      delegate_to:                      localhost
       get_azure_lb:
         subscription_id:                "{{ azure_instance_metadata.json.compute.subscriptionId }}"
         resource_group_name:            "{{ azure_instance_metadata.json.compute.resourceGroupName }}"

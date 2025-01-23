@@ -8,7 +8,6 @@ Custom ansible module for getting Azure Load Balancer details
 from ansible.module_utils.basic import AnsibleModule
 from azure.identity import ManagedIdentityCredential
 from azure.mgmt.network import NetworkManagementClient
-from collections import defaultdict
 
 PROBES = {
     "probe_threshold": 2,
