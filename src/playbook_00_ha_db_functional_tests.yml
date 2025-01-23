@@ -63,7 +63,7 @@
       ansible.builtin.set_fact:
         test_group_start_time:         "{{ now(utc=true,fmt='%Y-%m-%d %H:%M:%S') }}"
         test_group_invocation_id:      "{{ lookup('pipe', 'uuidgen') }}"
-        test_cases:                    "{{ test_groups | selectattr('name', 'equalto', test_group_name) | map(attribute='test_cases') | list | flatten(levels=1) }}"
+        test_cases:                    "{{ test_groups | selectattr('name', 'equalto', test_group_name) | map(attribute='test_cases') | list | flatten(levels=1) | selectattr('enabled', 'equalto', true) | list }}"
       run_once:                        true
 
     - name:                            "Run test cases by including them as roles"
