@@ -14,3 +14,10 @@
     test_case_status:                 "Starting"
     test_case_details:                {}
     test_case_message:                "Test case execution started"
+
+
+- name:                               "Ensure test_case_invocation_id is available on all nodes"
+  ansible.builtin.set_fact:
+    test_case_invocation_id:          "{{ test_case_invocation_id }}"
+  run_once:                           true
+  delegate_to:                        localhost

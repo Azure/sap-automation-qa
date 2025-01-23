@@ -9,8 +9,6 @@
 
 - name:                                 "Pre Validations: Validate the Azure Load Balancer config"
   become:                               true
-  become_user:                          root
-  run_once:                             true
   block:
     - name:                             "Install azure management network package"
       ansible.builtin.pip:
