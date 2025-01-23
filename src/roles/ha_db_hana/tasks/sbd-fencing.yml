@@ -47,7 +47,6 @@
           async:                    1
           poll:                     0
           register:                 inquisitor_kill
-          failed_when:              inquisitor_kill.rc != 0
 
     - name:                         "Test Execution: Wait for the failover to happen"
       when:                         ansible_hostname == cluster_status_pre.secondary_node
