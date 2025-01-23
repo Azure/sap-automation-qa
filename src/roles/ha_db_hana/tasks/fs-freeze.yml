@@ -5,6 +5,7 @@
 # |                          Freeze File System on Primary Node                |
 # +--------------------------------------------------------------------------*/
 - name:                             "Test Setup Tasks"
+  when:                             NFS_provider == "ANF"
   ansible.builtin.include_tasks:    "roles/misc/tasks/test-case-setup.yml"
   run_once:                         true
 
@@ -12,6 +13,7 @@
 # |                          Pre Validations                                  |
 # +--------------------------------------------------------------------------*/
 - name:                             "Pre Validations: HANA DB Nodes"
+  when:                             NFS_provider == "ANF"
   ansible.builtin.include_tasks:    "roles/misc/tasks/pre-validations.yml"
 
 # /*---------------------------------------------------------------------------
@@ -21,14 +23,14 @@
 - name:                             "Test Execution: Freeze File System on Primary Node init"
   become:                           true
   when:
-    - node_tier == "hana"
-    - cluster_status_pre.primary_node != "" and cluster_status_pre.secondary_node != ""
-    - cluster_status_pre.status == "running"
-    - cluster_status_pre is defined
+                                    - node_tier == "hana"
+                                    - NFS_provider == "ANF"
+                                    - cluster_status_pre.primary_node != "" and cluster_status_pre.secondary_node != ""
+                                    - cluster_status_pre.status == "running"
+                                    - cluster_status_pre is defined
   block:
     - name:                         "Test Execution: Freeze File System on Primary Node init"
-      when:
-        - ansible_hostname == cluster_status_pre.primary_node
+      when:                         ansible_hostname == cluster_status_pre.primary_node
       block:
         - name:                     "Test Execution: Start timer"
           ansible.builtin.set_fact:
@@ -42,8 +44,7 @@
           failed_when:              freeze_fs_results.rc != 0
 
         - name:                     "Test Execution: Validate HANA DB cluster status"
-          when:
-            automated_register.stdout != ""
+          when:                     automated_register.stdout != ""
           get_cluster_status:
             operation_step:         "test_execution"
             database_sid:           "{{ db_sid | lower }}"
@@ -57,8 +58,7 @@
         - name:                     "Test Execution: Register Failed Resource"
           become:                   true
           become_user:              "{{ db_sid | lower }}adm"
-          when:
-            - automated_register.stdout == ""
+          when:                     automated_register.stdout == ""
           ansible.builtin.command: |
                                     hdbnsutil -sr_register \
                                     --remoteHost={{ cluster_status_pre.secondary_node }} \

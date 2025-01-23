@@ -6,7 +6,6 @@
 ##########################################################################################
 - name:                               "Create the telemetry JSON object for the test case"
   failed_when :                       false
-  become:                             true
   delegate_to:                        localhost
   send_telemetry_data:
     telemetry_data_destination:       "{{ telemetry_data_destination | lower }}"
