@@ -61,35 +61,22 @@
           delay:                    30
           register:                 cluster_status_test_execution
           until: |
-                                    cluster_status_post.primary_node == cluster_status_pre.secondary_node and
-                                    cluster_status_post.secondary_node == cluster_status_pre.primary_node
+                                    cluster_status_test_execution.primary_node == cluster_status_pre.secondary_node and
+                                    cluster_status_test_execution.secondary_node == cluster_status_pre.primary_node
 
     - name:                         "Test Execution: SBD Inquisitor kill manual fail over"
       when:                         ansible_hostname == cluster_status_pre.primary_node
       block:
-        - name:                     "Test Execution: Register Failed Resource"
-          become:                   true
-          become_user:              "{{ db_sid | lower }}adm"
-          when:                     automated_register.stdout == ""
-          ansible.builtin.command: |
-                                    hdbnsutil -sr_register \
-                                    --remoteHost={{ cluster_status_pre.secondary_node }} \
-                                    --remoteInstance={{ db_instance_number }} \
-                                    --replicationMode=sync --name=SITEB
-          register:                 hana_db_register_failed_resource
-          changed_when:             hana_db_register_failed_resource.rc == 0
-
-
         - name:                     "Test Execution: Validate HANA DB cluster status"
           get_cluster_status:
             operation_step:         "test_execution"
             database_sid:           "{{ db_sid | lower }}"
-          register:                 cluster_status_test_execution_1
+          register:                 cluster_status_test_post
           retries:                  30
           delay:                    10
           until: |
-                                    cluster_status_test_execution_1.primary_node == cluster_status_pre.secondary_node and
-                                    cluster_status_test_execution_1.secondary_node == cluster_status_pre.primary_node
+                                    cluster_status_test_post.primary_node == cluster_status_pre.secondary_node and
+                                    cluster_status_test_post.secondary_node == cluster_status_pre.primary_node
 
         - name:                     "Test Execution: Stop timer"
           ansible.builtin.set_fact:
@@ -98,16 +85,16 @@
         - name:                     "Set test case message and details"
           ansible.builtin.set_fact:
             test_case_message_from_test_case: "Old primary: {{ cluster_status_pre.primary_node }} \
-                                      New primary: {{ cluster_status_test_execution.primary_node }} \
+                                      New primary: {{ cluster_status_test_post.primary_node }} \
                                       Old secondary: {{ cluster_status_pre.secondary_node }} \
-                                      New secondary: {{ cluster_status_test_execution.secondary_node }}"
+                                      New secondary: {{ cluster_status_test_post.secondary_node }}"
             test_case_details_from_test_case: {
                                       "Pre Validations: Remove any location_constraints": "{{ location_constraints_results }}",
                                       "Pre Validations: Validate HANA DB cluster status": "{{ cluster_status_pre }}",
                                       "Pre Validations: Check if the AUTOMATED_REGISTER": "{{ automated_register }}",
                                       "Pre Validations: CleanUp any failed resource": "{{ cleanup_failed_resource_pre }}",
                                       "Test Execution: Kill inquisitor results": "{{ inquisitor_kill }}",
-                                      "Post Validations: Validate HANA DB cluster status": "{{ cluster_status_test_execution_1 }}",
+                                      "Post Validations: Validate HANA DB cluster status": "{{ cluster_status_test_post }}",
                                     }
 
 # /*---------------------------------------------------------------------------
