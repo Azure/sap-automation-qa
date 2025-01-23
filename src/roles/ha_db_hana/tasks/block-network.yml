@@ -50,7 +50,7 @@
             operation_step:            "test_execution"
             database_sid:              "{{ db_sid | lower }}"
           register:                    cluster_status_test_execution
-          retries:                     40
+          retries:                     20
           delay:                       10
           until: |
                                        cluster_status_test_execution.primary_node == cluster_status_pre.primary_node and
@@ -79,7 +79,7 @@
             operation_step:            "test_execution"
             database_sid:              "{{ db_sid | lower }}"
           register:                    cluster_status_post
-          retries:                     30
+          retries:                     50
           delay:                       10
           until: |
                                        cluster_status_post.primary_node == cluster_status_pre.primary_node and
