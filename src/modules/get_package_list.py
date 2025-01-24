@@ -7,36 +7,18 @@ Custom ansible module for formatting the packages list
 
 from typing import Dict, Any
 from ansible.module_utils.basic import AnsibleModule
+from ansible_module_utils.sap_automation_qa import SapAutomationQA
+from ansible_module_utils.cluster_constants import PACKAGE_LIST
 
 
-PACKAGE_LIST = [
-    {"name": "Corosync Lib", "key": "corosynclib"},
-    {"name": "Corosync", "key": "corosync"},
-    {"name": "Fence Agents Common", "key": "fence-agents-common"},
-    {"name": "Fencing Agent", "key": "fence-agents-azure-arm"},
-    {"name": "Pacemaker CLI", "key": "pacemaker-cli"},
-    {"name": "Pacemaker Libs", "key": "pacemaker-libs"},
-    {"name": "Pacemaker Schemas", "key": "pacemaker-schemas"},
-    {"name": "Pacemaker", "key": "pacemaker"},
-    {"name": "Resource Agent", "key": "resource-agents"},
-    {"name": "SAP Cluster Connector", "key": "sap-cluster-connector"},
-    {"name": "SAPHanaSR", "key": "SAPHanaSR"},
-    {"name": "Socat", "key": "socat"},
-]
-
-
-class PackageListFormatter:
+class PackageListFormatter(SapAutomationQA):
     """
     Class to format the package list based on the provided package facts list.
     """
 
     def __init__(self, package_facts_list: Dict[str, Any]):
+        super().__init__()
         self.package_facts_list = package_facts_list
-        self.result = {
-            "changed": False,
-            "packages_list": [],
-            "msg": "",
-        }
 
     def format_packages(self) -> Dict[str, Any]:
         """
@@ -44,7 +26,7 @@ class PackageListFormatter:
 
         :return: A dictionary containing the formatted package list.
         """
-        self.result["packages_list"] = [
+        self.result["details"] = [
             {
                 package["name"]: {
                     "version": self.package_facts_list[package["key"]][0].get(

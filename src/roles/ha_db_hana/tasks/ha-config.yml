@@ -45,7 +45,7 @@
         test_case_message:              "{{ test_result.msg }}"
         test_case_details:              "{{ test_result.details }}"
         test_case_hostname:             "{{ virtual_host }}"
-        package_versions:               "{{ packages_list.packages_list }}"
+        package_versions:               "{{ packages_list.details }}"
 
   rescue:
     - name:                             "Test case failed"
@@ -55,7 +55,7 @@
           test_case_details:            "{{ test_result }}"
           test_case_message:            "{{ ansible_failed_result }}"
           test_case_hostname:           "{{ virtual_host }}"
-          package_versions:             "{{ packages_list.packages_list }}"
+          package_versions:             "{{ packages_list.details }}"
 
 - name:                                 "Post Telemetry Data"
   ansible.builtin.include_tasks:        "roles/misc/tasks/post-telemetry-data.yml"

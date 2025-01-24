@@ -9,47 +9,26 @@ import subprocess
 import xml.etree.ElementTree as ET
 from typing import List, Dict, Any
 from ansible.module_utils.basic import AnsibleModule
+from ansible.module_utils.sap_automation_qa import SapAutomationQA
 
 
-class LocationConstraintsManager:
+class LocationConstraintsManager(SapAutomationQA):
     """
     Class to manage the location constraints in a pacemaker cluster.
     """
 
     def __init__(self, ansible_os_family: str):
+        super().__init__()
         self.ansible_os_family = ansible_os_family
         self.module_name = {
             "SUSE": "crm",
             "REDHAT": "pcs",
         }
-        self.result = {
-            "changed": False,
-            "location_constraint_removed": False,
-            "stdout": "",
-            "msg": "",
-        }
-
-    def _run_command(self, cmd: List[str]) -> str:
-        """
-        Executes a command and returns the output.
-
-        :param cmd: The command to be executed.
-        :type cmd: list
-        :return: The output of the command.
-        :rtype: str
-        """
-        with subprocess.Popen(
-            cmd,
-            stdout=subprocess.PIPE,
-            stderr=subprocess.PIPE,
-            encoding="utf-8",
-        ) as proc:
-            stdout, stderr = proc.communicate()
-            if proc.returncode != 0:
-                raise subprocess.CalledProcessError(
-                    proc.returncode, cmd, output=stdout, stderr=stderr
-                )
-            return stdout
+        self.result.update(
+            {
+                "location_constraint_removed": False,
+            }
+        )
 
     def remove_location_constraints(
         self, location_constraints: List[ET.Element]
@@ -68,7 +47,7 @@ class LocationConstraintsManager:
                     "clear",
                     location_constraint.attrib["rsc"],
                 ]
-                self._run_command(cmd)
+                self.execute_command_subprocess(cmd)
                 self.result["location_constraint_removed"] = True
 
     def location_constraints_exists(self) -> List[ET.Element]:
@@ -78,7 +57,7 @@ class LocationConstraintsManager:
         :return: A list of location constraints if they exist, otherwise an empty list.
         :rtype: list
         """
-        xml_output = self._run_command(
+        xml_output = self.execute_command_subprocess(
             ["cibadmin", "--query", "--scope", "constraints"]
         )
         constraints = (
@@ -120,9 +99,9 @@ def run_module() -> None:
         if location_constraints and action == "remove":
             manager.remove_location_constraints(location_constraints)
             manager.result["changed"] = True
-            manager.result["msg"] = "Location constraints removed"
+            manager.result["message"] = "Location constraints removed"
         else:
-            manager.result["msg"] = (
+            manager.result["message"] = (
                 "Location constraints do not exist or were already removed."
             )
     except Exception as e:

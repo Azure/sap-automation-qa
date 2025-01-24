@@ -7,9 +7,10 @@ Custom ansible module for formatting the packages list
 import subprocess
 from typing import Dict, Any
 from ansible.module_utils.basic import AnsibleModule
+from ansible.module_utils.sap_automation_qa import SapAutomationQA
 
 
-class FileSystemFreeze:
+class FileSystemFreeze(SapAutomationQA):
     """
     Class to run the test case when the filesystem is frozen.
     """
@@ -17,31 +18,7 @@ class FileSystemFreeze:
     def __init__(
         self,
     ):
-        self.result = {
-            "changed": False,
-            "msg": "",
-        }
-
-    def _run_command(self, filesystem_path: str) -> None:
-        """
-        Run the command to change the filesystem to read only.
-        mount -o ro filesystem_path /hana/shared
-
-        :param filesystem_path: The path of the filesystem to change.
-        """
-        command = ["mount", "-o", "ro", filesystem_path, "/hana/shared"]
-        try:
-            with subprocess.Popen(
-                command,
-                stdout=subprocess.PIPE,
-                encoding="utf-8",
-            ) as proc:
-                stdout, stderr = proc.communicate()
-                if proc.returncode != 0:
-                    return stderr
-                return stdout
-        except subprocess.CalledProcessError as e:
-            return str(e)
+        super().__init__()
 
     def _find_filesystem(self) -> str:
         """
@@ -55,8 +32,8 @@ class FileSystemFreeze:
                     parts = line.split()
                     if len(parts) > 1 and parts[1] == "/hana/shared":
                         return parts[0]
-        except FileNotFoundError:
-            self.result["msg"] = "The /proc/mounts file was not found."
+        except FileNotFoundError as e:
+            self.handle_error(e)
         return None
 
     def run(self) -> Dict[str, Any]:
@@ -68,11 +45,15 @@ class FileSystemFreeze:
         file_system = self._find_filesystem()
 
         if file_system:
-            read_only_output = self._run_command(file_system)
+            read_only_output = self.execute_command_subprocess(
+                ["mount", "-o", "ro", file_system, "/hana/shared"]
+            )
             self.result["changed"] = True
-            self.result["msg"] = read_only_output
+            self.result["message"] = read_only_output
         else:
-            self.result["msg"] = "The filesystem mounted on /hana/shared was not found."
+            self.result["message"] = (
+                "The filesystem mounted on /hana/shared was not found."
+            )
 
         return self.result
 
@@ -87,7 +68,7 @@ def run_module() -> None:
 
     module = AnsibleModule(argument_spec=module_args, supports_check_mode=True)
     if module.params["nfs_provider"] != "ANF":
-        module.exit_json(changed=False, msg="The NFS provider is not ANF. Skipping")
+        module.exit_json(changed=False, message="The NFS provider is not ANF. Skipping")
     formatter = FileSystemFreeze()
     result = formatter.run()
 

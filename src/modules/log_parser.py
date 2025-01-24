@@ -9,44 +9,11 @@ import json
 from datetime import datetime
 from typing import Dict, Any
 from ansible.module_utils.basic import AnsibleModule
+from ansible.module_utils.sap_automation_qa import SapAutomationQA
+from ansible.module_utils.constants import PCMK_KEYWORDS, SYS_KEYWORDS
 
 
-PCMK_KEYWORDS = {
-    "LogAction",
-    "LogNodeActions",
-    "pacemaker-fenced",
-    "check_migration_threshold",
-    "corosync",
-    "Result of",
-    "reboot",
-    "cannot run anywhere",
-    "attrd_peer_update",
-    "High CPU load detected",
-    "cli-ban",
-    "cli-prefer",
-    "cib-bootstrap-options-maintenance-mode",
-    "-is-managed",
-    "-maintenance",
-    "-standby",
-}
-SYS_KEYWORDS = {
-    "SAPHana",
-    "SAPHanaController",
-    "SAPHanaTopology",
-    "SAPInstance",
-    "fence_azure_arm",
-    "rsc_st_azure",
-    "rsc_ip_",
-    "rsc_nc_",
-    "rsc_Db2_",
-    "rsc_HANA_",
-    "corosync",
-    "Result of",
-    "reboot",
-}
-
-
-class LogParser:
+class LogParser(SapAutomationQA):
     """
     Class to parse logs based on provided parameters.
     """
@@ -58,19 +25,21 @@ class LogParser:
         log_file: str,
         ansible_os_family: str,
     ):
+        super().__init__()
         self.start_time = start_time
         self.end_time = end_time
         self.log_file = log_file
         self.keywords = list(PCMK_KEYWORDS | SYS_KEYWORDS)
         self.ansible_os_family = ansible_os_family
-        self.result = {
-            "start_time": start_time,
-            "end_time": end_time,
-            "log_file": log_file,
-            "keywords": self.keywords,
-            "filtered_logs": [],
-            "error": "",
-        }
+        self.result.update(
+            {
+                "start_time": start_time,
+                "end_time": end_time,
+                "log_file": log_file,
+                "keywords": self.keywords,
+                "filtered_logs": [],
+            }
+        )
 
     def parse_logs(self) -> None:
         """
@@ -109,9 +78,9 @@ class LogParser:
 
             self.result["filtered_logs"] = json.dumps(self.result["filtered_logs"])
         except FileNotFoundError as ex:
-            self.result["error"] = str(ex)
+            self.handle_error(ex)
         except Exception as e:
-            self.result["error"] = str(e)
+            self.handle_error(e)
 
     def get_result(self) -> Dict[str, Any]:
         """
@@ -147,8 +116,8 @@ def run_module() -> None:
     parser.parse_logs()
 
     result = parser.get_result()
-    if result["error"]:
-        module.fail_json(msg=result["error"], **result)
+    if result["status"] == "FAILED":
+        module.fail_json(msg=result["message"], **result)
     else:
         module.exit_json(**result)
 

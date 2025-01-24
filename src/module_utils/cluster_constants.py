@@ -245,3 +245,52 @@ RULES = {
     "enable_floating_ip": True,
     "enable_tcp_reset": False,
 }
+
+PACKAGE_LIST = [
+    {"name": "Corosync Lib", "key": "corosynclib"},
+    {"name": "Corosync", "key": "corosync"},
+    {"name": "Fence Agents Common", "key": "fence-agents-common"},
+    {"name": "Fencing Agent", "key": "fence-agents-azure-arm"},
+    {"name": "Pacemaker CLI", "key": "pacemaker-cli"},
+    {"name": "Pacemaker Libs", "key": "pacemaker-libs"},
+    {"name": "Pacemaker Schemas", "key": "pacemaker-schemas"},
+    {"name": "Pacemaker", "key": "pacemaker"},
+    {"name": "Resource Agent", "key": "resource-agents"},
+    {"name": "SAP Cluster Connector", "key": "sap-cluster-connector"},
+    {"name": "SAPHanaSR", "key": "SAPHanaSR"},
+    {"name": "Socat", "key": "socat"},
+]
+
+PCMK_KEYWORDS = {
+    "LogAction",
+    "LogNodeActions",
+    "pacemaker-fenced",
+    "check_migration_threshold",
+    "corosync",
+    "Result of",
+    "reboot",
+    "cannot run anywhere",
+    "attrd_peer_update",
+    "High CPU load detected",
+    "cli-ban",
+    "cli-prefer",
+    "cib-bootstrap-options-maintenance-mode",
+    "-is-managed",
+    "-maintenance",
+    "-standby",
+}
+SYS_KEYWORDS = {
+    "SAPHana",
+    "SAPHanaController",
+    "SAPHanaTopology",
+    "SAPInstance",
+    "fence_azure_arm",
+    "rsc_st_azure",
+    "rsc_ip_",
+    "rsc_nc_",
+    "rsc_Db2_",
+    "rsc_HANA_",
+    "corosync",
+    "Result of",
+    "reboot",
+}

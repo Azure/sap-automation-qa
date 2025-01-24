@@ -5,25 +5,23 @@
 Custom ansible module for getting Azure Load Balancer details
 """
 
+from typing import Dict
 from ansible.module_utils.basic import AnsibleModule
 from azure.identity import ManagedIdentityCredential
 from azure.mgmt.network import NetworkManagementClient
 from ansible.module_utils.cluster_constants import PROBES, RULES
+from ansible.module_utils.sap_automation_qa import SapAutomationQA
 
 
-class AzureLoadBalancer:
+class AzureLoadBalancer(SapAutomationQA):
     """
     Class to get the details of the DB/SCS/ERS load balancers in a specific resource group.
     """
 
-    def __init__(self, module: AnsibleModule):
-        self.result = {
-            "details": [],
-            "status": None,
-            "error": None,
-        }
+    def __init__(self, module_params: Dict):
+        super().__init__()
         self.credential = None
-        self.module = module
+        self.module_params = module_params
         self.network_client = None
 
     def _create_network_client(self):
@@ -35,12 +33,10 @@ class AzureLoadBalancer:
         try:
             self.credential = ManagedIdentityCredential()
             self.network_client = NetworkManagementClient(
-                self.credential, self.module.params["subscription_id"]
+                self.credential, self.module_params["subscription_id"]
             )
         except Exception as e:
-            self.result["error"] = (
-                "Failed to get the MSI credential object or network client. " + str(e)
-            )
+            self.handle_error(e)
 
     def get_load_balancers(self) -> list:
         """
@@ -52,12 +48,11 @@ class AzureLoadBalancer:
             return [
                 lb.as_dict()
                 for lb in self.network_client.load_balancers.list(
-                    self.module.params["resource_group_name"]
+                    self.module_params["resource_group_name"]
                 )
             ]
         except Exception as e:
-            self.result["error"] = str(e)
-            return []
+            self.handle_error(e)
 
     def _format_parameter_result(self, name: str, value: str, expected: str) -> str:
         """
@@ -73,12 +68,12 @@ class AzureLoadBalancer:
         """
         self._create_network_client()
 
-        if self.result["error"]:
+        if self.result["status"] == "FAILED":
             return self.result
 
         load_balancers = self.get_load_balancers()
 
-        if self.result["error"]:
+        if self.result["status"] == "FAILED":
             return self.result
 
         required_load_balancer_ip = self.module.params["load_balancer_ip"]
@@ -129,9 +124,9 @@ class AzureLoadBalancer:
                 if all(param["status"] == "PASSED" for param in parameters)
                 else "FAILED"
             )
-            self.result["details"] = {"parameters": parameters}
+            self.result["details"].append(f"Load balancer details: {parameters}")
         except Exception as e:
-            self.result["error"] = str(e)
+            self.handle_error(e)
 
         return self.result
 
@@ -151,7 +146,7 @@ def run_module():
     load_balancer = AzureLoadBalancer(module)
     result = load_balancer.get_load_balancers_details()
 
-    if result["error"]:
+    if result["status"] == "FAILED":
         module.fail_json(msg=result["error"], **result)
     else:
         module.exit_json(
