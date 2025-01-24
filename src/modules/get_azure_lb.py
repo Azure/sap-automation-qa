@@ -9,8 +9,13 @@ from typing import Dict
 from ansible.module_utils.basic import AnsibleModule
 from azure.identity import ManagedIdentityCredential
 from azure.mgmt.network import NetworkManagementClient
-from ansible.module_utils.cluster_constants import PROBES, RULES
-from ansible.module_utils.sap_automation_qa import SapAutomationQA
+
+try:
+    from ansible.module_utils.sap_automation_qa import SapAutomationQA
+    from ansible.module_utils.cluster_constants import PROBES, RULES
+except ImportError:
+    from src.module_utils.sap_automation_qa import SapAutomationQA
+    from src.module_utils.cluster_constants import PROBES, RULES
 
 
 class AzureLoadBalancer(SapAutomationQA):

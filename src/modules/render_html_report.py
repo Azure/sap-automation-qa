@@ -12,8 +12,11 @@ from datetime import datetime
 from typing import Dict, Any, List
 from ansible.module_utils.basic import AnsibleModule
 import jinja2
-from ansible.module_utils.sap_automation_qa import SapAutomationQA
-from ansible.module_utils.models import TestStatus
+
+try:
+    from ansible.module_utils.sap_automation_qa import SapAutomationQA, TestStatus
+except ImportError:
+    from src.module_utils.sap_automation_qa import SapAutomationQA, TestStatus
 
 
 class HTMLReportRenderer(SapAutomationQA):

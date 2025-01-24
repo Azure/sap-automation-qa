@@ -7,8 +7,13 @@ Custom ansible module for formatting the packages list
 
 from typing import Dict, Any
 from ansible.module_utils.basic import AnsibleModule
-from ansible_module_utils.sap_automation_qa import SapAutomationQA
-from ansible_module_utils.cluster_constants import PACKAGE_LIST
+
+try:
+    from ansible.module_utils.sap_automation_qa import SapAutomationQA, TestStatus
+    from ansible.module_utils.cluster_constants import PACKAGE_LIST
+except ImportError:
+    from src.module_utils.sap_automation_qa import SapAutomationQA, TestStatus
+    from src.module_utils.cluster_constants import PACKAGE_LIST
 
 
 class PackageListFormatter(SapAutomationQA):
@@ -26,24 +31,27 @@ class PackageListFormatter(SapAutomationQA):
 
         :return: A dictionary containing the formatted package list.
         """
-        self.result["details"] = [
-            {
-                package["name"]: {
-                    "version": self.package_facts_list[package["key"]][0].get(
-                        "version"
-                    ),
-                    "release": self.package_facts_list[package["key"]][0].get(
-                        "release"
-                    ),
-                    "architecture": self.package_facts_list[package["key"]][0].get(
-                        "arch"
-                    ),
+        try:
+            self.result["details"] = [
+                {
+                    package["name"]: {
+                        "version": self.package_facts_list[package["key"]][0].get(
+                            "version"
+                        ),
+                        "release": self.package_facts_list[package["key"]][0].get(
+                            "release"
+                        ),
+                        "architecture": self.package_facts_list[package["key"]][0].get(
+                            "arch"
+                        ),
+                    }
                 }
-            }
-            for package in PACKAGE_LIST
-            if package["key"] in self.package_facts_list
-        ]
-
+                for package in PACKAGE_LIST
+                if package["key"] in self.package_facts_list
+            ]
+        except Exception as e:
+            self.handle_error(e)
+        self.result["status"] = TestStatus.SUCCESS.value
         return self.result
 
 

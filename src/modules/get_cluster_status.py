@@ -18,7 +18,11 @@ import xml.etree.ElementTree as ET
 from datetime import datetime
 from typing import Dict
 from ansible.module_utils.basic import AnsibleModule
-from ansible.module_utils.sap_automation_qa import SapAutomationQA
+
+try:
+    from ansible.module_utils.sap_automation_qa import SapAutomationQA, TestStatus
+except ImportError:
+    from src.module_utils.sap_automation_qa import SapAutomationQA, TestStatus
 
 
 class ClusterStatusChecker(SapAutomationQA):
@@ -152,6 +156,7 @@ class ClusterStatusChecker(SapAutomationQA):
         except Exception as e:
             self.handle_error(e)
         self.result["end"] = datetime.now()
+        self.result["status"] = TestStatus.SUCCESS.value
         self.log(logging.INFO, "Cluster status check completed")
         return self.result
 

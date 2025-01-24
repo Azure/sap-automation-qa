@@ -13,15 +13,27 @@ import json
 import xml.etree.ElementTree as ET
 from collections import defaultdict
 from ansible.module_utils.basic import AnsibleModule
-from ansible.module_utils.models import TestStatus
-from ansible.module_utils.cluster_constants import (
-    OS_PARAMETERS,
-    CUSTOM_OS_PARAMETERS,
-    CONSTRAINTS,
-    CLUSTER_PROPERTIES,
-    CLUSTER_RESOURCES,
-    REQUIRED_PARAMETERS,
-)
+
+try:
+    from ansible.module_utils.sap_automation_qa import TestStatus
+    from ansible.module_utils.cluster_constants import (
+        OS_PARAMETERS,
+        CUSTOM_OS_PARAMETERS,
+        CONSTRAINTS,
+        CLUSTER_PROPERTIES,
+        CLUSTER_RESOURCES,
+        REQUIRED_PARAMETERS,
+    )
+except ImportError:
+    from src.module_utils.sap_automation_qa import TestStatus
+    from src.module_utils.cluster_constants import (
+        OS_PARAMETERS,
+        CUSTOM_OS_PARAMETERS,
+        CONSTRAINTS,
+        CLUSTER_PROPERTIES,
+        CLUSTER_RESOURCES,
+        REQUIRED_PARAMETERS,
+    )
 
 
 @dataclass

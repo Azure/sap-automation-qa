@@ -4,13 +4,18 @@
 """
 Custom ansible module for log parsing
 """
-
+from enum import Enum
 import json
 from datetime import datetime
 from typing import Dict, Any
 from ansible.module_utils.basic import AnsibleModule
-from ansible.module_utils.sap_automation_qa import SapAutomationQA
-from ansible.module_utils.constants import PCMK_KEYWORDS, SYS_KEYWORDS
+
+try:
+    from ansible.module_utils.sap_automation_qa import SapAutomationQA, TestStatus
+    from ansible.module_utils.cluster_constants import PCMK_KEYWORDS, SYS_KEYWORDS
+except ImportError:
+    from src.module_utils.sap_automation_qa import SapAutomationQA, TestStatus
+    from src.module_utils.cluster_constants import PCMK_KEYWORDS, SYS_KEYWORDS
 
 
 class LogParser(SapAutomationQA):
@@ -77,6 +82,7 @@ class LogParser(SapAutomationQA):
                         continue
 
             self.result["filtered_logs"] = json.dumps(self.result["filtered_logs"])
+            self.result["status"] = TestStatus.SUCCESS
         except FileNotFoundError as ex:
             self.handle_error(ex)
         except Exception as e:

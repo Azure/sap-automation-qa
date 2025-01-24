@@ -5,11 +5,14 @@
 Custom ansible module for location constraints
 """
 
-import subprocess
 import xml.etree.ElementTree as ET
 from typing import List, Dict, Any
 from ansible.module_utils.basic import AnsibleModule
-from ansible.module_utils.sap_automation_qa import SapAutomationQA
+
+try:
+    from ansible.module_utils.sap_automation_qa import SapAutomationQA
+except ImportError:
+    from src.module_utils.sap_automation_qa import SapAutomationQA
 
 
 class LocationConstraintsManager(SapAutomationQA):
@@ -94,18 +97,17 @@ def run_module() -> None:
     if module.check_mode:
         module.exit_json(**manager.get_result())
 
-    try:
-        location_constraints = manager.location_constraints_exists()
-        if location_constraints and action == "remove":
-            manager.remove_location_constraints(location_constraints)
-            manager.result["changed"] = True
-            manager.result["message"] = "Location constraints removed"
-        else:
-            manager.result["message"] = (
-                "Location constraints do not exist or were already removed."
-            )
-    except Exception as e:
-        module.fail_json(msg=str(e))
+    location_constraints = manager.location_constraints_exists()
+    if location_constraints and action == "remove":
+        manager.remove_location_constraints(location_constraints)
+        manager.result["changed"] = True
+        manager.result["message"] = "Location constraints removed"
+    else:
+        manager.result["message"] = (
+            "Location constraints do not exist or were already removed."
+        )
+    if manager.result["status"] == "FAILED":
+        module.fail_json(**manager.result)
 
     module.exit_json(**manager.get_result())
 

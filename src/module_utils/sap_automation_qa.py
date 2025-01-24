@@ -4,12 +4,24 @@ and setup base variables for the test case running in the sap-automation-qa
 """
 
 from abc import ABC
+from enum import Enum
 import sys
 import logging
 import subprocess
 from typing import List, Optional
 import xml.etree.ElementTree as ET
-from ansible.module_utils.models import TestStatus
+
+
+class TestStatus(Enum):
+    """
+    Enum for the status of the test case/step.
+    """
+
+    SUCCESS = "PASSED"
+    ERROR = "FAILED"
+    WARNING = "WARNING"
+    INFO = "INFO"
+    NOT_STARTED = "NOT_STARTED"
 
 
 class SapAutomationQA(ABC):
@@ -85,9 +97,7 @@ class SapAutomationQA(ABC):
             command_output = subprocess.run(
                 command, shell=True, check=True, capture_output=True, timeout=30
             )
-            output = command_output.stdout.decode("utf-8").strip()
-            self.log(logging.INFO, f"Command output: {output}")
-            return output
+            return command_output
         except subprocess.TimeoutExpired as e:
             self.handle_error(e, "Command timed out")
         except subprocess.CalledProcessError as e:

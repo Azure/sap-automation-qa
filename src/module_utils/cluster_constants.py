@@ -294,3 +294,7 @@ SYS_KEYWORDS = {
     "Result of",
     "reboot",
 }
+
+LAWS_RESOURCE = "/api/logs"
+LAWS_METHOD = "POST"
+LAWS_CONTENT_TYPE = "application/json"

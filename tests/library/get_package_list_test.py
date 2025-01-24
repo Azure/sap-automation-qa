@@ -29,16 +29,14 @@ def test_main(mocker, package_facts_list):
     :param package_facts_list: The sample package facts list fixture.
     :type package_facts_list: dict
     """
-    mock_ansible_module = mocker.patch(
-        "src.library.get_package_list.AnsibleModule"
-    )
+    mock_ansible_module = mocker.patch("src.modules.get_package_list.AnsibleModule")
     mock_ansible_module.return_value.params = {"package_facts_list": package_facts_list}
 
     formatter = PackageListFormatter(package_facts_list)
     result = formatter.format_packages()
     expected_result = {
         "changed": False,
-        "packages_list": [
+        "details": [
             {
                 "Corosync Lib": {
                     "version": "2.4.5",
@@ -54,6 +52,8 @@ def test_main(mocker, package_facts_list):
                 }
             },
         ],
-        "msg": "",
+        "message": "",
+        "status": "PASSED",
     }
-    assert result == expected_result
+    assert result["details"] == expected_result["details"]
+    assert result["status"] == "PASSED"

@@ -4,10 +4,13 @@
 """
 Custom ansible module for formatting the packages list
 """
-import subprocess
 from typing import Dict, Any
 from ansible.module_utils.basic import AnsibleModule
-from ansible.module_utils.sap_automation_qa import SapAutomationQA
+
+try:
+    from ansible.module_utils.sap_automation_qa import SapAutomationQA
+except ImportError:
+    from src.module_utils.sap_automation_qa import SapAutomationQA
 
 
 class FileSystemFreeze(SapAutomationQA):
