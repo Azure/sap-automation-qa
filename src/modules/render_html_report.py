@@ -82,7 +82,7 @@ class HTMLReportRenderer(SapAutomationQA):
                     )
                 )
             self.result["report_path"] = report_path
-            self.result["status"] = TestStatus.PASSED.value
+            self.result["status"] = TestStatus.SUCCESS.value
         except Exception as e:
             self.handle_error(e)
 

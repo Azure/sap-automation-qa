@@ -215,7 +215,7 @@ class TelemetryDataSender(SapAutomationQA):
                 response = getattr(self, method_name)(
                     json.dumps(self.result["telemetry_data"])
                 )
-                self.result["status"] = TestStatus.PASSED.value
+                self.result["status"] = TestStatus.SUCCESS.value
             except Exception as e:
                 self.handle_error(e)
         else:
