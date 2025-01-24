@@ -54,7 +54,7 @@ class ValidationResult:
         :rtype: Dict
         """
         return {
-            "msg": self.messages,
+            "message": self.messages,
             "status": self.status.value,
             **(self.details or {}),
         }
@@ -707,7 +707,7 @@ class ResultAggregator:
         """
         result_dict = result.to_dict()
 
-        for key, value in result_dict.get("msg", {}).items():
+        for key, value in result_dict.get("message", {}).items():
             self._process_value(category, key, value)
 
         if result.status == TestStatus.ERROR and not self.error_message:
@@ -761,7 +761,7 @@ class ResultAggregator:
         }
 
         if self.error_message:
-            result["error_message"] = self.error_message
+            result["message"] = self.error_message
 
         return result
 
@@ -792,7 +792,7 @@ class ClusterManager:
             if self.module.params["action"] == "get":
                 self._handle_get_action()
         except Exception as e:
-            self.module.fail_json(msg=str(e))
+            self.module.fail_json(details=str(e))
 
     def _handle_get_action(self) -> None:
         """
@@ -804,7 +804,7 @@ class ClusterManager:
             self._process_results()
         except Exception as e:
             self.result_aggregator.error_message = str(e)
-            self.module.fail_json(msg=str(e), details=asdict(self.result_aggregator))
+            self.module.fail_json(details=asdict(self.result_aggregator))
 
     def _create_validators(self) -> Dict[str, ValidatorBase]:
         """
@@ -834,18 +834,22 @@ class ClusterManager:
             param["status"] == TestStatus.ERROR.value
             for param in self.result_aggregator.parameters
         )
+        result = {
+            "changed": False,
+            "status": TestStatus.NOT_STARTED.value,
+            "message": "",
+            "details": {},
+        }
 
-        status = (
+        result["status"] = (
             TestStatus.ERROR
             if (has_errors or self.result_aggregator.error_message)
             else TestStatus.SUCCESS
         )
+        result["message"] = self.result_aggregator.message
+        result["details"] = self.result_aggregator.to_dict()
 
-        self.module.exit_json(
-            msg=self.result_aggregator.message,
-            details=self.result_aggregator.to_dict(),
-            status=status.value,
-        )
+        self.module.exit_json(**result)
 
 
 def main() -> None:
