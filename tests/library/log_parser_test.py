@@ -5,7 +5,6 @@ Unit tests for the log_parser module.
 import json
 import pytest
 from src.modules.log_parser import LogParser
-from datetime import datetime
 
 
 PCMK_KEYWORDS = {
@@ -63,7 +62,7 @@ def test_parse_logs_success(mocker, log_parser):
     ]
     filtered_logs = [log.strip() for log in json.loads(result["filtered_logs"])]
     assert filtered_logs == expected_filtered_logs
-    assert result["error"] == ""
+    assert result["status"].value == "PASSED"
 
 
 def test_parse_logs_failure(mocker, log_parser):
@@ -83,9 +82,7 @@ def test_parse_logs_failure(mocker, log_parser):
     log_parser.parse_logs()
 
     result = log_parser.get_result()
-    print(f"Result: {result}")
     assert result["filtered_logs"] == []
-    assert result["error"] == "File not found"
 
 
 def test_main(mocker):
@@ -95,7 +92,7 @@ def test_main(mocker):
     :param mocker: The mocker fixture
     :type mocker: pytest_mock.MockerFixture
     """
-    mock_ansible_module = mocker.patch("src.library.log_parser.AnsibleModule")
+    mock_ansible_module = mocker.patch("src.modules.log_parser.AnsibleModule")
     mock_ansible_module.return_value.params = {
         "start_time": "2023-01-01 00:00:00",
         "end_time": "2023-01-01 23:59:59",

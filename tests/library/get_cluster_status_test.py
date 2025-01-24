@@ -26,7 +26,7 @@ def test_run_primary_node(mocker, cluster_status_checker):
     :param cluster_status_checker: The ClusterStatusChecker instance
     :type cluster_status_checker: ClusterStatusChecker
     """
-    mock_check_output = mocker.patch("subprocess.check_output")
+    mock_check_output = mocker.patch("subprocess.run")
     mock_check_output.side_effect = [
         b"""
         <cluster_status>
@@ -47,7 +47,7 @@ def test_run_primary_node(mocker, cluster_status_checker):
         b"active",
     ]
 
-    mock_ansible_module = mocker.patch("src.library.get_cluster_status.AnsibleModule")
+    mock_ansible_module = mocker.patch("src.modules.get_cluster_status.AnsibleModule")
     mock_ansible_module.return_value.params = {
         "operation_step": "check",
         "database_sid": "TEST",
@@ -56,7 +56,7 @@ def test_run_primary_node(mocker, cluster_status_checker):
     cluster_status_checker.run()
     assert cluster_status_checker.result["primary_node"] == "node1"
     assert cluster_status_checker.result["secondary_node"] == ""
-    assert cluster_status_checker.result["status"] == "running"
+    assert cluster_status_checker.result["status"] == "PASSED"
 
 
 def test_run_secondary_node(mocker, cluster_status_checker):
@@ -68,7 +68,7 @@ def test_run_secondary_node(mocker, cluster_status_checker):
     :param cluster_status_checker: The ClusterStatusChecker instance
     :type cluster_status_checker: ClusterStatusChecker
     """
-    mock_check_output = mocker.patch("subprocess.check_output")
+    mock_check_output = mocker.patch("subprocess.run")
     mock_check_output.side_effect = [
         b"""
         <cluster_status>
@@ -92,7 +92,7 @@ def test_run_secondary_node(mocker, cluster_status_checker):
         """,
         b"active",
     ]
-    mock_ansible_module = mocker.patch("src.library.get_cluster_status.AnsibleModule")
+    mock_ansible_module = mocker.patch("src.modules.get_cluster_status.AnsibleModule")
     mock_ansible_module.return_value.params = {
         "operation_step": "check",
         "database_sid": "TEST",
@@ -101,4 +101,4 @@ def test_run_secondary_node(mocker, cluster_status_checker):
     cluster_status_checker.run()
     assert cluster_status_checker.result["primary_node"] == "node1"
     assert cluster_status_checker.result["secondary_node"] == "node2"
-    assert cluster_status_checker.result["status"] == "running"
+    assert cluster_status_checker.result["status"] == "PASSED"
