@@ -99,8 +99,10 @@ class ClusterStatusChecker(SapAutomationQA):
 
         try:
             while self.result["primary_node"] == "":
-                self.result["cluster_status"] = self.execute_command_subprocess(
-                    ["crm_mon", "--output-as=xml"]
+                self.result["cluster_status"] = (
+                    self.execute_command_subprocess(["crm_mon", "--output-as=xml"])
+                    .stdout.decode("utf-8")
+                    .strip()
                 )
                 cluster_status_xml = ET.fromstring(self.result["cluster_status"])
                 self.log(logging.INFO, "Cluster status retrieved")
