@@ -41,12 +41,12 @@
         grid-template-columns: minmax(0, 1fr) minmax(auto, 1400px) minmax(0, 1fr);
         gap: 20px;
       }
-
+      
       .left-bar {
         grid-column: 2;
         padding: 20px;
       }
-
+      
       .right-content {
         grid-column: 2;
         padding: 20px;
@@ -314,23 +314,20 @@
           <div class="system-info-container">
             <h2 class="system-info-heading">System Information</h2>
             <div class="system-info-columns">
-              {% set properties = [
-                {'label': 'Test Group Name', 'value': test_case_results.0.TestGroupName},
-                {'label': 'DB SID', 'value': test_case_results.0.DbSid},
-                {'label': 'SAP SID', 'value': test_case_results.0.SapSid},
-                {% if test_case_results[0].TestGroupName == 'DatabaseHighAvailability' %}
-                  {'label': 'DB Fencing Agent', 'value': test_case_results[0].DbFencingType},
-                {% elif test_case_results[0].TestGroupName == 'CentralServicesHighAvailability' %}
-                  {'label': 'SCS Fencing Agent', 'value': test_case_results[0].ScsFencingType},
-                {% endif %}
-                {'label': 'DB Type', 'value': test_case_results.0.DBType},
-                {'label': 'Storage Type', 'value': test_case_results.0.StorageType},
-                {'label': 'OS Version', 'value': test_case_results.0.OsVersion},
-                {'label': 'Hostnames', 'value': test_case_results|map(attribute='TestCaseHostname')|unique|join(', ')}
-              ] %}
-              {% set num_columns = 3 %}
-              {% set properties_per_column = (properties|length // num_columns) + (1 if properties|length % num_columns > 0 else 0) %}
+              {% set properties = [{ label: 'Test Group Name', value: test_case_results.0.TestGroupName }, { label: 'DB SID', value: test_case_results.0.DbSid }, { label: 'SAP SID', value: test_case_results.0.SapSid }, { label: 'DB Type', value: test_case_results.0.DBType }, { label: 'Storage Type', value: test_case_results.0.StorageType }, { label: 'OS Version', value: test_case_results.0.OsVersion }, { label: 'Hostnames', value: test_case_results|map(attribute='TestCaseHostname')|unique|join(', ') }] %}
 
+              {% if test_case_results.0.TestGroupName == 'DatabaseHighAvailability' %}
+                {% set properties = properties + [{ label: 'DB Fencing Agent', value: test_case_results.0.DbFencingType }] %}
+              {% elif test_case_results.0.TestGroupName == 'CentralServicesHighAvailability' %}
+                {% set properties = properties + [{ label: 'SCS Fencing Agent', value: test_case_results.0.ScsFencingType }] %}
+              {% endif %}
+
+              {% set num_columns = 3 %}
+              {% set properties_length = properties|length %}
+              {% set properties_per_column = properties_length // num_columns %}
+              {% if properties_length % num_columns > 0 %}
+                {% set properties_per_column = properties_per_column + 1 %}
+              {% endif %}
               <div class="system-info-columns">
                 {% for col in range(num_columns) %}
                   <div class="system-info-column">
@@ -338,7 +335,7 @@
                       {% set index = col * properties_per_column + row %}
                       {% if index < properties|length %}
                         <p>
-                          <strong>{{ properties[index].label }}:</strong> {{ properties[index].value }}
+                          <strong>{{ properties.index.label }}:</strong> {{ properties.index.value }}
                         </p>
                       {% endif %}
                     {% endfor %}
@@ -392,14 +389,14 @@
                   <td>{{ test_case_result.TestCaseMessage }}</td>
                 </tr>
                 {% if test_case_result.PackageVersions %}
-                <tr>
+                  <tr>
                     <th>Package Versions</th>
                     <td class="packages">{{ test_case_result.PackageVersions }}</td>
-                </tr>
+                  </tr>
                 {% endif %}
                 <tr>
                   <th>Test Case Details (Logs)</th>
-                    {% if 'HA Parameters Validation' in test_case_result.TestCaseName or 'Azure Load Balancer' in test_case_result.TestCaseName %}
+                  {% if 'HA Parameters Validation' in test_case_result.TestCaseName or 'Azure Load Balancer' in test_case_result.TestCaseName %}
                     <td class="cluster">{{ test_case_result.TestCaseDetails }}</td>
                   {% else %}
                     <td class="jsonobject">{{ test_case_result.TestCaseDetails }}</td>
@@ -592,18 +589,18 @@
       function createClusterTable(clusterData) {
         const table = document.createElement('table')
         table.className = 'cluster-table'
-  
+      
         // Create table header
         const header = table.createTHead()
         const headerRow = header.insertRow()
-          ;['Category', 'Type', 'Name', 'Value', 'Expected Value', 'Status'].forEach((text) => {
-            const th = document.createElement('th')
-            th.textContent = text
-            headerRow.appendChild(th)
-          })
-  
+        ;['Category', 'Type', 'Name', 'Value', 'Expected Value', 'Status'].forEach((text) => {
+          const th = document.createElement('th')
+          th.textContent = text
+          headerRow.appendChild(th)
+        })
+      
         const tbody = table.createTBody()
-  
+      
         function addRow(category, type, name, value, expectedValue, status) {
           const row = tbody.insertRow()
           const categoryCell = row.insertCell()
@@ -612,7 +609,7 @@
           const valueCell = row.insertCell()
           const expectedValueCell = row.insertCell()
           const statusCell = row.insertCell()
-  
+      
           categoryCell.textContent = category
           typeCell.textContent = type
           nameCell.textContent = name
@@ -620,14 +617,14 @@
           expectedValueCell.textContent = expectedValue
           statusCell.textContent = status
         }
-  
-        clusterData.parameters.forEach(param => {
+      
+        clusterData.parameters.forEach((param) => {
           addRow(param.category, param.type, param.name, param.value, param['expected value'], param.status)
         })
-  
+      
         return table
       }
-  
+      
       // Function to parse and convert cluster data to tables
       function formatClusterData() {
         const clusterDataElements = document.getElementsByClassName('cluster-data')
@@ -642,7 +639,7 @@
           }
         }
       }
-  
+      
       // Function to parse and convert cluster data to tables
       function parseClusterData() {
         const clusterElements = document.getElementsByClassName('cluster')
@@ -650,10 +647,10 @@
           try {
             let clusterText = clusterElement.textContent.trim()
             // Replace single quotes with double quotes and remove control characters
-            clusterText = clusterText.replace(/'/g, '"').replace(/[\x00-\x1F\x7F]/g, "")
+            clusterText = clusterText.replace(/'/g, '"').replace(/[\x00-\x1F\x7F]/g, '')
             const clusterData = JSON.parse(clusterText)
             const clusterTable = createClusterTable(clusterData)
-  
+      
             clusterElement.textContent = '' // Clear the existing content
             clusterElement.appendChild(clusterTable)
           } catch (error) {
@@ -692,22 +689,22 @@
           let gradient
           if (progress <= percentages.PASSED) {
             gradient = `conic-gradient(
-                            var(--passed) 0% ${progress}%,
-                            transparent ${progress}% 100%
-                        )`
+                                        var(--passed) 0% ${progress}%,
+                                        transparent ${progress}% 100%
+                                    )`
           } else if (progress <= percentages.PASSED + percentages.FAILED) {
             gradient = `conic-gradient(
-                            var(--passed) 0% ${percentages.PASSED}%,
-                            var(--failed) ${percentages.PASSED}% ${progress}%,
-                            transparent ${progress}% 100%
-                        )`
+                                        var(--passed) 0% ${percentages.PASSED}%,
+                                        var(--failed) ${percentages.PASSED}% ${progress}%,
+                                        transparent ${progress}% 100%
+                                    )`
           } else {
             gradient = `conic-gradient(
-                            var(--passed) 0% ${percentages.PASSED}%,
-                            var(--failed) ${percentages.PASSED}% ${percentages.PASSED + percentages.FAILED}%,
-                            var(--warning) ${percentages.PASSED + percentages.FAILED}% ${progress}%,
-                            transparent ${progress}% 100%
-                        )`
+                                        var(--passed) 0% ${percentages.PASSED}%,
+                                        var(--failed) ${percentages.PASSED}% ${percentages.PASSED + percentages.FAILED}%,
+                                        var(--warning) ${percentages.PASSED + percentages.FAILED}% ${progress}%,
+                                        transparent ${progress}% 100%
+                                    )`
           }
       
           pie.style.background = gradient
