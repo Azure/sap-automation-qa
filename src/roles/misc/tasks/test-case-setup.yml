@@ -19,5 +19,6 @@
 - name:                               "Ensure test_case_invocation_id is available on all nodes"
   ansible.builtin.set_fact:
     test_case_invocation_id:          "{{ test_case_invocation_id }}"
+    test_case_start_time_epoch:       "{{ test_case_start_time_epoch }}"
   run_once:                           true
   delegate_to:                        localhost
