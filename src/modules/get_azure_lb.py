@@ -81,7 +81,7 @@ class AzureLoadBalancer(SapAutomationQA):
         if self.result["status"] == "FAILED":
             return self.result
 
-        required_load_balancer_ip = self.module.params["load_balancer_ip"]
+        required_load_balancer_ip = self.module_params["load_balancer_ip"]
         required_load_balancer = None
 
         required_load_balancer = next(
@@ -151,7 +151,7 @@ def run_module():
     load_balancer = AzureLoadBalancer(module_params=module.params)
     result = load_balancer.get_load_balancers_details()
 
-    if result["status"] == "FAILED":
+    if result["status"].value == "FAILED":
         module.fail_json(msg=result["message"], **result)
     else:
         module.exit_json(

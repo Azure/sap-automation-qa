@@ -792,7 +792,7 @@ class ClusterManager:
             if self.module.params["action"] == "get":
                 self._handle_get_action()
         except Exception as e:
-            self.module.fail_json(details=str(e))
+            self.module.fail_json(msg=str(e))
 
     def _handle_get_action(self) -> None:
         """
@@ -804,7 +804,7 @@ class ClusterManager:
             self._process_results()
         except Exception as e:
             self.result_aggregator.error_message = str(e)
-            self.module.fail_json(details=asdict(self.result_aggregator))
+            self.module.fail_json(msg=asdict(self.result_aggregator))
 
     def _create_validators(self) -> Dict[str, ValidatorBase]:
         """
@@ -842,7 +842,7 @@ class ClusterManager:
         }
 
         result["status"] = (
-            TestStatus.ERROR
+            TestStatus.ERROR.value
             if (has_errors or self.result_aggregator.error_message)
             else TestStatus.SUCCESS
         )
