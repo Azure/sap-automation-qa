@@ -13,8 +13,13 @@ from typing import Dict, Any, List
 from ansible.module_utils.basic import AnsibleModule
 import jinja2
 
+try:
+    from ansible.module_utils.sap_automation_qa import SapAutomationQA, TestStatus
+except ImportError:
+    from src.module_utils.sap_automation_qa import SapAutomationQA, TestStatus
 
-class HTMLReportRenderer:
+
+class HTMLReportRenderer(SapAutomationQA):
     """
     Class to render the HTML report for the test group invocation.
     """
@@ -26,17 +31,16 @@ class HTMLReportRenderer:
         report_template: str,
         workspace_directory: str,
     ):
+        super().__init__()
         self.test_group_invocation_id = test_group_invocation_id
         self.test_group_name = test_group_name
         self.report_template = report_template
         self.workspace_directory = workspace_directory
-        self.result = {
-            "changed": False,
-            "report_path": None,
-            "status": None,
-            "start": datetime.now(),
-            "end": datetime.now(),
-        }
+        self.result.update(
+            {
+                "status": None,
+            }
+        )
 
     def read_log_file(self) -> List[Dict[str, Any]]:
         """
@@ -58,26 +62,29 @@ class HTMLReportRenderer:
         :param test_case_results: A list of test case results.
         :type test_case_results: list
         """
-        report_path = os.path.join(
-            self.workspace_directory,
-            "quality_assurance",
-            f"{self.test_group_name}_{self.test_group_invocation_id}.html",
-        )
-        os.makedirs(os.path.dirname(report_path), exist_ok=True)
-        template = jinja2.Template(self.report_template)
-        with open(report_path, "w", encoding="utf-8") as report_file:
-            report_file.write(
-                template.render(
-                    {
-                        "test_case_results": test_case_results,
-                        "report_generation_time": datetime.now().strftime(
-                            "%m/%d/%Y, %I:%M:%S %p"
-                        ),
-                    }
-                )
+        try:
+            report_path = os.path.join(
+                self.workspace_directory,
+                "quality_assurance",
+                f"{self.test_group_name}_{self.test_group_invocation_id}.html",
             )
-        self.result["report_path"] = report_path
-        self.result["status"] = "Report rendered successfully"
+            os.makedirs(os.path.dirname(report_path), exist_ok=True)
+            template = jinja2.Template(self.report_template)
+            with open(report_path, "w", encoding="utf-8") as report_file:
+                report_file.write(
+                    template.render(
+                        {
+                            "test_case_results": test_case_results,
+                            "report_generation_time": datetime.now().strftime(
+                                "%m/%d/%Y, %I:%M:%S %p"
+                            ),
+                        }
+                    )
+                )
+            self.result["report_path"] = report_path
+            self.result["status"] = TestStatus.PASSED.value
+        except Exception as e:
+            self.handle_error(e)
 
     def get_result(self) -> Dict[str, Any]:
         """
@@ -86,7 +93,6 @@ class HTMLReportRenderer:
         :return: The result dictionary containing the status of the operation.
         :rtype: dict
         """
-        self.result["end"] = datetime.now()
         return self.result
 
 
@@ -111,11 +117,10 @@ def run_module() -> None:
         workspace_directory=module.params["workspace_directory"],
     )
 
-    try:
-        test_case_results = renderer.read_log_file()
-        renderer.render_report(test_case_results)
-    except Exception as e:
-        renderer.result["status"] = str(e)
+    test_case_results = renderer.read_log_file()
+    renderer.render_report(test_case_results)
+
+    if renderer.result["status"] != TestStatus.FAILED.value:
         module.fail_json(msg="Failed to render report", **renderer.get_result())
 
     module.exit_json(**renderer.get_result())

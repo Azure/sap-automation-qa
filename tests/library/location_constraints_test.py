@@ -66,7 +66,7 @@ def test_location_constraints_exists_success(
     :param location_constraints_xml: The location constraints XML
     :type location_constraints_xml: xml.etree.ElementTree.Element
     """
-    mock_run_command = mocker.patch.object(location_constraints_manager, "_run_command")
+    mock_run_command = mocker.patch.object(location_constraints_manager, "execute_command_subprocess")
     mock_run_command.return_value = location_constraints_string
     loc_constraints = location_constraints_manager.location_constraints_exists()
 
@@ -82,7 +82,7 @@ def test_location_constraints_exists_failure(mocker, location_constraints_manage
     :param location_constraints_manager: The LocationConstraintsManager instance
     :type location_constraints_manager: LocationConstraintsManager
     """
-    mock_run_command = mocker.patch.object(location_constraints_manager, "_run_command")
+    mock_run_command = mocker.patch.object(location_constraints_manager, "execute_command_subprocess")
     mock_run_command.return_value = None
     loc_constraints = location_constraints_manager.location_constraints_exists()
 
@@ -102,7 +102,7 @@ def test_remove_location_constraints_success(
     :param location_constraints_xml: The location constraints XML
     :type location_constraints_xml: xml.etree.ElementTree.Element
     """
-    mock_run_command = mocker.patch.object(location_constraints_manager, "_run_command")
+    mock_run_command = mocker.patch.object(location_constraints_manager, "execute_command_subprocess")
     mock_run_command.return_value = "Deleted: loc_azure"
     location_constraints_manager.remove_location_constraints(location_constraints_xml)
 

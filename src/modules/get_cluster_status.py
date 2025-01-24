@@ -12,31 +12,37 @@ Methods:
     main()
 """
 
-import subprocess
+import logging
 import concurrent.futures
 import xml.etree.ElementTree as ET
 from datetime import datetime
 from typing import Dict
 from ansible.module_utils.basic import AnsibleModule
 
+try:
+    from ansible.module_utils.sap_automation_qa import SapAutomationQA, TestStatus
+except ImportError:
+    from src.module_utils.sap_automation_qa import SapAutomationQA, TestStatus
 
-class ClusterStatusChecker:
+
+class ClusterStatusChecker(SapAutomationQA):
     """
     Class to check the status of a pacemaker cluster in a SAP HANA environment.
     """
 
     def __init__(self, database_sid: str):
+        super().__init__()
         self.database_sid = database_sid
-        self.result = {
-            "changed": False,
-            "status": None,
-            "cluster_status": None,
-            "primary_node": "",
-            "secondary_node": "",
-            "start": datetime.now(),
-            "end": datetime.now(),
-            "msg": "",
-        }
+        self.result.update(
+            {
+                "primary_node": "",
+                "secondary_node": "",
+                "cluster_status": "",
+                "start": datetime.now(),
+                "end": None,
+                "pacemaker_status": "",
+            }
+        )
 
     def _check_node(self, node: ET.Element) -> Dict[str, str]:
         """
@@ -76,31 +82,6 @@ class ClusterStatusChecker:
 
         return {}
 
-    def _get_cluster_status(self) -> str:
-        """
-        Retrieves the cluster status using the crm_mon command.
-
-        :return: The cluster status in XML format.
-        :rtype: str
-        """
-        return (
-            subprocess.check_output(["crm_mon", "--output-as=xml"])
-            .decode("utf-8")
-            .strip()
-        )
-
-    def _is_pacemaker_active(self) -> bool:
-        """
-        Checks if the pacemaker service is active.
-
-        :return: True if pacemaker is active, False otherwise.
-        :rtype: bool
-        """
-        pacemaker_status = subprocess.check_output(
-            ["systemctl", "is-active", "pacemaker"]
-        )
-        return pacemaker_status.decode("utf-8").strip() == "active"
-
     def run(self) -> Dict[str, str]:
         """
         Main function that runs the Ansible module and performs the cluster status checks.
@@ -114,16 +95,28 @@ class ClusterStatusChecker:
 
         :return: A dictionary containing the result of the cluster status checks.
         """
+        self.log(logging.INFO, "Starting cluster status check")
 
         try:
             while self.result["primary_node"] == "":
-                self.result["cluster_status"] = self._get_cluster_status()
+                self.result["cluster_status"] = self.execute_command_subprocess(
+                    ["crm_mon", "--output-as=xml"]
+                )
                 cluster_status_xml = ET.fromstring(self.result["cluster_status"])
+                self.log(logging.INFO, "Cluster status retrieved")
 
-                if self._is_pacemaker_active():
-                    self.result["status"] = "running"
+                if (
+                    self.execute_command_subprocess(
+                        ["systemctl", "is-active", "pacemaker"]
+                    )
+                    == "active"
+                ):
+                    self.result["pacemaker_status"] = "running"
                 else:
-                    self.result["msg"] = "pacemaker service is not running"
+                    self.result["pacemaker_status"] = "stopped"
+                self.log(
+                    logging.INFO, f"Pacemaker status: {self.result['pacemaker_status']}"
+                )
 
                 if (
                     int(
@@ -133,14 +126,18 @@ class ClusterStatusChecker:
                     )
                     < 2
                 ):
-                    self.result["msg"] = (
+                    self.result["message"] = (
                         "Pacemaker cluster isn't stable and does not have primary or secondary node"
                     )
+                    self.log(logging.WARNING, self.result["message"])
 
                 nodes = cluster_status_xml.find("nodes")
                 for node in nodes:
                     if node.attrib["online"] != "true":
-                        self.result["msg"] = f"Node {node.attrib['name']} is not online"
+                        self.result["message"] = (
+                            f"Node {node.attrib['name']} is not online"
+                        )
+                        self.log(logging.WARNING, self.result["message"])
 
                 node_attributes = cluster_status_xml.find("node_attributes")
                 with concurrent.futures.ThreadPoolExecutor() as executor:
@@ -152,13 +149,15 @@ class ClusterStatusChecker:
                         self.result.update(future.result())
 
             if self.result["primary_node"] == "" or self.result["secondary_node"] == "":
-                self.result["msg"] = (
+                self.result["message"] = (
                     "Pacemaker cluster isn't stable and does not have primary or secondary node"
                 )
+                self.log(logging.WARNING, self.result["message"])
         except Exception as e:
-            self.result["msg"] = str(e)
+            self.handle_error(e)
         self.result["end"] = datetime.now()
-
+        self.result["status"] = TestStatus.SUCCESS.value
+        self.log(logging.INFO, "Cluster status check completed")
         return self.result
 
 

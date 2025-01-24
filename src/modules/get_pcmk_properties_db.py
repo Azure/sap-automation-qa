@@ -14,224 +14,26 @@ import xml.etree.ElementTree as ET
 from collections import defaultdict
 from ansible.module_utils.basic import AnsibleModule
 
-
-CLUSTER_RESOURCES = {
-    "SUSE": {
-        "cln_SAPHanaTopology": {
-            "clone-node-max": "1",
-            "target-role": "Started",
-            "interleave": "true",
-        },
-        "ocf:suse:SAPHanaTopology": {
-            "monitor-interval": "10",
-            "monitor-timeout": "600",
-            "start-interval": "0",
-            "start-timeout": "600",
-            "stop-interval": "0",
-            "stop-timeout": "300",
-        },
-        "msl_SAPHana": {
-            "notify": "true",
-            "clone-max": "2",
-            "clone-node-max": "1",
-            "target-role": "Started",
-            "interleave": "true",
-        },
-        "ocf:suse:SAPHana": {
-            "PREFER_SITE_TAKEOVER": "true",
-            "DUPLICATE_PRIMARY_TIMEOUT": "7200",
-            "AUTOMATED_REGISTER": "true",
-            "start-interval": "0",
-            "start-timeout": "3600",
-            "stop-interval": "0",
-            "stop-timeout": "3600",
-            "promote-interval": "0",
-            "promote-timeout": "3600",
-            "monitor-Master-interval": "60",
-            "monitor-Master-timeout": "700",
-            "monitor-Slave-interval": "61",
-            "monitor-Slave-timeout": "700",
-            "demote-interval": "0s",
-            "demote-timeout": "320",
-        },
-        "stonith:fence_azure_arm": {
-            "pcmk_monitor_retries": "4",
-            "pcmk_action_limit": "3",
-            "power_timeout": "240",
-            "pcmk_reboot_timeout": "900",
-            "pcmk_delay_max": "15",
-            "monitor-interval": "3600",
-            "monitor-timeout": "120",
-        },
-        "ocf:heartbeat:azure-events-az": {
-            "interleave": "true",
-            "allow-unhealthy-nodes": "true",
-            "failure-timeout": "120s",
-            "start-start-delay": "60s",
-            "monitor-interval": "10s",
-        },
-        "ocf:heartbeat:azure-lb": {
-            "monitor-interval": "10s",
-            "monitor-timeout": "20s",
-            "resource-stickiness": "0",
-        },
-        "ocf:heartbeat:IPaddr2": {
-            "monitor-interval": "10s",
-            "monitor-timeout": "20s",
-        },
-    },
-    "REDHAT": {
-        "ocf:heartbeat:SAPHanaTopology": {
-            "clone-node-max": "1",
-            "target-role": "Started",
-            "interleave": "true",
-            "monitor-interval": "10",
-            "monitor-timeout": "600",
-            "start-interval": "0s",
-            "start-timeout": "600",
-            "stop-interval": "0s",
-            "stop-timeout": "300",
-        },
-        "ocf:heartbeat:SAPHana": {
-            "notify": "true",
-            "clone-max": "2",
-            "clone-node-max": "1",
-            "target-role": "Started",
-            "interleave": "true",
-            "PREFER_SITE_TAKEOVER": "true",
-            "DUPLICATE_PRIMARY_TIMEOUT": "7200",
-            "AUTOMATED_REGISTER": "true",
-            "start-interval": "0s",
-            "start-timeout": "3600",
-            "stop-interval": "0s",
-            "stop-timeout": "3600",
-            "promote-interval": "0s",
-            "promote-timeout": "3600",
-            "monitor-Master-interval": "59",
-            "monitor-Master-timeout": "700",
-            "monitor-Slave-interval": "61",
-            "monitor-Slave-timeout": "700",
-            "demote-interval": "0s",
-            "demote-timeout": "3600",
-        },
-        "stonith:fence_azure_arm": {
-            "pcmk_monitor_retries": "4",
-            "pcmk_action_limit": "3",
-            "power_timeout": "240",
-            "pcmk_reboot_timeout": "900",
-            "pcmk_delay_max": "15s",
-            "monitor-interval": "3600",
-            "pcmk_monitor_timeout": "120",
-        },
-        "ocf:heartbeat:azure-events-az": {
-            "interleave": "true",
-            "allow-unhealthy-nodes": "true",
-            "failure-timeout": "120s",
-            "start-start-delay": "60s",
-            "monitor-interval": "10s",
-        },
-        "ocf:heartbeat:azure-lb": {
-            "monitor-interval": "10s",
-            "monitor-timeout": "20s",
-        },
-        "ocf:heartbeat:IPaddr2": {
-            "monitor-interval": "10s",
-            "monitor-timeout": "20s",
-        },
-    },
-}
-
-CLUSTER_PROPERTIES = {
-    "crm_config": {
-        "cib-bootstrap-options": {
-            "have-watchdog": "false",
-            "cluster-infrastructure": "corosync",
-            "stonith-enabled": "true",
-            "concurrent-fencing": "true",
-            "stonith-timeout": "900s",
-            "maintenance-mode": "false",
-            "azure-events_globalPullState": "IDLE",
-            "priority-fencing-delay": "30",
-        }
-    },
-    "rsc_defaults": {
-        "build-resource-defaults": {
-            "resource-stickiness": "1000",
-            "migration-threshold": "5000",
-            "priority": "1",
-        }
-    },
-    "op_defaults": {
-        "op-options": {
-            "timeout": "600",
-            "record-pending": "true",
-        }
-    },
-}
-
-OS_PARAMETERS = {
-    "REDHAT": {
-        "sysctl": {
-            "net.ipv4.tcp_timestamps": {"expected_value": "1"},
-            "vm.swappiness": {"expected_value": "10"},
-        },
-        "corosync-cmapctl": {
-            "runtime.config.totem.token": {"expected_value": "30000"},
-            "runtime.config.totem.consensus": {"expected_value": "36000"},
-        },
-    },
-    "SUSE": {
-        "sysctl": {
-            "net.ipv4.tcp_timestamps": {"expected_value": "1"},
-            "vm.swappiness": {"expected_value": "10"},
-        },
-        "corosync-cmapctl": {
-            "runtime.config.totem.token": {"expected_value": "30000"},
-            "runtime.config.totem.consensus": {"expected_value": "36000"},
-            "quorum.expected_votes": {"expected_value": "2"},
-        },
-    },
-}
-
-CUSTOM_OS_PARAMETERS = {
-    "REDHAT": {
-        "quorum.expected_votes": {
-            "expected_value": "2",
-            "parameter_name": "Expected votes",
-            "command": ["pcs", "quorum", "status"],
-        },
-    },
-    "SUSE": {},
-}
-
-REQUIRED_PARAMETERS = {
-    "priority-fencing-delay",
-}
-
-CONSTRAINTS = {
-    "rsc_colocation": {
-        "score": "4000",
-        "rsc-role": "Started",
-        "with-rsc-role": "Promoted",
-    },
-    "rsc_order": {
-        "first-action": "start",
-        "then-action": "start",
-        "symmetrical": "false",
-    },
-    "rsc_location": {
-        "score-attribute": "#health-azure",
-        "operation": "defined",
-        "attribute": "#uname",
-    },
-}
-
-
-class Status(Enum):
-    SUCCESS = "PASSED"
-    ERROR = "FAILED"
-    WARNING = "WARNING"
-    INFO = "INFO"
+try:
+    from ansible.module_utils.sap_automation_qa import TestStatus
+    from ansible.module_utils.cluster_constants import (
+        OS_PARAMETERS,
+        CUSTOM_OS_PARAMETERS,
+        CONSTRAINTS,
+        CLUSTER_PROPERTIES,
+        CLUSTER_RESOURCES,
+        REQUIRED_PARAMETERS,
+    )
+except ImportError:
+    from src.module_utils.sap_automation_qa import TestStatus
+    from src.module_utils.cluster_constants import (
+        OS_PARAMETERS,
+        CUSTOM_OS_PARAMETERS,
+        CONSTRAINTS,
+        CLUSTER_PROPERTIES,
+        CLUSTER_RESOURCES,
+        REQUIRED_PARAMETERS,
+    )
 
 
 @dataclass
@@ -240,7 +42,7 @@ class ValidationResult:
     Represents the result of a validation.
     """
 
-    status: Status
+    status: TestStatus
     messages: Dict[str, Any]
     details: Optional[Dict] = None
 
@@ -371,18 +173,18 @@ class OSParameterValidator(ValidatorBase, ParameterValidatorMixin):
 
             if drift_parameters:
                 return ValidationResult(
-                    Status.ERROR,
+                    TestStatus.ERROR,
                     {
                         "Drift OS Parameters": drift_parameters,
                         "Validated OS Parameters": validated_parameters,
                     },
                 )
             return ValidationResult(
-                Status.SUCCESS,
+                TestStatus.SUCCESS,
                 {"Validated OS Parameters": validated_parameters},
             )
         except Exception as e:
-            return ValidationResult(Status.ERROR, {"Error": str(e)})
+            return ValidationResult(TestStatus.ERROR, {"Error": str(e)})
 
     def _validate_parameters(
         self,
@@ -459,13 +261,15 @@ class FenceValidator(ValidatorBase):
             if msi_value and msi_value.strip().lower() == "true":
                 return self._validate_fence_permissions()
             return ValidationResult(
-                Status.SUCCESS,
+                TestStatus.SUCCESS,
                 {
                     "Fence agent permissions": "MSI value not found or using SPN configuration"
                 },
             )
         except Exception as e:
-            return ValidationResult(Status.ERROR, {"Fence agent permissions": str(e)})
+            return ValidationResult(
+                TestStatus.ERROR, {"Fence agent permissions": str(e)}
+            )
 
     def _get_msi_value(self) -> Optional[str]:
         """
@@ -523,14 +327,14 @@ class FenceValidator(ValidatorBase):
         )
         if "Error" in fence_output:
             return ValidationResult(
-                Status.ERROR, {"Fence agent permissions": fence_output}
+                TestStatus.ERROR, {"Fence agent permissions": fence_output}
             )
         if self.context.vm_name in fence_output:
             return ValidationResult(
-                Status.SUCCESS, {"Fence agent permissions": fence_output}
+                TestStatus.SUCCESS, {"Fence agent permissions": fence_output}
             )
         return ValidationResult(
-            Status.ERROR,
+            TestStatus.ERROR,
             {"Fence agent permissions": f"VM not found in list: {fence_output}"},
         )
 
@@ -556,17 +360,19 @@ class ConstraintValidator(ValidatorBase, ParameterValidatorMixin):
 
             if drift_parameters:
                 return ValidationResult(
-                    Status.ERROR,
+                    TestStatus.ERROR,
                     {
                         "Valid Constraints parameters": valid_parameters,
                         "Drift in Constraints parameters": drift_parameters,
                     },
                 )
             return ValidationResult(
-                Status.SUCCESS, {"Valid Constraints parameter": valid_parameters}
+                TestStatus.SUCCESS, {"Valid Constraints parameter": valid_parameters}
             )
         except Exception as e:
-            return ValidationResult(Status.ERROR, {"Constraints validation": str(e)})
+            return ValidationResult(
+                TestStatus.ERROR, {"Constraints validation": str(e)}
+            )
 
     def _validate_constraints(
         self, root: ET.Element, drift_parameters: dict, valid_parameters: dict
@@ -635,21 +441,21 @@ class GlobalIniValidator(ValidatorBase):
 
             if properties == expected_properties:
                 return ValidationResult(
-                    Status.SUCCESS, {"SAPHanaSR Properties": properties}
+                    TestStatus.SUCCESS, {"SAPHanaSR Properties": properties}
                 )
             return ValidationResult(
-                Status.ERROR,
+                TestStatus.ERROR,
                 {
                     "SAPHanaSR Properties validation failed with expected properties": properties
                 },
             )
         except FileNotFoundError as e:
             return ValidationResult(
-                Status.ERROR, {"Exception raised, file not found error": str(e)}
+                TestStatus.ERROR, {"Exception raised, file not found error": str(e)}
             )
         except Exception as e:
             return ValidationResult(
-                Status.ERROR, {"SAPHanaSR Properties validation failed": str(e)}
+                TestStatus.ERROR, {"SAPHanaSR Properties validation failed": str(e)}
             )
 
     def _read_global_ini_properties(self) -> dict:
@@ -710,7 +516,7 @@ class ClusterParamValidator(ValidatorBase, ParameterValidatorMixin):
 
             return self._create_validation_result(valid_parameters, drift_parameters)
         except Exception as e:
-            return ValidationResult(Status.ERROR, {"Error message": str(e)})
+            return ValidationResult(TestStatus.ERROR, {"Error message": str(e)})
 
     def _validate_cluster_properties(
         self, drift_parameters: dict, valid_parameters: dict
@@ -864,7 +670,7 @@ class ClusterParamValidator(ValidatorBase, ParameterValidatorMixin):
 
         if missing_parameters:
             return ValidationResult(
-                Status.WARNING,
+                TestStatus.WARNING,
                 {
                     "Required parameters missing in cluster parameters": missing_parameters,
                     "Validated cluster parameters": valid_parameters,
@@ -873,7 +679,7 @@ class ClusterParamValidator(ValidatorBase, ParameterValidatorMixin):
 
         if drift_parameters:
             return ValidationResult(
-                Status.ERROR,
+                TestStatus.ERROR,
                 {
                     "Validated cluster parameters": valid_parameters,
                     "Drift in cluster parameters": drift_parameters,
@@ -881,7 +687,7 @@ class ClusterParamValidator(ValidatorBase, ParameterValidatorMixin):
             )
 
         return ValidationResult(
-            Status.SUCCESS, {"Validated cluster parameters": valid_parameters}
+            TestStatus.SUCCESS, {"Validated cluster parameters": valid_parameters}
         )
 
 
@@ -904,7 +710,7 @@ class ResultAggregator:
         for key, value in result_dict.get("msg", {}).items():
             self._process_value(category, key, value)
 
-        if result.status == Status.ERROR and not self.error_message:
+        if result.status == TestStatus.ERROR and not self.error_message:
             self.error_message = f"Error in {category} validation"
 
     def _process_value(self, category: str, key: str, value: Any) -> None:
@@ -937,12 +743,12 @@ class ResultAggregator:
                 param_entry[name.lower()] = val
 
             if "Drift" in key:
-                param_entry["status"] = Status.ERROR.value
+                param_entry["status"] = TestStatus.ERROR.value
             elif "Valid" in key:
-                param_entry["status"] = Status.SUCCESS.value
+                param_entry["status"] = TestStatus.SUCCESS.value
         else:
             param_entry["value"] = value
-            param_entry["status"] = Status.INFO.value
+            param_entry["status"] = TestStatus.INFO.value
 
         self.parameters.append(param_entry)
 
@@ -1025,14 +831,14 @@ class ClusterManager:
         Processes the validation results and exits the module with the appropriate status.
         """
         has_errors = any(
-            param["status"] == Status.ERROR.value
+            param["status"] == TestStatus.ERROR.value
             for param in self.result_aggregator.parameters
         )
 
         status = (
-            Status.ERROR
+            TestStatus.ERROR
             if (has_errors or self.result_aggregator.error_message)
-            else Status.SUCCESS
+            else TestStatus.SUCCESS
         )
 
         self.module.exit_json(

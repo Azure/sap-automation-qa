@@ -18,27 +18,40 @@ from azure.kusto.data.data_format import DataFormat
 from azure.kusto.ingest import QueuedIngestClient, IngestionProperties, ReportLevel
 from ansible.module_utils.basic import AnsibleModule
 
+try:
+    from ansible.module_utils.sap_automation_qa import SapAutomationQA, TestStatus
+    from ansible.module_utils.cluster_constants import (
+        LAWS_METHOD,
+        LAWS_CONTENT_TYPE,
+        LAWS_RESOURCE,
+    )
+except ImportError:
+    from src.module_utils.sap_automation_qa import SapAutomationQA, TestStatus
+    from src.module_utils.cluster_constants import (
+        LAWS_METHOD,
+        LAWS_CONTENT_TYPE,
+        LAWS_RESOURCE,
+    )
 
-LAWS_RESOURCE = "/api/logs"
-LAWS_METHOD = "POST"
-LAWS_CONTENT_TYPE = "application/json"
 
-
-class TelemetryDataSender:
+class TelemetryDataSender(SapAutomationQA):
     """
     Class to send telemetry data to Kusto Cluster/Log Analytics Workspace and create an HTML report.
     """
 
     def __init__(self, module_params: Dict[str, Any]):
+        super().__init__()
         self.module_params = module_params
-        self.result = {
-            "changed": False,
-            "telemetry_data": module_params["test_group_json_data"],
-            "telemetry_data_destination": module_params["telemetry_data_destination"],
-            "status": None,
-            "start": datetime.now(),
-            "end": datetime.now(),
-        }
+        self.result.update(
+            {
+                "telemetry_data": module_params["test_group_json_data"],
+                "telemetry_data_destination": module_params[
+                    "telemetry_data_destination"
+                ],
+                "start": datetime.now(),
+                "end": datetime.now(),
+            }
+        )
 
     def get_authorization_for_log_analytics(
         self,
@@ -97,7 +110,7 @@ class TelemetryDataSender:
             response = client.ingest_from_dataframe(data_frame, ingestion_properties)
             return response
         except Exception as ex:
-            raise
+            self.handle_error(ex)
 
     def send_telemetry_data_to_azureloganalytics(
         self, telemetry_json_data: str
@@ -131,7 +144,7 @@ class TelemetryDataSender:
             )
             return response
         except Exception as ex:
-            raise
+            self.handle_error(ex)
 
     def validate_params(self) -> bool:
         """
@@ -178,8 +191,7 @@ class TelemetryDataSender:
                 log_file.write(json.dumps(self.result["telemetry_data"]))
                 log_file.write("\n")
         except Exception as e:
-            self.result["status"] = f"Error writing to log file: {e}"
-            raise
+            self.handle_error(e)
 
     def send_telemetry_data(self) -> None:
         """
@@ -203,13 +215,15 @@ class TelemetryDataSender:
                 response = getattr(self, method_name)(
                     json.dumps(self.result["telemetry_data"])
                 )
-                self.result["status"] = f"Response: {response}"
+                self.result["status"] = TestStatus.PASSED.value
             except Exception as e:
-                self.result["status"] = f"Error sending telemetry data: {e}"
-                raise
+                self.handle_error(e)
         else:
-            self.result["status"] = (
-                "Telemetry data destination not provided. HTML report will be generated."
+            self.handle_error(
+                ValueError(
+                    f"Invalid telemetry data destination: "
+                    f"{self.module_params['telemetry_data_destination']}"
+                )
             )
 
     def get_result(self) -> Dict[str, Any]:
@@ -242,11 +256,10 @@ def run_module() -> None:
     module = AnsibleModule(argument_spec=module_args, supports_check_mode=True)
     sender = TelemetryDataSender(module.params)
 
-    try:
-        sender.write_log_file()
-        sender.send_telemetry_data()
-    except Exception as e:
-        module.fail_json(msg=str(e), **sender.get_result())
+    sender.write_log_file()
+    sender.send_telemetry_data()
+    if sender.result["status"] == "FAILED":
+        module.fail_json(**sender.get_result())
 
     module.exit_json(**sender.get_result())
 
