@@ -318,24 +318,33 @@
                 {'label': 'Test Group Name', 'value': test_case_results.0.TestGroupName},
                 {'label': 'DB SID', 'value': test_case_results.0.DbSid},
                 {'label': 'SAP SID', 'value': test_case_results.0.SapSid},
-                {'label': 'DB Fencing Agent', 'value': test_case_results.0.DbFencingType},
-                {'label': 'SCS Fencing Agent', 'value': test_case_results.0.ScsFencingType},
+                {% if test_case_results[0].TestGroupName == 'DatabaseHighAvailability' %}
+                  {'label': 'DB Fencing Agent', 'value': test_case_results[0].DbFencingType},
+                {% elif test_case_results[0].TestGroupName == 'CentralServicesHighAvailability' %}
+                  {'label': 'SCS Fencing Agent', 'value': test_case_results[0].ScsFencingType},
+                {% endif %}
                 {'label': 'DB Type', 'value': test_case_results.0.DBType},
+                {'label': 'Storage Type', 'value': test_case_results.0.StorageType},
                 {'label': 'OS Version', 'value': test_case_results.0.OsVersion},
                 {'label': 'Hostnames', 'value': test_case_results|map(attribute='TestCaseHostname')|unique|join(', ')}
               ] %}
-              
-              {% for i in range(0, properties|length, 3) %}
-                <div class="system-info-column">
-                  {% for j in range(i, i+3) %}
-                    {% if properties|length > j %}
-                      <p>
-                        <strong>{{ properties[j].label }}:</strong> {{ properties[j].value }}
-                      </p>
-                    {% endif %}
-                  {% endfor %}
-                </div>
-              {% endfor %}
+              {% set num_columns = 3 %}
+              {% set properties_per_column = (properties|length // num_columns) + (1 if properties|length % num_columns > 0 else 0) %}
+
+              <div class="system-info-columns">
+                {% for col in range(num_columns) %}
+                  <div class="system-info-column">
+                    {% for row in range(properties_per_column) %}
+                      {% set index = col * properties_per_column + row %}
+                      {% if index < properties|length %}
+                        <p>
+                          <strong>{{ properties[index].label }}:</strong> {{ properties[index].value }}
+                        </p>
+                      {% endif %}
+                    {% endfor %}
+                  </div>
+                {% endfor %}
+              </div>
               <div class="system-info-column">
                 <div class="pie" id="testResults" style="position: relative; z-index: 2;" data-results='{{ test_case_results|map(attribute='TestCaseStatus')|list|tojson|safe }}'>
                   <span style="position: relative; z-index: 3;">0/0</span>

@@ -129,7 +129,7 @@ class AzureLoadBalancer(SapAutomationQA):
                 if all(param["status"] == "PASSED" for param in parameters)
                 else TestStatus.ERROR.value
             )
-            self.result["details"].append(f"Load balancer details: {parameters}")
+            self.result["details"].append(f"parameters: {parameters}")
         except Exception as e:
             self.handle_error(e)
 
