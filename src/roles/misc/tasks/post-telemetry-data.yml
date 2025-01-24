@@ -35,6 +35,7 @@
                                         }}",
                                         "DbFencingType": "{{ database_cluster_type if database_high_availability else 'DB not HA' }}",
                                         "ScsFencingType": "{{ scs_cluster_type if scs_high_availability else 'SCS not HA' }}",
+                                        "StorageType": "{{ NFS_provider }}",
                                         "DBType": "{{ platform }}",
                                         "DbSid": "{{ db_sid | upper }}",
                                         "SapSid": "{{ sap_sid | upper }}",
