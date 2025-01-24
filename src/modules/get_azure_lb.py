@@ -11,10 +11,10 @@ from azure.identity import ManagedIdentityCredential
 from azure.mgmt.network import NetworkManagementClient
 
 try:
-    from ansible.module_utils.sap_automation_qa import SapAutomationQA
+    from ansible.module_utils.sap_automation_qa import SapAutomationQA, TestStatus
     from ansible.module_utils.cluster_constants import PROBES, RULES
 except ImportError:
-    from src.module_utils.sap_automation_qa import SapAutomationQA
+    from src.module_utils.sap_automation_qa import SapAutomationQA, TestStatus
     from src.module_utils.cluster_constants import PROBES, RULES
 
 
@@ -125,9 +125,9 @@ class AzureLoadBalancer(SapAutomationQA):
                     )
 
             self.result["status"] = (
-                "PASSED"
+                TestStatus.SUCCESS.value
                 if all(param["status"] == "PASSED" for param in parameters)
-                else "FAILED"
+                else TestStatus.ERROR.value
             )
             self.result["details"].append(f"Load balancer details: {parameters}")
         except Exception as e:
@@ -151,7 +151,7 @@ def run_module():
     load_balancer = AzureLoadBalancer(module_params=module.params)
     result = load_balancer.get_load_balancers_details()
 
-    if result["status"].value == "FAILED":
+    if result["status"] == "FAILED":
         module.fail_json(msg=result["message"], **result)
     else:
         module.exit_json(

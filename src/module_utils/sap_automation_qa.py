@@ -83,21 +83,32 @@ class SapAutomationQA(ABC):
         self.result["message"] = error_message
         self.result["logs"].append(error_message)
 
-    def execute_command_subprocess(self, command: str) -> str:
+    def execute_command_subprocess(
+        self, command: str, shell_command: bool = False
+    ) -> str:
         """
         Executes a shell command using subprocess with a timeout and logs output or errors.
 
         :param command: Shell command to execute
         :type command: str
+        :param shell_command: Whether the command is a shell command
+        :type shell_command: bool
         :return: Standard output from the command
         :rtype: str
         """
         self.log(logging.INFO, f"Executing command: {command}")
         try:
             command_output = subprocess.run(
-                command, shell=True, check=True, capture_output=True, timeout=30
+                command,
+                timeout=30,
+                check=True,
+                stdout=subprocess.PIPE,
+                stderr=subprocess.PIPE,
+                shell=shell_command,
             )
-            return command_output
+            stdout = command_output.stdout.decode("utf-8")
+            stderr = command_output.stderr.decode("utf-8")
+            return stdout if not stderr else stderr
         except subprocess.TimeoutExpired as e:
             self.handle_error(e, "Command timed out")
         except subprocess.CalledProcessError as e:

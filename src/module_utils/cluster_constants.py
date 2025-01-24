@@ -241,7 +241,7 @@ PROBES = {
 }
 
 RULES = {
-    "idle_timeout_in_minutes": 4,
+    "idle_timeout_in_minutes": 30,
     "enable_floating_ip": True,
     "enable_tcp_reset": False,
 }
