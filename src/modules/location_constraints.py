@@ -117,7 +117,9 @@ def run_module() -> None:
             "Location constraints do not exist or were already removed."
         )
     if manager.result["status"] == "FAILED":
-        module.fail_json(**manager.result)
+        module.fail_json(
+            msg="Failed to remove the location constraints", **manager.result
+        )
 
     module.exit_json(**manager.get_result())
 
