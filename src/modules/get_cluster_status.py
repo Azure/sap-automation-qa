@@ -44,6 +44,23 @@ class ClusterStatusChecker(SapAutomationQA):
             }
         )
 
+    def _node_attributes_to_dict(self, node_attributes: ET.Element) -> Dict[str, str]:
+        """
+        Converts the XML element containing node attributes to a dictionary.
+
+        :param node_attributes: The XML element containing node attributes.
+        :type node_attributes: xml.etree.ElementTree.Element
+        :return: A dictionary containing the node attributes.
+        :rtype: dict
+        """
+        return {
+            node.attrib["name"]: {
+                attribute.attrib["name"]: attribute.attrib["value"]
+                for attribute in node
+            }
+            for node in node_attributes
+        }
+
     def _check_node(self, node: ET.Element) -> Dict[str, str]:
         """
         Checks the attributes of node & returns corresponding action based on attribute value.
@@ -140,6 +157,9 @@ class ClusterStatusChecker(SapAutomationQA):
                         self.log(logging.WARNING, self.result["message"])
 
                 node_attributes = cluster_status_xml.find("node_attributes")
+                self.result["cluster_status"] = self._node_attributes_to_dict(
+                    node_attributes
+                )
                 with concurrent.futures.ThreadPoolExecutor() as executor:
                     futures = [
                         executor.submit(self._check_node, node)
