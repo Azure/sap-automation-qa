@@ -29,10 +29,10 @@ test_groups:
       #   description:                This runs a functional test for resource migration
       #   enabled:                    true
 
-      # - name:                       HA Functional Test- Primary Node Crash
-      #   task_name:                  primary-node-crash
-      #   description:                This runs a functional test for primary node crash
-      #   enabled:                    true
+      - name:                       HA Functional Test- Primary Node Crash
+        task_name:                  primary-node-crash
+        description:                This runs a functional test for primary node crash
+        enabled:                    true
 
       # - name:                       HA Functional Test- Block Network Communication
       #   task_name:                  block-network
