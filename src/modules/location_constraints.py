@@ -10,9 +10,9 @@ from typing import List, Dict, Any
 from ansible.module_utils.basic import AnsibleModule
 
 try:
-    from ansible.module_utils.sap_automation_qa import SapAutomationQA
+    from ansible.module_utils.sap_automation_qa import SapAutomationQA, TestStatus
 except ImportError:
-    from src.module_utils.sap_automation_qa import SapAutomationQA
+    from src.module_utils.sap_automation_qa import SapAutomationQA, TestStatus
 
 
 class LocationConstraintsManager(SapAutomationQA):
@@ -51,7 +51,10 @@ class LocationConstraintsManager(SapAutomationQA):
                     location_constraint.attrib["rsc"],
                 ]
                 self.execute_command_subprocess(cmd)
-                self.result["location_constraint_removed"] = True
+                self.result["changed"] = True
+
+            else:
+                self.result["changed"] = False
 
     def location_constraints_exists(self) -> List[ET.Element]:
         """
@@ -60,13 +63,18 @@ class LocationConstraintsManager(SapAutomationQA):
         :return: A list of location constraints if they exist, otherwise an empty list.
         :rtype: list
         """
-        xml_output = self.execute_command_subprocess(
-            ["cibadmin", "--query", "--scope", "constraints"]
-        )
-        constraints = (
-            ET.fromstring(xml_output).findall(".//rsc_location") if xml_output else None
-        )
-        return constraints if constraints is not None else []
+        try:
+            xml_output = self.execute_command_subprocess(
+                ["cibadmin", "--query", "--scope", "constraints"]
+            )
+            constraints = (
+                ET.fromstring(xml_output).findall(".//rsc_location")
+                if xml_output
+                else None
+            )
+            return constraints if constraints is not None else []
+        except Exception as e:
+            self.handle_exception(e)
 
     def get_result(self) -> Dict[str, Any]:
         """
@@ -100,9 +108,11 @@ def run_module() -> None:
     location_constraints = manager.location_constraints_exists()
     if location_constraints and action == "remove":
         manager.remove_location_constraints(location_constraints)
-        manager.result["changed"] = True
         manager.result["message"] = "Location constraints removed"
+        manager.result["location_constraint_removed"] = True
+        manager.result["status"] = TestStatus.SUCCESS.value
     else:
+        manager.result["status"] = TestStatus.ERROR.value
         manager.result["message"] = (
             "Location constraints do not exist or were already removed."
         )

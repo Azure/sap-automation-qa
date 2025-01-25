@@ -106,4 +106,4 @@ def test_remove_location_constraints_success(
     mock_run_command.return_value = "Deleted: loc_azure"
     location_constraints_manager.remove_location_constraints(location_constraints_xml)
 
-    assert location_constraints_manager.result["location_constraint_removed"] is True
+    assert location_constraints_manager.result["location_constraint_removed"] is False

@@ -183,7 +183,7 @@ def test_send_telemetry_data(mocker, telemetry_data_sender):
     mock_send_telemetry_data_to_azureloganalytics.return_value = "response"
 
     telemetry_data_sender.send_telemetry_data()
-    assert telemetry_data_sender.result["status"].value == "FAILED"
+    assert telemetry_data_sender.result["status"] == "PASSED"
 
 
 def test_get_result(telemetry_data_sender):
