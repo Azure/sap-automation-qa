@@ -33,7 +33,7 @@ class SapAutomationQA(ABC):
     def __init__(self):
         self.logger = self.setup_logger()
         self.result = {
-            "status": TestStatus.NOT_STARTED,
+            "status": TestStatus.NOT_STARTED.value,
             "message": "",
             "details": [],
             "logs": [],
