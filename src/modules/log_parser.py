@@ -82,7 +82,7 @@ class LogParser(SapAutomationQA):
                         continue
 
             self.result["filtered_logs"] = json.dumps(self.result["filtered_logs"])
-            self.result["status"] = TestStatus.SUCCESS
+            self.result["status"] = TestStatus.SUCCESS.value
         except FileNotFoundError as ex:
             self.handle_error(ex)
         except Exception as e:

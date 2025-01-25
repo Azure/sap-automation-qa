@@ -108,7 +108,7 @@ class ClusterStatusChecker(SapAutomationQA):
                 if (
                     self.execute_command_subprocess(
                         ["systemctl", "is-active", "pacemaker"]
-                    )
+                    ).strip()
                     == "active"
                 ):
                     self.result["pacemaker_status"] = "running"
