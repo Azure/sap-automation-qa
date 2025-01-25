@@ -79,7 +79,7 @@ class SapAutomationQA(ABC):
         error_message = f"Error executing command: {exception}. More errors: {stderr}"
         self.log(logging.ERROR, error_message)
         self.logger.error(error_message)
-        self.result["status"] = TestStatus.ERROR
+        self.result["status"] = TestStatus.ERROR.value
         self.result["message"] = error_message
         self.result["logs"].append(error_message)
 
