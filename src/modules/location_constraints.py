@@ -67,6 +67,7 @@ class LocationConstraintsManager(SapAutomationQA):
             xml_output = self.execute_command_subprocess(
                 ["cibadmin", "--query", "--scope", "constraints"]
             )
+            self.result["details"] = xml_output
             return (
                 ET.fromstring(xml_output).findall(".//rsc_location")
                 if xml_output
