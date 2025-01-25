@@ -8,9 +8,9 @@ from typing import Dict, Any
 from ansible.module_utils.basic import AnsibleModule
 
 try:
-    from ansible.module_utils.sap_automation_qa import SapAutomationQA
+    from ansible.module_utils.sap_automation_qa import SapAutomationQA, TestStatus
 except ImportError:
-    from src.module_utils.sap_automation_qa import SapAutomationQA
+    from src.module_utils.sap_automation_qa import SapAutomationQA, TestStatus
 
 
 class FileSystemFreeze(SapAutomationQA):
@@ -51,11 +51,20 @@ class FileSystemFreeze(SapAutomationQA):
             read_only_output = self.execute_command_subprocess(
                 ["mount", "-o", "ro", file_system, "/hana/shared"]
             )
-            self.result["changed"] = True
-            self.result["message"] = read_only_output
+            self.result.update(
+                {
+                    "changed": True,
+                    "message": "The file system (/hana/shared) was successfully mounted as read-only.",
+                    "status": TestStatus.SUCCESS.value,
+                    "details": read_only_output,
+                }
+            )
         else:
-            self.result["message"] = (
-                "The filesystem mounted on /hana/shared was not found."
+            self.result.update(
+                {
+                    "message": "The filesystem mounted on /hana/shared was not found.",
+                    "status": TestStatus.ERROR.value,
+                }
             )
 
         return self.result
@@ -75,6 +84,8 @@ def run_module() -> None:
     formatter = FileSystemFreeze()
     result = formatter.run()
 
+    if result["status"] == TestStatus.ERROR.value:
+        module.fail_json(**result)
     module.exit_json(**result)
 
 
