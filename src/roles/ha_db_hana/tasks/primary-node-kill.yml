@@ -22,7 +22,7 @@
   when:
     - node_tier == "hana"
     - cluster_status_pre.primary_node != "" and cluster_status_pre.secondary_node != ""
-    - cluster_status_pre.status == "running"
+    - cluster_status_pre.pacemaker_status == "running"
     - cluster_status_pre is defined
   block:
     - name:                         "Test Execution: Kill the primary node."
