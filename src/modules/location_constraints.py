@@ -43,16 +43,16 @@ class LocationConstraintsManager(SapAutomationQA):
         :type location_constraints: list
         """
         for location_constraint in location_constraints:
-            if location_constraint.attrib.get("rsc") is not None:
+            rsc = location_constraint.attrib.get("rsc")
+            if rsc:
                 cmd = [
                     self.module_name[self.ansible_os_family],
                     "resource",
                     "clear",
-                    location_constraint.attrib["rsc"],
+                    rsc,
                 ]
                 self.execute_command_subprocess(cmd)
                 self.result["changed"] = True
-
             else:
                 self.result["changed"] = False
 
@@ -67,12 +67,11 @@ class LocationConstraintsManager(SapAutomationQA):
             xml_output = self.execute_command_subprocess(
                 ["cibadmin", "--query", "--scope", "constraints"]
             )
-            constraints = (
+            return (
                 ET.fromstring(xml_output).findall(".//rsc_location")
                 if xml_output
-                else None
+                else []
             )
-            return constraints if constraints is not None else []
         except Exception as e:
             self.handle_exception(e)
 
@@ -108,17 +107,24 @@ def run_module() -> None:
     location_constraints = manager.location_constraints_exists()
     if location_constraints and action == "remove":
         manager.remove_location_constraints(location_constraints)
-        manager.result["message"] = "Location constraints removed"
-        manager.result["location_constraint_removed"] = True
-        manager.result["status"] = TestStatus.SUCCESS.value
-    else:
-        manager.result["status"] = TestStatus.ERROR.value
-        manager.result["message"] = (
-            "Location constraints do not exist or were already removed."
+        manager.result.update(
+            {
+                "message": "Location constraints removed",
+                "location_constraint_removed": True,
+                "status": TestStatus.SUCCESS.value,
+            }
         )
-    if manager.result["status"] == "FAILED":
+    else:
+        manager.result.update(
+            {
+                "status": TestStatus.INFO.value,
+                "message": "Location constraints do not exist or were already removed.",
+            }
+        )
+
+    if manager.result["status"] == TestStatus.ERROR.value:
         module.fail_json(
-            msg="Failed to remove the location constraints", **manager.result
+            msg="Failed to remove the location constraints", **manager.get_result()
         )
 
     module.exit_json(**manager.get_result())
