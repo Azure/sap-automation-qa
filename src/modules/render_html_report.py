@@ -120,7 +120,7 @@ def run_module() -> None:
     test_case_results = renderer.read_log_file()
     renderer.render_report(test_case_results)
 
-    if renderer.result["status"] != TestStatus.ERROR.value:
+    if renderer.result["status"] != TestStatus.SUCCESS.value:
         module.fail_json(msg="Failed to render report", **renderer.get_result())
 
     module.exit_json(**renderer.get_result())
