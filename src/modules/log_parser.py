@@ -51,7 +51,6 @@ class LogParser(SapAutomationQA):
         try:
             start_dt = datetime.strptime(self.start_time, "%Y-%m-%d %H:%M:%S")
             end_dt = datetime.strptime(self.end_time, "%Y-%m-%d %H:%M:%S")
-            date_format = "%Y-%m-%d %H:%M:%S"
 
             with open(self.log_file, "r", encoding="utf-8") as file:
                 for line in file:
@@ -63,7 +62,7 @@ class LogParser(SapAutomationQA):
                             log_time = log_time.replace(year=start_dt.year)
                         elif self.ansible_os_family == "SUSE":
                             log_time = datetime.strptime(
-                                line.split(".")[0], date_format
+                                line.split(".")[0], "%Y-%m-%dT%H:%M:%S"
                             )
                         else:
                             continue
