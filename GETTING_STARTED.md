@@ -125,14 +125,19 @@ This file contains the configuration details of the SAP system:
   - sap_sid: The SAP SID of the SAP system.
   - scs_high_availability: Boolean indicating if the SCS is configured as highly available.
   - scs_cluster_type: The high availability configuration of the SCS instance. Supported values are:
-    - AFA (Azure Fencing Agent) 
+    - AFA (for Azure Fencing Agent) 
+    - ISCSI (for SBD devices)
   - db_sid: The database SID of the SAP system.
   - db_instance_number: The instance number of the DB instance.
   - platform: The type of database. Supported values are:
     - HANA
   - db_high_availability: Boolean indicating if the database is configured as highly available.
+  - NFS_provider: The NFS provider used for shared storage. Supported values are:
+    - ANF (for Azure NetApp Files)
+    - AFS (for Azure File Share)
   - database_cluster_type: The high availability configuration of the DB instance. Supported values are:
-    - AFA (Azure Fencing Agent)
+    - AFA (for Azure Fencing Agent)
+    - ISCSI (for SBD devices)
   - use_key_vault: Boolean indicating if the SSH key is stored in Azure Key Vault.
   - keyvault_resource_id: The resource ID of the Azure Key Vault where the SSH key is stored. The jumpbox should have the system-assigned managed identity enabled, and the managed identity should have access to the Azure Key Vault secrets.
   - keyvault_secret_name: The name of the secret in the Azure Key Vault where the SSH key is stored.
@@ -145,7 +150,10 @@ This contains of the password, in plain text, for the SAP system hosts.
 
 ### Supported scenarios
 
-| SAP Tier | SAP Tier Type  | Cluster Type | High Availability |
-| :----------- | :------------ | :------------ | :------------- |
+| SAP Tier | SAP Tier Type  | Cluster Type | High Availability | Storage Profile |
+| :----------- | :------------ | :------------ | :------------- | :------------- |
 | Central Services       |     NA     | Azure Fencing Agent         | Yes |
-| Database       |      HANA    | Azure Fencing Agent         | Yes |
+| Database       |      HANA    | Azure Fencing Agent         | Yes | ANF |
+| Database       |      HANA    | Azure Fencing Agent         | Yes | AFS |
+| Database       |      HANA    | SBD         | Yes | ANF |
+| Database       |      HANA    | SBD         | Yes | AFS |
