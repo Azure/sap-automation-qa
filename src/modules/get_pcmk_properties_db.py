@@ -101,6 +101,7 @@ class ValidationContext:
     vm_name: str = ""
     cmd_executor: Optional[CommandExecutor] = None
     fencing_mechanism: str = ""
+    instance_number: str = ""
 
 
 class ValidatorBase(ABC):
@@ -401,11 +402,16 @@ class ConstraintValidator(ValidatorBase, ParameterValidatorMixin):
         expected_attrs = CONSTRAINTS[constraint_type]
 
         for key, value in constraint.attrib.items():
+            expected_value = (
+                expected_attrs[key](self.context)
+                if callable(expected_attrs[key])
+                else expected_attrs[key]
+            )
             if key in expected_attrs:
                 self._check_and_add_parameter(
                     key,
                     value,
-                    expected_attrs[key],
+                    expected_value,
                     constraint_type,
                     constraint_id,
                     drift_parameters,
@@ -414,11 +420,16 @@ class ConstraintValidator(ValidatorBase, ParameterValidatorMixin):
 
         for child in constraint:
             for key, value in child.attrib.items():
+                expected_value = (
+                    expected_attrs[key](self.context)
+                    if callable(expected_attrs[key])
+                    else expected_attrs[key]
+                )
                 if key in expected_attrs:
                     self._check_and_add_parameter(
                         key,
                         value,
-                        expected_attrs[key],
+                        expected_value,
                         constraint_type,
                         constraint_id,
                         drift_parameters,
@@ -789,6 +800,7 @@ class ClusterManager:
             vm_name=module.params["virtual_machine_name"],
             cmd_executor=CommandExecutor(),
             fencing_mechanism=module.params.get("fencing_mechanism", ""),
+            instance_number=module.params.get("instance_number", ""),
         )
         self.result_aggregator = ResultAggregator()
 
@@ -872,7 +884,7 @@ def main() -> None:
             instance_number=dict(type="str"),
             ansible_os_family=dict(type="str"),
             virtual_machine_name=dict(type="str"),
-            fencing_mechanism=dict(type="str")
+            fencing_mechanism=dict(type="str"),
         )
     )
 
