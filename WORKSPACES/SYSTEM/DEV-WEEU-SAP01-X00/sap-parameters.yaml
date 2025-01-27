@@ -1,8 +1,6 @@
 ---
 #############################################################################
-#                                                                           #
 #                           Application tier                                #
-#                                                                           #
 #############################################################################
 # sap_sid is the application SID
 sap_sid:                       X00
@@ -13,14 +11,12 @@ scs_high_availability:         true
 scs_cluster_type:              AFA
 
 #############################################################################
-#                                                                           #
 #                              Database tier                                #
-#                                                                           #
 #############################################################################
 
 # sap_sid is the database SID
 db_sid:                        HDB
-db_instance_number:            0
+db_instance_number:            "00"
 # platform defines the database platform
 # valid values are:ASE / DB2 / HANA / ORACLE / SQLSERVER
 platform:                      HANA
@@ -28,12 +24,13 @@ database_high_availability:    true
 database_cluster_type:         AFA
 
 #############################################################################
-#                                                                           #
+#                              Storage Profile                              #
+#############################################################################
+NFS_provider:                  AFS
+
+#############################################################################
 #                              Azure resources                              #
-#                                                                           #
 #############################################################################
 # MSI should have Get and List secrets permissions on the Key Vault
 sap_user_name:                "azureadm"
-keyvault_resource_id:         "kyevault_name"
-keyvault_secret_name:         "ssh_secret_name"
 ...
