@@ -872,6 +872,7 @@ def main() -> None:
             instance_number=dict(type="str"),
             ansible_os_family=dict(type="str"),
             virtual_machine_name=dict(type="str"),
+            fencing_mechanism=dict(type="str")
         )
     )
 
