@@ -864,7 +864,7 @@ class ClusterManager:
         result["status"] = (
             TestStatus.ERROR.value
             if (has_errors or self.result_aggregator.error_message)
-            else TestStatus.SUCCESS
+            else TestStatus.SUCCESS.value
         )
         result["message"] = self.result_aggregator.message
         result["details"] = self.result_aggregator.to_dict()
