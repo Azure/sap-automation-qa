@@ -10,13 +10,9 @@ cmd_dir="$(dirname "$(readlink -e "${BASH_SOURCE[0]}")")"
 
 # Set the environment variables
 export ANSIBLE_COLLECTIONS_PATH=/opt/ansible/collections:${ANSIBLE_COLLECTIONS_PATH:+${ANSIBLE_COLLECTIONS_PATH}}
-export ANSIBLE_CONFIG="${cmd_dir}/ansible.cfg"
-export ANSIBLE_MODULE_UTILS="${cmd_dir}/src/module_utils:${ANSIBLE_MODULE_UTILS:+${ANSIBLE_MODULE_UTILS}}
+export ANSIBLE_CONFIG="${cmd_dir}/../src/ansible.cfg"
+export ANSIBLE_MODULE_UTILS="${cmd_dir}/../src/module_utils:${ANSIBLE_MODULE_UTILS:+${ANSIBLE_MODULE_UTILS}}"
 export ANSIBLE_HOST_KEY_CHECKING=False
-
-# Define the path to the vars.yaml file
-VARS_FILE="../vars.yaml"
-
 # Colors for error messages
 RED='\033[0;31m'
 GREEN='\033[0;32m'
@@ -33,6 +29,13 @@ log() {
         echo -e "${GREEN}[INFO] $message${NC}"
     fi
 }
+
+log "INFO" "ANSIBLE_COLLECTIONS_PATH: $ANSIBLE_COLLECTIONS_PATH"
+log "INFO" "ANSIBLE_CONFIG: $ANSIBLE_CONFIG"
+log "INFO" "ANSIBLE_MODULE_UTILS: $ANSIBLE_MODULE_UTILS"
+
+# Define the path to the vars.yaml file
+VARS_FILE="${cmd_dir}/../vars.yaml"
 
 # Function to check if a command exists
 command_exists() {
@@ -106,14 +109,14 @@ run_ansible_playbook() {
     local system_config_folder=$5
 
     if [[ "$auth_type" == "SSHKEY" ]]; then
-        local ssh_key="../WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME/ssh_key.ppk"
+        local ssh_key="${cmd_dir}/../WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME/ssh_key.ppk"
         log "INFO" "Using SSH key: $ssh_key."
-        command="ansible-playbook ../src/$playbook_name.yml -i $system_hosts --private-key $ssh_key \
+        command="ansible-playbook ${cmd_dir}/../src/$playbook_name.yml -i $system_hosts --private-key $ssh_key \
         -e @$VARS_FILE -e @$system_params -e '_workspace_directory=$system_config_folder'"
     else
         log "INFO" "Using password authentication."
-        command="ansible-playbook ../src/$playbook_name.yml -i $system_hosts \
-        --extra-vars \"ansible_ssh_pass=$(cat ../WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME/password)\" \
+        command="ansible-playbook ${cmd_dir}/../src/$playbook_name.yml -i $system_hosts \
+        --extra-vars \"ansible_ssh_pass=$(cat ${cmd_dir}/../WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME/password)\" \
         --extra-vars @$VARS_FILE -e @$system_params -e '_workspace_directory=$system_config_folder'"
     fi
 
@@ -135,7 +138,7 @@ main() {
     validate_params
 
     # Check if the SYSTEM_HOSTS and SYSTEM_PARAMS directory exists inside WORKSPACES/SYSTEM folder
-    SYSTEM_CONFIG_FOLDER="../WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME"
+    SYSTEM_CONFIG_FOLDER="${cmd_dir}/../WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME"
     SYSTEM_HOSTS="$SYSTEM_CONFIG_FOLDER/hosts.yaml"
     SYSTEM_PARAMS="$SYSTEM_CONFIG_FOLDER/sap-parameters.yaml"
     TEST_TIER=$(echo "$TEST_TIER" | tr '[:upper:]' '[:lower:]')
@@ -151,18 +154,17 @@ main() {
 
     log "INFO" "Checking if the SSH key or password file exists..."
     if [[ "$AUTHENTICATION_TYPE" == "SSHKEY" ]]; then
-        check_file_exists "../WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME/ssh_key.ppk" \
+        check_file_exists "${cmd_dir}/../WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME/ssh_key.ppk" \
             "ssh_key.ppk not found in WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME directory."
     else
-        check_file_exists "../WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME/password" \
+        check_file_exists "${cmd_dir}/../WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME/password" \
             "password file not found in WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME directory."
     fi
 
     playbook_name=$(get_playbook_name "$sap_functional_test_type")
     log "INFO" "Using playbook: $playbook_name."
 
-    run_ansible_playbook "$playbook_name" \
-        "$SYSTEM_HOSTS" "$SYSTEM_PARAMS" "$AUTHENTICATION_TYPE" "$SYSTEM_CONFIG_FOLDER"
+    run_ansible_playbook "$playbook_name" "$SYSTEM_HOSTS" "$SYSTEM_PARAMS" "$AUTHENTICATION_TYPE" "$SYSTEM_CONFIG_FOLDER"
 }
 
 # Execute the main function
