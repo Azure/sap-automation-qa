@@ -402,12 +402,12 @@ class ConstraintValidator(ValidatorBase, ParameterValidatorMixin):
         expected_attrs = CONSTRAINTS[constraint_type]
 
         for key, value in constraint.attrib.items():
-            expected_value = (
-                expected_attrs[key](self.context)
-                if callable(expected_attrs[key])
-                else expected_attrs[key]
-            )
             if key in expected_attrs:
+                expected_value = (
+                    expected_attrs[key](self.context)
+                    if callable(expected_attrs[key])
+                    else expected_attrs[key]
+                )
                 self._check_and_add_parameter(
                     key,
                     value,
@@ -420,12 +420,12 @@ class ConstraintValidator(ValidatorBase, ParameterValidatorMixin):
 
         for child in constraint:
             for key, value in child.attrib.items():
-                expected_value = (
-                    expected_attrs[key](self.context)
-                    if callable(expected_attrs[key])
-                    else expected_attrs[key]
-                )
                 if key in expected_attrs:
+                    expected_value = (
+                        expected_attrs[key](self.context)
+                        if callable(expected_attrs[key])
+                        else expected_attrs[key]
+                    )
                     self._check_and_add_parameter(
                         key,
                         value,
