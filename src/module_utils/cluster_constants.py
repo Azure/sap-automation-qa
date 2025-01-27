@@ -150,29 +150,45 @@ CLUSTER_RESOURCES = {
 }
 
 CLUSTER_PROPERTIES = {
-    "crm_config": {
-        "cib-bootstrap-options": {
-            "have-watchdog": "false",
-            "cluster-infrastructure": "corosync",
-            "stonith-enabled": "true",
-            "concurrent-fencing": "true",
-            "stonith-timeout": "900s",
-            "maintenance-mode": "false",
-            "azure-events_globalPullState": "IDLE",
-            "priority-fencing-delay": "30",
-        }
+    "DEFAULTS": {
+        "crm_config": {
+            "cib-bootstrap-options": {
+                "cluster-infrastructure": "corosync",
+                "stonith-enabled": "true",
+                "concurrent-fencing": "true",
+                "maintenance-mode": "false",
+                "azure-events_globalPullState": "IDLE",
+                "priority-fencing-delay": "30",
+            }
+        },
+        "rsc_defaults": {
+            "build-resource-defaults": {
+                "resource-stickiness": "1000",
+                "migration-threshold": "5000",
+                "priority": "1",
+            }
+        },
+        "op_defaults": {
+            "op-options": {
+                "timeout": "600",
+                "record-pending": "true",
+            }
+        },
     },
-    "rsc_defaults": {
-        "build-resource-defaults": {
-            "resource-stickiness": "1000",
-            "migration-threshold": "5000",
-            "priority": "1",
-        }
+    "ISCSI": {
+        "crm_config": {
+            "cib-bootstrap-options": {
+                "have-watchdog": "true",
+                "stonith-timeout": "144s",
+            }
+        },
     },
-    "op_defaults": {
-        "op-options": {
-            "timeout": "600",
-            "record-pending": "true",
+    "AFA": {
+        "crm_config": {
+            "cib-bootstrap-options": {
+                "have-watchdog": "false",
+                "stonith-timeout": "900s",
+            }
         }
     },
 }
@@ -180,7 +196,7 @@ CLUSTER_PROPERTIES = {
 OS_PARAMETERS = {
     "REDHAT": {
         "sysctl": {
-            "net.ipv4.tcp_timestamps": {"expected_value": "1"},
+            "net.ipv4.tcp_timestamps": {"expected_value": "0"},
             "vm.swappiness": {"expected_value": "10"},
         },
         "corosync-cmapctl": {
@@ -190,7 +206,7 @@ OS_PARAMETERS = {
     },
     "SUSE": {
         "sysctl": {
-            "net.ipv4.tcp_timestamps": {"expected_value": "1"},
+            "net.ipv4.tcp_timestamps": {"expected_value": "0"},
             "vm.swappiness": {"expected_value": "10"},
         },
         "corosync-cmapctl": {
