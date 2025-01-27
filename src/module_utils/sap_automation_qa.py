@@ -8,7 +8,7 @@ from enum import Enum
 import sys
 import logging
 import subprocess
-from typing import List, Optional
+from typing import Optional, Dict, Any
 import xml.etree.ElementTree as ET
 
 
@@ -65,6 +65,7 @@ class SapAutomationQA(ABC):
         :type message: str
         """
         self.logger.log(level, message)
+        message.replace("\n", " ")
         self.result["logs"].append(message)
 
     def handle_error(self, exception: Exception, stderr: str = None):
@@ -96,7 +97,7 @@ class SapAutomationQA(ABC):
         :return: Standard output from the command
         :rtype: str
         """
-        self.log(logging.INFO, f"Executing command: {command}")
+        self.log(logging.INFO, f"Executing command: {' '.join(command)}")
         try:
             command_output = subprocess.run(
                 command,
@@ -124,3 +125,12 @@ class SapAutomationQA(ABC):
         if xml_output.startswith("<"):
             return ET.fromstring(xml_output)
         return None
+
+    def get_result(self) -> Dict[str, Any]:
+        """
+        Returns the result dictionary.
+
+        :return: The result dictionary containing the status, message, details, and logs.
+        :rtype: dict
+        """
+        return self.result

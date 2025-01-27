@@ -86,15 +86,6 @@ class HTMLReportRenderer(SapAutomationQA):
         except Exception as e:
             self.handle_error(e)
 
-    def get_result(self) -> Dict[str, Any]:
-        """
-        Returns the result dictionary.
-
-        :return: The result dictionary containing the status of the operation.
-        :rtype: dict
-        """
-        return self.result
-
 
 def run_module() -> None:
     """

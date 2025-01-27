@@ -86,9 +86,6 @@
                                     cluster_status_post.primary_node == cluster_status_pre.secondary_node and
                                     cluster_status_post.secondary_node == cluster_status_pre.primary_node
 
-        - name:                     "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} Read var log messages by importing role"
-          ansible.builtin.include_tasks: "roles/misc/tasks/var-log-messages.yml"
-
         - name:                     "Set test case message and details"
           ansible.builtin.set_fact:
             test_case_message_from_test_case: "Old primary: {{ cluster_status_pre.primary_node }} \
