@@ -49,6 +49,7 @@
           ansible.builtin.command:  "crm_resource --cleanup"
           register:                 cleanup_failed_resource_post
           changed_when:             cleanup_failed_resource_post.rc == 0
+          ignore_errors:               true
 
         - name:                     "Test Execution: Validate HANA DB cluster status"
           when:                     automated_register.stdout != ""
