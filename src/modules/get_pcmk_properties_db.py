@@ -4,7 +4,6 @@
 """
 Python script to get and validate the cluster configuration in HANA DB node.
 """
-from enum import Enum
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field, asdict
 from typing import Dict, List, Optional, Union, Any
@@ -101,6 +100,7 @@ class ValidationContext:
     sid: str = ""
     vm_name: str = ""
     cmd_executor: Optional[CommandExecutor] = None
+    fencing_mechanism: str = ""
 
 
 class ValidatorBase(ABC):
@@ -524,7 +524,7 @@ class ClusterParamValidator(ValidatorBase, ParameterValidatorMixin):
         """
         Validates the cluster properties.
         """
-        for resource_operation in CLUSTER_PROPERTIES.keys():
+        for resource_operation in CLUSTER_PROPERTIES["DEFAULTS"].keys():
             root = self.context.cmd_executor.parse_xml_output(
                 ["cibadmin", "--query", "--scope", resource_operation]
             )
@@ -550,9 +550,16 @@ class ClusterParamValidator(ValidatorBase, ParameterValidatorMixin):
                 for nvpair in root_element.findall(".//nvpair")
             }
 
-            recommended_values = CLUSTER_PROPERTIES[resource_operation].get(
+            recommended_values = CLUSTER_PROPERTIES["DEFAULTS"][resource_operation].get(
                 primitive_id, {}
             )
+            # combine the default values with fencing based values
+            if self.context.fencing_mechanism in CLUSTER_PROPERTIES:
+                recommended_values.update(
+                    CLUSTER_PROPERTIES[self.context.fencing_mechanism].get(
+                        primitive_id, {}
+                    )
+                )
             self._compare_parameters(
                 extracted_values,
                 recommended_values,

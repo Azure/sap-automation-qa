@@ -36,6 +36,7 @@
         instance_number:                "{{ db_instance_number }}"
         ansible_os_family:              "{{ ansible_os_family | upper }}"
         virtual_machine_name:           "{{ azure_instance_metadata.json.compute.name }}"
+        fencing_mechanism:              "{{ database_cluster_type }}"
       register:                         test_result
 
     - name:                             "Set the test case status to PASSED"
