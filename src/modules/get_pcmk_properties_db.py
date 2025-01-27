@@ -788,6 +788,7 @@ class ClusterManager:
             sid=module.params["sid"],
             vm_name=module.params["virtual_machine_name"],
             cmd_executor=CommandExecutor(),
+            fencing_mechanism=module.params.get("fencing_mechanism", ""),
         )
         self.result_aggregator = ResultAggregator()
 
