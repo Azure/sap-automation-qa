@@ -77,6 +77,7 @@
                                     --cleanup --node {{ cluster_status_pre.secondary_node }}
           register:                 cleanup_failed_resource_post
           changed_when:             cleanup_failed_resource_post.rc == 0
+          ignore_errors:            true
 
         - name:                     "Test execution: Validate HANA DB cluster status"
           get_cluster_status:
