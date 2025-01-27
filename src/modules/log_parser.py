@@ -4,10 +4,8 @@
 """
 Custom ansible module for log parsing
 """
-from enum import Enum
 import json
 from datetime import datetime
-from typing import Dict, Any
 from ansible.module_utils.basic import AnsibleModule
 
 try:
@@ -87,15 +85,6 @@ class LogParser(SapAutomationQA):
             self.handle_error(ex)
         except Exception as e:
             self.handle_error(e)
-
-    def get_result(self) -> Dict[str, Any]:
-        """
-        Returns the result dictionary.
-
-        :return: The result dictionary containing the filtered logs and other details.
-        :rtype: dict
-        """
-        return self.result
 
 
 def run_module() -> None:

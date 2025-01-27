@@ -5,26 +5,26 @@
 # Description: This script will run post validations for the test cases       #
 ###############################################################################
 
-- name:                         "Post Validations: HA cluster status after test execution"
+- name:                                 "Post Validations: HA cluster status after test execution"
   when:
-                                - ansible_hostname == cluster_status_pre.primary_node
-                                - cluster_status_pre is defined
+                                        - ansible_hostname == cluster_status_pre.primary_node
+                                        - cluster_status_pre is defined
   block:
-    - name:                     "Read var log messages by importing role"
-      ansible.builtin.include_tasks: "roles/misc/tasks/var-log-messages.yml"
+    - name:                             "Read var log messages by importing role"
+      ansible.builtin.include_tasks:    "roles/misc/tasks/var-log-messages.yml"
 
-    - name:                     "Post Validations: Set test case status"
-      delegate_to:              localhost
+    - name:                             "Post Validations: Set test case status"
+      delegate_to:                      localhost
       ansible.builtin.set_fact:
-        test_case_name:         "{{ item.name }}: {{ virtual_host }}"
-        test_case_description:  "{{ item.description }}"
-        test_case_status:       "PASSED"
-        test_execution_start_time: "{{ test_execution_start }}"
-        test_case_hostname:     "{{ virtual_host }}"
-        test_execution_end_time: "{{ test_execution_end }}"
-        test_case_var_log_messages: "{{ var_log_messages_output.filtered_logs }}"
-        test_case_message:      "{{ test_case_message_from_test_case }}"
-        test_case_details:      "{{ test_case_details_from_test_case }}"
+        test_case_name:                 "{{ item.name }}: {{ virtual_host }}"
+        test_case_description:          "{{ item.description }}"
+        test_case_status:               "PASSED"
+        test_execution_start_time:      "{{ test_execution_start }}"
+        test_case_hostname:             "{{ virtual_host }}"
+        test_execution_end_time:        "{{ test_execution_end }}"
+        test_case_var_log_messages:     "{{ var_log_messages_output.filtered_logs }}"
+        test_case_message:              "{{ test_case_message_from_test_case }}"
+        test_case_details:              "{{ test_case_details_from_test_case }}"
 
-    - name:                     "Post Telemetry Data"
-      ansible.builtin.include_tasks: "roles/misc/tasks/post-telemetry-data.yml"
+    - name:                             "Post Telemetry Data"
+      ansible.builtin.include_tasks:    "roles/misc/tasks/post-telemetry-data.yml"
