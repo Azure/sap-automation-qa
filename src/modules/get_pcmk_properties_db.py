@@ -5,7 +5,6 @@
 Python script to get and validate the cluster configuration in HANA DB node.
 """
 from abc import ABC, abstractmethod
-from dataclasses import dataclass, field, asdict
 from typing import Dict, List, Optional, Union, Any
 import subprocess
 import json
@@ -35,15 +34,20 @@ except ImportError:
     )
 
 
-@dataclass
 class ValidationResult:
     """
     Represents the result of a validation.
     """
 
-    status: TestStatus
-    messages: Dict[str, Any]
-    details: Optional[Dict] = None
+    def __init__(
+        self,
+        status: TestStatus,
+        messages: Dict[str, Any],
+        details: Optional[Dict] = None,
+    ):
+        self.status = status
+        self.messages = messages
+        self.details = details
 
     def to_dict(self) -> Dict:
         """
@@ -90,18 +94,27 @@ class CommandExecutor:
         return None
 
 
-@dataclass
 class ValidationContext:
     """
     Context for validation, containing necessary parameters and command executor.
     """
 
-    ansible_os_family: str
-    sid: str = ""
-    vm_name: str = ""
-    cmd_executor: Optional[CommandExecutor] = None
-    fencing_mechanism: str = ""
-    instance_number: str = ""
+    def __init__(
+        self,
+        ansible_os_family: str,
+        sid: str = "",
+        vm_name: str = "",
+        cmd_executor: Optional[CommandExecutor] = None,
+        fencing_mechanism: str = "",
+        instance_number: str = "",
+    ):
+
+        self.ansible_os_family = ansible_os_family
+        self.sid = sid
+        self.vm_name = vm_name
+        self.cmd_executor = cmd_executor
+        self.fencing_mechanism = fencing_mechanism
+        self.instance_number = instance_number
 
 
 class ValidatorBase(ABC):
@@ -709,15 +722,20 @@ class ClusterParamValidator(ValidatorBase, ParameterValidatorMixin):
         )
 
 
-@dataclass
 class ResultAggregator:
     """
     Aggregates the results of the cluster parameter validations.
     """
 
-    parameters: List[Dict[str, str]] = field(default_factory=list)
-    error_message: str = ""
-    message: str = "Cluster parameters validation completed"
+    def __init__(
+        self,
+        parameters: Optional[List[Dict[str, str]]] = None,
+        error_message: str = "",
+        message: str = "Cluster parameters validation completed",
+    ):
+        self.parameters = parameters if parameters is not None else []
+        self.error_message = error_message
+        self.message = message
 
     def add_validation_result(self, category: str, result: ValidationResult) -> None:
         """
@@ -824,7 +842,7 @@ class ClusterManager:
             self._process_results()
         except Exception as e:
             self.result_aggregator.error_message = str(e)
-            self.module.fail_json(msg=asdict(self.result_aggregator))
+            self.module.fail_json(msg=self.result_aggregator.to_dict())
 
     def _create_validators(self) -> Dict[str, ValidatorBase]:
         """
