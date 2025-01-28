@@ -307,7 +307,7 @@ def validate_fence_azure_arm(ansible_os_family: str, virtual_machine_name: str):
                     "--get-parameter",
                     "msi",
                 ]
-            )
+            ).strip()
 
         if msi_value and msi_value.strip().lower() == "true":
             fence_azure_arm_output = run_subprocess(
@@ -337,9 +337,9 @@ def validate_fence_azure_arm(ansible_os_family: str, virtual_machine_name: str):
             "status": SUCCESS_STATUS,
         }
     except json.JSONDecodeError as e:
-        return {"message": {"Fence agent permissions": str(e)}, "status": "FAILED"}
+        return {"message": {"Fence agent permissions": str(e)}, "status": ERROR_STATUS}
     except Exception as e:
-        return {"message": {"Fence agent permissions": str(e)}, "status": "FAILED"}
+        return {"message": {"Fence agent permissions": str(e)}, "status": ERROR_STATUS}
 
 
 def validate_os_parameters(SID: str, ansible_os_family: str):
@@ -365,16 +365,22 @@ def validate_os_parameters(SID: str, ansible_os_family: str):
                 ),
                 None,
             )
+            result = {
+                "category": "custom_os_parameters",
+                "type": parameter,
+                "name": parameter,
+                "value": parameter_value,
+                "expected_value": details["expected_value"],
+                "status": (
+                    SUCCESS_STATUS
+                    if parameter_value == details["expected_value"]
+                    else ERROR_STATUS
+                ),
+            }
             if parameter_value != details["expected_value"]:
-                drift_parameters.append(
-                    PARAMETER_VALUE_FORMAT
-                    % (parameter, parameter_value, details["expected_value"])
-                )
+                drift_parameters.append(result)
             else:
-                validated_parameters.append(
-                    PARAMETER_VALUE_FORMAT
-                    % (parameter, parameter_value, details["expected_value"])
-                )
+                validated_parameters.append(result)
 
         for stack_name, stack_details in OS_PARAMETERS[ansible_os_family].items():
             base_args = (
@@ -383,16 +389,22 @@ def validate_os_parameters(SID: str, ansible_os_family: str):
             for parameter, details in stack_details.items():
                 output = run_subprocess(base_args + [parameter])
                 parameter_value = output.split("=")[1].strip()
+                result = {
+                    "category": stack_name,
+                    "type": parameter,
+                    "name": parameter,
+                    "value": parameter_value,
+                    "expected_value": details["expected_value"],
+                    "status": (
+                        SUCCESS_STATUS
+                        if parameter_value == details["expected_value"]
+                        else ERROR_STATUS
+                    ),
+                }
                 if parameter_value != details["expected_value"]:
-                    drift_parameters.append(
-                        PARAMETER_VALUE_FORMAT
-                        % (parameter, parameter_value, details["expected_value"])
-                    )
+                    drift_parameters.append(result)
                 else:
-                    validated_parameters.append(
-                        PARAMETER_VALUE_FORMAT
-                        % (parameter, parameter_value, details["expected_value"])
-                    )
+                    validated_parameters.append(result)
 
         if drift_parameters:
             return {
@@ -434,50 +446,52 @@ def validate_constraints(SID: str, ansible_os_family: str):
                 if constraint_type in cluster_properties:
                     constraint_id = constraint.attrib.get("id", "")
                     for key, value in constraint.attrib.items():
+                        result = {
+                            "category": constraint_type,
+                            "type": constraint_id,
+                            "name": key,
+                            "value": value,
+                            "expected_value": cluster_properties[constraint_type][key],
+                            "status": (
+                                SUCCESS_STATUS
+                                if value == cluster_properties[constraint_type][key]
+                                else ERROR_STATUS
+                            ),
+                        }
                         if key in cluster_properties[constraint_type]:
                             if value != cluster_properties[constraint_type][key]:
                                 drift_parameters[constraint_type][constraint_id].append(
-                                    PARAMETER_VALUE_FORMAT
-                                    % (
-                                        key,
-                                        value,
-                                        cluster_properties[constraint_type][key],
-                                    )
+                                    result
                                 )
                             else:
                                 valid_parameters[constraint_type][constraint_id].append(
-                                    PARAMETER_VALUE_FORMAT
-                                    % (
-                                        key,
-                                        value,
-                                        cluster_properties[constraint_type][key],
-                                    )
+                                    result
                                 )
                     for child in constraint:
                         for key, value in child.attrib.items():
+                            result = {
+                                "category": constraint_type,
+                                "type": constraint_id,
+                                "name": key,
+                                "value": value,
+                                "expected_value": cluster_properties[constraint_type][
+                                    key
+                                ],
+                                "status": (
+                                    SUCCESS_STATUS
+                                    if value == cluster_properties[constraint_type][key]
+                                    else ERROR_STATUS
+                                ),
+                            }
                             if key in cluster_properties[constraint_type]:
                                 if value != cluster_properties[constraint_type][key]:
                                     drift_parameters[constraint_type][
                                         constraint_id
-                                    ].append(
-                                        PARAMETER_VALUE_FORMAT
-                                        % (
-                                            key,
-                                            value,
-                                            cluster_properties[constraint_type][key],
-                                        )
-                                    )
+                                    ].append(result)
                                 else:
                                     valid_parameters[constraint_type][
                                         constraint_id
-                                    ].append(
-                                        PARAMETER_VALUE_FORMAT
-                                        % (
-                                            key,
-                                            value,
-                                            cluster_properties[constraint_type][key],
-                                        )
-                                    )
+                                    ].append(result)
         if drift_parameters:
             return {
                 "message": {
@@ -555,24 +569,22 @@ def validate_resource_parameters(
                 actual_attributes[name] = op.get("timeout")
         for name, value in actual_attributes.items():
             if name in expected_attributes:
+                result = {
+                    "category": "resources",
+                    "type": resource_type,
+                    "name": name,
+                    "value": value,
+                    "expected_value": expected_attributes[name],
+                    "status": (
+                        SUCCESS_STATUS
+                        if value == expected_attributes[name]
+                        else ERROR_STATUS
+                    ),
+                }
                 if value != expected_attributes[name]:
-                    drift_parameters["resources"][resource_id].append(
-                        PARAMETER_VALUE_FORMAT
-                        % (
-                            name,
-                            value,
-                            expected_attributes[name],
-                        )
-                    )
+                    drift_parameters["resources"][resource_id].append(result)
                 else:
-                    valid_parameters["resources"][resource_id].append(
-                        PARAMETER_VALUE_FORMAT
-                        % (
-                            name,
-                            value,
-                            expected_attributes[name],
-                        )
-                    )
+                    valid_parameters["resources"][resource_id].append(result)
 
 
 def validate_cluster_params(ansible_os_family: str):
@@ -604,28 +616,26 @@ def validate_cluster_params(ansible_os_family: str):
                     ].get(primitive_id, {})
                     for name, value in extracted_values[primitive_id].items():
                         if name in recommended_for_primitive:
+                            result = {
+                                "category": resource_operation,
+                                "type": primitive_id,
+                                "name": name,
+                                "value": value,
+                                "expected_value": recommended_for_primitive[name],
+                                "status": (
+                                    SUCCESS_STATUS
+                                    if value == recommended_for_primitive[name]
+                                    else ERROR_STATUS
+                                ),
+                            }
                             if value != recommended_for_primitive[name]:
                                 drift_parameters[resource_operation][
                                     primitive_id
-                                ].append(
-                                    PARAMETER_VALUE_FORMAT
-                                    % (
-                                        name,
-                                        value,
-                                        recommended_for_primitive[name],
-                                    )
-                                )
+                                ].append(result)
                             else:
                                 valid_parameters[resource_operation][
                                     primitive_id
-                                ].append(
-                                    PARAMETER_VALUE_FORMAT
-                                    % (
-                                        name,
-                                        value,
-                                        recommended_for_primitive[name],
-                                    )
-                                )
+                                ].append(result)
         validate_resource_parameters(
             ansible_os_family, drift_parameters, valid_parameters
         )
