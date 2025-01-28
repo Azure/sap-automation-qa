@@ -163,7 +163,7 @@ CLUSTER_PROPERTIES = {
         "cib-bootstrap-options": {
             "have-watchdog": "false",
             "cluster-infrastructure": "corosync",
-            "stonith-enabled": "true",
+            "stonith-enabled": "false",
             "concurrent-fencing": "true",
             "stonith-timeout": "900",
             "maintenance-mode": "false",
@@ -183,8 +183,8 @@ CLUSTER_PROPERTIES = {
 OS_PARAMETERS = {
     "REDHAT": {
         "sysctl": {
-            "net.ipv4.tcp_timestamps": {"expected_value": "1"},
-            "vm.swappiness": {"expected_value": "10"},
+            "net.ipv4.tcp_timestamps": {"expected_value": "0"},
+            "vm.swappiness": {"expected_value": "60"},
         },
         "corosync-cmapctl": {
             "runtime.config.totem.token": {"expected_value": "30000"},
