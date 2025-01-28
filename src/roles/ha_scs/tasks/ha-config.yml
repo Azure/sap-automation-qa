@@ -7,7 +7,7 @@
 - name:                                 "Test Setup Tasks"
   ansible.builtin.include_tasks:        "roles/misc/tasks/test-case-setup.yml"
 
-- name:                                 "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} - Pre Validations: Validate parameters for the SCS nodes"
+- name:                                 "Pre Validations: Validate parameters for the SCS nodes"
   become:                               true
   become_user:                          root
   block:
@@ -19,7 +19,7 @@
           Metadata:                     true
       register:                         azure_instance_metadata
 
-    - name:                             "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} - HA Configuration check for the SCS nodes"
+    - name:                             "HA Configuration check for the SCS nodes"
       get_pcmk_properties_scs:
         sid:                            "{{ sap_sid | upper }}"
         ascs_instance_number:           "{{ scs_instance_number }}"
@@ -28,7 +28,7 @@
         virtual_machine_name:           "{{ azure_instance_metadata.json.compute.name }}"
       register:                         test_result
 
-    - name:                             "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} - Set the test case status to PASSED"
+    - name:                             "Set the test case status to PASSED"
       ansible.builtin.set_fact:
         test_case_name:                 "{{ item.name }}: {{ virtual_host }}"
         test_case_status:               "{{ test_result.status }}"
@@ -36,7 +36,7 @@
         test_case_details:              "{{ test_result.details }}"
         test_case_hostname:             "{{ virtual_host }}"
   rescue:
-    - name:                             "{{ lookup('pipe', 'date +%Y-%m-%dT%H:%M:%S') }} - Test case failed"
+    - name:                             "Test case failed"
       ansible.builtin.set_fact:
           test_case_name:               "{{ item.name }}: {{ virtual_host }}"
           test_case_status:             "FAILED"

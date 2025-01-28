@@ -331,15 +331,15 @@ def validate_fence_azure_arm(ansible_os_family: str, virtual_machine_name: str):
                 "status": ERROR_STATUS,
             }
         return {
-            "msg": {
+            "message": {
                 "Fence agent permissions": "MSI value not found or the stonith is configured using SPN."
             },
             "status": SUCCESS_STATUS,
         }
     except json.JSONDecodeError as e:
-        return {"msg": {"Fence agent permissions": str(e)}, "status": "FAILED"}
+        return {"message": {"Fence agent permissions": str(e)}, "status": "FAILED"}
     except Exception as e:
-        return {"msg": {"Fence agent permissions": str(e)}, "status": "FAILED"}
+        return {"message": {"Fence agent permissions": str(e)}, "status": "FAILED"}
 
 
 def validate_os_parameters(SID: str, ansible_os_family: str):
@@ -396,19 +396,19 @@ def validate_os_parameters(SID: str, ansible_os_family: str):
 
         if drift_parameters:
             return {
-                "msg": {
+                "message": {
                     "Drift OS and Corosync Parameters": drift_parameters,
                     "Validated OS and Corosync Parameters": validated_parameters,
                 },
                 "status": ERROR_STATUS,
             }
         return {
-            "msg": {"Validated OS and Corosync Parameters": validated_parameters},
+            "message": {"Validated OS and Corosync Parameters": validated_parameters},
             "status": SUCCESS_STATUS,
         }
     except Exception as e:
         return {
-            "msg": {"Error OS and Corosync Parameters": str(e)},
+            "message": {"Error OS and Corosync Parameters": str(e)},
             "status": ERROR_STATUS,
         }
 
@@ -480,18 +480,18 @@ def validate_constraints(SID: str, ansible_os_family: str):
                                     )
         if drift_parameters:
             return {
-                "msg": {
+                "message": {
                     "Valid Constraints parameters": valid_parameters,
                     "Drift in Constraints parameters": drift_parameters,
                 },
                 "status": ERROR_STATUS,
             }
         return {
-            "msg": {"Valid Constraints parameter": valid_parameters},
+            "message": {"Valid Constraints parameter": valid_parameters},
             "status": SUCCESS_STATUS,
         }
     except Exception as e:
-        return {"msg": {"Constraints validation": str(e)}, "status": ERROR_STATUS}
+        return {"message": {"Constraints validation": str(e)}, "status": ERROR_STATUS}
 
 
 def validate_resource_parameters(
@@ -637,7 +637,7 @@ def validate_cluster_params(ansible_os_family: str):
         ]
         if missing_parameters:
             return {
-                "msg": {
+                "message": {
                     "Required parameters missing in cluster parameters": missing_parameters,
                     "Validated cluster parameters": valid_parameters,
                 },
@@ -645,18 +645,18 @@ def validate_cluster_params(ansible_os_family: str):
             }
         if drift_parameters:
             return {
-                "msg": {
+                "message": {
                     "Validated cluster parameters": valid_parameters,
                     "Drift in cluster parameters": drift_parameters,
                 },
                 "status": ERROR_STATUS,
             }
         return {
-            "msg": {"Validated cluster parameters": valid_parameters},
+            "message": {"Validated cluster parameters": valid_parameters},
             "status": SUCCESS_STATUS,
         }
     except Exception as e:
-        return {"msg": {"Error message": str(e)}, "status": ERROR_STATUS}
+        return {"message": {"Error message": str(e)}, "status": ERROR_STATUS}
 
 
 def run_module():
@@ -688,12 +688,12 @@ def run_module():
     )
     try:
         module.exit_json(
-            msg="Cluster parameters validation completed",
+            message="Cluster parameters validation completed",
             details={
-                **cluster_result.get("msg", {}),
-                **os_parameters_result.get("msg", {}),
-                **fence_azure_arm_result.get("msg", {}),
-                **constraints.get("msg", {}),
+                **cluster_result.get("message", {}),
+                **os_parameters_result.get("message", {}),
+                **fence_azure_arm_result.get("message", {}),
+                **constraints.get("message", {}),
             },
             status=(
                 SUCCESS_STATUS
