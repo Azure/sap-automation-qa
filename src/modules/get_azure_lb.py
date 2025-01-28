@@ -12,10 +12,10 @@ from azure.mgmt.network import NetworkManagementClient
 
 try:
     from ansible.module_utils.sap_automation_qa import SapAutomationQA, TestStatus
-    from ansible.module_utils.cluster_constants import PROBES, RULES
+    from ansible.module_utils.db_cluster_constants import PROBES, RULES
 except ImportError:
     from src.module_utils.sap_automation_qa import SapAutomationQA, TestStatus
-    from src.module_utils.cluster_constants import PROBES, RULES
+    from src.module_utils.db_cluster_constants import PROBES, RULES
 
 
 class AzureLoadBalancer(SapAutomationQA):

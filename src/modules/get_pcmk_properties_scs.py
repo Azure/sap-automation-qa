@@ -9,283 +9,294 @@ import json
 from collections import defaultdict
 import xml.etree.ElementTree as ET
 from ansible.module_utils.basic import AnsibleModule
+from typing import Dict, Any, List, Union, Optional
+from abc import ABC, abstractmethod
 
-SUCCESS_STATUS = "PASSED"
-ERROR_STATUS = "FAILED"
-WARNING_STATUS = "WARNING"
+try:
+    from ansible.module_utils.sap_automation_qa import TestStatus
+    from ansible.module_utils.scs_cluster_constants import (
+        OS_PARAMETERS,
+        CUSTOM_OS_PARAMETERS,
+        CONSTRAINTS,
+        CLUSTER_PROPERTIES,
+        CLUSTER_RESOURCES,
+        REQUIRED_PARAMETERS,
+    )
+except ImportError:
+    from src.module_utils.sap_automation_qa import TestStatus
+    from src.module_utils.scs_cluster_constants import (
+        OS_PARAMETERS,
+        CUSTOM_OS_PARAMETERS,
+        CONSTRAINTS,
+        CLUSTER_PROPERTIES,
+        CLUSTER_RESOURCES,
+        REQUIRED_PARAMETERS,
+    )
 
-CLUSTER_RESOURCES = {
-    "SUSE": {
-        "stonith:fence_azure_arm": {
-            "pcmk_monitor_retries": "4",
-            "pcmk_action_limit": "3",
-            "power_timeout": "240",
-            "pcmk_reboot_timeout": "900",
-            "pcmk_delay_max": "15",
-            "monitor-interval": "3600",
-            "pcmk_monitor_timeout": "120",
-            "monitor-timeout": "120",
-        },
-        "ocf:heartbeat:azure-events-az": {
-            "interleave": "true",
-            "allow-unhealthy-nodes": "true",
-            "failure-timeout": "120s",
-            "start-start-delay": "60s",
-            "monitor-interval": "10s",
-        },
-        "ocf:heartbeat:azure-lb": {
-            "monitor-interval": "10",
-            "monitor-timeout": "20s",
-            "start-interval": "0s",
-            "start-timeout": "20s",
-            "stop-interval": "0s",
-            "stop-timeout": "20s",
-        },
-        "ocf:heartbeat:IPaddr2": {
-            "monitor-interval": "10",
-            "monitor-timeout": "20",
-            "start-interval": "0s",
-            "start-timeout": "20s",
-            "stop-interval": "0s",
-            "stop-timeout": "20s",
-        },
-        "ocf:heartbeat:SAPInstance:ASCS": {
-            "AUTOMATIC_RECOVER": "false",
-            "MINIMAL_PROBE": "true",
-            "resource-stickiness": "5000",
-            "priority": "100",
-            "monitor-interval": "11",
-            "monitor-timeout": "60",
-            "start-interval": "0s",
-            "start-timeout": "180s",
-            "stop-interval": "0s",
-            "stop-timeout": "240s",
-            "promote-interval": "0s",
-            "promote-timeout": "320s",
-            "demote-interval": "0s",
-            "demote-timeout": "320s",
-        },
-        "ocf:heartbeat:SAPInstance:ERS": {
-            "AUTOMATIC_RECOVER": "false",
-            "IS_ERS": "true",
-            "MINIMAL_PROBE": "true",
-            "monitor-interval": "11",
-            "monitor-timeout": "60",
-            "start-interval": "0s",
-            "start-timeout": "180s",
-            "stop-interval": "0s",
-            "stop-timeout": "240s",
-            "promote-interval": "0s",
-            "promote-timeout": "320s",
-            "demote-interval": "0s",
-            "demote-timeout": "320s",
-        },
-    },
-    "REDHAT": {
-        "stonith:fence_azure_arm": {
-            "pcmk_monitor_retries": "4",
-            "pcmk_action_limit": "3",
-            "power_timeout": "240",
-            "pcmk_reboot_timeout": "900",
-            "pcmk_delay_max": "15",
-            "monitor-interval": "3600",
-            "pcmk_monitor_timeout": "120",
-            "monitor-timeout": "120",
-        },
-        "ocf:heartbeat:azure-events-az": {
-            "interleave": "true",
-            "allow-unhealthy-nodes": "true",
-            "failure-timeout": "120s",
-            "start-start-delay": "60s",
-            "monitor-interval": "10s",
-        },
-        "ocf:heartbeat:azure-lb": {
-            "monitor-interval": "10",
-            "monitor-timeout": "20s",
-            "start-interval": "0s",
-            "start-timeout": "20s",
-            "stop-interval": "0s",
-            "stop-timeout": "20s",
-        },
-        "ocf:heartbeat:IPaddr2": {
-            "monitor-interval": "10",
-            "monitor-timeout": "20",
-            "start-interval": "0s",
-            "start-timeout": "20s",
-            "stop-interval": "0s",
-            "stop-timeout": "20s",
-        },
-        "ocf:heartbeat:SAPInstance:ASCS": {
-            "AUTOMATIC_RECOVER": "false",
-            "MINIMAL_PROBE": "true",
-            "resource-stickiness": "5000",
-            "priority": "100",
-            "monitor-interval": "11",
-            "monitor-timeout": "60",
-            "start-interval": "0s",
-            "start-timeout": "180s",
-            "stop-interval": "0s",
-            "stop-timeout": "240s",
-            "promote-interval": "0s",
-            "promote-timeout": "320s",
-            "demote-interval": "0s",
-            "demote-timeout": "320s",
-        },
-        "ocf:heartbeat:SAPInstance:ERS": {
-            "AUTOMATIC_RECOVER": "false",
-            "IS_ERS": "true",
-            "MINIMAL_PROBE": "true",
-            "monitor-interval": "11",
-            "monitor-timeout": "60",
-            "start-interval": "0s",
-            "start-timeout": "180s",
-            "stop-interval": "0s",
-            "stop-timeout": "240s",
-            "promote-interval": "0s",
-            "promote-timeout": "320s",
-            "demote-interval": "0s",
-            "demote-timeout": "320s",
-        },
-    },
-}
 
-CLUSTER_PROPERTIES = {
-    "crm_config": {
-        "cib-bootstrap-options": {
-            "have-watchdog": "false",
-            "cluster-infrastructure": "corosync",
-            "stonith-enabled": "true",
-            "concurrent-fencing": "true",
-            "stonith-timeout": "900",
-            "maintenance-mode": "false",
-            "azure-events_globalPullState": "IDLE",
-            "priority-fencing-delay": "30",
+class ValidationResult:
+    """
+    Represents the result of a validation.
+    """
+
+    def __init__(
+        self,
+        status: TestStatus,
+        messages: Dict[str, Any],
+        details: Optional[Dict] = None,
+    ):
+        self.status = status
+        self.messages = messages
+        self.details = details
+
+    def to_dict(self) -> Dict:
+        """
+        Converts the validation result to a dictionary.
+        """
+        return {
+            "message": self.messages,
+            "status": self.status.value,
+            **(self.details or {}),
         }
-    },
-    "rsc_defaults": {
-        "build-resource-defaults": {
-            "resource-stickiness": "1",
-            "migration-threshold": "3",
-            "priority": "1",
-        }
-    },
-}
-
-OS_PARAMETERS = {
-    "REDHAT": {
-        "sysctl": {
-            "net.ipv4.tcp_timestamps": {"expected_value": "1"},
-            "vm.swappiness": {"expected_value": "10"},
-        },
-        "corosync-cmapctl": {
-            "runtime.config.totem.token": {"expected_value": "30000"},
-            "runtime.config.totem.consensus": {"expected_value": "36000"},
-        },
-    },
-    "SUSE": {
-        "sysctl": {
-            "net.ipv4.tcp_timestamps": {"expected_value": "1"},
-            "vm.swappiness": {"expected_value": "10"},
-        },
-        "corosync-cmapctl": {
-            "runtime.config.totem.token": {"expected_value": "30000"},
-            "runtime.config.totem.consensus": {"expected_value": "36000"},
-            "quorum.expected_votes": {"expected_value": "2"},
-        },
-    },
-}
-
-CUSTOM_OS_PARAMETERS = {
-    "REDHAT": {
-        "quorum.expected_votes": {
-            "expected_value": "2",
-            "parameter_name": "Expected votes",
-            "command": ["pcs", "quorum", "status"],
-        },
-    },
-    "SUSE": {},
-}
-
-REQUIRED_PARAMETERS = {
-    "priority-fencing-delay",
-}
-
-CONSTRAINTS = {
-    "rsc_colocation": {
-        "score": "-5000",
-        "rsc-role": "Started",
-        "with-rsc-role": "Promoted",
-    },
-    "rsc_order": {
-        "first-action": "start",
-        "then-action": "stop",
-        "symmetrical": "false",
-    },
-    "rsc_location": {
-        "score-attribute": "#health-azure",
-        "operation": "defined",
-        "attribute": "#uname",
-    },
-}
-
-PARAMETER_VALUE_FORMAT = "Name: %s, Value: %s, Expected Value: %s"
 
 
-def run_subprocess(command):
-    """Run a subprocess command and return the output.
-
-    Args:
-        command (list[str]): The command to run.
-
-    Returns:
-        output: The output of the command.
+class CommandExecutor:
     """
-    try:
-        with subprocess.Popen(
-            command,
-            stdout=subprocess.PIPE,
-            encoding="utf-8",
-        ) as proc:
-            return proc.stdout.read()
-    except subprocess.CalledProcessError as e:
-        return str(e)
-
-
-def parse_xml_output(command):
-    """Parse the XML output of a command.
-
-    Args:
-        command (list[str]): The command to run.
-
-    Returns:
-        xml: The parsed XML output.
+    Executes system commands and parses XML output.
     """
-    xml_output = run_subprocess(command)
-    if xml_output.startswith("<"):
-        return ET.fromstring(xml_output)
-    return None
+
+    @staticmethod
+    def run_subprocess(command: Union[List[str], str]) -> str:
+        """
+        Runs a subprocess command and returns its output.
+        """
+        try:
+            with subprocess.Popen(
+                command,
+                stdout=subprocess.PIPE,
+                encoding="utf-8",
+            ) as proc:
+                return proc.stdout.read()
+        except subprocess.CalledProcessError as e:
+            return str(e)
+
+    @classmethod
+    def parse_xml_output(cls, command: List[str]) -> Optional[ET.Element]:
+        """
+        Parses the XML output of a command.
+        """
+        xml_output = cls.run_subprocess(command)
+        if xml_output.startswith("<"):
+            return ET.fromstring(xml_output)
+        return None
 
 
-def validate_fence_azure_arm(ansible_os_family: str, virtual_machine_name: str):
+class ValidationContext:
     """
-    Validate the permissions of the fence agent in Azure ARM.
-
-    Args:
-        ansible_os_family (str): Ansible OS family
-        virtual_machine_name (str): Virtual machine name
-
-    Returns:
-        dict: Fence agent permissions
+    Context for validation, containing necessary parameters and command executor.
     """
-    try:
-        msi_value = None
-        if ansible_os_family == "REDHAT":
+
+    def __init__(
+        self,
+        ansible_os_family: str,
+        sid: str = "",
+        vm_name: str = "",
+        cmd_executor: Optional[CommandExecutor] = None,
+        ascs_instance_number: str = "",
+        ers_instance_number: str = "",
+    ):
+        self.ansible_os_family = ansible_os_family
+        self.sid = sid
+        self.vm_name = vm_name
+        self.cmd_executor = cmd_executor or CommandExecutor()
+        self.ascs_instance_number = ascs_instance_number
+        self.ers_instance_number = ers_instance_number
+
+
+class ValidatorBase(ABC):
+    """
+    Abstract base class for validators.
+    """
+
+    def __init__(self, context: ValidationContext):
+        """
+        Initializes the validator with the given context.
+        """
+        self.context = context
+
+    @abstractmethod
+    def validate(self) -> ValidationResult:
+        """
+        Abstract method to perform validation.
+        """
+        pass
+
+    def _format_parameter_result(self, name: str, value: str, expected: str) -> str:
+        """
+        Formats the parameter result for reporting.
+        """
+        return f"Name: {name}, Value: {value}, Expected Value: {expected}"
+
+
+class ParameterValidatorMixin:
+    """
+    Mixin class for parameter validation.
+    """
+
+    def _check_and_add_parameter(
+        self,
+        key: str,
+        value: str,
+        expected: str,
+        category: str,
+        identifier: str,
+        drift_parameters: dict,
+        valid_parameters: dict,
+    ) -> None:
+        """
+        Checks and adds the parameter to the appropriate list based on comparison.
+        """
+        result = self._format_parameter_result(key, value, expected)
+        target_dict = drift_parameters if value != expected else valid_parameters
+        target_dict[category][identifier].append(result)
+
+
+class OSParameterValidator(ValidatorBase, ParameterValidatorMixin):
+    """
+    Validates the OS parameters by comparing actual and expected values.
+    """
+
+    def validate(self) -> ValidationResult:
+        drift_parameters = []
+        validated_parameters = []
+
+        try:
+            for param_type, params in OS_PARAMETERS[
+                self.context.ansible_os_family
+            ].items():
+                base_args = (
+                    ["sysctl"] if param_type == "sysctl" else ["corosync-cmapctl", "-g"]
+                )
+
+                for param, details in params.items():
+                    output = self.context.cmd_executor.run_subprocess(
+                        base_args + [param]
+                    )
+                    value = output.split("=")[1].strip()
+
+                    result = {
+                        "category": param_type,
+                        "type": param,
+                        "name": param,
+                        "value": value,
+                        "expected_value": details["expected_value"],
+                        "status": (
+                            TestStatus.SUCCESS.value
+                            if value == details["expected_value"]
+                            else TestStatus.ERROR.value
+                        ),
+                    }
+
+                    if value != details["expected_value"]:
+                        drift_parameters.append(result)
+                    else:
+                        validated_parameters.append(result)
+
+            for param, details in CUSTOM_OS_PARAMETERS[
+                self.context.ansible_os_family
+            ].items():
+                output = self.context.cmd_executor.run_subprocess(details["command"])
+                value = next(
+                    (
+                        line.split(":")[1].strip()
+                        for line in output.splitlines()
+                        if details["parameter_name"] in line
+                    ),
+                    None,
+                )
+
+                result = {
+                    "category": "custom_os_parameters",
+                    "type": param,
+                    "name": param,
+                    "value": value,
+                    "expected_value": details["expected_value"],
+                    "status": (
+                        TestStatus.SUCCESS.value
+                        if value == details["expected_value"]
+                        else TestStatus.ERROR.value
+                    ),
+                }
+
+                if value != details["expected_value"]:
+                    drift_parameters.append(result)
+                else:
+                    validated_parameters.append(result)
+
+            if drift_parameters:
+                return ValidationResult(
+                    TestStatus.ERROR,
+                    {
+                        "Drift OS Parameters": drift_parameters,
+                        "Validated OS Parameters": validated_parameters,
+                    },
+                )
+            return ValidationResult(
+                TestStatus.SUCCESS, {"Validated OS Parameters": validated_parameters}
+            )
+        except Exception as e:
+            return ValidationResult(TestStatus.ERROR, {"Error": str(e)})
+
+
+class FenceValidator(ValidatorBase):
+    """
+    Validates the fence agent permissions.
+    """
+
+    def validate(self) -> ValidationResult:
+        try:
+            msi_value = self._get_msi_value()
+            if msi_value and msi_value.strip().lower() == "true":
+                fence_output = self.context.cmd_executor.run_subprocess(
+                    ["fence_azure_arm", "--msi", "--action=list"]
+                )
+
+                if "Error" in fence_output:
+                    return ValidationResult(
+                        TestStatus.ERROR, {"Fence agent permissions": fence_output}
+                    )
+
+                if self.context.vm_name in fence_output:
+                    return ValidationResult(
+                        TestStatus.SUCCESS, {"Fence agent permissions": fence_output}
+                    )
+
+                return ValidationResult(
+                    TestStatus.ERROR,
+                    {
+                        "Fence agent permissions": f"VM not found in list: {fence_output}"
+                    },
+                )
+
+            return ValidationResult(
+                TestStatus.SUCCESS,
+                {
+                    "Fence agent permissions": "MSI value not found or using SPN configuration"
+                },
+            )
+        except Exception as e:
+            return ValidationResult(
+                TestStatus.ERROR, {"Fence agent permissions": str(e)}
+            )
+
+    def _get_msi_value(self) -> Optional[str]:
+        if self.context.ansible_os_family == "REDHAT":
             stonith_config = json.loads(
-                run_subprocess(
-                    command=["pcs", "stonith", "config", "--output-format=json"]
+                self.context.cmd_executor.run_subprocess(
+                    ["pcs", "stonith", "config", "--output-format=json"]
                 )
             )
-            msi_value = next(
+            return next(
                 (
                     nvpair.get("value")
                     for nvpair in stonith_config.get("primitives", [])[0]
@@ -295,240 +306,274 @@ def validate_fence_azure_arm(ansible_os_family: str, virtual_machine_name: str):
                 ),
                 None,
             )
-        elif ansible_os_family == "SUSE":
-            stonith_device_name = run_subprocess(
-                command=["stonith_admin", "--list-registered"]
+        elif self.context.ansible_os_family == "SUSE":
+            stonith_device_name = self.context.cmd_executor.run_subprocess(
+                ["stonith_admin", "--list-registered"]
             ).splitlines()[0]
-            msi_value = run_subprocess(
-                command=[
+            return self.context.cmd_executor.run_subprocess(
+                [
                     "crm_resource",
                     "--resource",
-                    f"{stonith_device_name}",
+                    stonith_device_name,
                     "--get-parameter",
                     "msi",
                 ]
             ).strip()
+        return None
 
-        if msi_value and msi_value.strip().lower() == "true":
-            fence_azure_arm_output = run_subprocess(
-                ["fence_azure_arm", "--msi", "--action=list"]
+
+class ConstraintValidator(ValidatorBase, ParameterValidatorMixin):
+    """
+    Validates the constraints in the cluster configuration.
+    """
+
+    def validate(self) -> ValidationResult:
+        drift_parameters = defaultdict(lambda: defaultdict(list))
+        valid_parameters = defaultdict(lambda: defaultdict(list))
+
+        try:
+            root = self.context.cmd_executor.parse_xml_output(
+                ["cibadmin", "--query", "--scope", "constraints"]
             )
-            if "Error" in fence_azure_arm_output:
-                return {
-                    "msg": {"Fence agent permissions": fence_azure_arm_output},
-                    "status": ERROR_STATUS,
-                }
-            if virtual_machine_name in fence_azure_arm_output:
-                return {
-                    "msg": {"Fence agent permissions": fence_azure_arm_output},
-                    "status": SUCCESS_STATUS,
-                }
-            return {
-                "msg": {
-                    "Fence agent permissions": f"The virtual machine is not found "
-                    + f"in the list of virtual machines {fence_azure_arm_output}"
+            if root is not None:
+                for constraint in root:
+                    constraint_type = constraint.tag
+                    if constraint_type in CONSTRAINTS:
+                        self._validate_constraint(
+                            constraint,
+                            constraint_type,
+                            drift_parameters,
+                            valid_parameters,
+                        )
+
+            if drift_parameters:
+                return ValidationResult(
+                    TestStatus.ERROR,
+                    {
+                        "Valid Constraints parameters": valid_parameters,
+                        "Drift in Constraints parameters": drift_parameters,
+                    },
+                )
+            return ValidationResult(
+                TestStatus.SUCCESS, {"Valid Constraints parameter": valid_parameters}
+            )
+        except Exception as e:
+            return ValidationResult(
+                TestStatus.ERROR, {"Constraints validation": str(e)}
+            )
+
+    def _validate_constraint(
+        self,
+        constraint: ET.Element,
+        constraint_type: str,
+        drift_parameters: dict,
+        valid_parameters: dict,
+    ) -> None:
+        constraint_id = constraint.attrib.get("id", "")
+        for key, value in constraint.attrib.items():
+            if key in CONSTRAINTS[constraint_type]:
+                self._check_and_add_parameter(
+                    key,
+                    value,
+                    CONSTRAINTS[constraint_type][key],
+                    constraint_type,
+                    constraint_id,
+                    drift_parameters,
+                    valid_parameters,
+                )
+
+        for child in constraint:
+            for key, value in child.attrib.items():
+                if key in CONSTRAINTS[constraint_type]:
+                    self._check_and_add_parameter(
+                        key,
+                        value,
+                        CONSTRAINTS[constraint_type][key],
+                        constraint_type,
+                        constraint_id,
+                        drift_parameters,
+                        valid_parameters,
+                    )
+
+
+class GlobalIniValidator(ValidatorBase):
+    """
+    Validates the global.ini properties for SAPHanaSR.
+    """
+
+    def validate(self) -> ValidationResult:
+        """
+        Validates the global.ini properties.
+        """
+        try:
+            properties = self._read_global_ini_properties()
+            expected_properties = self._get_expected_properties()
+
+            if properties == expected_properties:
+                return ValidationResult(
+                    TestStatus.SUCCESS, {"SAPHanaSR Properties": properties}
+                )
+            return ValidationResult(
+                TestStatus.ERROR,
+                {
+                    "SAPHanaSR Properties validation failed with expected properties": properties
                 },
-                "status": ERROR_STATUS,
+            )
+        except FileNotFoundError as e:
+            return ValidationResult(
+                TestStatus.ERROR, {"Exception raised, file not found error": str(e)}
+            )
+        except Exception as e:
+            return ValidationResult(
+                TestStatus.ERROR, {"SAPHanaSR Properties validation failed": str(e)}
+            )
+
+    def _read_global_ini_properties(self) -> dict:
+        """
+        Reads the global.ini properties.
+        """
+        global_ini_path = (
+            f"/usr/sap/{self.context.sid}/SYS/global/hdb/custom/config/global.ini"
+        )
+        with open(global_ini_path, "r", encoding="utf-8") as file:
+            global_ini = [line.strip() for line in file.readlines()]
+
+        try:
+            section_start = global_ini.index("[ha_dr_provider_SAPHanaSR]")
+            properties_slice = global_ini[section_start + 1 : section_start + 4]
+
+            return {
+                prop.split("=")[0].strip(): prop.split("=")[1].strip()
+                for prop in properties_slice
             }
-        return {
-            "message": {
-                "Fence agent permissions": "MSI value not found or the stonith is configured using SPN."
+        except (ValueError, IndexError) as e:
+            raise ValueError(f"Failed to parse global.ini: {str(e)}")
+
+    def _get_expected_properties(self) -> dict:
+        """
+        Gets the expected properties for the global.ini file based on the OS family.
+        """
+        expected_properties = {
+            "SUSE": {
+                "provider": "SAPHanaSR",
+                "path": "/usr/share/SAPHanaSR",
+                "execution_order": "1",
             },
-            "status": SUCCESS_STATUS,
+            "REDHAT": {
+                "provider": "SAPHanaSR",
+                "path": "/hana/shared/myHooks",
+                "execution_order": "1",
+            },
         }
-    except json.JSONDecodeError as e:
-        return {"message": {"Fence agent permissions": str(e)}, "status": ERROR_STATUS}
-    except Exception as e:
-        return {"message": {"Fence agent permissions": str(e)}, "status": ERROR_STATUS}
+        return expected_properties[self.context.ansible_os_family]
 
 
-def validate_os_parameters(SID: str, ansible_os_family: str):
-    """Validate SAP OS parameters.
-
-    Args:
-        SID (str): SID
-        ansible_os_family (str): Ansible OS family
-
-    Returns:
-        dict: SAP VM Parameters
+class ClusterParamValidator(ValidatorBase, ParameterValidatorMixin):
     """
-    drift_parameters = []
-    validated_parameters = []
-    try:
-        for parameter, details in CUSTOM_OS_PARAMETERS[ansible_os_family].items():
-            output = run_subprocess(details["command"]).splitlines()
-            parameter_value = next(
-                (
-                    line.split(":")[1].strip()
-                    for line in output
-                    if details["parameter_name"] in line
-                ),
-                None,
+    Validates cluster parameters by comparing actual and expected values.
+    """
+
+    def validate(self) -> ValidationResult:
+        drift_parameters = defaultdict(lambda: defaultdict(list))
+        valid_parameters = defaultdict(lambda: defaultdict(list))
+
+        try:
+            self._validate_cluster_properties(drift_parameters, valid_parameters)
+            self._validate_resource_parameters(drift_parameters, valid_parameters)
+
+            valid_parameters_json = json.dumps(valid_parameters)
+            missing_parameters = [
+                parameter
+                for parameter in REQUIRED_PARAMETERS
+                if parameter not in valid_parameters_json
+            ]
+
+            if missing_parameters:
+                return ValidationResult(
+                    TestStatus.WARNING,
+                    {
+                        "Required parameters missing": missing_parameters,
+                        "Validated cluster parameters": valid_parameters,
+                    },
+                )
+
+            if drift_parameters:
+                return ValidationResult(
+                    TestStatus.ERROR,
+                    {
+                        "Validated cluster parameters": valid_parameters,
+                        "Drift in cluster parameters": drift_parameters,
+                    },
+                )
+
+            return ValidationResult(
+                TestStatus.SUCCESS, {"Validated cluster parameters": valid_parameters}
             )
-            result = {
-                "category": "custom_os_parameters",
-                "type": parameter,
-                "name": parameter,
-                "value": parameter_value,
-                "expected_value": details["expected_value"],
-                "status": (
-                    SUCCESS_STATUS
-                    if parameter_value == details["expected_value"]
-                    else ERROR_STATUS
-                ),
-            }
-            if parameter_value != details["expected_value"]:
-                drift_parameters.append(result)
-            else:
-                validated_parameters.append(result)
+        except Exception as e:
+            return ValidationResult(TestStatus.ERROR, {"Error": str(e)})
 
-        for stack_name, stack_details in OS_PARAMETERS[ansible_os_family].items():
-            base_args = (
-                ["sysctl"] if stack_name == "sysctl" else ["corosync-cmapctl", "-g"]
+    def _validate_cluster_properties(
+        self, drift_parameters: dict, valid_parameters: dict
+    ) -> None:
+        for resource_operation in CLUSTER_PROPERTIES.keys():
+            root = self.context.cmd_executor.parse_xml_output(
+                ["cibadmin", "--query", "--scope", resource_operation]
             )
-            for parameter, details in stack_details.items():
-                output = run_subprocess(base_args + [parameter])
-                parameter_value = output.split("=")[1].strip()
-                result = {
-                    "category": stack_name,
-                    "type": parameter,
-                    "name": parameter,
-                    "value": parameter_value,
-                    "expected_value": details["expected_value"],
-                    "status": (
-                        SUCCESS_STATUS
-                        if parameter_value == details["expected_value"]
-                        else ERROR_STATUS
-                    ),
-                }
-                if parameter_value != details["expected_value"]:
-                    drift_parameters.append(result)
-                else:
-                    validated_parameters.append(result)
+            if root is not None:
+                for element in root:
+                    primitive_id = element.get("id")
+                    for nvpair in element.findall(".//nvpair"):
+                        name = nvpair.get("name")
+                        value = nvpair.get("value")
+                        if name in CLUSTER_PROPERTIES[resource_operation].get(
+                            primitive_id, {}
+                        ):
+                            expected = CLUSTER_PROPERTIES[resource_operation][
+                                primitive_id
+                            ][name]
+                            self._check_and_add_parameter(
+                                name,
+                                value,
+                                expected,
+                                resource_operation,
+                                primitive_id,
+                                drift_parameters,
+                                valid_parameters,
+                            )
 
-        if drift_parameters:
-            return {
-                "message": {
-                    "Drift OS and Corosync Parameters": drift_parameters,
-                    "Validated OS and Corosync Parameters": validated_parameters,
-                },
-                "status": ERROR_STATUS,
-            }
-        return {
-            "message": {"Validated OS and Corosync Parameters": validated_parameters},
-            "status": SUCCESS_STATUS,
-        }
-    except Exception as e:
-        return {
-            "message": {"Error OS and Corosync Parameters": str(e)},
-            "status": ERROR_STATUS,
-        }
-
-
-def validate_constraints(SID: str, ansible_os_family: str):
-    """
-    Validate constraints in the pacemaker cluster.
-
-    Args:
-        SID (str):  SID
-        ansible_os_family (str): Ansible OS family
-    Returns:
-        dict: Validated constraints
-    """
-    drift_parameters = defaultdict(lambda: defaultdict(list))
-    valid_parameters = defaultdict(lambda: defaultdict(list))
-    try:
-        cluster_properties = CONSTRAINTS
-        root = parse_xml_output(["cibadmin", "--query", "--scope", "constraints"])
+    def _validate_resource_parameters(
+        self, drift_parameters: dict, valid_parameters: dict
+    ) -> None:
+        root = self.context.cmd_executor.parse_xml_output(
+            ["cibadmin", "--query", "--scope", "resources"]
+        )
         if root is not None:
-            for constraint in root:
-                constraint_type = constraint.tag
-                if constraint_type in cluster_properties:
-                    constraint_id = constraint.attrib.get("id", "")
-                    for key, value in constraint.attrib.items():
-                        result = {
-                            "category": constraint_type,
-                            "type": constraint_id,
-                            "name": key,
-                            "value": value,
-                            "expected_value": cluster_properties[constraint_type][key],
-                            "status": (
-                                SUCCESS_STATUS
-                                if value == cluster_properties[constraint_type][key]
-                                else ERROR_STATUS
-                            ),
-                        }
-                        if key in cluster_properties[constraint_type]:
-                            if value != cluster_properties[constraint_type][key]:
-                                drift_parameters[constraint_type][constraint_id].append(
-                                    result
-                                )
-                            else:
-                                valid_parameters[constraint_type][constraint_id].append(
-                                    result
-                                )
-                    for child in constraint:
-                        for key, value in child.attrib.items():
-                            result = {
-                                "category": constraint_type,
-                                "type": constraint_id,
-                                "name": key,
-                                "value": value,
-                                "expected_value": cluster_properties[constraint_type][
-                                    key
-                                ],
-                                "status": (
-                                    SUCCESS_STATUS
-                                    if value == cluster_properties[constraint_type][key]
-                                    else ERROR_STATUS
-                                ),
-                            }
-                            if key in cluster_properties[constraint_type]:
-                                if value != cluster_properties[constraint_type][key]:
-                                    drift_parameters[constraint_type][
-                                        constraint_id
-                                    ].append(result)
-                                else:
-                                    valid_parameters[constraint_type][
-                                        constraint_id
-                                    ].append(result)
-        if drift_parameters:
-            return {
-                "message": {
-                    "Valid Constraints parameters": valid_parameters,
-                    "Drift in Constraints parameters": drift_parameters,
-                },
-                "status": ERROR_STATUS,
-            }
-        return {
-            "message": {"Valid Constraints parameter": valid_parameters},
-            "status": SUCCESS_STATUS,
-        }
-    except Exception as e:
-        return {"message": {"Constraints validation": str(e)}, "status": ERROR_STATUS}
+            for primitive in root.findall(".//primitive"):
+                resource_id = primitive.get("id")
+                resource_type = self._get_resource_type(primitive)
 
+                if resource_type in CLUSTER_RESOURCES[self.context.ansible_os_family]:
+                    expected_attrs = CLUSTER_RESOURCES[self.context.ansible_os_family][
+                        resource_type
+                    ]
+                    actual_attrs = self._get_actual_attributes(primitive)
 
-def validate_resource_parameters(
-    ansible_os_family: str, drift_parameters: dict, valid_parameters: dict
-):
-    """Validate resource parameters.
+                    for name, value in actual_attrs.items():
+                        if name in expected_attrs:
+                            self._check_and_add_parameter(
+                                name,
+                                value,
+                                expected_attrs[name],
+                                "resources",
+                                resource_id,
+                                drift_parameters,
+                                valid_parameters,
+                            )
 
-    Args:
-        ansible_os_family (str): Ansible OS family
-        drift_parameters (dict): Dictionary to store drift parameters
-        valid_parameters (dict): Dictionary to store valid parameters
-    """
-    resource_mapping = {}
-    root = parse_xml_output(["cibadmin", "--query", "--scope", "resources"])
-    for primitive in root.findall(".//primitive"):
-        resource_id = primitive.get("id")
+    def _get_resource_type(self, primitive: ET.Element) -> str:
         resource_class = primitive.get("class")
         resource_provider = primitive.get("provider", "")
         resource_type = primitive.get("type")
-        properties = {
-            prop.get("name"): prop.get("value")
-            for prop in primitive.findall(".//nvpair")
-        }
 
         if resource_provider:
             resource_full_type = f"{resource_class}:{resource_provider}:{resource_type}"
@@ -536,142 +581,196 @@ def validate_resource_parameters(
             resource_full_type = f"{resource_class}:{resource_type}"
 
         if resource_type == "SAPInstance":
+            properties = {
+                prop.get("name"): prop.get("value")
+                for prop in primitive.findall(".//nvpair")
+            }
             if "IS_ERS" in properties and properties["IS_ERS"] == "true":
                 resource_full_type += ":ERS"
             else:
                 resource_full_type += ":ASCS"
 
-        resource_mapping[resource_full_type] = resource_id
+        return resource_full_type
 
-    for resource_type, resource_id in resource_mapping.items():
-        expected_attributes = CLUSTER_RESOURCES[ansible_os_family].get(
-            resource_type, {}
-        )
-        actual_attributes = {}
-
-        primitive = root.find(f".//primitive[@id='{resource_id}']")
-        if primitive is not None:
-            for prop in primitive.findall(".//nvpair"):
-                actual_attributes[prop.get("name")] = prop.get("value")
-
-            for op in primitive.findall(".//op"):
-                name = (
-                    f"{op.get('name')}-{op.get('role', 'NoRole')}-interval"
-                    if op.get("role")
-                    else f"{op.get('name')}-interval"
-                )
-                actual_attributes[name] = op.get("interval")
-                name = (
-                    f"{op.get('name')}-{op.get('role', 'NoRole')}-timeout"
-                    if op.get("role")
-                    else f"{op.get('name')}-timeout"
-                )
-                actual_attributes[name] = op.get("timeout")
-        for name, value in actual_attributes.items():
-            if name in expected_attributes:
-                result = {
-                    "category": "resources",
-                    "type": resource_type,
-                    "name": name,
-                    "value": value,
-                    "expected_value": expected_attributes[name],
-                    "status": (
-                        SUCCESS_STATUS
-                        if value == expected_attributes[name]
-                        else ERROR_STATUS
-                    ),
-                }
-                if value != expected_attributes[name]:
-                    drift_parameters["resources"][resource_id].append(result)
-                else:
-                    valid_parameters["resources"][resource_id].append(result)
+    def _get_actual_attributes(self, primitive: ET.Element) -> dict:
+        attributes = {}
+        for prop in primitive.findall(".//nvpair"):
+            attributes[prop.get("name")] = prop.get("value")
+        for op in primitive.findall(".//op"):
+            name_prefix = f"{op.get('name')}-{op.get('role', 'NoRole')}"
+            attributes[f"{name_prefix}-interval"] = op.get("interval")
+            attributes[f"{name_prefix}-timeout"] = op.get("timeout")
+        return attributes
 
 
-def validate_cluster_params(ansible_os_family: str):
-    """Validate pacemaker cluster parameters for DB and SCS
-
-    Args:
-        ansible_os_family (str): Ansible OS family
-    Returns:
-        dict: Validated cluster parameters
+class ResultAggregator:
     """
-    drift_parameters = defaultdict(lambda: defaultdict(list))
-    valid_parameters = defaultdict(lambda: defaultdict(list))
-    try:
-        for resource_operation in CLUSTER_PROPERTIES.keys():
-            root = parse_xml_output(
-                ["cibadmin", "--query", "--scope", resource_operation]
-            )
-            if root is not None:
-                for root_element in root:
-                    primitive_id = root_element.get("id")
-                    extracted_values = {
-                        primitive_id: {
-                            nvpair.get("name"): nvpair.get("value")
-                            for nvpair in root_element.findall(".//nvpair")
-                        }
-                    }
-                    recommended_for_primitive = CLUSTER_PROPERTIES[
-                        resource_operation
-                    ].get(primitive_id, {})
-                    for name, value in extracted_values[primitive_id].items():
-                        if name in recommended_for_primitive:
-                            result = {
-                                "category": resource_operation,
-                                "type": primitive_id,
-                                "name": name,
-                                "value": value,
-                                "expected_value": recommended_for_primitive[name],
-                                "status": (
-                                    SUCCESS_STATUS
-                                    if value == recommended_for_primitive[name]
-                                    else ERROR_STATUS
-                                ),
-                            }
-                            if value != recommended_for_primitive[name]:
-                                drift_parameters[resource_operation][
-                                    primitive_id
-                                ].append(result)
-                            else:
-                                valid_parameters[resource_operation][
-                                    primitive_id
-                                ].append(result)
-        validate_resource_parameters(
-            ansible_os_family, drift_parameters, valid_parameters
-        )
-        valid_parameters_json = json.dumps(valid_parameters)
-        missing_parameters = [
-            parameter
-            for parameter in REQUIRED_PARAMETERS
-            if parameter not in valid_parameters_json
-        ]
-        if missing_parameters:
-            return {
-                "message": {
-                    "Required parameters missing in cluster parameters": missing_parameters,
-                    "Validated cluster parameters": valid_parameters,
-                },
-                "status": WARNING_STATUS,
-            }
-        if drift_parameters:
-            return {
-                "message": {
-                    "Validated cluster parameters": valid_parameters,
-                    "Drift in cluster parameters": drift_parameters,
-                },
-                "status": ERROR_STATUS,
-            }
-        return {
-            "message": {"Validated cluster parameters": valid_parameters},
-            "status": SUCCESS_STATUS,
+    Aggregates the results of the cluster parameter validations.
+    """
+
+    def __init__(
+        self,
+        parameters: Optional[List[Dict[str, str]]] = None,
+        error_message: str = "",
+        message: str = "Cluster parameters validation completed",
+    ):
+        self.parameters = parameters if parameters is not None else []
+        self.error_message = error_message
+        self.message = message
+
+    def add_validation_result(self, category: str, result: ValidationResult) -> None:
+        """
+        Adds a validation result to the aggregator.
+        """
+        result_dict = result.to_dict()
+
+        for key, value in result_dict.get("message", {}).items():
+            self._process_value(category, key, value)
+
+        if result.status == TestStatus.ERROR and not self.error_message:
+            self.error_message = f"Error in {category} validation"
+
+    def _process_value(self, category: str, key: str, value: Any) -> None:
+        """
+        Processes a value from the validation result.
+        """
+        if isinstance(value, dict):
+            for sub_key, sub_value in value.items():
+                self._process_value(category, f"{key}.{sub_key}", sub_value)
+        elif isinstance(value, list):
+            for item in value:
+                self._categorize_parameter(category, key, str(item))
+        else:
+            self._categorize_parameter(category, key, str(value))
+
+    def _categorize_parameter(self, category: str, key: str, value: str) -> None:
+        """
+        Categorizes a parameter from the validation result.
+        """
+        parent_key = key.split(".")[-1] if category != "os_parameters" else key
+        param_entry = {
+            "category": category,
+            "type": parent_key,
         }
-    except Exception as e:
-        return {"message": {"Error message": str(e)}, "status": ERROR_STATUS}
+
+        if "Name:" in value:
+            parts = value.split(", ")
+            for part in parts:
+                name, val = part.split(": ", 1)
+                param_entry[name.lower()] = val
+
+            if "Drift" in key:
+                param_entry["status"] = TestStatus.ERROR.value
+            elif "Valid" in key:
+                param_entry["status"] = TestStatus.SUCCESS.value
+        else:
+            param_entry["value"] = value
+            param_entry["status"] = TestStatus.INFO.value
+
+        self.parameters.append(param_entry)
+
+    def to_dict(self) -> Dict:
+        """
+        Converts the aggregated results to a dictionary.
+        """
+        result = {
+            "parameters": self.parameters,
+        }
+
+        if self.error_message:
+            result["message"] = self.error_message
+
+        return result
 
 
-def run_module():
+class ClusterManager:
     """
-    Main function to parse, validate and visualize pacemaker cluster parameters.
+    Manages the cluster operations and validations.
+    """
+
+    def __init__(self, module: AnsibleModule):
+        self.module = module
+        self.context = ValidationContext(
+            ansible_os_family=module.params["ansible_os_family"],
+            sid=module.params["sid"],
+            vm_name=module.params["virtual_machine_name"],
+            ascs_instance_number=module.params["ascs_instance_number"],
+            ers_instance_number=module.params["ers_instance_number"],
+        )
+        self.result_aggregator = ResultAggregator()
+
+    def run(self) -> None:
+        """
+        Executes the main logic for cluster validation.
+        """
+        try:
+            validators = self._create_validators()
+            self._run_validations(validators)
+            self._process_results()
+        except Exception as e:
+            self.result_aggregator.error_message = str(e)
+            self.module.fail_json(msg=self.result_aggregator.to_dict())
+
+    def _create_validators(self) -> Dict[str, ValidatorBase]:
+        """
+        Creates a dictionary of validators for different cluster parameters.
+        """
+        return {
+            "cluster": ClusterParamValidator(self.context),
+            "os_parameters": OSParameterValidator(self.context),
+            "fence_agent": FenceValidator(self.context),
+            "constraints": ConstraintValidator(self.context),
+        }
+
+    def _handle_get_action(self) -> None:
+        """
+        Handles the 'get' action by running validations and processing results.
+        """
+        try:
+            validators = self._create_validators()
+            self._run_validations(validators)
+            self._process_results()
+        except Exception as e:
+            self.result_aggregator.error_message = str(e)
+            self.module.fail_json(msg=self.result_aggregator.to_dict())
+
+    def _run_validations(self, validators: Dict[str, ValidatorBase]) -> None:
+        """
+        Runs the validations using the provided validators.
+        """
+        for name, validator in validators.items():
+            result = validator.validate()
+            self.result_aggregator.add_validation_result(name, result)
+
+    def _process_results(self) -> None:
+        """
+        Processes the validation results and exits the module with the appropriate status.
+        """
+        has_errors = any(
+            param["status"] == TestStatus.ERROR.value
+            for param in self.result_aggregator.parameters
+        )
+        result = {
+            "changed": False,
+            "status": TestStatus.NOT_STARTED.value,
+            "message": "",
+            "details": {},
+        }
+
+        result["status"] = (
+            TestStatus.ERROR.value
+            if (has_errors or self.result_aggregator.error_message)
+            else TestStatus.SUCCESS.value
+        )
+        result["message"] = self.result_aggregator.message
+        result["details"] = self.result_aggregator.to_dict()
+
+        self.module.exit_json(**result)
+
+
+def main() -> None:
+    """
+    Main entry point for the Ansible module.
     """
     module = AnsibleModule(
         argument_spec=dict(
@@ -682,52 +781,9 @@ def run_module():
             virtual_machine_name=dict(type="str", required=True),
         )
     )
-    ansible_os_family = module.params.get("ansible_os_family")
-    cluster_result = validate_cluster_params(
-        ansible_os_family=ansible_os_family,
-    )
-    os_parameters_result = validate_os_parameters(
-        SID=module.params.get("sid"), ansible_os_family=ansible_os_family
-    )
-    fence_azure_arm_result = validate_fence_azure_arm(
-        ansible_os_family=ansible_os_family,
-        virtual_machine_name=module.params.get("virtual_machine_name"),
-    )
-    constraints = validate_constraints(
-        SID=module.params.get("sid"), ansible_os_family=ansible_os_family
-    )
-    try:
-        module.exit_json(
-            message="Cluster parameters validation completed",
-            details={
-                **cluster_result.get("message", {}),
-                **os_parameters_result.get("message", {}),
-                **fence_azure_arm_result.get("message", {}),
-                **constraints.get("message", {}),
-            },
-            status=(
-                SUCCESS_STATUS
-                if all(
-                    result["status"] == SUCCESS_STATUS
-                    for result in [
-                        cluster_result,
-                        os_parameters_result,
-                        fence_azure_arm_result,
-                        constraints,
-                    ]
-                )
-                else ERROR_STATUS
-            ),
-        )
-    except Exception as e:
-        module.fail_json(msg=str(e))
 
-
-def main() -> None:
-    """
-    Entry point of the script.
-    """
-    run_module()
+    manager = ClusterManager(module)
+    manager.run()
 
 
 if __name__ == "__main__":

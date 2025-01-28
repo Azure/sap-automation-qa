@@ -56,14 +56,19 @@
 
     - name:                            "Set the test group name based on the inputs"
       ansible.builtin.set_fact:
-        test_group_name:               "{{ sap_functional_test_type_map | selectattr('name', 'equalto', sap_functional_test_type) | map(attribute='value') | first }}_{{ platform | upper }}"
+        test_group_name:               "{{ sap_functional_test_type_map
+                                        | selectattr('name', 'equalto', sap_functional_test_type)
+                                        | map(attribute='value') | first }}_{{ platform | upper }}"
       run_once:                        true
 
     - name:                            Set the test group facts
       ansible.builtin.set_fact:
         test_group_start_time:         "{{ now(utc=true,fmt='%Y-%m-%d %H:%M:%S') }}"
         test_group_invocation_id:      "{{ lookup('pipe', 'uuidgen') }}"
-        test_cases:                    "{{ test_groups | selectattr('name', 'equalto', test_group_name) | map(attribute='test_cases') | list | flatten(levels=1) | selectattr('enabled', 'equalto', true) | list }}"
+        test_cases:                    "{{ test_groups
+                                            | selectattr('name', 'equalto', test_group_name)
+                                            | map(attribute='test_cases') | list | flatten(levels=1)
+                                            | selectattr('enabled', 'equalto', true) | list }}"
       run_once:                        true
 
     - name:                            "Run test cases by including them as roles"
