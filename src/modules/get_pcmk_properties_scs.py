@@ -167,71 +167,19 @@ class OSParameterValidator(ValidatorBase, ParameterValidatorMixin):
     """
 
     def validate(self) -> ValidationResult:
+        """
+        Validates the OS parameters.
+        """
         drift_parameters = []
         validated_parameters = []
 
         try:
-            for param_type, params in OS_PARAMETERS[
-                self.context.ansible_os_family
-            ].items():
-                base_args = (
-                    ["sysctl"] if param_type == "sysctl" else ["corosync-cmapctl", "-g"]
-                )
-
-                for param, details in params.items():
-                    output = self.context.cmd_executor.run_subprocess(
-                        base_args + [param]
-                    )
-                    value = output.split("=")[1].strip()
-
-                    result = {
-                        "category": param_type,
-                        "type": param,
-                        "name": param,
-                        "value": value,
-                        "expected_value": details["expected_value"],
-                        "status": (
-                            TestStatus.SUCCESS.value
-                            if value == details["expected_value"]
-                            else TestStatus.ERROR.value
-                        ),
-                    }
-
-                    if value != details["expected_value"]:
-                        drift_parameters.append(result)
-                    else:
-                        validated_parameters.append(result)
-
-            for param, details in CUSTOM_OS_PARAMETERS[
-                self.context.ansible_os_family
-            ].items():
-                output = self.context.cmd_executor.run_subprocess(details["command"])
-                value = next(
-                    (
-                        line.split(":")[1].strip()
-                        for line in output.splitlines()
-                        if details["parameter_name"] in line
-                    ),
-                    None,
-                )
-
-                result = {
-                    "category": "custom_os_parameters",
-                    "type": param,
-                    "name": param,
-                    "value": value,
-                    "expected_value": details["expected_value"],
-                    "status": (
-                        TestStatus.SUCCESS.value
-                        if value == details["expected_value"]
-                        else TestStatus.ERROR.value
-                    ),
-                }
-
-                if value != details["expected_value"]:
-                    drift_parameters.append(result)
-                else:
-                    validated_parameters.append(result)
+            self._validate_parameters(
+                OS_PARAMETERS[self.context.ansible_os_family],
+                CUSTOM_OS_PARAMETERS[self.context.ansible_os_family],
+                drift_parameters,
+                validated_parameters,
+            )
 
             if drift_parameters:
                 return ValidationResult(
@@ -242,10 +190,71 @@ class OSParameterValidator(ValidatorBase, ParameterValidatorMixin):
                     },
                 )
             return ValidationResult(
-                TestStatus.SUCCESS, {"Validated OS Parameters": validated_parameters}
+                TestStatus.SUCCESS,
+                {"Validated OS Parameters": validated_parameters},
             )
         except Exception as e:
             return ValidationResult(TestStatus.ERROR, {"Error": str(e)})
+
+    def _validate_parameters(
+        self,
+        standard_params: Dict,
+        custom_params: Dict,
+        drift_parameters: List,
+        validated_parameters: List,
+    ) -> None:
+        """
+        Validates the standard and custom OS parameters.
+        """
+        for param_type, params in standard_params.items():
+            base_args = (
+                ["sysctl"] if param_type == "sysctl" else ["corosync-cmapctl", "-g"]
+            )
+            for param, details in params.items():
+                output = self.context.cmd_executor.run_subprocess(base_args + [param])
+                value = output.split("=")[1].strip()
+                self._add_parameter_result(
+                    param,
+                    value,
+                    details["expected_value"],
+                    drift_parameters,
+                    validated_parameters,
+                )
+
+        for param, details in custom_params.items():
+            output = self.context.cmd_executor.run_subprocess(details["command"])
+            value = self._extract_custom_param_value(output, details)
+            self._add_parameter_result(
+                param,
+                value,
+                details["expected_value"],
+                drift_parameters,
+                validated_parameters,
+            )
+
+    def _extract_custom_param_value(self, output: str, details: Dict) -> str:
+        """
+        Extracts the value of a custom parameter from the command output.
+        """
+        for line in output.splitlines():
+            if details["parameter_name"] in line:
+                return line.split(":")[1].strip()
+        return ""
+
+    def _add_parameter_result(
+        self,
+        name: str,
+        value: str,
+        expected: str,
+        drift_parameters: List,
+        validated_parameters: List,
+    ) -> None:
+        """
+        Adds the parameter result to the appropriate list based on comparison.
+        """
+        result = self._format_parameter_result(name, value, expected)
+        target_list = drift_parameters if value != expected else validated_parameters
+        target_list.append(result)
 
 
 class FenceValidator(ValidatorBase):
