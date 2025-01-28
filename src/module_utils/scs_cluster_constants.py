@@ -193,8 +193,8 @@ OS_PARAMETERS = {
     },
     "SUSE": {
         "sysctl": {
-            "net.ipv4.tcp_timestamps": {"expected_value": "1"},
-            "vm.swappiness": {"expected_value": "10"},
+            "net.ipv4.tcp_timestamps": {"expected_value": "0"},
+            "vm.swappiness": {"expected_value": "60"},
         },
         "corosync-cmapctl": {
             "runtime.config.totem.token": {"expected_value": "30000"},
