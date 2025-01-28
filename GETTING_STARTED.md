@@ -90,8 +90,8 @@ ssh_key_from_kv: false
 
 # The destination of the telemetry data. Supported values are:
 # - azureloganalytics
-# - azuredataexplorer
-telemetry_data_destination: "azureloganalytics"
+# - azuredataexplorer (recommended for long-term storage)
+telemetry_data_destination: "azuredataexplorer"
 
 # The name of the telemetry table in the telemetry data destination.
 telemetry_table_name: "your-telemetry-table-name"
