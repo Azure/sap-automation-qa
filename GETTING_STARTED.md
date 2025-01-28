@@ -83,7 +83,7 @@ TEST_TYPE: "SAPFunctionalTests"
 sap_functional_test_type: "DatabaseHighAvailability"  # or "CentralServicesHighAvailability"
 
 # The name of the SAP system configuration for which you want to execute the test cases.
-SYSTEM_CONFIG_NAME: "your-system-config-name"
+SYSTEM_CONFIG_NAME: "DEV-WEEU-SAP01-X00"
 
 # Boolean indicating if the SSH key is stored in Azure Key Vault.
 ssh_key_from_kv: false
