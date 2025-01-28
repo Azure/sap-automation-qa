@@ -10,10 +10,10 @@ from ansible.module_utils.basic import AnsibleModule
 
 try:
     from ansible.module_utils.sap_automation_qa import SapAutomationQA, TestStatus
-    from ansible.module_utils.cluster_constants import PACKAGE_LIST
+    from ansible.module_utils.db_cluster_constants import PACKAGE_LIST
 except ImportError:
     from src.module_utils.sap_automation_qa import SapAutomationQA, TestStatus
-    from src.module_utils.cluster_constants import PACKAGE_LIST
+    from src.module_utils.db_cluster_constants import PACKAGE_LIST
 
 
 class PackageListFormatter(SapAutomationQA):

@@ -14,7 +14,7 @@ from ansible.module_utils.basic import AnsibleModule
 
 try:
     from ansible.module_utils.sap_automation_qa import TestStatus
-    from ansible.module_utils.cluster_constants import (
+    from ansible.module_utils.db_cluster_constants import (
         OS_PARAMETERS,
         CUSTOM_OS_PARAMETERS,
         CONSTRAINTS,
@@ -24,7 +24,7 @@ try:
     )
 except ImportError:
     from src.module_utils.sap_automation_qa import TestStatus
-    from src.module_utils.cluster_constants import (
+    from src.module_utils.db_cluster_constants import (
         OS_PARAMETERS,
         CUSTOM_OS_PARAMETERS,
         CONSTRAINTS,

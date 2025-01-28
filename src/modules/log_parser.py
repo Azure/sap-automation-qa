@@ -10,10 +10,10 @@ from ansible.module_utils.basic import AnsibleModule
 
 try:
     from ansible.module_utils.sap_automation_qa import SapAutomationQA, TestStatus
-    from ansible.module_utils.cluster_constants import PCMK_KEYWORDS, SYS_KEYWORDS
+    from ansible.module_utils.db_cluster_constants import PCMK_KEYWORDS, SYS_KEYWORDS
 except ImportError:
     from src.module_utils.sap_automation_qa import SapAutomationQA, TestStatus
-    from src.module_utils.cluster_constants import PCMK_KEYWORDS, SYS_KEYWORDS
+    from src.module_utils.db_cluster_constants import PCMK_KEYWORDS, SYS_KEYWORDS
 
 
 class LogParser(SapAutomationQA):
