@@ -38,7 +38,7 @@ test_groups:
         task_name:                  block-network
         description:                This runs a functional test for blocking network communication
         enabled:                    true
-      
+
       - name:                       HA Functional Test- Crash index server on primary node
         task_name:                  primary-crash-index
         description:                This runs a functional test for crashing index server on primary node
