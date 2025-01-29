@@ -19,6 +19,8 @@
   run_once:                             true
   delegate_to:                          localhost
   ansible.builtin.set_fact:
-    combined_var_log_messages:          "{{ combined_var_log_messages | default([]) + [item.var_log_messages_output.filtered_logs] }}"
-  with_items:                           "{{ groups['all'] }}"
-  when:                                 item.var_log_messages_output is defined
+    combined_var_log_messages:          "{{ combined_var_log_messages | default([]) + [node.var_log_messages_output.filtered_logs] }}"
+  loop:                                 "{{ groups['all'] }}"
+  loop_control:
+    loop_var:                           node
+  when:                                 node.var_log_messages_output is defined
