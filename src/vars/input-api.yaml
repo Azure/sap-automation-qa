@@ -14,7 +14,7 @@ sap_functional_test_type_map:
 test_groups:
   - name:                           HA_DB_HANA
     test_cases:
-      - name:                       HA Parameters Validation
+      # - name:                       HA Parameters Validation
       #   task_name:                  ha-config
       #   description:                This validates the HA configuration
       #   enabled:                    true
