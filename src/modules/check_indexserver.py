@@ -45,7 +45,7 @@ class IndexServerCheck(SapAutomationQA):
         }
 
         global_ini_path = (
-            f"/usr/sap/{self.context.sid}/SYS/global/hdb/custom/config/global.ini"
+            f"/usr/sap/{self.database_sid}/SYS/global/hdb/custom/config/global.ini"
         )
         with open(global_ini_path, "r", encoding="utf-8") as file:
             global_ini = [line.strip() for line in file.readlines()]
