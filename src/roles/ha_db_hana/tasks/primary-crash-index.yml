@@ -14,13 +14,13 @@
 - name:                                "Pre Validations: HANA DB Nodes"
   ansible.builtin.include_tasks:       "roles/misc/tasks/pre-validations.yml"
 
-- name:                                "Pre Validations: Crash Index Server init"
-  block:
-    - name:                            "Pre Validations: Check if indexserver process is enabled"
-      check_indexserver:
-        database_sid:                  "{{ db_sid | upper }}"
-        ansible_os_family:             "{{ ansible_os_family | lower }}"
-      register:                        index_server_check
+
+- name:                                "Pre Validations: Check if indexserver process is enabled"
+  become:                              true
+  check_indexserver:
+    database_sid:                      "{{ db_sid | upper }}"
+    ansible_os_family:                 "{{ ansible_os_family | lower }}"
+  register:                            index_server_check
 
 # /*---------------------------------------------------------------------------
 # |                          Test Execution                                   |
