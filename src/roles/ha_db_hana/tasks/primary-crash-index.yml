@@ -15,11 +15,10 @@
   ansible.builtin.include_tasks:       "roles/misc/tasks/pre-validations.yml"
 
 - name:                                "Pre Validations: Crash Index Server init"
-  when:                                ansible_hostname == cluster_status_pre.primary_node
   block:
     - name:                            "Pre Validations: Check if indexserver process is enabled"
       check_indexserver:
-        database_sid:                  "{{ db_sid | lower }}"
+        database_sid:                  "{{ db_sid | upper }}"
         ansible_os_family:             "{{ ansible_os_family | lower }}"
       register:                        index_server_check
 
