@@ -14,6 +14,14 @@
 - name:                                "Pre Validations: HANA DB Nodes"
   ansible.builtin.include_tasks:       "roles/misc/tasks/pre-validations.yml"
 
+- name:                                "Pre Validations: Crash Index Server init"
+  when:                                ansible_hostname == cluster_status_pre.primary_node
+  block:
+    - name:                            "Pre Validations: Check if indexserver process is enabled"
+      check_indexserver:
+        database_sid:                  "{{ db_sid | lower }}"
+      register:                        index_server_check
+
 # /*---------------------------------------------------------------------------
 # |                          Test Execution                                   |
 # +--------------------------------------------------------------------------*/
@@ -24,6 +32,7 @@
                                        - cluster_status_pre.primary_node != "" and cluster_status_pre.secondary_node != ""
                                        - cluster_status_pre.pacemaker_status == "running"
                                        - cluster_status_pre is defined
+                                       - index_server_check.indexserver_enabled == "yes"
   block:
     - name:                            "Test Execution: Crash Index Server init"
       when:                            ansible_hostname == cluster_status_pre.primary_node
