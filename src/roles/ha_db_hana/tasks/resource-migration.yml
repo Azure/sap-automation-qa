@@ -73,7 +73,6 @@
         # This is required because the cluster reports incorrect location constraints
         # after the location constraints is removed.
         - name:                     "Test Execution: Wait for 200 seconds"
-          when:                     "{{ ansible_os_family | upper}} == 'SUSE'"
           ansible.builtin.wait_for:
             timeout:                100
 
