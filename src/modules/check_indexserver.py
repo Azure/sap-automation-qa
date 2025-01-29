@@ -21,12 +21,10 @@ class IndexServerCheck(SapAutomationQA):
     :type SapAutomationQA: class
     """
 
-    def __init__(
-        self,
-        database_sid: str,
-    ):
+    def __init__(self, database_sid: str, os_distribution: str):
         super().__init__()
         self.database_sid = database_sid
+        self.os_distribution = os_distribution
 
     def check_indexserver(self) -> None:
         """
@@ -40,10 +38,21 @@ class IndexServerCheck(SapAutomationQA):
         # then consider chksrv is not set
 
         expected_properties = {
-            "provider": "ChkSrv",
-            "path": "/usr/share/SAPHanaSR/srHook",
+            "redhat": {
+                "[ha_dr_provider_chksrv]": {
+                    "provider": "ChkSrv",
+                    "path": "/usr/share/SAPHanaSR/srHook",
+                }
+            },
+            "suse": {
+                "[ha_dr_provider_suschksrv]": {
+                    "provider": "susChkSrv",
+                    "path": "/usr/share/SAPHanaSR",
+                }
+            },
         }
 
+        section_title = expected_properties.get(self.os_distribution).keys()[0]
         global_ini_path = (
             f"/usr/sap/{self.database_sid}/SYS/global/hdb/custom/config/global.ini"
         )
@@ -51,7 +60,9 @@ class IndexServerCheck(SapAutomationQA):
             global_ini = [line.strip() for line in file.readlines()]
 
         try:
-            section_start = global_ini.index("[ha_dr_provider_chksrv]")
+            section_start = global_ini.index(
+                expected_properties.get(self.os_distribution).keys()[0]
+            )
             properties_slice = global_ini[section_start + 1 : section_start + 4]
 
             extracted_properties = {
@@ -64,7 +75,9 @@ class IndexServerCheck(SapAutomationQA):
             if not all(
                 [
                     extracted_properties.get(key) == value
-                    for key, value in expected_properties.items()
+                    for key, value in expected_properties.get(self.os_distribution)[
+                        section_title
+                    ].items()
                 ]
             ):
                 self.result.update(
@@ -102,12 +115,14 @@ def main():
     module = AnsibleModule(
         argument_spec=dict(
             database_sid=dict(type="str", required=True),
+            ansible_os_family=dict(type="str", required=True),
         )
     )
 
     database_sid = module.params["database_sid"]
+    os_distribution = module.params["ansible_os_family"]
 
-    index_server_check = IndexServerCheck(database_sid)
+    index_server_check = IndexServerCheck(database_sid, os_distribution)
     index_server_check.check_indexserver()
 
     module.exit_json(**index_server_check.get_result())
