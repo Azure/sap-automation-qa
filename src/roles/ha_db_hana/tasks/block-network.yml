@@ -65,15 +65,15 @@
           changed_when:                firewall_rule_deleted == 0
           failed_when:                 firewall_rule_deleted.rc != 0
 
-        - name:                        "Test Execution: Wait for the cluster to be in a stable state"
-          ansible.builtin.wait_for:
-            timeout:                   60
-
         - name:                        "Test Execution: CleanUp any failed resource"
           ansible.builtin.command:     "crm_resource --cleanup"
           register:                    cleanup_failed_resource_post
           changed_when:                cleanup_failed_resource_post.rc == 0
           ignore_errors:               true
+
+        - name:                        "Test Execution: Wait for the cluster to be in a stable state"
+          ansible.builtin.wait_for:
+            timeout:                   100
 
         - name:                        "Test Execution: Validate HANA DB cluster status"
           get_cluster_status:   
