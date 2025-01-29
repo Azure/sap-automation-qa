@@ -10,6 +10,14 @@
 
 - name:                                 "Post Validations: HA cluster status after test execution"
   block:
+    - name:                             Combine logs from both nodes
+      ansible.builtin.set_fact:
+        combined_logs: >-
+          {{
+            (hostvars[cluster_status_pre.primary_node]['var_log_messages_output'].filtered_logs | default([])) +
+            (hostvars[cluster_status_pre.secondary_node]['var_log_messages_output'].filtered_logs | default([]))
+          }}
+
     - name:                             "Post Validations: Rescure operation set test case status"
       delegate_to:                      localhost
       ansible.builtin.set_fact:
@@ -19,7 +27,7 @@
         test_case_status:               "FAILED"
         test_case_message:              "{{ ansible_failed_result }}"
         test_case_details:              "{{ ansible_failed_result }}"
-        test_case_var_log_messages:     "{{ combined_var_log_messages }}"
+        test_case_var_log_messages:     "{{ combined_logs }}"
 
 - name:                                 "Post Telemetry Data"
   ansible.builtin.include_tasks:        "roles/misc/tasks/post-telemetry-data.yml"
