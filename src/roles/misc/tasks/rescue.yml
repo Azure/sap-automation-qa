@@ -5,19 +5,22 @@
 #                Rescue tasks for the test cases                               #
 ################################################################################
 
-- name:                         "Read var log messages by importing role"
-  ansible.builtin.include_tasks: "roles/misc/tasks/var-log-messages.yml"
+- name:                                 "Read var log messages by importing role"
+  ansible.builtin.include_tasks:        "roles/misc/tasks/var-log-messages.yml"
 
-- name:                         "Post Validations: Set test case status"
-  ansible.builtin.set_fact:
-    test_case_name:             "{{ item.name }}: {{ virtual_host }}"
-    test_case_hostname:         "{{ virtual_host }}"
-    test_case_description:      "{{ item.description }}"
-    test_case_status:           "FAILED"
-    test_case_message:          "{{ ansible_failed_result }}"
-    test_case_details:          "{{ ansible_failed_result }}"
-    test_case_var_log_messages: "{{ combined_var_log_messages }}"
+- name:                                 "Post Validations: HA cluster status after test execution"
+  block:
+    - name:                             "Post Validations: Rescure operation set test case status"
+      delegate_to:                      localhost
+      ansible.builtin.set_fact:
+        test_case_name:                 "{{ item.name }}: {{ virtual_host }}"
+        test_case_hostname:             "{{ virtual_host }}"
+        test_case_description:          "{{ item.description }}"
+        test_case_status:               "FAILED"
+        test_case_message:              "{{ ansible_failed_result }}"
+        test_case_details:              "{{ ansible_failed_result }}"
+        test_case_var_log_messages:     "{{ combined_var_log_messages }}"
 
-- name:                         "Post Telemetry Data"
-  ansible.builtin.include_tasks: "roles/misc/tasks/post-telemetry-data.yml"
-  run_once:                     true
+- name:                                 "Post Telemetry Data"
+  ansible.builtin.include_tasks:        "roles/misc/tasks/post-telemetry-data.yml"
+  run_once:                             true
