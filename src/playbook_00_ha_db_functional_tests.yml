@@ -9,7 +9,7 @@
 - hosts:                               localhost
   gather_facts:                        true
   name:                                "Setup deployer for HA Testing Framework"
-  vars_files:                          "./vars/main.yaml"
+  vars_files:                          "./vars/input-api.yaml"
   tasks:
     - name:                            "Install python azure pacakges required"
       become:                          true
@@ -24,7 +24,7 @@
 - hosts:                               "{{ sap_sid | upper }}_DB"
   name:                                "Host tasks"
   gather_facts:                        true
-  vars_files:                          "./vars/main.yaml"
+  vars_files:                          "./vars/input-api.yaml"
   tasks:
     - name:                            "Enable profile_tasks callback plugin"
       ansible.builtin.set_fact:
