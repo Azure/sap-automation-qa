@@ -14,3 +14,11 @@
         end_time:                       "{{ now(utc=true, fmt='%Y-%m-%d %H:%M:%S') }}"
         ansible_os_family:              "{{ ansible_os_family | upper }}"
       register:                         var_log_messages_output
+
+- name:                                 Combine log results from both nodes
+  run_once:                             true
+  delegate_to:                          localhost
+  ansible.builtin.set_fact:
+    combined_var_log_messages:          "{{ combined_var_log_messages | default([]) + [item.var_log_messages_output.filtered_logs] }}"
+  with_items:                           "{{ groups['all'] }}"
+  when:                                 item.var_log_messages_output is defined
