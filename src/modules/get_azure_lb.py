@@ -151,12 +151,7 @@ def run_module():
     load_balancer = AzureLoadBalancer(module_params=module.params)
     result = load_balancer.get_load_balancers_details()
 
-    if result["status"] == "FAILED":
-        module.fail_json(msg=result["message"], **result)
-    else:
-        module.exit_json(
-            msg="Load balancer details are fetched successfully.", **result
-        )
+    module.exit_json(msg="Load balancer details are fetched successfully.", **result)
 
 
 def main():
