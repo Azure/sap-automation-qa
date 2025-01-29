@@ -23,10 +23,10 @@
   block:
     - name:                         "Test Execution: Manual resource migration init"
       when:
-        - cluster_status_pre.primary_node != "" and cluster_status_pre.secondary_node != ""
-        - ansible_hostname == cluster_status_pre.primary_node
-        - cluster_status_pre.pacemaker_status == "running"
-        - cluster_status_pre is defined
+                                    - cluster_status_pre.primary_node != "" and cluster_status_pre.secondary_node != ""
+                                    - ansible_hostname == cluster_status_pre.primary_node
+                                    - cluster_status_pre.pacemaker_status == "running"
+                                    - cluster_status_pre is defined
       block:
         - name:                     "Test Execution: Start timer"
           ansible.builtin.set_fact:
@@ -41,8 +41,7 @@
           changed_when:             hana_db_resource_migration.rc == 0
 
         - name:                     "Test Execution: Validate HANA DB cluster status"
-          when:
-            automated_register.stdout != ""
+          when:                     automated_register.stdout != ""
           get_cluster_status:
             operation_step:         "test_execution"
             database_sid:           "{{ db_sid | lower }}"
