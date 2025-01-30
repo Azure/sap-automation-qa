@@ -41,8 +41,27 @@ class ClusterStatusChecker(SapAutomationQA):
                 "start": datetime.now(),
                 "end": None,
                 "pacemaker_status": "",
+                "stonith_action": "",
             }
         )
+
+    def _get_stonith_action(self) -> None:
+        """
+        Retrieves the STONITH action from the crm_attribute.
+        """
+        try:
+            stonith_action = self.execute_command_subprocess(
+                [
+                    "crm_attribute",
+                    "--query",
+                    "--name",
+                    "stonith-action",
+                    "--quiet",
+                ]
+            )
+            self.result["stonith_action"] = stonith_action.strip()
+        except Exception:
+            self.result["stonith_action"] = "unknown"
 
     def _node_attributes_to_dict(self, node_attributes: ET.Element) -> Dict[str, str]:
         """
@@ -113,6 +132,8 @@ class ClusterStatusChecker(SapAutomationQA):
         :return: A dictionary containing the result of the cluster status checks.
         """
         self.log(logging.INFO, "Starting cluster status check")
+
+        self._get_stonith_action()
 
         try:
             while self.result["primary_node"] == "":

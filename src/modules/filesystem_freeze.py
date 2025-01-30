@@ -84,8 +84,6 @@ def run_module() -> None:
     formatter = FileSystemFreeze()
     result = formatter.run()
 
-    if result["status"] == TestStatus.ERROR.value:
-        module.fail_json(**result)
     module.exit_json(**result)
 
 

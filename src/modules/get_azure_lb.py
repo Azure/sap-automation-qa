@@ -5,6 +5,7 @@
 Custom ansible module for getting Azure Load Balancer details
 """
 
+import json
 from typing import Dict
 from ansible.module_utils.basic import AnsibleModule
 from azure.identity import ManagedIdentityCredential
@@ -50,12 +51,13 @@ class AzureLoadBalancer(SapAutomationQA):
         :rtype: list
         """
         try:
+            load_balancers = self.network_client.load_balancers.list_all()
             return [
                 lb.as_dict()
-                for lb in self.network_client.load_balancers.list(
-                    self.module_params["resource_group_name"]
-                )
+                for lb in load_balancers
+                if lb.location.lower() == self.module_params["region"].lower()
             ]
+
         except Exception as e:
             self.handle_error(e)
 
@@ -81,15 +83,18 @@ class AzureLoadBalancer(SapAutomationQA):
         if self.result["status"] == "FAILED":
             return self.result
 
-        required_load_balancer_ip = self.module_params["load_balancer_ip"]
+        load_balancer_ips = [
+            inbound_rule.get["privateIpAddress"]
+            for inbound_rule in json.loads(self.module_params["inbound_rules"])
+        ]
         required_load_balancer = None
 
         required_load_balancer = next(
             (
                 lb
                 for lb in load_balancers
-                if lb["frontend_ip_configurations"][0]["private_ip_address"]
-                == required_load_balancer_ip
+                for frontend_ip_config in lb["frontend_ip_configurations"]
+                if frontend_ip_config["private_ip_address"] in load_balancer_ips
             ),
             None,
         )
@@ -142,8 +147,8 @@ def run_module():
     """
     module_args = dict(
         subscription_id=dict(type="str", required=True),
-        resource_group_name=dict(type="str", required=True),
-        load_balancer_ip=dict(type="str", required=True),
+        region=dict(type="str", required=True),
+        inbound_rules=dict(type="str", required=True),
     )
 
     module = AnsibleModule(argument_spec=module_args, supports_check_mode=True)

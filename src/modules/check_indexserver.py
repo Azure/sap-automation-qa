@@ -31,12 +31,20 @@ class IndexServerCheck(SapAutomationQA):
         Checks if the indexserver is configured.
         """
         expected_properties = {
-            "redhat": {
-                "[ha_dr_provider_chksrv]": {
-                    "provider": "ChkSrv",
-                    "path": "/usr/share/SAPHanaSR/srHook",
-                }
-            },
+            "redhat": [
+                {
+                    "[ha_dr_provider_chksrv]": {
+                        "provider": "ChkSrv",
+                        "path": "/usr/share/SAPHanaSR/srHook",
+                    }
+                },
+                {
+                    "[ha_dr_provider_chksrv]": {
+                        "provider": "ChkSrv",
+                        "path": "/hana/shared/myHooks",
+                    }
+                },
+            ],
             "suse": {
                 "[ha_dr_provider_suschksrv]": {
                     "provider": "susChkSrv",
@@ -45,8 +53,8 @@ class IndexServerCheck(SapAutomationQA):
             },
         }
 
-        os_props = expected_properties.get(self.os_distribution)
-        if not os_props:
+        os_props_list = expected_properties.get(self.os_distribution)
+        if not os_props_list:
             self.result.update(
                 {
                     "status": TestStatus.ERROR.value,
@@ -57,7 +65,6 @@ class IndexServerCheck(SapAutomationQA):
             )
             return
 
-        section_title = list(os_props.keys())[0]
         global_ini_path = (
             f"/usr/sap/{self.database_sid}/SYS/global/hdb/custom/config/global.ini"
         )
@@ -66,35 +73,41 @@ class IndexServerCheck(SapAutomationQA):
             with open(global_ini_path, "r", encoding="utf-8") as file:
                 global_ini = [line.strip() for line in file.readlines()]
 
-            section_start = global_ini.index(section_title)
-            properties_slice = global_ini[section_start + 1 : section_start + 4]
-
-            extracted_properties = {
-                prop.split("=")[0].strip(): prop.split("=")[1].strip()
-                for prop in properties_slice
-            }
-
-            if all(
-                extracted_properties.get(key) == value
-                for key, value in os_props[section_title].items()
+            for os_props in (
+                os_props_list if isinstance(os_props_list, list) else [os_props_list]
             ):
-                self.result.update(
-                    {
-                        "status": TestStatus.SUCCESS.value,
-                        "message": "Indexserver is configured.",
-                        "details": extracted_properties,
-                        "indexserver_enabled": "yes",
+                section_title = list(os_props.keys())[0]
+                if section_title in global_ini:
+                    section_start = global_ini.index(section_title)
+                    properties_slice = global_ini[section_start + 1 : section_start + 4]
+
+                    extracted_properties = {
+                        prop.split("=")[0].strip(): prop.split("=")[1].strip()
+                        for prop in properties_slice
                     }
-                )
-            else:
-                self.result.update(
-                    {
-                        "status": TestStatus.SUCCESS.value,
-                        "message": "Indexserver is not configured.",
-                        "details": extracted_properties,
-                        "indexserver_enabled": "no",
-                    }
-                )
+
+                    if all(
+                        extracted_properties.get(key) == value
+                        for key, value in os_props[section_title].items()
+                    ):
+                        self.result.update(
+                            {
+                                "status": TestStatus.SUCCESS.value,
+                                "message": "Indexserver is configured.",
+                                "details": extracted_properties,
+                                "indexserver_enabled": "yes",
+                            }
+                        )
+                        return
+
+            self.result.update(
+                {
+                    "status": TestStatus.ERROR.value,
+                    "message": "Indexserver is not configured.",
+                    "details": {},
+                    "indexserver_enabled": "no",
+                }
+            )
         except Exception as e:
             self.result.update(
                 {

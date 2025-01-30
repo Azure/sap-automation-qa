@@ -114,11 +114,6 @@ def run_module() -> None:
             }
         )
 
-    if manager.result["status"] == TestStatus.ERROR.value:
-        module.fail_json(
-            msg="Failed to remove the location constraints", **manager.get_result()
-        )
-
     module.exit_json(**manager.get_result())
 
 

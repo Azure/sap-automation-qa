@@ -258,8 +258,6 @@ def run_module() -> None:
 
     sender.write_log_file()
     sender.send_telemetry_data()
-    if sender.result["status"] == "FAILED":
-        module.fail_json(**sender.get_result())
 
     module.exit_json(**sender.get_result())
 

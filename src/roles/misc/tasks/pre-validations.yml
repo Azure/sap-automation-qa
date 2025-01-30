@@ -21,9 +21,6 @@
         operation_step:             "pre_failover"
         database_sid:               "{{ db_sid | lower }}"
       register:                     cluster_status_pre
-      failed_when:
-        - cluster_status_pre.primary_node == ""
-        - cluster_status_pre.secondary_node == ""
 
     - name:                         "Pre Validations: Check if the AUTOMATED_REGISTER parameter
                                     is set to true"
@@ -45,3 +42,16 @@
       until:                        cleanup_failed_resource_pre.rc == 0
       changed_when:                 cleanup_failed_resource_pre.rc == 0
       failed_when:                  cleanup_failed_resource_pre.rc != 0
+
+    - name:                         "Pre Validations: Set pre validations status as false"
+      ansible.builtin.set_fact:
+        pre_validations_status:     "FAILED"
+
+    - name:                         "Pre Validations: Set pre validations status"
+      when:
+                                    - cluster_status_pre is defined
+                                    - cluster_status_pre.primary_node != "" and cluster_status_pre.secondary_node != ""
+                                    - ansible_hostname == cluster_status_pre.primary_node
+                                    - cluster_status_pre.pacemaker_status == "running"
+      ansible.builtin.set_fact:
+        pre_validations_status:     "PASSED"

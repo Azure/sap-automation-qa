@@ -31,8 +31,8 @@
       changed_when:                   false
       ignore_errors:                  true
       with_items:
-        - "tar.bz2"
-        - "tar.gz"
+                                      - "tar.bz2"
+                                      - "tar.gz"
 
     - name:                           "Remove the cluster report from the primary node"
       ansible.builtin.file:
@@ -40,5 +40,6 @@
         path:                         "/tmp/{{ test_group_invocation_id }}.{{ item }}"
       ignore_errors:                  true
       with_items:
-        - "tar.bz2"
-        - "tar.gz"
+                                      - "tar.bz2"
+                                      - "tar.gz"
+  

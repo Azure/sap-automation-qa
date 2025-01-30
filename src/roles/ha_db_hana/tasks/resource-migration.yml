@@ -22,11 +22,7 @@
   when:                             node_tier == "hana"
   block:
     - name:                         "Test Execution: Manual resource migration init"
-      when:
-                                    - cluster_status_pre.primary_node != "" and cluster_status_pre.secondary_node != ""
-                                    - ansible_hostname == cluster_status_pre.primary_node
-                                    - cluster_status_pre.pacemaker_status == "running"
-                                    - cluster_status_pre is defined
+      when:                         pre_validations_status == "PASSED"
       block:
         - name:                     "Test Execution: Start timer"
           ansible.builtin.set_fact:
@@ -72,7 +68,7 @@
 
         # This is required because the cluster reports incorrect location constraints
         # after the location constraints is removed.
-        - name:                     "Test Execution: Wait for 200 seconds"
+        - name:                     "Test Execution: Wait for 100 seconds"
           ansible.builtin.wait_for:
             timeout:                100
 

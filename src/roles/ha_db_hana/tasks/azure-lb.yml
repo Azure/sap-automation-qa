@@ -9,6 +9,7 @@
 
 - name:                                 "Pre Validations: Validate the Azure Load Balancer config"
   become:                               true
+  run_once:                             true
   block:
     - name:                             "Install azure management network package"
       ansible.builtin.pip:
@@ -35,8 +36,8 @@
       delegate_to:                      localhost
       get_azure_lb:
         subscription_id:                "{{ azure_instance_metadata.json.compute.subscriptionId }}"
-        resource_group_name:            "{{ azure_instance_metadata.json.compute.resourceGroupName }}"
-        load_balancer_ip:               "{{ azure_loadbalancer_metadata.json.loadbalancer.inboundRules[0].privateIpAddress }}"
+        region:                         "{{ azure_instance_metadata.json.compute.location }}"
+        inbound_rules   :               "{{ azure_loadbalancer_metadata.json.loadbalancer.inboundRules }}"
       register:                         test_result
 
     - name:                             "Set the test case status to PASSED"

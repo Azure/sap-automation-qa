@@ -25,9 +25,8 @@
   when:
                                     - node_tier == "hana"
                                     - NFS_provider == "ANF"
-                                    - cluster_status_pre.primary_node != "" and cluster_status_pre.secondary_node != ""
-                                    - cluster_status_pre.pacemaker_status == "running"
-                                    - cluster_status_pre is defined
+                                    - pre_validations_status == "PASSED"
+                                    - cluster_status_pre.stonith_action == "reboot"
   block:
     - name:                         "Test Execution: Freeze File System on Primary Node init"
       when:                         ansible_hostname == cluster_status_pre.primary_node
@@ -57,8 +56,8 @@
             operation_step:         "test_execution"
             database_sid:           "{{ db_sid | lower }}"
           register:                 cluster_status_test_execution
-          retries:                  40
-          delay:                    20
+          retries:                  50
+          delay:                    10
           until: |
                                     cluster_status_test_execution.primary_node == cluster_status_pre.secondary_node and
                                     cluster_status_test_execution.secondary_node == cluster_status_pre.primary_node
@@ -71,7 +70,7 @@
             operation_step:         "post_failover"
             database_sid:           "{{ db_sid | lower }}"
           register:                 cluster_status_post
-          retries:                  40
+          retries:                  50
           delay:                    10
           until: |
                                     cluster_status_post.primary_node == cluster_status_pre.secondary_node and
