@@ -4,6 +4,8 @@
 """
 Custom ansible module for getting Azure Load Balancer details
 """
+
+import logging
 import ast
 from typing import Dict
 from ansible.module_utils.basic import AnsibleModule
@@ -92,6 +94,10 @@ class AzureLoadBalancer(SapAutomationQA):
         )
         required_load_balancer = None
 
+        self.log(logging.INFO, f"Load balancers: {load_balancers}")
+
+        self.log(logging.INFO, f"Load balancer IPs: {load_balancer_ips}")
+
         required_load_balancer = next(
             (
                 lb
@@ -102,6 +108,8 @@ class AzureLoadBalancer(SapAutomationQA):
             None,
         )
         parameters = []
+
+        self.log(logging.INFO, f"Required load balancer: {required_load_balancer}")
 
         def check_parameters(entity, entity_name, parameters_dict, entity_type):
             for key, value in parameters_dict.items():
