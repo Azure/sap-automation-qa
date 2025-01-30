@@ -4,58 +4,60 @@
 # /*---------------------------------------------------------------------------
 # |                          Azure Load Balancer Validation                   |
 # +--------------------------------------------------------------------------*/
-- name:                                 "Test Setup Tasks"
-  ansible.builtin.include_tasks:        "roles/misc/tasks/test-case-setup.yml"
-
-- name:                                 "Pre Validations: Validate the Azure Load Balancer config"
-  become:                               true
-  run_once:                             true
+- name:                                     "Azure LB Validation"
+  run_once:                                 true
   block:
-    - name:                             "Install azure management network package"
-      ansible.builtin.pip:
-        name:                           "azure-mgmt-network"
-        state:                          present
+    - name:                                 "Test Setup Tasks"
+      ansible.builtin.include_tasks:        "roles/misc/tasks/test-case-setup.yml"
 
-    - name:                             "Retrieve Subscription ID and Resource Group Name"
-      ansible.builtin.uri:
-        url:                            http://169.254.169.254/metadata/instance?api-version=2021-02-01
-        use_proxy:                      false
-        headers:
-          Metadata:                     true
-      register:                         azure_instance_metadata
-    
-    - name:                             "Get the Azure Load Balancer IP"
-      ansible.builtin.uri:
-        url:                            http://169.254.169.254:80/metadata/loadbalancer?api-version=2020-10-01
-        use_proxy:                      false
-        headers:
-          Metadata:                     true
-      register:                         azure_loadbalancer_metadata
+    - name:                                 "Pre Validations: Validate the Azure Load Balancer config"
+      become:                               true
+      block:
+        - name:                             "Install azure management network package"
+          ansible.builtin.pip:
+            name:                           "azure-mgmt-network"
+            state:                          present
 
-    - name:                             "Azure Load Balancer check for the DB nodes"
-      delegate_to:                      localhost
-      get_azure_lb:
-        subscription_id:                "{{ azure_instance_metadata.json.compute.subscriptionId }}"
-        region:                         "{{ azure_instance_metadata.json.compute.location }}"
-        inbound_rules:                  "{{ azure_loadbalancer_metadata.json.loadbalancer.inboundRules }}"
-      register:                         test_result
+        - name:                             "Retrieve Subscription ID and Resource Group Name"
+          ansible.builtin.uri:
+            url:                            http://169.254.169.254/metadata/instance?api-version=2021-02-01
+            use_proxy:                      false
+            headers:
+              Metadata:                     true
+          register:                         azure_instance_metadata
+        
+        - name:                             "Get the Azure Load Balancer IP"
+          ansible.builtin.uri:
+            url:                            http://169.254.169.254:80/metadata/loadbalancer?api-version=2020-10-01
+            use_proxy:                      false
+            headers:
+              Metadata:                     true
+          register:                         azure_loadbalancer_metadata
 
-    - name:                             "Set the test case status to PASSED"
-      ansible.builtin.set_fact:
-        test_case_name:                 "{{ item.name }}: {{ virtual_host }}"
-        test_case_message:              "{{ test_result.message }}"
-        test_case_details:              "{{ test_result.details }}"
-        test_case_hostname:             "{{ virtual_host }}"
-        test_case_status:               "{{ test_result.status }}"
+        - name:                             "Azure Load Balancer check for the DB nodes"
+          delegate_to:                      localhost
+          get_azure_lb:
+            subscription_id:                "{{ azure_instance_metadata.json.compute.subscriptionId }}"
+            region:                         "{{ azure_instance_metadata.json.compute.location }}"
+            inbound_rules:                  "{{ azure_loadbalancer_metadata.json.loadbalancer.inboundRules }}"
+          register:                         test_result
 
-  rescue:
-    - name:                             "Test case failed"
-      ansible.builtin.set_fact:
-          test_case_name:               "{{ item.name }}: {{ virtual_host }}"
-          test_case_status:             "FAILED"
-          test_case_details:            "{{ test_result }}"
-          test_case_message:            "{{ ansible_failed_result }}"
-          test_case_hostname:           "{{ virtual_host }}"
+        - name:                             "Set the test case status to PASSED"
+          ansible.builtin.set_fact:
+            test_case_name:                 "{{ item.name }}: {{ virtual_host }}"
+            test_case_message:              "{{ test_result.message }}"
+            test_case_details:              "{{ test_result.details }}"
+            test_case_hostname:             "{{ virtual_host }}"
+            test_case_status:               "{{ test_result.status }}"
 
-- name:                                 "Post Telemetry Data"
-  ansible.builtin.include_tasks:        "roles/misc/tasks/post-telemetry-data.yml"
+      rescue:
+        - name:                             "Test case failed"
+          ansible.builtin.set_fact:
+              test_case_name:               "{{ item.name }}: {{ virtual_host }}"
+              test_case_status:             "FAILED"
+              test_case_details:            "{{ test_result }}"
+              test_case_message:            "{{ ansible_failed_result }}"
+              test_case_hostname:           "{{ virtual_host }}"
+
+    - name:                                 "Post Telemetry Data"
+      ansible.builtin.include_tasks:        "roles/misc/tasks/post-telemetry-data.yml"
