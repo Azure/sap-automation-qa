@@ -235,15 +235,15 @@ REQUIRED_PARAMETERS = {
 CONSTRAINTS = {
     "rsc_colocation": {
         "score": "4000",
-        "rsc": lambda context: f"g_ip_{context.sid}_{context.sid}{context.instance_number}",
+        "rsc": lambda context: f"g_ip_{context.sid}_HDB{context.instance_number}",
         "rsc-role": "Started",
-        "with-rsc": lambda context: f"msl_SAPHana_{context.sid}_{context.sid}{context.instance_number}",
+        "with-rsc": lambda context: f"msl_SAPHana_{context.sid}_HDB{context.instance_number}",
         "with-rsc-role": "Master",
     },
     "rsc_order": {
         "kind": "Optional",
-        "first": lambda context: f"cln_SAPHanaTopology_{context.sid}_{context.sid}{context.instance_number}",
-        "then": lambda context: f"msl_SAPHana_{context.sid}_{context.sid}{context.instance_number}",
+        "first": lambda context: f"cln_SAPHanaTopology_{context.sid}_HDB{context.instance_number}",
+        "then": lambda context: f"msl_SAPHana_{context.sid}_HDB{context.instance_number}",
     },
     "rsc_location": {
         "score-attribute": "#health-azure",
