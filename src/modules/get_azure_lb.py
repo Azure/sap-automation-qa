@@ -106,7 +106,7 @@ class AzureLoadBalancer(SapAutomationQA):
 
         self.log(logging.INFO, f"Required load balancer: {found_load_balancer}")
 
-        def check_parameters(entity, entity_name, parameters_dict, entity_type):
+        def check_parameters(entity, parameters_dict, entity_type):
             for key, value in parameters_dict.items():
                 status = "PASSED" if entity[key] == value else "FAILED"
                 parameters.append(
@@ -122,18 +122,18 @@ class AzureLoadBalancer(SapAutomationQA):
 
         try:
             if found_load_balancer:
+                self.result["message"] = (
+                    f"Validating load balancer parameters {found_load_balancer['name']}"
+                )
                 for rule in found_load_balancer["load_balancing_rules"]:
                     check_parameters(
                         rule,
-                        found_load_balancer["name"],
                         RULES,
                         "load_balancing_rule",
                     )
 
                 for probe in found_load_balancer["probes"]:
-                    check_parameters(
-                        probe, found_load_balancer["name"], PROBES, "probes"
-                    )
+                    check_parameters(probe, PROBES, "probes")
 
             self.result["status"] = (
                 TestStatus.SUCCESS.value
