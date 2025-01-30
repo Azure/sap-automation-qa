@@ -111,7 +111,7 @@ class AzureLoadBalancer(SapAutomationQA):
                 status = "PASSED" if entity[key] == value else "FAILED"
                 parameters.append(
                     {
-                        "category": entity_name,
+                        "category": entity["name"],
                         "type": entity_type,
                         "name": key,
                         "value": str(entity[key]),
