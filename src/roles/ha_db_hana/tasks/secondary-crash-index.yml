@@ -14,6 +14,13 @@
 - name:                                 "Pre Validations: HANA DB Nodes"
   ansible.builtin.include_tasks:        "roles/misc/tasks/pre-validations.yml"
 
+- name:                                 "Pre Validations: Check if indexserver process is enabled"
+  become:                               true
+  check_indexserver:
+    database_sid:                       "{{ db_sid | upper }}"
+    ansible_os_family:                  "{{ ansible_os_family | lower }}"
+  register:                             index_server_check
+
 # /*---------------------------------------------------------------------------
 # |                          Test Execution                                   |
 # +--------------------------------------------------------------------------*/
@@ -23,6 +30,7 @@
                                         - node_tier == "hana"
                                         - pre_validations_status == "PASSED"
                                         - cluster_status_pre.stonith_action == "reboot"
+                                        - index_server_check.indexserver_enabled == "yes"
   block:
     - name:                             "Test Execution: Crash Index Server init"
       when:                             ansible_hostname == cluster_status_pre.primary_node
@@ -32,7 +40,7 @@
             test_execution_start:       "{{ now(utc=true, fmt='%Y-%m-%d %H:%M:%S') }}"
 
     - name:                             "Test Execution: Validate HANA DB cluster status"
-      when:                            ansible_hostname == cluster_status_pre.secondary_node
+      when:                             ansible_hostname == cluster_status_pre.secondary_node
       block:
         - name:                         "Test Execution: Crash the index server on secondary node"
           ansible.builtin.command:      "killall -9 hdbindexserver"
