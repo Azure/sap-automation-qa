@@ -296,6 +296,11 @@ PCMK_KEYWORDS = {
     "-is-managed",
     "-maintenance",
     "-standby",
+    "sbd",
+    "pacemaker-controld",
+    "pacemaker-execd",
+    "pacemaker-based",
+    "pacemaker-attrd",
 }
 SYS_KEYWORDS = {
     "SAPHana",
