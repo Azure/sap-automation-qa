@@ -84,11 +84,11 @@ class AzureLoadBalancer(SapAutomationQA):
         if self.result["status"] == "FAILED":
             return self.result
         inbound_rules = ast.literal_eval(self.module_params["inbound_rules"])
-        load_balancer_ips = [
+        load_balancer_ips = list(
             inbound_rule["privateIpAddress"]
             for inbound_rule in inbound_rules
             if "privateIpAddress" in inbound_rule
-        ]
+        )
         found_load_balancer = None
 
         self.log(logging.INFO, f"Load balancer IPs: {load_balancer_ips}")
