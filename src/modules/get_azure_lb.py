@@ -83,22 +83,20 @@ class AzureLoadBalancer(SapAutomationQA):
 
         if self.result["status"] == "FAILED":
             return self.result
-
+        inbound_rules = ast.literal_eval(self.module_params["inbound_rules"])
         load_balancer_ips = (
             (
                 inbound_rule["privateIpAddress"]
                 if "privateIpAddress" in inbound_rule
                 else None
             )
-            for inbound_rule in ast.literal_eval(self.module_params["inbound_rules"])
+            for inbound_rule in inbound_rules
         )
-        required_load_balancer = None
-
-        self.log(logging.INFO, f"Load balancers: {load_balancers}")
+        found_load_balancer = None
 
         self.log(logging.INFO, f"Load balancer IPs: {load_balancer_ips}")
 
-        required_load_balancer = next(
+        found_load_balancer = next(
             (
                 lb
                 for lb in load_balancers
@@ -109,7 +107,7 @@ class AzureLoadBalancer(SapAutomationQA):
         )
         parameters = []
 
-        self.log(logging.INFO, f"Required load balancer: {required_load_balancer}")
+        self.log(logging.INFO, f"Required load balancer: {found_load_balancer}")
 
         def check_parameters(entity, entity_name, parameters_dict, entity_type):
             for key, value in parameters_dict.items():
@@ -126,18 +124,18 @@ class AzureLoadBalancer(SapAutomationQA):
                 )
 
         try:
-            if required_load_balancer:
-                for rule in required_load_balancer["load_balancing_rules"]:
+            if found_load_balancer:
+                for rule in found_load_balancer["load_balancing_rules"]:
                     check_parameters(
                         rule,
-                        required_load_balancer["name"],
+                        found_load_balancer["name"],
                         RULES,
                         "load_balancing_rule",
                     )
 
-                for probe in required_load_balancer["probes"]:
+                for probe in found_load_balancer["probes"]:
                     check_parameters(
-                        probe, required_load_balancer["name"], PROBES, "probes"
+                        probe, found_load_balancer["name"], PROBES, "probes"
                     )
 
             self.result["status"] = (
