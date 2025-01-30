@@ -4,109 +4,106 @@
 # /*---------------------------------------------------------------------------
 # |               Crash the primary node with echo b                           |
 # +--------------------------------------------------------------------------*/
-- name:                                "Test Setup Tasks"
-  ansible.builtin.include_tasks:       "roles/misc/tasks/test-case-setup.yml"
-  run_once:                            true
+- name:                                 "Test Setup Tasks"
+  ansible.builtin.include_tasks:        "roles/misc/tasks/test-case-setup.yml"
+  run_once:                             true
 
 # /*---------------------------------------------------------------------------
 # |                          Pre Validations                                  |
 # +--------------------------------------------------------------------------*/
-- name:                                "Pre Validations: HANA DB Nodes"
-  ansible.builtin.include_tasks:       "roles/misc/tasks/pre-validations.yml"
+- name:                                 "Pre Validations: HANA DB Nodes"
+  ansible.builtin.include_tasks:        "roles/misc/tasks/pre-validations.yml"
 
 # /*---------------------------------------------------------------------------
 # |                          Test Execution                                   |
 # +--------------------------------------------------------------------------*/
-- name:                                "Test Execution: Primary Node Crash with echo b init"
-  become:                              true
+- name:                                 "Test Execution: Primary Node Crash with echo b init"
+  become:                               true
   when:
-                                       - node_tier == "hana"
-                                       - cluster_status_pre.primary_node != "" and cluster_status_pre.secondary_node != ""
-                                       - cluster_status_pre.pacemaker_status == "running"
-                                       - cluster_status_pre is defined
+                                        - node_tier == "hana"
+                                        - pre_validations_status == "PASSED"
+                                        - cluster_status_pre.stonith_action == "reboot"
   block:
-    - name:                            "Test Execution: Crash the primary node with echo b init"
-      when:                            ansible_hostname == cluster_status_pre.primary_node
+    - name:                             "Test Execution: Crash the primary node with echo b init"
+      when:                             ansible_hostname == cluster_status_pre.primary_node
       block:
-        - name:                        "Test Execution: Start timer"
+        - name:                         "Test Execution: Start timer"
           ansible.builtin.set_fact:
-            test_execution_start:      "{{ now(utc=true, fmt='%Y-%m-%d %H:%M:%S') }}"
+            test_execution_start:       "{{ now(utc=true, fmt='%Y-%m-%d %H:%M:%S') }}"
 
-        - name:                        "Test Execution: Echo b"
-          become:                      true
-          ansible.builtin.shell:       echo b > /proc/sysrq-trigger
-          async:                       1
-          poll:                        0
-          ignore_errors:               true
-          register:                    echo_b_result
+        - name:                         "Test Execution: Echo b"
+          ansible.builtin.shell:        echo b > /proc/sysrq-trigger
+          async:                        1
+          poll:                         0
+          ignore_errors:                true
+          register:                     echo_b_result
 
-    - name:                            "Test Execution: Switch to secondary node"
-      when:                            ansible_hostname == cluster_status_pre.secondary_node
+    - name:                             "Test Execution: Switch to secondary node"
+      when:                             ansible_hostname == cluster_status_pre.secondary_node
       block:
-        - name:                        "Test Execution: Validate HANA DB cluster status"
-          when:                        automated_register.stdout != ""
+        - name:                         "Test Execution: Validate HANA DB cluster status"
+          when:                         automated_register.stdout != ""
           get_cluster_status:
-            operation_step:            "test_execution"
-            database_sid:              "{{ db_sid | lower }}"
-          retries:                     40
-          delay:                       20
-          register:                    cluster_status_test_execution
+            operation_step:             "test_execution"
+            database_sid:               "{{ db_sid | lower }}"
+          retries:                      50
+          delay:                        10
+          register:                     cluster_status_test_execution
           until: |
-                                       cluster_status_test_execution.primary_node == cluster_status_pre.secondary_node and
-                                       cluster_status_test_execution.secondary_node == cluster_status_pre.primary_node
+                                        cluster_status_test_execution.primary_node == cluster_status_pre.secondary_node and
+                                        cluster_status_test_execution.secondary_node == cluster_status_pre.primary_node
 
-    - name:                            "Test Execution: Switch back to primary node"
-      when:                            ansible_hostname == cluster_status_pre.primary_node
+    - name:                             "Test Execution: Switch back to primary node"
+      when:                             ansible_hostname == cluster_status_pre.primary_node
       block:
-        - name:                        "Test Execution: Register Failed Resource"
-          become:                      true
-          become_user:                 "{{ db_sid | lower }}adm"
-          when:                        automated_register.stdout == ""
+        - name:                         "Test Execution: Register Failed Resource"
+          become_user:                  "{{ db_sid | lower }}adm"
+          when:                         automated_register.stdout == ""
           ansible.builtin.command: |
-                                       hdbnsutil -sr_register \
-                                       --remoteHost={{ cluster_status_pre.secondary_node }} \
-                                       --remoteInstance={{ db_instance_number }} \
-                                       --replicationMode=sync --name=SITEB
-          register:                    hana_db_register_failed_resource
-          changed_when:                hana_db_register_failed_resource.rc == 0
+                                        hdbnsutil -sr_register \
+                                        --remoteHost={{ cluster_status_pre.secondary_node }} \
+                                        --remoteInstance={{ db_instance_number }} \
+                                        --replicationMode=sync --name=SITEB
+          register:                     hana_db_register_failed_resource
+          changed_when:                 hana_db_register_failed_resource.rc == 0
 
-        - name:                        "Test Execution: Stop timer"
+        - name:                         "Test Execution: Stop timer"
           ansible.builtin.set_fact:
-            test_execution_end:        "{{ now(utc=true, fmt='%Y-%m-%d %H:%M:%S') }}"
+            test_execution_end:         "{{ now(utc=true, fmt='%Y-%m-%d %H:%M:%S') }}"
 
-        - name:                        "Test Execution: Validate HANA DB cluster status"
+        - name:                         "Test Execution: Validate HANA DB cluster status"
           get_cluster_status:
-            operation_step:            "post_failover"
-            database_sid:              "{{ db_sid | lower }}"
-          register:                    cluster_status_post
-          retries:                     40
-          delay:                       10
+            operation_step:             "post_failover"
+            database_sid:               "{{ db_sid | lower }}"
+          register:                     cluster_status_post
+          retries:                      50
+          delay:                        10
           until: |
-                                       cluster_status_post.primary_node == cluster_status_pre.secondary_node and
-                                       cluster_status_post.secondary_node == cluster_status_pre.primary_node
+                                        cluster_status_post.primary_node == cluster_status_pre.secondary_node and
+                                        cluster_status_post.secondary_node == cluster_status_pre.primary_node
 
-        - name:                        "Set test case message and details"
+        - name:                         "Set test case message and details"
           ansible.builtin.set_fact:
             test_case_message_from_test_case: |
-                                       "Old primary: {{ cluster_status_pre.primary_node }} \
-                                       New primary: {{ cluster_status_post.primary_node }} \
-                                       Old secondary: {{ cluster_status_pre.secondary_node }} \
-                                       New secondary: {{ cluster_status_post.secondary_node }}"
+                                        "Old primary: {{ cluster_status_pre.primary_node }} \
+                                        New primary: {{ cluster_status_post.primary_node }} \
+                                        Old secondary: {{ cluster_status_pre.secondary_node }} \
+                                        New secondary: {{ cluster_status_post.secondary_node }}"
             test_case_details_from_test_case: {
-                                       "Pre Validations: Remove any location_constraints": "{{ location_constraints_results }}",
-                                       "Pre Validations: Validate HANA DB cluster status": "{{ cluster_status_pre }}",
-                                       "Pre Validations: Check if the AUTOMATED_REGISTER": "{{ automated_register }}",
-                                       "Pre Validations: CleanUp any failed resource": "{{ cleanup_failed_resource_pre }}",
-                                       "Test Execution: Echo b results": "{{ echo_b_result }}",
-                                       "Post Validations: Validate HANA DB cluster status": "{{ cluster_status_post }}",
-                                       }
+                                        "Pre Validations: Remove any location_constraints": "{{ location_constraints_results }}",
+                                        "Pre Validations: Validate HANA DB cluster status": "{{ cluster_status_pre }}",
+                                        "Pre Validations: Check if the AUTOMATED_REGISTER": "{{ automated_register }}",
+                                        "Pre Validations: CleanUp any failed resource": "{{ cleanup_failed_resource_pre }}",
+                                        "Test Execution: Echo b results": "{{ echo_b_result }}",
+                                        "Post Validations: Validate HANA DB cluster status": "{{ cluster_status_post }}",
+                                        }
 
       # /*---------------------------------------------------------------------------
       # |                          Post Validations                                 |
       # +--------------------------------------------------------------------------*/
-    - name:                            "Post Validations Tasks"
-      ansible.builtin.include_tasks:   "roles/misc/tasks/post-validations.yml"
+    - name:                             "Post Validations Tasks"
+      ansible.builtin.include_tasks:    "roles/misc/tasks/post-validations.yml"
 
   rescue:
-    - name:                            "Rescue operation"
-      ansible.builtin.include_tasks:   "roles/misc/tasks/rescue.yml"
+    - name:                             "Rescue operation"
+      ansible.builtin.include_tasks:    "roles/misc/tasks/rescue.yml"

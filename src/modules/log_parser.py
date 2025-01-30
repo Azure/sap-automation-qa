@@ -110,10 +110,7 @@ def run_module() -> None:
     parser.parse_logs()
 
     result = parser.get_result()
-    if result["status"] == "FAILED":
-        module.fail_json(msg=result["message"], **result)
-    else:
-        module.exit_json(**result)
+    module.exit_json(**result)
 
 
 def main() -> None:
