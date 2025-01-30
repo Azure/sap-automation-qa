@@ -5,7 +5,7 @@
 Custom ansible module for getting Azure Load Balancer details
 """
 
-import json
+import logging
 from typing import Dict
 from ansible.module_utils.basic import AnsibleModule
 from azure.identity import ManagedIdentityCredential
@@ -82,6 +82,11 @@ class AzureLoadBalancer(SapAutomationQA):
 
         if self.result["status"] == "FAILED":
             return self.result
+
+        self.log(
+            logging.INFO,
+            f"Load balancers: {load_balancers} Type, {type(load_balancers)}",
+        )
 
         load_balancer_ips = [
             inbound_rule.get("privateIpAddress", "")
