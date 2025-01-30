@@ -90,8 +90,8 @@ class AzureLoadBalancer(SapAutomationQA):
 
         self.log(
             logging.INFO,
-            f"Inbound rules: {self.module_params["inbound_rules"]}" +
-            f"Type, {type(self.module_params["inbound_rules"])}",
+            f"Inbound rules: {self.module_params['inbound_rules']} "
+            + f"Type, {type(self.module_params['inbound_rules'])}",
         )
 
         load_balancer_ips = [
