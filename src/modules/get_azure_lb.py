@@ -88,6 +88,12 @@ class AzureLoadBalancer(SapAutomationQA):
             f"Load balancers: {load_balancers} Type, {type(load_balancers)}",
         )
 
+        self.log(
+            logging.INFO,
+            f"Inbound rules: {self.module_params["inbound_rules"]}" +
+            f"Type, {type(self.module_params["inbound_rules"])}",
+        )
+
         load_balancer_ips = [
             inbound_rule.get("privateIpAddress", "")
             for inbound_rule in self.module_params["inbound_rules"]
@@ -161,7 +167,7 @@ def run_module():
     load_balancer = AzureLoadBalancer(module_params=module.params)
     result = load_balancer.get_load_balancers_details()
 
-    module.exit_json(msg="Load balancer details are fetched successfully.", **result)
+    module.exit_json(**result)
 
 
 def main():
