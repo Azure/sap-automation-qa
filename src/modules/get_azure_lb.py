@@ -85,7 +85,7 @@ class AzureLoadBalancer(SapAutomationQA):
 
         load_balancer_ips = [
             inbound_rule.get["privateIpAddress"]
-            for inbound_rule in json.loads(self.module_params["inbound_rules"])
+            for inbound_rule in self.module_params["inbound_rules"]
         ]
         required_load_balancer = None
 

@@ -37,7 +37,7 @@
       get_azure_lb:
         subscription_id:                "{{ azure_instance_metadata.json.compute.subscriptionId }}"
         region:                         "{{ azure_instance_metadata.json.compute.location }}"
-        inbound_rules   :               "{{ azure_loadbalancer_metadata.json.loadbalancer.inboundRules }}"
+        inbound_rules:                  "{{ azure_loadbalancer_metadata.json.loadbalancer.inboundRules }}"
       register:                         test_result
 
     - name:                             "Set the test case status to PASSED"
