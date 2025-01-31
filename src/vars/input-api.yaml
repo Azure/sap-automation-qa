@@ -14,10 +14,10 @@ sap_functional_test_type_map:
 test_groups:
   - name:                           HA_DB_HANA
     test_cases:
-      # - name:                       HA Parameters Validation
-      #   task_name:                  ha-config
-      #   description:                This validates the HA configuration
-      #   enabled:                    true
+      - name:                       HA Parameters Validation
+        task_name:                  ha-config
+        description:                This validates the HA configuration
+        enabled:                    true
 
       # - name:                       Azure Load Balancer Validation
       #   task_name:                  azure-lb
@@ -54,15 +54,15 @@ test_groups:
       #   description:                This runs a functional test to immediately reboot the system without properly shutting it down.
       #   enabled:                    true
 
-      - name:                       HA Functional Test- Crash index server on secondary node
-        task_name:                  secondary-crash-index
-        description:                This runs a functional test for crashing index server on secondary node
-        enabled:                    true
+      # - name:                       HA Functional Test- Crash index server on secondary node
+      #   task_name:                  secondary-crash-index
+      #   description:                This runs a functional test for crashing index server on secondary node
+      #   enabled:                    true
 
-      - name:                       HA Functional Test- Secondary Node Kill
-        task_name:                  secondary-node-kill
-        description:                This runs a functional test for secondary node crash
-        enabled:                    true
+      # - name:                       HA Functional Test- Secondary Node Kill
+      #   task_name:                  secondary-node-kill
+      #   description:                This runs a functional test for secondary node crash
+      #   enabled:                    true
 
       # - name:                       HA Functional Test- Echo B on Secondary Node
       #   task_name:                  secondary-echo-b
