@@ -89,13 +89,9 @@ CLUSTER_RESOURCES = {
         },
     },
     "REDHAT": {
-        lambda context: f"SAPHana_{context.sid}_{context.instance_number}-clone-meta_attributes": {
-            "clone-node-max": "1",
-            "clone-max": "2",
-            "interleave": "true",
-        },
         "ocf:heartbeat:SAPHanaTopology": {
             "clone-node-max": "1",
+            "target-role": "Started",
             "interleave": "true",
             "monitor-interval": "10",
             "monitor-timeout": "600",
@@ -137,12 +133,10 @@ CLUSTER_RESOURCES = {
         },
         "ocf:heartbeat:azure-events-az": {
             "interleave": "true",
+            "allow-unhealthy-nodes": "true",
             "failure-timeout": "120s",
             "start-start-delay": "60s",
             "monitor-interval": "10s",
-        },
-        "health-azure-events-clone-meta_attributes": {
-            "allow-unhealthy-nodes": "true",
         },
         "ocf:heartbeat:azure-lb": {
             "monitor-interval": "10s",
@@ -165,7 +159,6 @@ CLUSTER_PROPERTIES = {
                 "maintenance-mode": "false",
                 "azure-events_globalPullState": "IDLE",
                 "priority-fencing-delay": "30",
-                "stonith-action": "reboot",
             }
         },
         "rsc_defaults": {
