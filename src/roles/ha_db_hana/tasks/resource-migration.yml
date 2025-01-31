@@ -53,7 +53,7 @@
           become:                   true
           become_user:              "{{ db_sid | lower }}adm"
           when:                     automated_register.stdout == "false"
-          ansible.builtin.command:  hdbnsutil -sr_register \
+          ansible.builtin.command:  /usr/sap/{{ db_sid | upper }}/HDB{{ db_instance_number }}/hdbnsutil -sr_register \
                                     --remoteHost={{ cluster_status_pre.secondary_node }} \
                                     --remoteInstance={{ db_instance_number }} \
                                     --replicationMode=sync --name=SITEB
