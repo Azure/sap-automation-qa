@@ -37,7 +37,7 @@
           changed_when:             hana_db_resource_migration.rc == 0
 
         - name:                     "Test Execution: Validate HANA DB cluster status"
-          when:                     automated_register.stdout != ""
+          when:                     automated_register.stdout == "true"
           get_cluster_status:
             operation_step:         "test_execution"
             database_sid:           "{{ db_sid | lower }}"
@@ -52,7 +52,7 @@
         - name:                     "Test Execution: Register Failed Resource"
           become:                   true
           become_user:              "{{ db_sid | lower }}adm"
-          when:                     automated_register.stdout == ""
+          when:                     automated_register.stdout == "false"
           ansible.builtin.command:  hdbnsutil -sr_register \
                                     --remoteHost={{ cluster_status_pre.secondary_node }} \
                                     --remoteInstance={{ db_instance_number }} \

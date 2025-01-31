@@ -51,7 +51,7 @@
           ignore_errors:               true
 
         - name:                     "Test Execution: Validate HANA DB cluster status"
-          when:                     automated_register.stdout != ""
+          when:                     automated_register.stdout == "true"
           get_cluster_status:
             operation_step:         "test_execution"
             database_sid:           "{{ db_sid | lower }}"
