@@ -16,7 +16,7 @@ import logging
 import concurrent.futures
 import xml.etree.ElementTree as ET
 from datetime import datetime
-from typing import Dict
+from typing import Dict, Any
 from ansible.module_utils.basic import AnsibleModule
 
 try:
@@ -42,6 +42,9 @@ class ClusterStatusChecker(SapAutomationQA):
                 "end": None,
                 "pacemaker_status": "",
                 "stonith_action": "",
+                "operation_mode": "",
+                "replication_mode": "",
+                "primary_site_name": "",
             }
         )
 
@@ -63,60 +66,62 @@ class ClusterStatusChecker(SapAutomationQA):
         except Exception:
             self.result["stonith_action"] = "unknown"
 
-    def _node_attributes_to_dict(self, node_attributes: ET.Element) -> Dict[str, str]:
+    def _process_node_attributes(self, node_attributes: ET.Element) -> Dict[str, Any]:
         """
-        Converts the XML element containing node attributes to a dictionary.
+        Processes node attributes and identifies primary/secondary nodes.
 
         :param node_attributes: The XML element containing node attributes.
         :type node_attributes: xml.etree.ElementTree.Element
-        :return: A dictionary containing the node attributes.
+        :return: A dictionary containing the primary and secondary node information, plus cluster status.
         :rtype: dict
         """
-        return {
-            node.attrib["name"]: {
-                attribute.attrib["name"]: attribute.attrib["value"]
-                for attribute in node
-            }
-            for node in node_attributes
+        result = {
+            "primary_node": "",
+            "secondary_node": "",
+            "cluster_status": {"primary": {}, "secondary": {}},
+            "operation_mode": "",
+            "replication_mode": "",
+            "primary_site_name": "",
         }
 
-    def _check_node(self, node: ET.Element) -> Dict[str, str]:
-        """
-        Checks the attributes of node & returns corresponding action based on attribute value.
-
-        :param node: The XML element representing a node.
-        :type node: xml.etree.ElementTree.Element
-        :return: A dictionary containing the action to be taken based on the attribute value.
-        :rtype: dict
-        """
-        node_states = {}
-
-        attribute_actions = {
-            f"hana_{self.database_sid}_clone_state": lambda node, value: node_states.update(
-                {"clone_state": value}
-            ),
-            f"hana_{self.database_sid}_sync_state": lambda node, value: node_states.update(
-                {"sync_state": value}
-            ),
+        attribute_map = {
+            f"hana_{self.database_sid}_op_mode": "operation_mode",
+            f"hana_{self.database_sid}_srmode": "replication_mode",
+            f"hana_{self.database_sid}_site": "primary_site_name",
         }
 
-        for attribute in node:
-            action = attribute_actions.get(attribute.attrib["name"])
-            if action:
-                action(node, attribute.attrib["value"])
+        for node in node_attributes:
+            node_name = node.attrib["name"]
+            node_states = {}
+            node_attributes_dict = {}
 
-        if (
-            node_states.get("clone_state") == "PROMOTED"
-            and node_states.get("sync_state") == "PRIM"
-        ):
-            return {"primary_node": node.attrib["name"]}
-        elif (
-            node_states.get("clone_state") == "DEMOTED"
-            and node_states.get("sync_state") == "SOK"
-        ):
-            return {"secondary_node": node.attrib["name"]}
+            for attribute in node:
+                attr_name = attribute.attrib["name"]
+                attr_value = attribute.attrib["value"]
+                node_attributes_dict[attr_name] = attr_value
 
-        return {}
+                if attr_name in attribute_map:
+                    result[attribute_map[attr_name]] = attr_value
+
+                if attr_name == f"hana_{self.database_sid}_clone_state":
+                    node_states["clone_state"] = attr_value
+                elif attr_name == f"hana_{self.database_sid}_sync_state":
+                    node_states["sync_state"] = attr_value
+
+            if (
+                node_states.get("clone_state") == "PROMOTED"
+                and node_states.get("sync_state") == "PRIM"
+            ):
+                result["primary_node"] = node_name
+                result["cluster_status"]["primary"] = node_attributes_dict
+            elif (
+                node_states.get("clone_state") == "DEMOTED"
+                and node_states.get("sync_state") == "SOK"
+            ):
+                result["secondary_node"] = node_name
+                result["cluster_status"]["secondary"] = node_attributes_dict
+
+        return result
 
     def run(self) -> Dict[str, str]:
         """
@@ -177,17 +182,12 @@ class ClusterStatusChecker(SapAutomationQA):
                         )
                         self.log(logging.WARNING, self.result["message"])
 
-                node_attributes = cluster_status_xml.find("node_attributes")
-                self.result["cluster_status"] = self._node_attributes_to_dict(
-                    node_attributes
+                # Process node attributes, get primary and secondary nodes, and update the result
+                self.result.update(
+                    self._process_node_attributes(
+                        cluster_status_xml.find("node_attributes")
+                    )
                 )
-                with concurrent.futures.ThreadPoolExecutor() as executor:
-                    futures = [
-                        executor.submit(self._check_node, node)
-                        for node in node_attributes
-                    ]
-                    for future in concurrent.futures.as_completed(futures):
-                        self.result.update(future.result())
 
             if self.result["primary_node"] == "" or self.result["secondary_node"] == "":
                 self.result["message"] = (

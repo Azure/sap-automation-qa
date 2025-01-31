@@ -45,23 +45,29 @@
           delay:                    10
           failed_when:              false
           until: |
-                                    cluster_status_test_execution.primary_node == cluster_status_pre.secondary_node and
-                                    cluster_status_test_execution.secondary_node == ""
+                                    cluster_status_test_execution.primary_node == cluster_status_pre.secondary_node
+                                    and cluster_status_test_execution.secondary_node == ""
 
         - name:                     "Test Execution: Register Failed Resource"
           become:                   true
           become_user:              "{{ db_sid | lower }}adm"
           when:                     automated_register.stdout == "false"
           block:
+            - name:                 "Test Execution: Set facts for the failed resource"
+              ansible.builtin.set_fact:
+                replication_mode:   cluster_status_pre.replication_mode
+                primary_site_name:  cluster_status_pre.primary_site_name
+                operation_mode:     cluster_status_pre.operation_mode
+
             - name:                 "Test Execution: Register Failed Resource"
               ansible.builtin.command:  /usr/sap/{{ db_sid | upper }}/HDB{{ db_instance_number }}/ HDB start
-              register:                 hana_db_start
+              register:             hana_db_start
 
             - name:                 "Test Execution: Register the failed resource"
               ansible.builtin.command:  /usr/sap/{{ db_sid | upper }}/HDB{{ db_instance_number }}/hdbnsutil -sr_register \
                                         --remoteHost={{ cluster_status_pre.secondary_node }} \
                                         --remoteInstance={{ db_instance_number }} \
-                                        --replicationMode={{ replication_mode }} --name={{ site_name }}
+                                        --replicationMode={{ replication_mode }} --name={{ primary_site_name }}
                                         --operation_mode={{ operation_mode }}
               register:                 hana_db_register_failed_resource
               changed_when:             hana_db_register_failed_resource.rc == 0

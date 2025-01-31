@@ -72,7 +72,7 @@
 
         - name:                         "Test Execution: Wait for the cluster to be in a stable state"
           ansible.builtin.wait_for:
-            timeout:                    100
+            timeout:                    150
 
         - name:                         "Test Execution: Validate HANA DB cluster status"
           get_cluster_status:   
