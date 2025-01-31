@@ -22,7 +22,9 @@
   when:                             node_tier == "hana"
   block:
     - name:                         "Test Execution: Crash the primary node."
-      when:                         pre_validations_status == "PASSED"
+      when:
+                                    - pre_validations_status == "PASSED"
+                                    - ansible_hostname == cluster_status_pre.primary_node
       block:
         - name:                     "Test Execution: Start timer"
           ansible.builtin.set_fact:
