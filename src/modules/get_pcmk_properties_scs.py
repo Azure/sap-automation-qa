@@ -414,32 +414,19 @@ class GlobalIniValidator(ValidatorBase):
         """
         Validates the global.ini properties.
         """
-        drift_parameters = defaultdict(lambda: defaultdict(list))
-        valid_parameters = defaultdict(lambda: defaultdict(list))
         try:
-            actual_properties = self._read_global_ini_properties()
+            properties = self._read_global_ini_properties()
             expected_properties = self._get_expected_properties()
 
-            for key, value in actual_properties.items():
-                expected_value = expected_properties.get(key)
-                result = self._format_parameter_result(key, value, expected_value)
-
-                if value == expected_value:
-                    valid_parameters["global_ini"]["SAPHanaSR"].append(result)
-                else:
-                    drift_parameters["global_ini"]["SAPHanaSR"].append(result)
-
-            if drift_parameters:
+            if properties == expected_properties:
                 return ValidationResult(
-                    TestStatus.ERROR,
-                    {
-                        "Valid global.ini parameters": valid_parameters,
-                        "Drift in global.ini parameters": drift_parameters,
-                    },
+                    TestStatus.SUCCESS, {"SAPHanaSR Properties": properties}
                 )
             return ValidationResult(
-                TestStatus.SUCCESS,
-                {"Valid global.ini parameters": valid_parameters},
+                TestStatus.ERROR,
+                {
+                    "SAPHanaSR Properties validation failed with expected properties": properties
+                },
             )
         except FileNotFoundError as e:
             return ValidationResult(
@@ -468,8 +455,8 @@ class GlobalIniValidator(ValidatorBase):
                 prop.split("=")[0].strip(): prop.split("=")[1].strip()
                 for prop in properties_slice
             }
-        except Exception as e:
-            raise e
+        except (ValueError, IndexError) as e:
+            raise ValueError(f"Failed to parse global.ini: {str(e)}")
 
     def _get_expected_properties(self) -> dict:
         """
