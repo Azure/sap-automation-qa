@@ -55,9 +55,9 @@
           block:
             - name:                     "Test Execution: Set facts for the failed resource"
               ansible.builtin.set_fact:
-                replication_mode:       cluster_status_pre.replication_mode
-                primary_site_name:      cluster_status_pre.primary_site_name
-                operation_mode:         cluster_status_pre.operation_mode
+                replication_mode:       "{{ cluster_status_pre.replication_mode }}"
+                primary_site_name:      "{{ cluster_status_pre.primary_site_name }}"
+                operation_mode:         "{{ cluster_status_pre.operation_mode }}"
 
             - name:                     "Test Execution: Register the failed resource"
               become:                   true
