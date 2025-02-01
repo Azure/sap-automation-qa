@@ -59,12 +59,6 @@
                 primary_site_name:      cluster_status_pre.primary_site_name
                 operation_mode:         cluster_status_pre.operation_mode
 
-            - name:                     "Test Execution: Register Failed Resource"
-              become:                   true
-              become_user:              "{{ db_sid | lower }}adm"
-              ansible.builtin.command:  /usr/sap/{{ db_sid | upper }}/HDB{{ db_instance_number }}/HDB start
-              register:                 hana_db_start
-
             - name:                     "Test Execution: Register the failed resource"
               become:                   true
               become_user:              "{{ db_sid | lower }}adm"
