@@ -62,12 +62,12 @@
             - name:                     "Test Execution: Register the failed resource"
               become:                   true
               become_user:              "{{ db_sid | lower }}adm"
-              ansible.builtin.command:  /usr/sap/{{ db_sid | upper }}/HDB{{ db_instance_number }}/exe/hdbnsutil -sr_register \
+              ansible.builtin.shell:    /usr/sap/{{ db_sid | upper }}/HDB{{ db_instance_number }}/exe/hdbnsutil -sr_register \
                                         --remoteHost={{ cluster_status_pre.secondary_node }} \
                                         --remoteInstance={{ db_instance_number }} \
                                         --replicationMode={{ replication_mode }} \
                                         --name={{ primary_site_name }} \
-                                        --operation_mode={{ operation_mode }} --online
+                                        --operationMode={{ operation_mode }} --online
               register:                 hana_db_register_failed_resource
 
             - name:                     "Pre Validation: CleanUp any failed resource"
