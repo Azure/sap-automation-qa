@@ -69,6 +69,8 @@
                                         --name={{ primary_site_name }} \
                                         --operationMode={{ operation_mode }} --online
               register:                 hana_db_register_failed_resource
+              args:
+                executable:             /bin/bash
 
             - name:                     "Pre Validation: CleanUp any failed resource"
               become:                   true

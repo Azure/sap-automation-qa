@@ -87,7 +87,6 @@ class ClusterStatusChecker(SapAutomationQA):
         attribute_map = {
             f"hana_{self.database_sid}_op_mode": "operation_mode",
             f"hana_{self.database_sid}_srmode": "replication_mode",
-            f"hana_{self.database_sid}_site": "primary_site_name",
         }
 
         for node in node_attributes:
@@ -114,6 +113,9 @@ class ClusterStatusChecker(SapAutomationQA):
             ):
                 result["primary_node"] = node_name
                 result["cluster_status"]["primary"] = node_attributes_dict
+                result["primary_site_name"] = node_attributes_dict.get(
+                    f"hana_{self.database_sid}_site", ""
+                )
             elif (
                 node_states.get("clone_state") == "DEMOTED"
                 and node_states.get("sync_state") == "SOK"
