@@ -5,20 +5,20 @@
 #                       Task to setup telemetry information for each test case           #
 ##########################################################################################
 
-- name:                               "Setup telemetry data for each test case"
+- name:                                 "Setup telemetry data for each test case"
   ansible.builtin.set_fact:
-    test_case_name:                   "{{ item.name }}"
-    test_case_description:            "{{ item.description }}"
-    test_case_invocation_id:          "{{ lookup('pipe', 'uuidgen') }}"
-    test_case_start_time_epoch:       "{{ now(utc=true, fmt='%Y-%m-%d %H:%M:%S') }}"
-    test_case_status:                 "Starting"
-    test_case_details:                {}
-    test_case_message:                "Test case execution started"
+    test_case_name:                     "{{ item.name }}"
+    test_case_description:              "{{ item.description }}"
+    test_case_invocation_id:            "{{ lookup('pipe', 'uuidgen') }}"
+    test_case_start_time_epoch:         "{{ now(utc=true, fmt='%Y-%m-%d %H:%M:%S') }}"
+    test_case_status:                   "Starting"
+    test_case_details:                  {}
+    test_case_message:                  "Test case execution started"
 
 
-- name:                               "Ensure test_case_invocation_id is available on all nodes"
+- name:                                 "Ensure test_case_invocation_id is available on all nodes"
   ansible.builtin.set_fact:
-    test_case_invocation_id:          "{{ test_case_invocation_id }}"
-    test_case_start_time_epoch:       "{{ test_case_start_time_epoch }}"
-  run_once:                           true
-  delegate_to:                        localhost
+    test_case_invocation_id:            "{{ test_case_invocation_id }}"
+    test_case_start_time_epoch:         "{{ test_case_start_time_epoch }}"
+  run_once:                             true
+  delegate_to:                          localhost
