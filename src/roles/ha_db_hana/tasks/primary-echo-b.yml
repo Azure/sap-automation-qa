@@ -42,7 +42,7 @@
       when:                             ansible_hostname == cluster_status_pre.secondary_node
       block:
         - name:                         "Test Execution: Validate HANA DB cluster status"
-          when:                         automated_register.stdout == "true"
+          when:                         cluster_status_pre.AUTOMATED_REGISTER == "true"
           get_cluster_status:
             operation_step:             "test_execution"
             database_sid:               "{{ db_sid | lower }}"
@@ -54,7 +54,7 @@
                                         cluster_status_test_execution.secondary_node == cluster_status_pre.primary_node
 
         - name:                         "Test Execution: Validate HANA DB cluster status"
-          when:                         automated_register.stdout == "false"
+          when:                         cluster_status_pre.AUTOMATED_REGISTER == "false"
           get_cluster_status:
             operation_step:             "test_execution"
             database_sid:               "{{ db_sid | lower }}"
@@ -69,14 +69,14 @@
       when:                             ansible_hostname == cluster_status_pre.primary_node
       block:
         - name:                         "Test Execution: Set facts for the failed resource"
-          when:                         automated_register.stdout == "false"
+          when:                         cluster_status_pre.AUTOMATED_REGISTER == "false"
           ansible.builtin.set_fact:
             replication_mode:           "{{ cluster_status_pre.replication_mode }}"
             primary_site_name:          "{{ cluster_status_pre.primary_site_name }}"
             operation_mode:             "{{ cluster_status_pre.operation_mode }}"
 
         - name:                         "Test Execution: Register the failed resource"
-          when:                         automated_register.stdout == "false"
+          when:                         cluster_status_pre.AUTOMATED_REGISTER == "false"
           become:                       true
           become_user:                  "{{ db_sid | lower }}adm"
           ansible.builtin.shell: | 
@@ -116,7 +116,6 @@
             test_case_details_from_test_case: {
                                         "Pre Validations: Remove any location_constraints": "{{ location_constraints_results }}",
                                         "Pre Validations: Validate HANA DB cluster status": "{{ cluster_status_pre }}",
-                                        "Pre Validations: Check if the AUTOMATED_REGISTER": "{{ automated_register }}",
                                         "Pre Validations: CleanUp any failed resource": "{{ cleanup_failed_resource_pre }}",
                                         "Test Execution: Echo b results": "{{ echo_b_result }}",
                                         "Post Validations: Validate HANA DB cluster status": "{{ cluster_status_post }}",
