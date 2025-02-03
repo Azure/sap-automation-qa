@@ -4,45 +4,45 @@
 ##########################################################################################
 #                       Tasks for sending telemetry data to the data explorer            #
 ##########################################################################################
-- name:                               "Create the telemetry JSON object for the test case"
-  failed_when:                        false
-  delegate_to:                        localhost
+- name:                                 "Create the telemetry JSON object for the test case"
+  failed_when:                          false
+  delegate_to:                          localhost
   send_telemetry_data:
-    telemetry_data_destination:       "{{ telemetry_data_destination | lower }}"
-    laws_workspace_id:                "{{ laws_workspace_id | default('') }}"
-    laws_shared_key:                  "{{ laws_shared_key | default('') }}"
-    adx_database_name:                "{{ adx_database_name | default('') }}"
-    adx_cluster_fqdn:                 "{{ adx_cluster_fqdn | default('') }}"
-    adx_client_id:                    "{{ adx_client_id | default('') }}"
-    telemetry_table_name:             "{{ telemetry_table_name | default('') }}"
-    workspace_directory:              "{{ _workspace_directory }}"
-    test_group_json_data:             {
-                                        "TestCaseInvocationId": "{{ test_case_invocation_id }}",
-                                        "TestCaseStartTime": "{{ test_case_start_time_epoch }}",
-                                        "TestCaseEndTime": "{{ now(utc=true, fmt='%Y-%m-%d %H:%M:%S') }}",
-                                        "TestCaseStatus": "{{ test_case_status }}",
-                                        "TestCaseName": "{{ test_case_name }}",
-                                        "TestCaseDescription": "{{ test_case_description }}",
-                                        "TestGroupInvocationId": "{{ group_invocation_id }}",
-                                        "TestGroupStartTime": "{{ group_start_time }}",
-                                        "TestGroupName": "{{ group_name }}",
-                                        "OsVersion": "{{ ansible_distribution }} {{ ansible_distribution_version }}",
-                                        "TestCaseMessage": "{{ test_case_message }}",
-                                        "TestCaseDetails": "{{ test_case_details }}",
-                                        "DurationSeconds": "{{
-                                            ((test_execution_end_time | default(now(utc=true, fmt='%Y-%m-%d %H:%M:%S')) | to_datetime)
-                                            - (test_execution_start_time | default(test_case_start_time_epoch) | to_datetime))
-                                        }}",
-                                        "DbFencingType": "{{ database_cluster_type if database_high_availability else 'DB not HA' }}",
-                                        "ScsFencingType": "{{ scs_cluster_type if scs_high_availability else 'SCS not HA' }}",
-                                        "StorageType": "{{ NFS_provider }}",
-                                        "DBType": "{{ platform }}",
-                                        "DbSid": "{{ db_sid | upper }}",
-                                        "SapSid": "{{ sap_sid | upper }}",
-                                        "PackageVersions": "{{ package_versions | default('') }}",
-                                        "Tags": "{{ execution_tags | default('') }}",
-                                        "TestExecutionStartTime": "{{ test_execution_start_time | default('') }}",
-                                        "TestExecutionEndTime": "{{ test_execution_end_time | default('') }}",
-                                        "TestCaseHostname": "{{ test_case_hostname }}",
-                                        "TestCaseLogMessagesFromSap": "{{ test_case_var_log_messages | default('') }}"
-                                      }
+    telemetry_data_destination:         "{{ telemetry_data_destination | lower }}"
+    laws_workspace_id:                  "{{ laws_workspace_id | default('') }}"
+    laws_shared_key:                    "{{ laws_shared_key | default('') }}"
+    adx_database_name:                  "{{ adx_database_name | default('') }}"
+    adx_cluster_fqdn:                   "{{ adx_cluster_fqdn | default('') }}"
+    adx_client_id:                      "{{ adx_client_id | default('') }}"
+    telemetry_table_name:               "{{ telemetry_table_name | default('') }}"
+    workspace_directory:                "{{ _workspace_directory }}"
+    test_group_json_data:               {
+                                          "TestCaseInvocationId": "{{ test_case_invocation_id }}",
+                                          "TestCaseStartTime": "{{ test_case_start_time_epoch }}",
+                                          "TestCaseEndTime": "{{ now(utc=true, fmt='%Y-%m-%d %H:%M:%S') }}",
+                                          "TestCaseStatus": "{{ test_case_status }}",
+                                          "TestCaseName": "{{ test_case_name }}",
+                                          "TestCaseDescription": "{{ test_case_description }}",
+                                          "TestGroupInvocationId": "{{ group_invocation_id }}",
+                                          "TestGroupStartTime": "{{ group_start_time }}",
+                                          "TestGroupName": "{{ group_name }}",
+                                          "OsVersion": "{{ ansible_distribution }} {{ ansible_distribution_version }}",
+                                          "TestCaseMessage": "{{ test_case_message }}",
+                                          "TestCaseDetails": "{{ test_case_details }}",
+                                          "DurationSeconds": "{{
+                                              ((test_execution_end_time | default(now(utc=true, fmt='%Y-%m-%d %H:%M:%S')) | to_datetime)
+                                              - (test_execution_start_time | default(test_case_start_time_epoch) | to_datetime))
+                                          }}",
+                                          "DbFencingType": "{{ database_cluster_type if database_high_availability else 'DB not HA' }}",
+                                          "ScsFencingType": "{{ scs_cluster_type if scs_high_availability else 'SCS not HA' }}",
+                                          "StorageType": "{{ NFS_provider }}",
+                                          "DBType": "{{ platform }}",
+                                          "DbSid": "{{ db_sid | upper }}",
+                                          "SapSid": "{{ sap_sid | upper }}",
+                                          "PackageVersions": "{{ package_versions | default('') }}",
+                                          "Tags": "{{ execution_tags | default('') }}",
+                                          "TestExecutionStartTime": "{{ test_execution_start_time | default('') }}",
+                                          "TestExecutionEndTime": "{{ test_execution_end_time | default('') }}",
+                                          "TestCaseHostname": "{{ test_case_hostname }}",
+                                          "TestCaseLogMessagesFromSap": "{{ test_case_var_log_messages | default('') }}"
+                                        }
