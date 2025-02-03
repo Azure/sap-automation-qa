@@ -88,7 +88,7 @@
           become:                       true
           become_user:                  "{{ db_sid | lower }}adm"
           when:                         cluster_status_pre.AUTOMATED_REGISTER == "false"
-          ansible.builtin.shell: | 
+          ansible.builtin.shell: |
                                         source /usr/sap/{{ db_sid | upper }}/HDB{{ db_instance_number | upper }}/HDBSettings.sh && \
                                         /usr/sap/{{ db_sid | upper }}/HDB{{ db_instance_number }}/exe/hdbnsutil -sr_register \
                                         --remoteHost={{ cluster_status_pre.secondary_node }} \
@@ -124,10 +124,10 @@
         - name:                         "Set test case message and details"
           ansible.builtin.set_fact:
             test_case_message_from_test_case: |
-                                        "Old primary: {{ cluster_status_pre.primary_node }} \
-                                        New primary: {{ cluster_status_post.primary_node }} \
-                                        Old secondary: {{ cluster_status_pre.secondary_node }} \
-                                        New secondary: {{ cluster_status_post.secondary_node }}"
+                                        Old primary: {{ cluster_status_pre.primary_node }}
+                                        New primary: {{ cluster_status_post.primary_node }}
+                                        Old secondary: {{ cluster_status_pre.secondary_node }}
+                                        New secondary: {{ cluster_status_post.secondary_node }}
             test_case_details_from_test_case: {
                                         "Pre Validations: Remove any location_constraints": "{{ location_constraints_results }}",
                                         "Pre Validations: Validate HANA DB cluster status": "{{ cluster_status_pre }}",
