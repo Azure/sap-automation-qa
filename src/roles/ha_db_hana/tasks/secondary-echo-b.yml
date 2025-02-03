@@ -57,12 +57,6 @@
                                         cluster_status_test_execution.primary_node == cluster_status_pre.primary_node and
                                         cluster_status_test_execution.secondary_node == ""
 
-        - name:                         "Test Execution: CleanUp any failed resource"
-          ansible.builtin.command:      crm_resource --cleanup
-          register:                     cleanup_failed_resource_post
-          changed_when:                 cleanup_failed_resource_post.rc == 0
-          ignore_errors:                true
-
         - name:                         "Test Execution: Validate HANA DB cluster status"
           get_cluster_status:
             operation_step:             "post_failover"
@@ -73,6 +67,12 @@
           until: |
                                         cluster_status_post.primary_node == cluster_status_pre.primary_node and
                                         cluster_status_post.secondary_node == cluster_status_pre.secondary_node
+
+        - name:                         "Test Execution: CleanUp any failed resource"
+          ansible.builtin.command:      crm_resource --cleanup
+          register:                     cleanup_failed_resource_post
+          changed_when:                 cleanup_failed_resource_post.rc == 0
+          ignore_errors:                true
 
         - name:                         "Test Execution: Stop timer"
           ansible.builtin.set_fact:
