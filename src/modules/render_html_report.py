@@ -55,11 +55,12 @@ class HTMLReportRenderer(SapAutomationQA):
         try:
             with open(log_file_path, "r", encoding="utf-8") as log_file:
                 return [json.loads(line) for line in log_file.readlines()]
-        except FileNotFoundError:
+        except FileNotFoundError as e:
             self.log(
                 logging.ERROR,
                 f"Log file {log_file_path} not found.",
             )
+            self.handle_error(e)
             return []
 
     def render_report(self, test_case_results: List[Dict[str, Any]]) -> None:
