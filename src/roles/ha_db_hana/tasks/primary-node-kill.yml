@@ -49,16 +49,29 @@
                                     cluster_status_test_execution.primary_node == cluster_status_pre.secondary_node and
                                     cluster_status_test_execution.secondary_node == cluster_status_pre.primary_node
 
-        - name:                     "Test Execution: Register Failed Resource"
-          become_user:              "{{ db_sid | lower }}adm"
+        - name:                     "Test Execution: Register Failed Resource when automated_register is false"
           when:                     automated_register.stdout == "false"
-          ansible.builtin.command: |
-                                    hdbnsutil -sr_register \
-                                    --remoteHost={{ cluster_status_pre.secondary_node }} \
-                                    --remoteInstance={{ db_instance_number }} \
-                                    --replicationMode=sync --name=SITEB
-          register:                 hana_db_register_failed_resource
-          changed_when:             hana_db_register_failed_resource.rc == 0
+          block:
+            - name:                 "Test Execution: Set facts for the failed resource"
+              ansible.builtin.set_fact:
+                replication_mode:   "{{ cluster_status_pre.replication_mode }}"
+                primary_site_name:  "{{ cluster_status_pre.primary_site_name }}"
+                operation_mode:     "{{ cluster_status_pre.operation_mode }}"
+
+            - name:                 "Test Execution: Register the failed resource"
+              become:               true
+              become_user:          "{{ db_sid | lower }}adm"
+              ansible.builtin.shell: | 
+                                      source /usr/sap/{{ db_sid | upper }}/HDB{{ db_instance_number | upper }}/HDBSettings.sh && \
+                                      /usr/sap/{{ db_sid | upper }}/HDB{{ db_instance_number }}/exe/hdbnsutil -sr_register \
+                                      --remoteHost={{ cluster_status_pre.secondary_node }} \
+                                      --remoteInstance={{ db_instance_number }} \
+                                      --replicationMode={{ replication_mode }} \
+                                      --name={{ primary_site_name }} \
+                                      --operationMode={{ operation_mode }} --online
+              register:              hana_db_register_failed_resource
+              args:
+                executable:          /bin/bash
 
         - name:                     "Test Execution: Stop timer"
           ansible.builtin.set_fact:
@@ -68,7 +81,7 @@
           ansible.builtin.command:  "crm_resource --cleanup"
           register:                 cleanup_failed_resource_post
           changed_when:             cleanup_failed_resource_post.rc == 0
-          ignore_errors:               true
+          ignore_errors:            true
 
         - name:                     "Test execution: Validate HANA DB cluster status"
           get_cluster_status:
