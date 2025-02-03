@@ -38,7 +38,6 @@
           failed_when:              hana_db_stop_results.rc != 0
 
         - name:                     "Test Execution: Validate HANA DB cluster status"
-          when:                     automated_register.stdout == "true"
           get_cluster_status:
             operation_step:         "test_execution"
             database_sid:           "{{ db_sid | lower }}"
