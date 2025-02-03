@@ -1,0 +1,89 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+
+---
+# /*---------------------------------------------------------------------------
+# |                          Block Network Communication                      |
+# +--------------------------------------------------------------------------*/
+- name:                                 "Test Setup Tasks"
+  ansible.builtin.include_tasks:        "roles/misc/tasks/test-case-setup.yml"
+  run_once:                             true
+
+# /*---------------------------------------------------------------------------
+# |                          Pre Validations                                  |
+# +--------------------------------------------------------------------------*/
+- name:                                 "Pre Validations: Get initial cluster status"
+  become:                               true
+  ansible.builtin.command:              crm_mon -1 -o
+  register:                             cluster_status_pre
+  changed_when:                         false
+
+- name:                                 "Pre Validations: Get current ASCS node"
+  ansible.builtin.shell: |
+                                        crm resource status rsc_sap_{{ sap_sid }}_ASCS{{ scs_instance_number }} | \
+                                        grep Started | awk '{print $4}'
+  register:                             current_ascs_node
+  changed_when:                         false
+
+# /*---------------------------------------------------------------------------
+# |                          Test Execution                                   |
+# +--------------------------------------------------------------------------*/
+- name:                                 "Test Execution: Block Network Communication"
+  become:                               true
+  when:                                 node_tier == "scs"
+  block:
+    - name:                             "Test Execution: Start timer"
+      ansible.builtin.set_fact:
+        test_execution_start:           "{{ now(utc=true, fmt='%Y-%m-%d %H:%M:%S') }}"
+
+    - name:                             "Test Execution: Block network on primary ASCS node"
+      when:                             ansible_hostname == current_ascs_node.stdout
+      block:
+        - name:                         "Test Execution: Get secondary node IP"
+          ansible.builtin.set_fact:
+            secondary_node_ip:          "{{ hostvars[groups[sap_sid ~ '_SCS'] | difference([current_ascs_node.stdout]) | first].ansible_host }}"
+
+        - name:                         "Test Execution: Add firewall rules"
+          ansible.builtin.shell: |
+                                        iptables -A INPUT -s {{ secondary_node_ip }} -j DROP
+                                        iptables -A OUTPUT -d {{ secondary_node_ip }} -j DROP
+          register:                     block_network_result
+
+        - name:                         "Test Execution: Wait for failover"
+          ansible.builtin.pause:
+            seconds:                    60
+
+        - name:                         "Test Execution: Remove firewall rules"
+          ansible.builtin.shell: |
+                                        iptables -D INPUT -s {{ secondary_node_ip }} -j DROP
+                                        iptables -D OUTPUT -d {{ secondary_node_ip }} -j DROP
+          register:                     unblock_network_result
+
+    - name:                             "Test Execution: Stop timer"
+      ansible.builtin.set_fact:
+        test_execution_end:             "{{ now(utc=true, fmt='%Y-%m-%d %H:%M:%S') }}"
+
+    - name:                             "Test Execution: Get final cluster status"
+      ansible.builtin.command:          crm_mon -1 -o
+      register:                         cluster_status_post
+      changed_when:                     false
+
+    - name:                             "Set test case message and details"
+      ansible.builtin.set_fact:
+        test_case_message_from_test_case: "Network communication blocked and restored successfully"
+        test_case_details_from_test_case: {
+                                        "Pre Validations Status": "{{ cluster_status_pre.stdout }}",
+                                        "Block Network Result": "{{ block_network_result }}",
+                                        "Unblock Network Result": "{{ unblock_network_result }}",
+                                        "Post Status": "{{ cluster_status_post.stdout }}"
+                                        }
+
+# /*---------------------------------------------------------------------------
+# |                          Post Validations                                 |
+# +--------------------------------------------------------------------------*/
+    - name:                             "Post Validations Tasks"
+      ansible.builtin.include_tasks:    "roles/misc/tasks/post-validations.yml"
+
+  rescue:
+    - name:                             "Rescue operation"
+      ansible.builtin.include_tasks:    "roles/misc/tasks/rescue.yml"
