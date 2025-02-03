@@ -31,6 +31,7 @@
       changed_when:                     false
       register:                         copy_cluster_report
       failed_when:                      copy_cluster_report.rc != 0
+      ignore_errors:                    true
       with_items:
                                         - "tar.bz2"
                                         - "tar.gz"
@@ -40,7 +41,7 @@
         state:                          absent
         path:                           "/tmp/{{ test_group_invocation_id }}.{{ item }}"
       register:                         remove_cluster_report
-      failed_when:                      remove_cluster_report.rc != 0 and "'No such file'" not in remove_cluster_report.stderr|default('')
+      ignore_errors:                    true
       with_items:
                                         - "tar.bz2"
                                         - "tar.gz"
