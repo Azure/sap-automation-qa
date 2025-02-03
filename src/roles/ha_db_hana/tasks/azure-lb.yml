@@ -37,8 +37,8 @@
         - name:                         "Azure Load Balancer check for the DB nodes"
           delegate_to:                  localhost
           get_azure_lb:
-            subscription_id:                "{{ azure_instance_metadata.json.compute.subscriptionId }}"
-            region:                         "{{ azure_instance_metadata.json.compute.location }}"
+            subscription_id:            "{{ azure_instance_metadata.json.compute.subscriptionId }}"
+            region:                     "{{ azure_instance_metadata.json.compute.location }}"
             inbound_rules:              "{{ azure_loadbalancer_metadata.json.loadbalancer.inboundRules }}"
           register:                     test_result
 
