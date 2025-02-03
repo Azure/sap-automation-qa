@@ -83,9 +83,9 @@
           retries:                      50
           delay:                        10
           until: |
-                                        (cluster_status_test_execution.primary_node == cluster_status_pre.secondary_node and
-                                        cluster_status_test_execution.secondary_node == cluster_status_pre.primary_node) or
-                                        (cluster_status_test_execution.primary_node == cluster_status_pre.primary_node and
+                                        (cluster_status_test_execution.primary_node == cluster_status_pre.secondary_node or
+                                        cluster_status_test_execution.primary_node == cluster_status_pre.primary_node) and
+                                        (cluster_status_test_execution.secondary_node == cluster_status_pre.primary_node or
                                         cluster_status_test_execution.secondary_node == cluster_status_pre.secondary_node)
 
         - name:                         "Test Execution: Stop timer"
