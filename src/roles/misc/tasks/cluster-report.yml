@@ -30,7 +30,6 @@
         flat:                           true
       changed_when:                     false
       register:                         copy_cluster_report
-      failed_when:                      copy_cluster_report.rc != 0
       ignore_errors:                    true
       with_items:
                                         - "tar.bz2"
