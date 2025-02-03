@@ -52,8 +52,15 @@ class HTMLReportRenderer(SapAutomationQA):
         log_file_path = os.path.join(
             self.workspace_directory, "logs", f"{self.test_group_invocation_id}.log"
         )
-        with open(log_file_path, "r", encoding="utf-8") as log_file:
-            return [json.loads(line) for line in log_file.readlines()]
+        try:
+            with open(log_file_path, "r", encoding="utf-8") as log_file:
+                return [json.loads(line) for line in log_file.readlines()]
+        except FileNotFoundError:
+            self.log(
+                logging.ERROR,
+                f"Log file {log_file_path} not found.",
+            )
+            return []
 
     def render_report(self, test_case_results: List[Dict[str, Any]]) -> None:
         """
