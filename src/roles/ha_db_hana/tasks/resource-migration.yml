@@ -62,7 +62,7 @@
             - name:                     "Test Execution: Register the failed resource"
               become:                   true
               become_user:              "{{ db_sid | lower }}adm"
-              ansible.builtin.shell: | 
+              ansible.builtin.shell: |
                                         source /usr/sap/{{ db_sid | upper }}/HDB{{ db_instance_number | upper }}/HDBSettings.sh && \
                                         /usr/sap/{{ db_sid | upper }}/HDB{{ db_instance_number }}/exe/hdbnsutil -sr_register \
                                         --remoteHost={{ cluster_status_pre.secondary_node }} \
@@ -124,9 +124,9 @@
 # /*---------------------------------------------------------------------------
 # |                          Post Validations                                 |
 # +--------------------------------------------------------------------------*/
-    - name:                         "Post Validations Tasks"
-      ansible.builtin.include_tasks: "roles/misc/tasks/post-validations.yml"
+    - name:                             "Post Validations Tasks"
+      ansible.builtin.include_tasks:    "roles/misc/tasks/post-validations.yml"
 
   rescue:
-    - name:                         "Rescue operation"
-      ansible.builtin.include_tasks: "roles/misc/tasks/rescue.yml"
+    - name:                             "Rescue operation"
+      ansible.builtin.include_tasks:    "roles/misc/tasks/rescue.yml"
