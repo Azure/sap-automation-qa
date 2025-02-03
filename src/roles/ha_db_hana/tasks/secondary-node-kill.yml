@@ -86,7 +86,7 @@
                                         "Pre Validations: Remove any location_constraints": "{{ location_constraints_results }}",
                                         "Pre Validations: Validate HANA DB cluster status": "{{ cluster_status_pre }}",
                                         "Pre Validations: CleanUp any failed resource": "{{ cleanup_failed_resource_pre }}",
-                                        "Test Execution: Primary node crash": "{{ hana_db_kill_results }}",
+                                        "Test Execution: Secondary node crash": "{{ hana_db_kill_results }}",
                                         "Post Validations: CleanUp any failed resource": "{{ cleanup_failed_resource_post }}",
                                         "Post Validations: Validate HANA DB cluster status": "{{ cluster_status_post }}",
                                         }
