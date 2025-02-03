@@ -52,13 +52,13 @@
         - name:                     "Test Execution: Register Failed Resource when automated_register is false"
           when:                     cluster_status_pre.AUTOMATED_REGISTER == "false"
           block:
-            - name:                     "Test Execution: Validate HANA DB cluster status"
+            - name:                 "Test Execution: Validate HANA DB cluster status"
               get_cluster_status:
-                operation_step:         "test_execution"
-                database_sid:           "{{ db_sid | lower }}"
-              register:                 cluster_status_test_execution
-              retries:                  50
-              delay:                    10
+                operation_step:     "test_execution"
+                database_sid:       "{{ db_sid | lower }}"
+              register:             cluster_status_test_execution
+              retries:              50
+              delay:                10
               until: |
                                         cluster_status_test_execution.primary_node == cluster_status_pre.secondary_node and
                                         cluster_status_test_execution.secondary_node == ""
