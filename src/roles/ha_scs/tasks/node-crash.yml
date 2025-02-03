@@ -41,10 +41,12 @@
       when:                             ansible_hostname == current_ascs_node.stdout
       block:
         - name:                         "Test Execution: Trigger system crash"
-          ansible.builtin.shell:        "echo b > /proc/sysrq-trigger"
+          ansible.builtin.shell:        "echo b > /proc/sysrq-trigger" # no-qa
           async:                        1
           poll:                         0
-          ignore_errors:                true
+          register:                     crash_result
+          # We disable failure checking here since a crash (and consequent loss of connection)
+          # is expected when triggering the cure; cluster/node recovery is handled downstream.
           failed_when:                  false
 
     - name:                             "Test Execution: Wait for node recovery"
