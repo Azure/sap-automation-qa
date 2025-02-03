@@ -68,7 +68,7 @@
                                     --remoteInstance={{ db_instance_number }} \
                                     --replicationMode={{ replication_mode }} \
                                     --name={{ primary_site_name }} \
-                                    --operationMode={{ operation_mode }} --online
+                                    --operationMode={{ operation_mode }}
               register:             hana_db_register_failed_resource
               args:
                 executable:         /bin/bash
