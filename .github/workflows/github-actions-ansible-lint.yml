@@ -1,21 +1,30 @@
+
 name: Ansible Lint
 on: [push, pull_request]
+permissions:
+  contents: read
+
 jobs:
   build:
     runs-on: ubuntu-latest
     steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@cb605e52c26070c328afc4562f0b4ada7618a84e # v2.10.4
+        with:
+          egress-policy: audit
+
       - name: Checkout the code
-        uses: actions/checkout@v4
+        uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 #v4.2.2
 
       - name: Setup Python
-        uses: actions/setup-python@v5
+        uses: actions/setup-python@42375524e23c412d93fb67b49958b491fce71c38 #v5.4.0
         with:
           python-version: '3.x'
 
       - name: Install Ansible and Ansible-Lint
         run: |
           python -m pip install --upgrade pip
-          pip install ansible-core ansible-lint==24.2.0 jmespath netaddr
+          pip install ansible-core ansible-lint==24.7.0 jmespath netaddr
 
       - name: Install Ansible Collections
         run: |
@@ -29,4 +38,4 @@ jobs:
 
       - name: Run ansible-lint
         run: |
-          ansible-lint deploy/ansible -c .ansible-lint -x yaml[colons]
+          ansible-lint src/roles -c .ansible-lint

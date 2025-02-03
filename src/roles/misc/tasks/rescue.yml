@@ -10,13 +10,20 @@
 
 - name:                                 "Post Validations: HA cluster status after test execution"
   block:
-    - name:                             Combine logs from both nodes
+    - name:                             "Combine logs from both Nodes"
       ansible.builtin.set_fact:
         combined_logs: >-
-          {{
-            (hostvars[cluster_status_pre.primary_node]['var_log_messages_output'].filtered_logs | default([])) +
-            (hostvars[cluster_status_pre.secondary_node]['var_log_messages_output'].filtered_logs | default([]))
-          }}
+                                        {{
+                                          (
+                                            hostvars[cluster_status_pre.primary_node]['var_log_messages_output'].filtered_logs
+                                            | default([])
+                                          )
+                                          +
+                                          (
+                                            hostvars[cluster_status_pre.secondary_node]['var_log_messages_output'].filtered_logs
+                                            | default([])
+                                          )
+                                        }}
 
     - name:                             "Post Validations: Rescure operation set test case status"
       delegate_to:                      localhost

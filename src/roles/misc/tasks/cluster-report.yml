@@ -5,41 +5,42 @@
 #                   Task to get the cluster report from the primary instance             #
 #                 after all the test cases have been executed.                           #
 ##########################################################################################
-- name:                               "Get the cluster status"
-  become:                             true
+- name:                                 "Get the cluster status"
+  become:                               true
   get_cluster_status:
-    operation_step:                   "cluster_report_collection"
-    database_sid:                     "{{ db_sid | lower }}"
-  register:                           cluster_status
-  failed_when:                        cluster_status.primary_node == ""
+    operation_step:                     "cluster_report_collection"
+    database_sid:                       "{{ db_sid | lower }}"
+  register:                             cluster_status
+  failed_when:                          cluster_status.primary_node == ""
 
-- name:                               "Get the cluster report from the primary node"
-  become:                             true
+- name:                                 "Get the cluster report from the primary node"
+  become:                               true
   when:
-                                      - cluster_status is defined
-                                      - cluster_status.primary_node == ansible_hostname
+                                        - cluster_status is defined
+                                        - cluster_status.primary_node == ansible_hostname
   block:
-    - name:                           "Cluster report from the HA cluster"
-      ansible.builtin.command:        "{{ commands | selectattr('name', 'equalto', 'crm_report_cmd') | map(attribute=(ansible_os_family | upper)) | first }}"
-      register:                       cluster_report_results
+    - name:                             "Cluster report from the HA cluster"
+      ansible.builtin.command:          "{{ commands | selectattr('name', 'equalto', 'crm_report_cmd') | map(attribute=(ansible_os_family | upper)) | first }}"
+      register:                         cluster_report_results
 
-    - name:                           "Copy the cluster report to the local machine"
+    - name:                             "Copy the cluster report to the local machine"
       ansible.builtin.fetch:
-        src:                          "/tmp/{{ test_group_invocation_id }}.{{ item }}"
-        dest:                         "{{ _workspace_directory }}/logs/cluster_report/"
-        flat:                         yes
-      changed_when:                   false
-      ignore_errors:                  true
+        src:                            "/tmp/{{ test_group_invocation_id }}.{{ item }}"
+        dest:                           "{{ _workspace_directory }}/logs/cluster_report/"
+        flat:                           true
+      changed_when:                     false
+      register:                         copy_cluster_report
+      failed_when:                      copy_cluster_report.rc != 0
       with_items:
-                                      - "tar.bz2"
-                                      - "tar.gz"
+                                        - "tar.bz2"
+                                        - "tar.gz"
 
-    - name:                           "Remove the cluster report from the primary node"
+    - name:                             "Remove the cluster report from the primary node"
       ansible.builtin.file:
-        state:                        absent
-        path:                         "/tmp/{{ test_group_invocation_id }}.{{ item }}"
-      ignore_errors:                  true
+        state:                          absent
+        path:                           "/tmp/{{ test_group_invocation_id }}.{{ item }}"
+      register:                         remove_cluster_report
+      failed_when:                      remove_cluster_report.rc != 0 and "'No such file'" not in remove_cluster_report.stderr|default('')
       with_items:
-                                      - "tar.bz2"
-                                      - "tar.gz"
-  
+                                        - "tar.bz2"
+                                        - "tar.gz"
