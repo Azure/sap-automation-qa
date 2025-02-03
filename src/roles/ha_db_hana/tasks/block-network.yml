@@ -41,7 +41,7 @@
                                         iptables -A INPUT -s {{ secondary_node_ip }} -j DROP;
                                         iptables -A OUTPUT -d {{ secondary_node_ip }} -j DROP
           register:                     firewall_rule_created
-          changed_when:                 firewall_rule_created == 0
+          changed_when:                 firewall_rule_created.rc == 0
           failed_when:                  firewall_rule_created.rc != 0
 
         - name:                         "Test Execution: Validate HANA DB cluster status"
@@ -56,13 +56,13 @@
                                         cluster_status_test_execution.primary_node == cluster_status_pre.secondary_node) and
                                         cluster_status_test_execution.secondary_node == ""
 
-        - name:                        "Test Execution: Remove the firewall rule on on primary node."
+        - name:                        "Test Execution: Remove the firewall rule on primary node."
           become:                      true
           ansible.builtin.shell: |
                                         iptables -D INPUT -s {{ secondary_node_ip }} -j DROP;
                                         iptables -D OUTPUT -d {{ secondary_node_ip }} -j DROP
           register:                     firewall_rule_deleted
-          changed_when:                 firewall_rule_deleted == 0
+          changed_when:                 firewall_rule_deleted.rc == 0
           failed_when:                  firewall_rule_deleted.rc != 0
 
         - name:                         "Test Execution: CleanUp any failed resource"
@@ -83,10 +83,10 @@
           retries:                      50
           delay:                        10
           until: |
-                                        (cluster_status_test_execution.primary_node == cluster_status_pre.secondary_node or
-                                        cluster_status_test_execution.primary_node == cluster_status_pre.primary_node) and
-                                        (cluster_status_test_execution.secondary_node == cluster_status_pre.primary_node or
-                                        cluster_status_test_execution.secondary_node == cluster_status_pre.secondary_node)
+                                        (cluster_status_post.primary_node == cluster_status_pre.secondary_node or
+                                        cluster_status_post.primary_node == cluster_status_pre.primary_node) and
+                                        (cluster_status_post.secondary_node == cluster_status_pre.primary_node or
+                                        cluster_status_post.secondary_node == cluster_status_pre.secondary_node)
 
         - name:                         "Test Execution: Stop timer"
           ansible.builtin.set_fact:
