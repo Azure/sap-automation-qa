@@ -1,7 +1,7 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
-# Description: This contains the test groups and test cases that 
+# Description: This contains the test groups and test cases that
 # will be executed by the quality assurance playbook
 
 # Map of functional type name and actual values
@@ -81,9 +81,40 @@ test_groups:
 
   - name:                           HA_SCS
     test_cases:
-      - name:                       HA Parameters Validation
+      - name:                       "HA Parameters Validation"
         task_name:                  ha-config
-        description:                This validates the HA configuration
+        description:                "Validates the HA configuration"
+        enabled:                    true
+
+      - name:                       "Manual ASCS Migration"
+        task_name:                  ascs-migration
+        description:                "Tests manual migration of ASCS instance"
+        enabled:                    true
+
+      - name:                       "Kill Message Server Process"
+        task_name:                  kill-message-server
+        description:                "Tests recovery after message server process kill"
+        enabled:                    false
+
+      - name:                       "Kill Enqueue Server Process"
+        task_name:                  kill-enqueue-server
+        description:                "Tests recovery after enqueue server process kill"
+        enabled:                    false
+
+      - name:                       "Kill Enqueue Replication Process"
+        task_name:                  kill-enqueue-replication
+        description:                "Tests recovery after enqueue replication process kill"
+        enabled:                    false
+
+      - name:                       "Block Network Communication"
+        task_name:                  block-network
+        description:                "Tests behavior during network communication loss"
+        enabled:                    true
+
+      - name:                       "Node Crash Simulation"
+        task_name:                  node-crash
+        description:                "Tests recovery after node crash"
+        enabled:                    true
 
 # Commands for HANA DB HA Test Cases based on OS family
 commands:
