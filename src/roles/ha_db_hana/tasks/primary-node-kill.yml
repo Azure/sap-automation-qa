@@ -38,7 +38,7 @@
           failed_when:              hana_db_kill_results.rc != 0
 
         - name:                     "Test Execution: Validate HANA DB cluster status"
-          when:                     automated_register.stdout == "true"
+          when:                     cluster_status_pre.AUTOMATED_REGISTER == "true"
           get_cluster_status:
             operation_step:         "test_execution"
             database_sid:           "{{ db_sid | lower }}"
@@ -50,8 +50,19 @@
                                     cluster_status_test_execution.secondary_node == cluster_status_pre.primary_node
 
         - name:                     "Test Execution: Register Failed Resource when automated_register is false"
-          when:                     automated_register.stdout == "false"
+          when:                     cluster_status_pre.AUTOMATED_REGISTER == "false"
           block:
+            - name:                     "Test Execution: Validate HANA DB cluster status"
+              get_cluster_status:
+                operation_step:         "test_execution"
+                database_sid:           "{{ db_sid | lower }}"
+              register:                 cluster_status_test_execution
+              retries:                  50
+              delay:                    10
+              until: |
+                                        cluster_status_test_execution.primary_node == cluster_status_pre.secondary_node and
+                                        cluster_status_test_execution.secondary_node == ""
+
             - name:                 "Test Execution: Set facts for the failed resource"
               ansible.builtin.set_fact:
                 replication_mode:   "{{ cluster_status_pre.replication_mode }}"
@@ -103,7 +114,6 @@
             test_case_details_from_test_case: {
                                       "Pre Validations: Remove any location_constraints": "{{ location_constraints_results }}",
                                       "Pre Validations: Validate HANA DB cluster status": "{{ cluster_status_pre }}",
-                                      "Pre Validations: Check if the AUTOMATED_REGISTER": "{{ automated_register }}",
                                       "Pre Validations: CleanUp any failed resource": "{{ cleanup_failed_resource_pre }}",
                                       "Test Execution: Primary node crash": "{{ hana_db_kill_results }}",
                                       "Post Validations: CleanUp any failed resource": "{{ cleanup_failed_resource_post }}",

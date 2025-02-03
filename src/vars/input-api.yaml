@@ -39,15 +39,15 @@ test_groups:
       #   description:                This runs a functional test for blocking network communication
       #   enabled:                    true
 
-      - name:                       HA Functional Test- Crash index server on primary node
-        task_name:                  primary-crash-index
-        description:                This runs a functional test for crashing index server on primary node
-        enabled:                    true
-
-      # - name:                       HA Functional Test- Primary Node Kill
-      #   task_name:                  primary-node-kill
-      #   description:                This runs a functional test for primary node crash
+      # - name:                       HA Functional Test- Crash index server on primary node
+      #   task_name:                  primary-crash-index
+      #   description:                This runs a functional test for crashing index server on primary node
       #   enabled:                    true
+
+      - name:                       HA Functional Test- Primary Node Kill
+        task_name:                  primary-node-kill
+        description:                This runs a functional test for primary node crash
+        enabled:                    true
 
       # - name:                       HA Functional Test- Echo B on Primary Node
       #   task_name:                  primary-echo-b
