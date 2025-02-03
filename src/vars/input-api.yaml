@@ -14,60 +14,60 @@ sap_functional_test_type_map:
 test_groups:
   - name:                           HA_DB_HANA
     test_cases:
-      # - name:                       HA Parameters Validation
-      #   task_name:                  ha-config
-      #   description:                This validates the HA configuration
-      #   enabled:                    true
-
-      # - name:                       Azure Load Balancer Validation
-      #   task_name:                  azure-lb
-      #   description:                This validates the Azure Load Balancer configuration
-      #   enabled:                    true
-
-      # - name:                       HA Functional Test- Resource Migration
-      #   task_name:                  resource-migration
-      #   description:                This runs a functional test for resource migration
-      #   enabled:                    true
-
-      # - name:                       HA Functional Test- Primary Node Crash
-      #   task_name:                  primary-node-crash
-      #   description:                This runs a functional test for primary node crash
-      #   enabled:                    true
-
-      # - name:                       HA Functional Test- Block Network Communication
-      #   task_name:                  block-network
-      #   description:                This runs a functional test for blocking network communication
-      #   enabled:                    true
-
-      # - name:                       HA Functional Test- Crash index server on primary node
-      #   task_name:                  primary-crash-index
-      #   description:                This runs a functional test for crashing index server on primary node
-      #   enabled:                    true
-
-      # - name:                       HA Functional Test- Primary Node Kill
-      #   task_name:                  primary-node-kill
-      #   description:                This runs a functional test for primary node crash
-      #   enabled:                    true
-
-      # - name:                       HA Functional Test- Echo B on Primary Node
-      #   task_name:                  primary-echo-b
-      #   description:                This runs a functional test to immediately reboot the system without properly shutting it down.
-      #   enabled:                    true
-
-      - name:                       HA Functional Test- Crash index server on secondary node
-        task_name:                  secondary-crash-index
-        description:                This runs a functional test for crashing index server on secondary node
+      - name:                       HA Parameters Validation
+        task_name:                  ha-config
+        description:                This validates the HA configuration
         enabled:                    true
 
-      - name:                       HA Functional Test- Secondary Node Kill
-        task_name:                  secondary-node-kill
-        description:                This runs a functional test for secondary node crash
+      - name:                       Azure Load Balancer Validation
+        task_name:                  azure-lb
+        description:                This validates the Azure Load Balancer configuration
         enabled:                    true
 
-      - name:                       HA Functional Test- Echo B on Secondary Node
-        task_name:                  secondary-echo-b
+      - name:                       HA Functional Test- Resource Migration
+        task_name:                  resource-migration
+        description:                This runs a functional test for resource migration
+        enabled:                    true
+
+      - name:                       HA Functional Test- Primary Node Crash
+        task_name:                  primary-node-crash
+        description:                This runs a functional test for primary node crash
+        enabled:                    true
+
+      - name:                       HA Functional Test- Block Network Communication
+        task_name:                  block-network
+        description:                This runs a functional test for blocking network communication
+        enabled:                    true
+
+      - name:                       HA Functional Test- Crash index server on primary node
+        task_name:                  primary-crash-index
+        description:                This runs a functional test for crashing index server on primary node
+        enabled:                    true
+
+      - name:                       HA Functional Test- Primary Node Kill
+        task_name:                  primary-node-kill
+        description:                This runs a functional test for primary node crash
+        enabled:                    true
+
+      - name:                       HA Functional Test- Echo B on Primary Node
+        task_name:                  primary-echo-b
         description:                This runs a functional test to immediately reboot the system without properly shutting it down.
         enabled:                    true
+
+      # - name:                       HA Functional Test- Crash index server on secondary node
+      #   task_name:                  secondary-crash-index
+      #   description:                This runs a functional test for crashing index server on secondary node
+      #   enabled:                    true
+
+      # - name:                       HA Functional Test- Secondary Node Kill
+      #   task_name:                  secondary-node-kill
+      #   description:                This runs a functional test for secondary node crash
+      #   enabled:                    true
+
+      # - name:                       HA Functional Test- Echo B on Secondary Node
+      #   task_name:                  secondary-echo-b
+      #   description:                This runs a functional test to immediately reboot the system without properly shutting it down.
+      #   enabled:                    true
 
       # - name:                       HA Functional Test- Freeze File System on Primary Node
       #   task_name:                  fs-freeze
@@ -86,42 +86,38 @@ test_groups:
         description:                "Validates the HA configuration"
         enabled:                    true
 
-      - name:                       "Manual ASCS Migration"
-        task_name:                  ascs-migration
-        description:                "Tests manual migration of ASCS instance"
-        enabled:                    true
+      # - name:                       "Manual ASCS Migration"
+      #   task_name:                  ascs-migration
+      #   description:                "Tests manual migration of ASCS instance"
+      #   enabled:                    true
 
-      - name:                       "Kill Message Server Process"
-        task_name:                  kill-message-server
-        description:                "Tests recovery after message server process kill"
-        enabled:                    false
+      # - name:                       "Kill Message Server Process"
+      #   task_name:                  kill-message-server
+      #   description:                "Tests recovery after message server process kill"
+      #   enabled:                    false
 
-      - name:                       "Kill Enqueue Server Process"
-        task_name:                  kill-enqueue-server
-        description:                "Tests recovery after enqueue server process kill"
-        enabled:                    false
+      # - name:                       "Kill Enqueue Server Process"
+      #   task_name:                  kill-enqueue-server
+      #   description:                "Tests recovery after enqueue server process kill"
+      #   enabled:                    false
 
-      - name:                       "Kill Enqueue Replication Process"
-        task_name:                  kill-enqueue-replication
-        description:                "Tests recovery after enqueue replication process kill"
-        enabled:                    false
+      # - name:                       "Kill Enqueue Replication Process"
+      #   task_name:                  kill-enqueue-replication
+      #   description:                "Tests recovery after enqueue replication process kill"
+      #   enabled:                    false
 
-      - name:                       "Block Network Communication"
-        task_name:                  block-network
-        description:                "Tests behavior during network communication loss"
-        enabled:                    true
+      # - name:                       "Block Network Communication"
+      #   task_name:                  block-network
+      #   description:                "Tests behavior during network communication loss"
+      #   enabled:                    true
 
-      - name:                       "Node Crash Simulation"
-        task_name:                  node-crash
-        description:                "Tests recovery after node crash"
-        enabled:                    true
+      # - name:                       "Node Crash Simulation"
+      #   task_name:                  node-crash
+      #   description:                "Tests recovery after node crash"
+      #   enabled:                    true
 
 # Commands for HANA DB HA Test Cases based on OS family
 commands:
-  - name:                           automated_register_cmd
-    SUSE:                           "set -o pipefail; crm configure show | grep AUTOMATED_REGISTER=true | awk '{print $6}'"
-    REDHAT:                         "set -o pipefail; pcs config show | grep AUTOMATED_REGISTER=true | awk '{print $1}'"
-
   - name:                           resource_migration_cmd
     SUSE:                           "crm resource move msl_SAPHana_{{ db_sid | upper }}_HDB{{ db_instance_number }} {{ cluster_status_pre.secondary_node | default('') }} force"
     REDHAT:                         "pcs resource move SAPHana_{{ db_sid | upper }}_{{ db_instance_number }}-clone --master"

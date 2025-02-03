@@ -50,7 +50,7 @@
       when:                         ansible_hostname == cluster_status_pre.secondary_node
       block:
         - name:                     "Test Execution: Validate HANA DB cluster status during stop operation."
-          when:                     automated_register.stdout == "true"
+          when:                     cluster_status_pre.AUTOMATED_REGISTER == "true"
           get_cluster_status:
             operation_step:         "test_execution"
             database_sid:           "{{ db_sid | lower }}"
@@ -88,7 +88,6 @@
             test_case_details_from_test_case: {
                                       "Pre Validations: Remove any location_constraints": "{{ location_constraints_results }}",
                                       "Pre Validations: Validate HANA DB cluster status": "{{ cluster_status_pre }}",
-                                      "Pre Validations: Check if the AUTOMATED_REGISTER": "{{ automated_register }}",
                                       "Pre Validations: CleanUp any failed resource": "{{ cleanup_failed_resource_pre }}",
                                       "Test Execution: Kill inquisitor results": "{{ inquisitor_kill }}",
                                       "Post Validations: Validate HANA DB cluster status": "{{ cluster_status_test_post }}",
