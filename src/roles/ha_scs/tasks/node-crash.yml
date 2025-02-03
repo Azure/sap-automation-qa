@@ -20,6 +20,7 @@
 
 - name:                                 "Pre Validations: Get current ASCS node"
   ansible.builtin.shell: |
+                                        set -o pipefail
                                         crm resource status rsc_sap_{{ sap_sid }}_ASCS{{ scs_instance_number }} | \
                                         grep Started | awk '{print $4}'
   register:                             current_ascs_node
@@ -44,6 +45,7 @@
           async:                        1
           poll:                         0
           ignore_errors:                true
+          failed_when:                  false
 
     - name:                             "Test Execution: Wait for node recovery"
       when:                             ansible_hostname != current_ascs_node.stdout
