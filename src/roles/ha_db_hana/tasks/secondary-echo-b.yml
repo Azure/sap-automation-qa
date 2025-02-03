@@ -47,7 +47,6 @@
       when:                             ansible_hostname == cluster_status_pre.primary_node
       block:
         - name:                         "Test Execution: Validate HANA DB cluster status"
-          when:                         automated_register.stdout == "true"
           get_cluster_status:
             operation_step:             "test_execution"
             database_sid:               "{{ db_sid | lower }}"
@@ -58,17 +57,35 @@
                                         cluster_status_test_execution.primary_node == cluster_status_pre.primary_node and
                                         cluster_status_test_execution.secondary_node == ""
 
-        - name:                         "Test Execution: Register Failed Resource"
-          become:                       true
-          become_user:                  "{{ db_sid | lower }}adm"
-          when:                         automated_register.stdout == "false"
-          ansible.builtin.command: |
-                                        hdbnsutil -sr_register \
-                                        --remoteHost={{ cluster_status_pre.secondary_node }} \
-                                        --remoteInstance={{ db_instance_number }} \
-                                        --replicationMode=sync --name=SITEB
-          register:                     hana_db_register_failed_resource
-          changed_when:                 hana_db_register_failed_resource.rc == 0
+        - name:                         "Test Execution: Register Failed Resource when automated_register is false"
+          when:                         cluster_status_pre.AUTOMATED_REGISTER == "false"
+          block:
+            - name:                     "Test Execution: Set facts for the failed resource"
+              ansible.builtin.set_fact:
+                replication_mode:       "{{ cluster_status_pre.replication_mode }}"
+                primary_site_name:      "{{ cluster_status_pre.primary_site_name }}"
+                operation_mode:         "{{ cluster_status_pre.operation_mode }}"
+
+            - name:                     "Test Execution: Register the failed resource"
+              become:                   true
+              become_user:              "{{ db_sid | lower }}adm"
+              ansible.builtin.shell: | 
+                                          source /usr/sap/{{ db_sid | upper }}/HDB{{ db_instance_number | upper }}/HDBSettings.sh && \
+                                          /usr/sap/{{ db_sid | upper }}/HDB{{ db_instance_number }}/exe/hdbnsutil -sr_register \
+                                          --remoteHost={{ cluster_status_pre.secondary_node }} \
+                                          --remoteInstance={{ db_instance_number }} \
+                                          --replicationMode={{ replication_mode }} \
+                                          --name={{ primary_site_name }} \
+                                          --operationMode={{ operation_mode }} --online
+              register:                 hana_db_register_failed_resource
+              args:
+                executable:             /bin/bash
+
+        - name:                         "Test Execution: CleanUp any failed resource"
+          ansible.builtin.command:      crm_resource --cleanup
+          register:                     cleanup_failed_resource_post
+          changed_when:                 cleanup_failed_resource_post.rc == 0
+          ignore_errors:                true
 
         - name:                         "Test Execution: Validate HANA DB cluster status"
           get_cluster_status:
@@ -95,7 +112,6 @@
             test_case_details_from_test_case: {
                                         "Pre Validations: Remove any location_constraints": "{{ location_constraints_results }}",
                                         "Pre Validations: Validate HANA DB cluster status": "{{ cluster_status_pre }}",
-                                        "Pre Validations: Check if the AUTOMATED_REGISTER": "{{ automated_register }}",
                                         "Pre Validations: CleanUp any failed resource": "{{ cleanup_failed_resource_pre }}",
                                         "Test Execution: Echo b results": "{{ echo_b_result }}",
                                         "Post Validations: Validate HANA DB cluster status": "{{ cluster_status_post }}",
