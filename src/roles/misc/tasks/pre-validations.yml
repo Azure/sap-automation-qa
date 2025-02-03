@@ -27,7 +27,6 @@
       become:                       true
       ansible.builtin.shell:        cibadmin --query --xpath "//nvpair[@name='AUTOMATED_REGISTER']" | grep \
                                     -o 'value="[^"]*"' | cut -d'"' -f2
-
       register:                     automated_register
       changed_when:                 false
       when:                         cluster_status_pre is defined

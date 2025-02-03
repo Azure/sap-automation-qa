@@ -45,6 +45,7 @@ class ClusterStatusChecker(SapAutomationQA):
                 "operation_mode": "",
                 "replication_mode": "",
                 "primary_site_name": "",
+                "AUTOMATED_REGISTER": "false",
             }
         )
 
@@ -65,6 +66,23 @@ class ClusterStatusChecker(SapAutomationQA):
             self.result["stonith_action"] = stonith_action.strip()
         except Exception:
             self.result["stonith_action"] = "unknown"
+
+    def _get_automation_register(self) -> None:
+        """
+        Retrieves the AUTOMATED_REGISTER attribute from the crm_attribute.
+        """
+        try:
+            cmd_output = self.execute_command_subprocess(
+                [
+                    "cibadmin",
+                    "--query",
+                    "--xpath",
+                    "//nvpair[@name='AUTOMATED_REGISTER']",
+                ]
+            ).strip()
+            self.result["AUTOMATED_REGISTER"] = ET.fromstring(cmd_output).get("value")
+        except Exception:
+            self.result["AUTOMATED_REGISTER"] = "unknown"
 
     def _process_node_attributes(self, node_attributes: ET.Element) -> Dict[str, Any]:
         """
@@ -196,6 +214,7 @@ class ClusterStatusChecker(SapAutomationQA):
                     "Pacemaker cluster isn't stable and does not have primary or secondary node"
                 )
                 self.log(logging.WARNING, self.result["message"])
+
         except Exception as e:
             self.handle_error(e)
         self.result["end"] = datetime.now()
