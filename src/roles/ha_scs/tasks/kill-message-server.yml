@@ -3,7 +3,7 @@
 
 ---
 # /*---------------------------------------------------------------------------
-# |                          Block Network Communication                      |
+# |                          Kill Message Server Process                       |
 # +--------------------------------------------------------------------------*/
 - name:                                 "Test Setup Tasks"
   ansible.builtin.include_tasks:        "roles/misc/tasks/test-case-setup.yml"
@@ -29,7 +29,7 @@
 # /*---------------------------------------------------------------------------
 # |                          Test Execution                                   |
 # +--------------------------------------------------------------------------*/
-- name:                                 "Test Execution: Block Network Communication"
+- name:                                 "Test Execution: Kill Message Server Process"
   become:                               true
   when:                                 node_tier == "scs"
   block:
@@ -37,28 +37,30 @@
       ansible.builtin.set_fact:
         test_execution_start:           "{{ now(utc=true, fmt='%Y-%m-%d %H:%M:%S') }}"
 
-    - name:                             "Test Execution: Block network on primary ASCS node"
+    - name:                             "Test Execution: Kill message server on ASCS node"
       when:                             ansible_hostname == current_ascs_node.stdout
       block:
-        - name:                         "Test Execution: Get secondary node IP"
-          ansible.builtin.set_fact:
-            secondary_node_ip:          "{{ hostvars[groups[sap_sid ~ '_SCS'] | difference([current_ascs_node.stdout]) | first].ansible_host }}"
+        - name:                         "Test Execution: Find message server PID"
+          ansible.builtin.shell:        "pgrep -f 'ms.sap{{ sap_sid }}'"
+          register:                     ms_pid
+          changed_when:                 false
 
-        - name:                         "Test Execution: Add firewall rules"
-          ansible.builtin.shell: |
-                                        iptables -A INPUT -s {{ secondary_node_ip }} -j DROP
-                                        iptables -A OUTPUT -d {{ secondary_node_ip }} -j DROP
-          register:                     block_network_result
+        - name:                         "Test Execution: Kill message server process"
+          ansible.builtin.command:      "kill -9 {{ ms_pid.stdout }}"
+          register:                     kill_result
+          when:                         ms_pid.stdout != ""
 
-        - name:                         "Test Execution: Wait for failover"
-          ansible.builtin.pause:
-            seconds:                    60
+        - name:                         "Test Execution: Wait for process restart"
+          ansible.builtin.wait_for:
+            timeout:                    30
 
-        - name:                         "Test Execution: Remove firewall rules"
-          ansible.builtin.shell: |
-                                        iptables -D INPUT -s {{ secondary_node_ip }} -j DROP
-                                        iptables -D OUTPUT -d {{ secondary_node_ip }} -j DROP
-          register:                     unblock_network_result
+        - name:                         "Test Execution: Verify message server restart"
+          ansible.builtin.shell:        "pgrep -f 'ms.sap{{ sap_sid }}'"
+          register:                     new_ms_pid
+          changed_when:                 false
+          retries:                      6
+          delay:                        10
+          until:                        new_ms_pid.stdout != "" and new_ms_pid.stdout != ms_pid.stdout
 
     - name:                             "Test Execution: Stop timer"
       ansible.builtin.set_fact:
@@ -71,11 +73,12 @@
 
     - name:                             "Set test case message and details"
       ansible.builtin.set_fact:
-        test_case_message_from_test_case: "Network communication blocked and restored successfully"
+        test_case_message_from_test_case: "Message server process killed and auto-recovered on {{ current_ascs_node.stdout }}"
         test_case_details_from_test_case: {
                                         "Pre Validations Status": "{{ cluster_status_pre.stdout }}",
-                                        "Block Network Result": "{{ block_network_result }}",
-                                        "Unblock Network Result": "{{ unblock_network_result }}",
+                                        "Original PID": "{{ ms_pid.stdout }}",
+                                        "Kill Result": "{{ kill_result }}",
+                                        "New PID": "{{ new_ms_pid.stdout }}",
                                         "Post Status": "{{ cluster_status_post.stdout }}"
                                         }
 
