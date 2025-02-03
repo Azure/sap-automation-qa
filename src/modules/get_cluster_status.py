@@ -214,6 +214,7 @@ class ClusterStatusChecker(SapAutomationQA):
                     "Pacemaker cluster isn't stable and does not have primary or secondary node"
                 )
                 self.log(logging.WARNING, self.result["message"])
+            self._get_automation_register()
 
         except Exception as e:
             self.handle_error(e)
