@@ -69,8 +69,7 @@
             retries:                    50
             delay:                      10
             until: |
-                                        (cluster_status_test_execution.primary_node == cluster_status_pre.primary_node or
-                                        cluster_status_test_execution.primary_node == cluster_status_pre.secondary_node) and
+                                        cluster_status_test_execution.primary_node == cluster_status_pre.primary_node and
                                         cluster_status_test_execution.secondary_node == ""
 
           - name:                       "Test Execution: Remove the firewall rule on primary node."
@@ -82,11 +81,6 @@
             register:                   firewall_rule_deleted
             changed_when:               firewall_rule_deleted.rc == 0
             failed_when:                firewall_rule_deleted.rc != 0
-
-
-          - name:                       "Test Execution: Wait for the cluster to be in a stable state"
-            ansible.builtin.wait_for:
-              timeout:                  150
 
           - name:                       "Test Execution: Validate HANA DB cluster status"
             delegate_to:                "{{ cluster_status_pre.primary_node }}"
