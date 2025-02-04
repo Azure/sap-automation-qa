@@ -21,19 +21,7 @@ module_utils:
 """
 
 STONITH_ACTION = {
-    "REDHAT": [
-        "pcs",
-        "property",
-        "config",
-        "stonith-action",
-        "|",
-        "grep",
-        "'stonith-action'",
-        "|",
-        "awk",
-        "-F': '",
-        "'{print $2}'",
-    ],
+    "REDHAT": ["pcs", "property", "config", "stonith-action"],
     "SUSE": ["crm", "configure", "get_property", "stonith-action"],
 }
 
