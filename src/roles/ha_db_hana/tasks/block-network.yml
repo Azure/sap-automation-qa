@@ -46,26 +46,26 @@
 
         - name:                             "Test Execution: Wait for the cluster to be in a stable state"
           ansible.builtin.wait_for:
+            port:                           22
+            start:                          started
+            host:                           "{{ cluster_status_pre.primary_node }}"
             timeout:                        30
+          register:                         primary_node_alive
+          failed_when:                      false
 
-        - name:                             "Test Execution: Check if primary node is still alive (ping test)"
-          ansible.builtin.shell:            "ping -c 1 {{ hostvars[cluster_status_pre.primary_node].ansible_host }}"
-          delegate_to:                      localhost
-          register:                         ping_primary
-          ignore_errors:                    true
-          changed_when:                     false
-                  
-        - name:                             "Set primary_alive fact"
-          ansible.builtin.set_fact:
-            primary_alive:                  "{{ ping_primary.rc == 0 }}"
+        # - name:                             "Test Execution: Check if primary node is still alive (ping test)"
+        #   ansible.builtin.shell:            "ping -c 1 {{ hostvars[cluster_status_pre.primary_node].ansible_host }}"
+        #   delegate_to:                      localhost
+        #   register:                         ping_primary
+        #   ignore_errors:                    true
+        #   changed_when:                     false
 
-        - name:                             "Set primary_alive fact"
-          delegate_to:                      "{{ cluster_status_pre.secondary_node }}"
-          ansible.builtin.set_fact:
-            primary_alive:                  "{{ ping_primary.rc == 0 }}"
+        # - name:                             "Set primary_alive fact"
+        #   ansible.builtin.set_fact:
+        #     primary_alive:                  "{{ ping_primary.rc == 0 }}"
 
         - name:                             "Test Execution: Block Network Communication"
-          when:                             primary_alive
+          when:                             not primary_node_alive.failed
           block:
             - name:                         "Test Execution: Validate HANA DB cluster status (Primary Node)"
               delegate_to:                  "{{ cluster_status_pre.primary_node }}"
@@ -107,11 +107,11 @@
 
     - name:                                 "Test Execution: Block Network Communication (Secondary Node)"
       when:                                 ansible_hostname == cluster_status_pre.secondary_node
-      
+
       block:
         - name:                             "Test Execution: Set primary_alive fact"
           ansible.builtin.set_fact:
-            primary_alive:                  hostvars[cluster_status_pre.primary_node].primary_alive
+            primary_alive:                  hostvars[cluster_status_pre.primary_node].primary_node_alive.failed
 
         - name:                             "Test Execution: Block Network Communication (Secondary Node)"
           when:                             not primary_alive
@@ -148,8 +148,14 @@
         - name:                             "Test Execution: Stop timer"
           ansible.builtin.set_fact:
             test_execution_end:             "{{ now(utc=true, fmt='%Y-%m-%d %H:%M:%S') }}"
-            cluster_status_post:            "{{ cluster_status_post_primary if (cluster_status_post_primary | default('') != '') else cluster_status_post_secondary | default('') }}"
-            cluster_status_test_execution:  "{{ cluster_status_test_execution_primary if (cluster_status_test_execution_primary | default('') != '') else cluster_status_test_execution_secondary | default('') }}"
+            cluster_status_post:            "{{ cluster_status_post_primary
+                                            if (cluster_status_post_primary | default('') != '')
+                                            else hostvars[cluster_status_pre.secondary_node].cluster_status_post_secondary
+                                            | default('') }}"
+            cluster_status_test_execution:  "{{ cluster_status_test_execution_primary
+                                            if (cluster_status_test_execution_primary | default('') != '')
+                                            else hostvars[cluster_status_pre.secondary_node].cluster_status_test_execution_secondary
+                                            | default('') }}"
 
         - name:                               "Set test case message and details"
           ansible.builtin.set_fact:
