@@ -9,8 +9,10 @@ from ansible.module_utils.basic import AnsibleModule
 
 try:
     from ansible.module_utils.sap_automation_qa import SapAutomationQA, TestStatus
+    from ansible.module_utils.commands import FREEZE_FILESYSTEM
 except ImportError:
     from src.module_utils.sap_automation_qa import SapAutomationQA, TestStatus
+    from src.module_utils.commands import FREEZE_FILESYSTEM
 
 
 class FileSystemFreeze(SapAutomationQA):
@@ -49,7 +51,7 @@ class FileSystemFreeze(SapAutomationQA):
 
         if file_system:
             read_only_output = self.execute_command_subprocess(
-                ["mount", "-o", "ro", file_system, "/hana/shared"]
+                FREEZE_FILESYSTEM(file_system)
             )
             self.result.update(
                 {

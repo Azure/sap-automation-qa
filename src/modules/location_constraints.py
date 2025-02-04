@@ -11,8 +11,10 @@ from ansible.module_utils.basic import AnsibleModule
 
 try:
     from ansible.module_utils.sap_automation_qa import SapAutomationQA, TestStatus
+    from ansible.module_utils.commands import RSC_CLEAR, CONSTRAINTS
 except ImportError:
     from src.module_utils.sap_automation_qa import SapAutomationQA, TestStatus
+    from src.module_utils.commands import RSC_CLEAR, CONSTRAINTS
 
 
 class LocationConstraintsManager(SapAutomationQA):
@@ -23,10 +25,6 @@ class LocationConstraintsManager(SapAutomationQA):
     def __init__(self, ansible_os_family: str):
         super().__init__()
         self.ansible_os_family = ansible_os_family
-        self.module_name = {
-            "SUSE": "crm",
-            "REDHAT": "pcs",
-        }
         self.result.update(
             {
                 "location_constraint_removed": False,
@@ -45,13 +43,7 @@ class LocationConstraintsManager(SapAutomationQA):
         for location_constraint in location_constraints:
             rsc = location_constraint.attrib.get("rsc")
             if rsc:
-                cmd = [
-                    self.module_name[self.ansible_os_family],
-                    "resource",
-                    "clear",
-                    rsc,
-                ]
-                self.execute_command_subprocess(cmd)
+                self.execute_command_subprocess(RSC_CLEAR[self.ansible_os_family](rsc))
                 self.result["changed"] = True
             else:
                 self.result["changed"] = False
@@ -64,9 +56,7 @@ class LocationConstraintsManager(SapAutomationQA):
         :rtype: list
         """
         try:
-            xml_output = self.execute_command_subprocess(
-                ["cibadmin", "--query", "--scope", "constraints"]
-            )
+            xml_output = self.execute_command_subprocess(CONSTRAINTS)
             self.result["details"] = xml_output
             return (
                 ET.fromstring(xml_output).findall(".//rsc_location")
