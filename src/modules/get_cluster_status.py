@@ -70,7 +70,7 @@ class ClusterStatusChecker(SapAutomationQA):
                 STONITH_ACTION[self.ansible_os_family]
             )
             stonith_action = (
-                stonith_action.split("\n")[-1].split(":")[-1]
+                stonith_action.split("stonith-action:")[-1]
                 if self.ansible_os_family == "REDHAT"
                 else stonith_action
             )
