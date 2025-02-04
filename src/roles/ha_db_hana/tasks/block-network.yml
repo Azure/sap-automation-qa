@@ -169,8 +169,8 @@
       # /*---------------------------------------------------------------------------
       # |                          Post Validations                                 |
       # +--------------------------------------------------------------------------*/
-        - name:                               "Post Validations Tasks"
-          ansible.builtin.include_tasks:      "roles/misc/tasks/post-validations.yml"
+    - name:                               "Post Validations Tasks"
+      ansible.builtin.include_tasks:      "roles/misc/tasks/post-validations.yml"
 
   rescue:
     - name:                                 "Rescue operation"
