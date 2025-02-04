@@ -25,6 +25,7 @@
                                         - cluster_status_pre.stonith_action == "reboot"
   block:
     - name:                             "Test Execution: Block Network Communication"
+      when:                             ansible_hostname == cluster_status_pre.primary_node
       block:
         - name:                         "Test Execution: Start timer"
           ansible.builtin.set_fact:
@@ -36,7 +37,6 @@
 
         - name:                         "Test Execution: Create a firewall on primary node"
           become:                       true
-          delegate_to:                  "{{ cluster_status_pre.primary_node }}"
           ansible.builtin.shell: |
                                         iptables -A INPUT -s {{ secondary_node_ip }} -j DROP;
                                         iptables -A OUTPUT -d {{ secondary_node_ip }} -j DROP
@@ -54,109 +54,101 @@
           register:                     ping_primary
           ignore_errors:                true
           changed_when:                 false
-
+                  
         - name:                         "Set primary_alive fact"
           ansible.builtin.set_fact:
             primary_alive:              "{{ ping_primary.rc == 0 }}"
 
-        - block:
-          - name:                       "Test Execution: Validate HANA DB cluster status (Primary Node)"
-            delegate_to:                "{{ cluster_status_pre.primary_node }}"
-            get_cluster_status:
-              operation_step:           "test_execution"
-              database_sid:             "{{ db_sid | lower }}"
-            register:                   cluster_status_test_execution
-            retries:                    50
-            delay:                      10
-            until: |
-                                        cluster_status_test_execution.primary_node == cluster_status_pre.primary_node and
-                                        cluster_status_test_execution.secondary_node == ""
+        - name:                         "Set primary_alive fact"
+          delegate_to:                  "{{ cluster_status_pre.secondary_node }}"
+          ansible.builtin.set_fact:
+            primary_alive:              "{{ ping_primary.rc == 0 }}"
 
-          - name:                       "Test Execution: Remove the firewall rule on primary node."
-            delegate_to:                "{{ cluster_status_pre.primary_node }}"
-            become:                     true
-            ansible.builtin.shell: |
-                                        iptables -D INPUT -s {{ secondary_node_ip }} -j DROP;
-                                        iptables -D OUTPUT -d {{ secondary_node_ip }} -j DROP
-            register:                   firewall_rule_deleted
-            changed_when:               firewall_rule_deleted.rc == 0
-            failed_when:                firewall_rule_deleted.rc != 0
-
-          - name:                       "Test Execution: Validate HANA DB cluster status"
-            delegate_to:                "{{ cluster_status_pre.primary_node }}"
-            get_cluster_status:
-              operation_step:           "test_execution"
-              database_sid:             "{{ db_sid | lower }}"
-            register:                   cluster_status_post
-            retries:                    50
-            delay:                      10
-            until: |
-                                        cluster_status_post.primary_node == cluster_status_pre.primary_node and
-                                        cluster_status_post.secondary_node == cluster_status_pre.secondary_node
-
-          - name:                       "Test Execution: Stop timer"
-            ansible.builtin.set_fact:
-              test_execution_end:       "{{ now(utc=true, fmt='%Y-%m-%d %H:%M:%S') }}"
-
-          - name:                       "Set test case message and details"
-            ansible.builtin.set_fact:
-              test_case_message_from_test_case: |
-                                        "Old primary: {{ cluster_status_pre.primary_node }} \
-                                        New primary: {{ cluster_status_post.primary_node }} \
-                                        Old secondary: {{ cluster_status_pre.secondary_node }} \
-                                        New secondary: {{ cluster_status_post.secondary_node }}"
-              test_case_details_from_test_case: {
-                                        "Pre Validations: Remove any location_constraints": "{{ location_constraints_results }}",
-                                        "Pre Validations: Validate HANA DB cluster status": "{{ cluster_status_pre }}",
-                                        "Pre Validations: CleanUp any failed resource": "{{ cleanup_failed_resource_pre }}",
-                                        "Test Execution: Firewall Rule Created": "{{ firewall_rule_created }}",
-                                        "Test Execution: Cluster Status after the network blocked": "{{ cluster_status_test_execution }}",
-                                        "Test Execution: Firewall Rule Removed": "{{ firewall_rule_deleted }}",
-                                        "Post Validations: Validate HANA DB cluster status": "{{ cluster_status_post }}",
-                                        }
+        - name:                         "Test Execution: Block Network Communication"
           when:                         primary_alive
+          block:
+            - name:                     "Test Execution: Validate HANA DB cluster status (Primary Node)"
+              delegate_to:              "{{ cluster_status_pre.primary_node }}"
+              get_cluster_status:
+                operation_step:             "test_execution"
+                database_sid:               "{{ db_sid | lower }}"
+              register:                     cluster_status_test_execution
+              retries:                      50
+              delay:                        10
+              until: |
+                                            cluster_status_test_execution.primary_node == cluster_status_pre.primary_node and
+                                            cluster_status_test_execution.secondary_node == ""
 
-        - block:
-          - name:                       "Test Execution: Validate HANA DB cluster status (Secondary Node)"
-            delegate_to:                "{{ cluster_status_pre.secondary_node }}"
-            get_cluster_status:
-              operation_step:           "test_execution"
-              database_sid:             "{{ db_sid | lower }}"
-            register:                   cluster_status_test_execution
-            retries:                    50
-            delay:                      10
-            until: |
-                                        cluster_status_test_execution.primary_node == cluster_status_pre.secondary_node and
-                                        cluster_status_test_execution.secondary_node == ""
+            - name:                         "Test Execution: Remove the firewall rule on primary node."
+              delegate_to:                  "{{ cluster_status_pre.primary_node }}"
+              become:                       true
+              ansible.builtin.shell: |
+                                            iptables -D INPUT -s {{ secondary_node_ip }} -j DROP;
+                                            iptables -D OUTPUT -d {{ secondary_node_ip }} -j DROP
+              register:                     firewall_rule_deleted
+              changed_when:                 firewall_rule_deleted.rc == 0
+              failed_when:                  firewall_rule_deleted.rc != 0
 
-          - name:                       "Test Execution: Wait for the cluster to be in a stable state"
-            ansible.builtin.wait_for:
-              timeout:                  150
+            - name:                         "Test Execution: Validate HANA DB cluster status"
+              delegate_to:                  "{{ cluster_status_pre.primary_node }}"
+              get_cluster_status:
+                operation_step:             "test_execution"
+                database_sid:               "{{ db_sid | lower }}"
+              register:                     cluster_status_post
+              retries:                      50
+              delay:                        10
+              until: |
+                                            cluster_status_post.primary_node == cluster_status_pre.primary_node and
+                                            cluster_status_post.secondary_node == cluster_status_pre.secondary_node
 
-          - name:                       "Test Execution: Validate HANA DB cluster status"
-            delegate_to:                "{{ cluster_status_pre.secondary_node }}"
-            get_cluster_status:
-              operation_step:           "test_execution"
-              database_sid:             "{{ db_sid | lower }}"
-            register:                   cluster_status_post
-            retries:                    50
-            delay:                      10
-            until: |
-                                        cluster_status_post.primary_node == cluster_status_pre.secondary_node and
-                                        cluster_status_post.secondary_node == cluster_status_pre.primary_node
+    - name:                             "Test Execution: Block Network Communication"
+      when:                             ansible_hostname == cluster_status_pre.secondary_node and not primary_alive
+      block:
+        - name:                             "Test Execution: Block Network Communication"
+          when:                             primary_alive
+          block:
+            - name:                         "Test Execution: Validate HANA DB cluster status (Secondary Node)"
+              delegate_to:                  "{{ cluster_status_pre.secondary_node }}"
+              get_cluster_status:
+                operation_step:             "test_execution"
+                database_sid:               "{{ db_sid | lower }}"
+              register:                     cluster_status_test_execution
+              retries:                      50
+              delay:                        10
+              until: |
+                                            cluster_status_test_execution.primary_node == cluster_status_pre.secondary_node and
+                                            cluster_status_test_execution.secondary_node == ""
 
-          - name:                       "Test Execution: Stop timer"
-            ansible.builtin.set_fact:
-              test_execution_end:       "{{ now(utc=true, fmt='%Y-%m-%d %H:%M:%S') }}"
+            - name:                         "Test Execution: Wait for the cluster to be in a stable state"
+              ansible.builtin.wait_for:
+                timeout:                    150
 
-          - name:                       "Set test case message and details"
-            ansible.builtin.set_fact:
-              test_case_message_from_test_case: |
+            - name:                         "Test Execution: Validate HANA DB cluster status"
+              delegate_to:                  "{{ cluster_status_pre.secondary_node }}"
+              get_cluster_status:
+                operation_step:             "test_execution"
+                database_sid:               "{{ db_sid | lower }}"
+              register:                     cluster_status_post
+              retries:                      50
+              delay:                        10
+              until: |
+                                            cluster_status_post.primary_node == cluster_status_pre.secondary_node and
+                                            cluster_status_post.secondary_node == cluster_status_pre.primary_node
+
+    - name:                             "Test Execution: Block Network Communication"
+      when:                             ansible_hostname == cluster_status_pre.primary_node
+      block:
+      - name:                           "Test Execution: Stop timer"
+        ansible.builtin.set_fact:
+          test_execution_end:           "{{ now(utc=true, fmt='%Y-%m-%d %H:%M:%S') }}"
+      - name:                           "Set test case message and details"
+        ansible.builtin.set_fact:
+          test_case_message_from_test_case: |
                                         "Old primary: {{ cluster_status_pre.primary_node }} \
                                         New primary: {{ cluster_status_post.primary_node }} \
                                         Old secondary: {{ cluster_status_pre.secondary_node }} \
                                         New secondary: {{ cluster_status_post.secondary_node }}"
-              test_case_details_from_test_case: {
+          test_case_details_from_test_case: {
                                         "Pre Validations: Remove any location_constraints": "{{ location_constraints_results }}",
                                         "Pre Validations: Validate HANA DB cluster status": "{{ cluster_status_pre }}",
                                         "Pre Validations: CleanUp any failed resource": "{{ cleanup_failed_resource_pre }}",
@@ -165,13 +157,12 @@
                                         "Test Execution: Firewall Rule Removed": "{{ firewall_rule_deleted }}",
                                         "Post Validations: Validate HANA DB cluster status": "{{ cluster_status_post }}",
                                         }
-          when:                         not primary_alive
 
       # /*---------------------------------------------------------------------------
       # |                          Post Validations                                 |
       # +--------------------------------------------------------------------------*/
-    - name:                             "Post Validations Tasks"
-      ansible.builtin.include_tasks:    "roles/misc/tasks/post-validations.yml"
+      - name:                             "Post Validations Tasks"
+        ansible.builtin.include_tasks:    "roles/misc/tasks/post-validations.yml"
 
   rescue:
     - name:                             "Rescue operation"
