@@ -30,7 +30,7 @@ class TestIndexServerCheck:
             "dummy=dummy",
         ]
         monkeypatch.setattr("builtins.open", fake_open_factory(file_lines))
-        checker = IndexServerCheck(database_sid="TEST", os_distribution="redhat")
+        checker = IndexServerCheck(database_sid="TEST", os_distribution="REDHAT")
         checker.check_indexserver()
         result = checker.get_result()
 
@@ -51,7 +51,7 @@ class TestIndexServerCheck:
             "dummy=dummy",
         ]
         monkeypatch.setattr("builtins.open", fake_open_factory(file_lines))
-        checker = IndexServerCheck(database_sid="TEST", os_distribution="suse")
+        checker = IndexServerCheck(database_sid="TEST", os_distribution="SUSE")
         checker.check_indexserver()
         result = checker.get_result()
 
@@ -65,7 +65,7 @@ class TestIndexServerCheck:
         """
         With unsupported os, no file open is needed.
         """
-        checker = IndexServerCheck(database_sid="TEST", os_distribution="ubuntu")
+        checker = IndexServerCheck(database_sid="TEST", os_distribution="WINDOWS")
         checker.check_indexserver()
         result = checker.get_result()
 
@@ -84,7 +84,7 @@ class TestIndexServerCheck:
             "dummy=dummy",
         ]
         monkeypatch.setattr("builtins.open", fake_open_factory(file_lines))
-        checker = IndexServerCheck(database_sid="TEST", os_distribution="redhat")
+        checker = IndexServerCheck(database_sid="TEST", os_distribution="REDHAT")
         checker.check_indexserver()
         result = checker.get_result()
 
@@ -101,7 +101,7 @@ class TestIndexServerCheck:
             raise Exception("File error")
 
         monkeypatch.setattr("builtins.open", fake_open_fail)
-        checker = IndexServerCheck(database_sid="TEST", os_distribution="redhat")
+        checker = IndexServerCheck(database_sid="TEST", os_distribution="REDHAT")
         checker.check_indexserver()
         result = checker.get_result()
 
