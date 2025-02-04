@@ -72,12 +72,12 @@
               get_cluster_status:
                 operation_step:             "test_execution"
                 database_sid:               "{{ db_sid | lower }}"
-              register:                     cluster_status_test_execution
+              register:                     cluster_status_test_execution_primary
               retries:                      50
               delay:                        10
               until: |
-                                            cluster_status_test_execution.primary_node == cluster_status_pre.primary_node and
-                                            cluster_status_test_execution.secondary_node == ""
+                                            cluster_status_test_execution_primary.primary_node == cluster_status_pre.primary_node and
+                                            cluster_status_test_execution_primary.secondary_node == ""
 
             - name:                         "Test Execution: Remove the firewall rule on primary node."
               delegate_to:                  "{{ cluster_status_pre.primary_node }}"
@@ -98,12 +98,12 @@
               get_cluster_status:
                 operation_step:             "test_execution"
                 database_sid:               "{{ db_sid | lower }}"
-              register:                     cluster_status_post
+              register:                     cluster_status_post_primary
               retries:                      50
               delay:                        10
               until: |
-                                            cluster_status_post.primary_node == cluster_status_pre.primary_node and
-                                            cluster_status_post.secondary_node == cluster_status_pre.secondary_node
+                                            cluster_status_post_primary.primary_node == cluster_status_pre.primary_node and
+                                            cluster_status_post_primary.secondary_node == cluster_status_pre.secondary_node
 
     - name:                                 "Test Execution: Block Network Communication (Secondary Node)"
       when:                                 ansible_hostname == cluster_status_pre.secondary_node
@@ -120,12 +120,12 @@
               get_cluster_status:
                 operation_step:             "test_execution"
                 database_sid:               "{{ db_sid | lower }}"
-              register:                     cluster_status_test_execution
+              register:                     cluster_status_test_execution_secondary
               retries:                      50
               delay:                        10
               until: |
-                                            cluster_status_test_execution.primary_node == cluster_status_pre.secondary_node and
-                                            cluster_status_test_execution.secondary_node == ""
+                                            cluster_status_test_execution_secondary.primary_node == cluster_status_pre.secondary_node and
+                                            cluster_status_test_execution_secondary.secondary_node == ""
 
             - name:                         "Test Execution: Wait for the cluster to be in a stable state"
               ansible.builtin.wait_for:
@@ -145,9 +145,11 @@
     - name:                                 "Test Execution: Block Network Communication"
       when:                                 ansible_hostname == cluster_status_pre.primary_node
       block:
-        - name:                               "Test Execution: Stop timer"
+        - name:                             "Test Execution: Stop timer"
           ansible.builtin.set_fact:
-            test_execution_end:               "{{ now(utc=true, fmt='%Y-%m-%d %H:%M:%S') }}"
+            test_execution_end:             "{{ now(utc=true, fmt='%Y-%m-%d %H:%M:%S') }}"
+            cluster_status_post:            "{{ cluster_status_post_primary if (cluster_status_post_primary | default('') != '') else cluster_status_post_secondary | default('') }}"
+            cluster_status_test_execution:  "{{ cluster_status_test_execution_primary if (cluster_status_test_execution_primary | default('') != '') else cluster_status_test_execution_secondary | default('') }}"
 
         - name:                               "Set test case message and details"
           ansible.builtin.set_fact:
@@ -162,7 +164,7 @@
                                               "Pre Validations: CleanUp any failed resource": "{{ cleanup_failed_resource_pre }}",
                                               "Test Execution: Firewall Rule Created": "{{ firewall_rule_created }}",
                                               "Test Execution: Cluster Status after the network blocked": "{{ cluster_status_test_execution }}",
-                                              "Test Execution: Firewall Rule Removed": "{{ firewall_rule_deleted }}",
+                                              "Test Execution: Firewall Rule Removed": "{{ firewall_rule_deleted | default('Firewall rule not deleted') }}",
                                               "Post Validations: Validate HANA DB cluster status": "{{ cluster_status_post }}",
                                               }
 
