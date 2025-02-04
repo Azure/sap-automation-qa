@@ -45,7 +45,7 @@
         - name:                         "Test Execution: Crash the index server on secondary node"
           ansible.builtin.command:      "killall -9 hdbindexserver"
           register:                     index_server_result
-          changed_when:                 index_server_result == 0
+          changed_when:                 index_server_result.rc == 0
           failed_when:                  index_server_result.rc != 0
 
     - name:                             "Test Execution: Crash the index server cont"
