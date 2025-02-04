@@ -19,6 +19,7 @@
       become:                       true
       get_cluster_status:
         operation_step:             "pre_failover"
+        ansible_os_family:          "{{ ansible_os_family | upper }}"
         database_sid:               "{{ db_sid | lower }}"
       register:                     cluster_status_pre
 

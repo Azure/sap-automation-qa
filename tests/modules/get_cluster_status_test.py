@@ -14,7 +14,7 @@ def cluster_status_checker():
     :return: ClusterStatusChecker instance
     :rtype: ClusterStatusChecker
     """
-    return ClusterStatusChecker(database_sid="TEST")
+    return ClusterStatusChecker(database_sid="TEST", ansible_os_family="REDHAT")
 
 
 class TestClusterStatusChecker:
