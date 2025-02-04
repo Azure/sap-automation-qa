@@ -97,7 +97,13 @@ class SapAutomationQA(ABC):
         :return: Standard output from the command
         :rtype: str
         """
-        self.log(logging.INFO, f"Executing command: {' '.join(command)}")
+        command_string = (
+            command if isinstance(command, str) else " ".join(command).replace("'", "")
+        )
+        self.log(
+            logging.INFO,
+            f"Executing command: {command_string}",
+        )
         try:
             command_output = subprocess.run(
                 command,
