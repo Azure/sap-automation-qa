@@ -16,12 +16,12 @@
                                         {{
                                           (
                                             hostvars[cluster_status_pre.primary_node]['var_log_messages_output'].filtered_logs
-                                            | default([])
+                                            | default("")
                                           )
                                           +
                                           (
                                             hostvars[cluster_status_pre.secondary_node]['var_log_messages_output'].filtered_logs
-                                            | default([])
+                                            | default("")
                                           )
                                         }}
 
