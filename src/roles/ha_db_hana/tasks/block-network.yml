@@ -107,9 +107,14 @@
 
     - name:                                 "Test Execution: Block Network Communication (Secondary Node)"
       when:                                 ansible_hostname == cluster_status_pre.secondary_node
+      
       block:
+        - name:                             "Test Execution: Set primary_alive fact"
+          ansible.builtin.set_fact:
+            primary_alive:                  hostvars[cluster_status_pre.primary_node].primary_alive
+
         - name:                             "Test Execution: Block Network Communication (Secondary Node)"
-          when:                             not hostvars[cluster_status_pre.primary_node].primary_alive
+          when:                             not primary_alive
           block:
             - name:                         "Test Execution: Validate HANA DB cluster status (Secondary Node)"
               get_cluster_status:
@@ -138,7 +143,6 @@
                                             cluster_status_post.secondary_node == cluster_status_pre.primary_node
 
             - name:                         "Set fact on primary node"
-              delegate_to:                  "{{ cluster_status_pre.primary_node }}"
               ansible.builtin.set_fact:
                 cluster_status_test_execution: "{{ cluster_status_test_execution }}"
                 cluster_status_post:        "{{ cluster_status_post }}"
