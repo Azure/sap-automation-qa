@@ -149,6 +149,11 @@
       - name:                               "Test Execution: Stop timer"
         ansible.builtin.set_fact:
           test_execution_end:               "{{ now(utc=true, fmt='%Y-%m-%d %H:%M:%S') }}"
+
+      - name:                               "Debug"
+        ansible.builtin.debug:
+          msg:                             "{{ cluster_status_test_execution }} {{ cluster_status_post }} {{ firewall_rule_created }} {{ firewall_rule_deleted }}"
+
       - name:                               "Set test case message and details"
         ansible.builtin.set_fact:
           test_case_message_from_test_case: |
