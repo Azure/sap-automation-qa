@@ -44,7 +44,11 @@
           changed_when:                     firewall_rule_created.rc == 0
           failed_when:                      firewall_rule_created.rc != 0
 
-        - name:                             "Test Execution: Wait for the cluster to be in a stable state"
+        - name:                             "Test Execution: Wait for the reboot to complete"
+          ansible.builtin.wait_for:
+            timeout:                        60
+
+        - name:                             "Test Execution: Check connection on the primary node"
           ansible.builtin.wait_for:
             port:                           22
             state:                          started
