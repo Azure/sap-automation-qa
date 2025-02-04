@@ -43,3 +43,6 @@
 
     - name:                             "Post Telemetry Data"
       ansible.builtin.include_tasks:    "roles/misc/tasks/post-telemetry-data.yml"
+
+- name:                                 "Clear the failed state of hosts"
+  ansible.builtin.meta:                 clear_host_errors
