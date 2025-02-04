@@ -69,6 +69,11 @@ class ClusterStatusChecker(SapAutomationQA):
             stonith_action = self.execute_command_subprocess(
                 STONITH_ACTION[self.ansible_os_family]
             )
+            stonith_action = (
+                stonith_action.split("\n")[-1].split(":")[-1]
+                if self.ansible_os_family == "REDHAT"
+                else stonith_action
+            )
             self.result["stonith_action"] = stonith_action.strip()
         except Exception:
             self.result["stonith_action"] = "reboot"
