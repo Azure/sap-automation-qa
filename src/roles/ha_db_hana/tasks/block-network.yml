@@ -135,25 +135,16 @@
               get_cluster_status:
                 operation_step:             "test_execution"
                 database_sid:               "{{ db_sid | lower }}"
-              register:                     cluster_status_post
+              register:                     cluster_status_post_secondary
               retries:                      50
               delay:                        10
               until: |
-                                            cluster_status_post.primary_node == cluster_status_pre.secondary_node and
-                                            cluster_status_post.secondary_node == cluster_status_pre.primary_node
-
-            - name:                         "Set fact on primary node"
-              ansible.builtin.set_fact:
-                cluster_status_test_execution: "{{ cluster_status_test_execution }}"
-                cluster_status_post:        "{{ cluster_status_post }}"
+                                            cluster_status_post_secondary.primary_node == cluster_status_pre.secondary_node and
+                                            cluster_status_post_secondary.secondary_node == cluster_status_pre.primary_node
 
     - name:                                 "Test Execution: Block Network Communication"
       when:                                 ansible_hostname == cluster_status_pre.primary_node
       block:
-        - name:                               "Debug print the cluster status post"
-          ansible.builtin.debug:
-            msg:                             "{{ cluster_status_post }}"
-
         - name:                               "Test Execution: Stop timer"
           ansible.builtin.set_fact:
             test_execution_end:               "{{ now(utc=true, fmt='%Y-%m-%d %H:%M:%S') }}"
