@@ -13,7 +13,6 @@ Methods:
 """
 
 import logging
-import concurrent.futures
 import xml.etree.ElementTree as ET
 from datetime import datetime
 from typing import Dict, Any
@@ -21,8 +20,20 @@ from ansible.module_utils.basic import AnsibleModule
 
 try:
     from ansible.module_utils.sap_automation_qa import SapAutomationQA, TestStatus
+    from ansible.module_utils.commands import (
+        STONITH_ACTION,
+        AUTOMATED_REGISTER,
+        PACEMAKER_STATUS,
+        CLUSTER_STATUS,
+    )
 except ImportError:
     from src.module_utils.sap_automation_qa import SapAutomationQA, TestStatus
+    from src.module_utils.commands import (
+        STONITH_ACTION,
+        AUTOMATED_REGISTER,
+        PACEMAKER_STATUS,
+        CLUSTER_STATUS,
+    )
 
 
 class ClusterStatusChecker(SapAutomationQA):
@@ -30,9 +41,10 @@ class ClusterStatusChecker(SapAutomationQA):
     Class to check the status of a pacemaker cluster in a SAP HANA environment.
     """
 
-    def __init__(self, database_sid: str):
+    def __init__(self, database_sid: str, ansible_os_family: str = ""):
         super().__init__()
         self.database_sid = database_sid
+        self.ansible_os_family = ansible_os_family
         self.result.update(
             {
                 "primary_node": "",
@@ -55,31 +67,18 @@ class ClusterStatusChecker(SapAutomationQA):
         """
         try:
             stonith_action = self.execute_command_subprocess(
-                [
-                    "crm_attribute",
-                    "--query",
-                    "--name",
-                    "stonith-action",
-                    "--quiet",
-                ]
+                STONITH_ACTION[self.ansible_os_family]
             )
             self.result["stonith_action"] = stonith_action.strip()
         except Exception:
-            self.result["stonith_action"] = "unknown"
+            self.result["stonith_action"] = "reboot"
 
     def _get_automation_register(self) -> None:
         """
         Retrieves the AUTOMATED_REGISTER attribute from the crm_attribute.
         """
         try:
-            cmd_output = self.execute_command_subprocess(
-                [
-                    "cibadmin",
-                    "--query",
-                    "--xpath",
-                    "//nvpair[@name='AUTOMATED_REGISTER']",
-                ]
-            ).strip()
+            cmd_output = self.execute_command_subprocess(AUTOMATED_REGISTER).strip()
             self.result["AUTOMATED_REGISTER"] = ET.fromstring(cmd_output).get("value")
         except Exception:
             self.result["AUTOMATED_REGISTER"] = "unknown"
@@ -163,15 +162,13 @@ class ClusterStatusChecker(SapAutomationQA):
         try:
             while self.result["primary_node"] == "":
                 self.result["cluster_status"] = self.execute_command_subprocess(
-                    ["crm_mon", "--output-as=xml"]
+                    CLUSTER_STATUS
                 )
                 cluster_status_xml = ET.fromstring(self.result["cluster_status"])
                 self.log(logging.INFO, "Cluster status retrieved")
 
                 if (
-                    self.execute_command_subprocess(
-                        ["systemctl", "is-active", "pacemaker"]
-                    ).strip()
+                    self.execute_command_subprocess(PACEMAKER_STATUS).strip()
                     == "active"
                 ):
                     self.result["pacemaker_status"] = "running"
@@ -231,12 +228,15 @@ def run_module() -> None:
     module_args = dict(
         operation_step=dict(type="str", required=True),
         database_sid=dict(type="str", required=True),
+        ansible_os_family=dict(type="str", required=False),
     )
 
     module = AnsibleModule(argument_spec=module_args, supports_check_mode=True)
-    database_sid = module.params["database_sid"]
 
-    checker = ClusterStatusChecker(database_sid)
+    checker = ClusterStatusChecker(
+        database_sid=module.params["database_sid"],
+        ansible_os_family=module.params["ansible_os_family"],
+    )
     result = checker.run()
 
     module.exit_json(**result)

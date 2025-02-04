@@ -41,17 +41,19 @@ def html_report_renderer(module_params):
     )
 
 
-def test_render_report(mocker, html_report_renderer):
+class TestHTMLReportRenderer:
     """
-    Test the render_report method.
+    Test cases for the HTMLReportRenderer class.
+    """
 
-    :param html_report_renderer: The HTMLReportRenderer instance.
-    :type html_report_renderer: HTMLReportRenderer
-    """
-    mock_open = mocker.patch(
-        "builtins.open",
-        mocker.mock_open(
-            read_data="""
+    def test_render_report(self, mocker, html_report_renderer):
+        """
+        Test the render_report method.
+        """
+        mock_open = mocker.patch(
+            "builtins.open",
+            mocker.mock_open(
+                read_data="""
 <!DOCTYPE html>
 <html>
 <head>
@@ -73,17 +75,17 @@ def test_render_report(mocker, html_report_renderer):
 </body>
 </html>
 """
-        ),
-    )
+            ),
+        )
 
-    html_report_renderer.render_report(
-        [
-            {"test_name": "Test 1", "test_result": "Pass"},
-            {"test_name": "Test 2", "test_result": "Fail"},
-        ]
-    )
-    mock_open.assert_called_with(
-        "/tmp/quality_assurance/test_group_12345.html", "w", encoding="utf-8"
-    )
-    handle = mock_open()
-    handle.write.assert_called()
+        html_report_renderer.render_report(
+            [
+                {"test_name": "Test 1", "test_result": "Pass"},
+                {"test_name": "Test 2", "test_result": "Fail"},
+            ]
+        )
+        mock_open.assert_called_with(
+            "/tmp/quality_assurance/test_group_12345.html", "w", encoding="utf-8"
+        )
+        handle = mock_open()
+        handle.write.assert_called()
