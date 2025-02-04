@@ -46,7 +46,7 @@
 
         - name:                             "Test Execution: Wait for the reboot to complete"
           ansible.builtin.wait_for:
-            timeout:                        60
+            timeout:                        90
 
         - name:                             "Test Execution: Check connection on the primary node"
           ansible.builtin.wait_for:
