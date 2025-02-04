@@ -50,6 +50,7 @@
           get_cluster_status:
             operation_step:             "test_execution"
             database_sid:               "{{ db_sid | lower }}"
+            ansible_os_family:          "{{ ansible_os_family | upper }}"
           retries:                      50
           delay:                        10
           register:                     cluster_status_test_execution
@@ -61,6 +62,7 @@
           get_cluster_status:
             operation_step:             "post_failover"
             database_sid:               "{{ db_sid | lower }}"
+            ansible_os_family:          "{{ ansible_os_family | upper }}"
           register:                     cluster_status_post
           retries:                      50
           delay:                        10

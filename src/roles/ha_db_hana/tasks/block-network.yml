@@ -65,6 +65,7 @@
               get_cluster_status:
                 operation_step:             "test_execution"
                 database_sid:               "{{ db_sid | lower }}"
+                ansible_os_family:          "{{ ansible_os_family | upper }}"
               register:                     cluster_status_test_execution_primary
               retries:                      50
               delay:                        10
@@ -91,6 +92,7 @@
               get_cluster_status:
                 operation_step:             "test_execution"
                 database_sid:               "{{ db_sid | lower }}"
+                ansible_os_family:          "{{ ansible_os_family | upper }}"
               register:                     cluster_status_post_primary
               retries:                      50
               delay:                        10
@@ -113,6 +115,7 @@
               get_cluster_status:
                 operation_step:             "test_execution"
                 database_sid:               "{{ db_sid | lower }}"
+                ansible_os_family:          "{{ ansible_os_family | upper }}"
               register:                     cluster_status_test_execution_secondary
               retries:                      50
               delay:                        10
@@ -128,6 +131,7 @@
               get_cluster_status:
                 operation_step:             "test_execution"
                 database_sid:               "{{ db_sid | lower }}"
+                ansible_os_family:          "{{ ansible_os_family | upper }}"
               register:                     cluster_status_post_secondary
               retries:                      50
               delay:                        10

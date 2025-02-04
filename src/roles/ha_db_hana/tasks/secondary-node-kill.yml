@@ -47,6 +47,7 @@
         - name:                         "Test Execution: Validate HANA DB cluster status"
           get_cluster_status:
             operation_step:             "test_execution"
+            ansible_os_family:          "{{ ansible_os_family | upper }}"
             database_sid:               "{{ db_sid | lower }}"
           register:                     cluster_status_test_execution
           retries:                      50
@@ -58,6 +59,7 @@
         - name:                         "Test execution: Validate HANA DB cluster status"
           get_cluster_status:
             operation_step:             "post_failover"
+            ansible_os_family:          "{{ ansible_os_family | upper }}"
             database_sid:               "{{ db_sid | lower }}"
           register:                     cluster_status_post
           retries:                      50
