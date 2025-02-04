@@ -53,17 +53,6 @@
           register:                         primary_node_alive
           failed_when:                      false
 
-        # - name:                             "Test Execution: Check if primary node is still alive (ping test)"
-        #   ansible.builtin.shell:            "ping -c 1 {{ hostvars[cluster_status_pre.primary_node].ansible_host }}"
-        #   delegate_to:                      localhost
-        #   register:                         ping_primary
-        #   ignore_errors:                    true
-        #   changed_when:                     false
-
-        # - name:                             "Set primary_alive fact"
-        #   ansible.builtin.set_fact:
-        #     primary_alive:                  "{{ ping_primary.rc == 0 }}"
-
         - name:                             "Test Execution: Block Network Communication"
           when:                             not primary_node_alive.failed
           block:
