@@ -47,7 +47,7 @@
         - name:                             "Test Execution: Wait for the cluster to be in a stable state"
           ansible.builtin.wait_for:
             port:                           22
-            start:                          started
+            state:                          started
             host:                           "{{ cluster_status_pre.primary_node }}"
             timeout:                        30
           register:                         primary_node_alive
