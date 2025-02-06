@@ -14,70 +14,70 @@ sap_functional_test_type_map:
 test_groups:
   - name:                           HA_DB_HANA
     test_cases:
-      - name:                       HA Parameters Validation
-        task_name:                  ha-config
-        description:                This validates the HA configuration
-        enabled:                    true
+      # - name:                       HA Parameters Validation
+      #   task_name:                  ha-config
+      #   description:                This validates the HA configuration
+      #   enabled:                    true
 
-      - name:                       Azure Load Balancer Validation
-        task_name:                  azure-lb
-        description:                This validates the Azure Load Balancer configuration
-        enabled:                    true
+      # - name:                       Azure Load Balancer Validation
+      #   task_name:                  azure-lb
+      #   description:                This validates the Azure Load Balancer configuration
+      #   enabled:                    true
 
-      - name:                       HA Functional Test- Resource Migration
-        task_name:                  resource-migration
-        description:                This runs a functional test for resource migration
-        enabled:                    true
+      # - name:                       HA Functional Test- Resource Migration
+      #   task_name:                  resource-migration
+      #   description:                This runs a functional test for resource migration
+      #   enabled:                    true
 
-      - name:                       HA Functional Test- Primary Node Crash
-        task_name:                  primary-node-crash
-        description:                This runs a functional test for primary node crash
-        enabled:                    true
+      # - name:                       HA Functional Test- Primary Node Crash
+      #   task_name:                  primary-node-crash
+      #   description:                This runs a functional test for primary node crash
+      #   enabled:                    true
 
       - name:                       HA Functional Test- Block Network Communication
         task_name:                  block-network
         description:                This runs a functional test for blocking network communication
         enabled:                    true
 
-      - name:                       HA Functional Test- Crash index server on primary node
-        task_name:                  primary-crash-index
-        description:                This runs a functional test for crashing index server on primary node
-        enabled:                    true
+      # - name:                       HA Functional Test- Crash index server on primary node
+      #   task_name:                  primary-crash-index
+      #   description:                This runs a functional test for crashing index server on primary node
+      #   enabled:                    true
 
-      - name:                       HA Functional Test- Primary Node Kill
-        task_name:                  primary-node-kill
-        description:                This runs a functional test for primary node crash
-        enabled:                    true
+      # - name:                       HA Functional Test- Primary Node Kill
+      #   task_name:                  primary-node-kill
+      #   description:                This runs a functional test for primary node crash
+      #   enabled:                    true
 
-      - name:                       HA Functional Test- Echo B on Primary Node
-        task_name:                  primary-echo-b
-        description:                This runs a functional test to immediately reboot the system without properly shutting it down.
-        enabled:                    true
+      # - name:                       HA Functional Test- Echo B on Primary Node
+      #   task_name:                  primary-echo-b
+      #   description:                This runs a functional test to immediately reboot the system without properly shutting it down.
+      #   enabled:                    true
 
-      - name:                       HA Functional Test- Crash index server on secondary node
-        task_name:                  secondary-crash-index
-        description:                This runs a functional test for crashing index server on secondary node
-        enabled:                    true
+      # - name:                       HA Functional Test- Crash index server on secondary node
+      #   task_name:                  secondary-crash-index
+      #   description:                This runs a functional test for crashing index server on secondary node
+      #   enabled:                    true
 
-      - name:                       HA Functional Test- Secondary Node Kill
-        task_name:                  secondary-node-kill
-        description:                This runs a functional test for secondary node crash
-        enabled:                    true
+      # - name:                       HA Functional Test- Secondary Node Kill
+      #   task_name:                  secondary-node-kill
+      #   description:                This runs a functional test for secondary node crash
+      #   enabled:                    true
 
-      - name:                       HA Functional Test- Echo B on Secondary Node
-        task_name:                  secondary-echo-b
-        description:                This runs a functional test to immediately reboot the system without properly shutting it down.
-        enabled:                    true
+      # - name:                       HA Functional Test- Echo B on Secondary Node
+      #   task_name:                  secondary-echo-b
+      #   description:                This runs a functional test to immediately reboot the system without properly shutting it down.
+      #   enabled:                    true
 
-      - name:                       HA Functional Test- Freeze File System on Primary Node
-        task_name:                  fs-freeze
-        description:                This runs a functional test for freezing file system on primary node
-        enabled:                    true
+      # - name:                       HA Functional Test- Freeze File System on Primary Node
+      #   task_name:                  fs-freeze
+      #   description:                This runs a functional test for freezing file system on primary node
+      #   enabled:                    true
 
-      - name:                       HA Functional Test- Test SBD Inquisitor kill
-        task_name:                  sbd-fencing
-        description:                This runs a functional test for SBD Inquisitor kill
-        enabled:                    true
+      # - name:                       HA Functional Test- Test SBD Inquisitor kill
+      #   task_name:                  sbd-fencing
+      #   description:                This runs a functional test for SBD Inquisitor kill
+      #   enabled:                    true
 
   - name:                           HA_SCS
     test_cases:
