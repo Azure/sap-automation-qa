@@ -1,13 +1,13 @@
-# Block Network Communication Test Case
+# SBD Fencing Test Case
 
 ## Prerequisites
 
 - Functioning HANA cluster
 - Two active nodes (primary and secondary)
 - System replication configured
-- Cluster services running
-- iptables service accessible
 - STONITH configuration (stonith-enabled=true)
+- iSCSI-based SBD configuration
+- sbd: inquisitor process enabled
 
 ## Validation
 
@@ -16,40 +16,36 @@
 - Validate failover behavior
 
 ## Pseudocode
-
 ```pseudocode
-FUNCTION BlockNetworkTest():
+FUNCTION SBDFencingTest():
     // Setup Phase
     EXECUTE TestSetup()
     EXECUTE PreValidations()
 
-    IF pre_validations_status != "PASSED" THEN
+    IF pre_validations_status != "PASSED" OR database_cluster_type != "ISCSI" THEN
         RETURN "Test Prerequisites Failed"
 
     // Main Test Execution
     TRY:
         IF current_node == primary_node THEN
             record_start_time()
-            get_secondary_node_ip()
             
-            // Block Network
-            create_iptables_rules(secondary_node_ip)
+            // Find and Kill Inquisitor
+            inquisitor_pid = find_sbd_inquisitor_process()
+            kill_process(inquisitor_pid)
             
-            // Check Node Status
-            WHILE timeout_not_reached DO
-                check_node_connectivity()
-                IF secondary_node_unreachable AND primary_node_reachable THEN
-                    BREAK
-            END WHILE
+        ELIF current_node == secondary_node THEN
+            // Monitor Failover
+            IF automated_register == true THEN
+                WHILE timeout_not_reached DO
+                    check_cluster_status()
+                    IF new_primary == old_secondary AND 
+                       new_secondary == old_primary THEN
+                        BREAK
+                    WAIT 10_seconds
+                END WHILE
+            END IF
 
-            // Validate Cluster Status
-            validate_cluster_status()
-            
-            // Restore Network
-            remove_iptables_rules(secondary_node_ip)
-            wait_for_cluster_stability()
-            
-            // Final Validation
             validate_final_cluster_status()
             record_end_time()
             generate_test_report()
