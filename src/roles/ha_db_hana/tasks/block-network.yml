@@ -49,23 +49,19 @@
       block:
         - name:                             "Test Execution: Check node connectivity"
           ansible.builtin.wait_for:
-            host:                           "{{ hostname_item }}"
+            host:                           "{{ ansible_hostname }}"
             port:                           "3{{ db_instance_number }}13"
-            state:                          started
+            state:                          stopped
             delay:                          10
             timeout:                        60
-          loop:
-                                            - "{{ hostvars[cluster_status_pre.primary_node].ansible_host }}"
-                                            - "{{ hostvars[cluster_status_pre.secondary_node].ansible_host }}"
-          loop_control:
-            loop_var:                       hostname_item
+          when:                             hostvars[cluster_status_pre.primary_node].ansible_host == ansible_hostname
           register:                         node_connectivity
           ignore_errors:                    true
 
         - name:                             "Set Node Status Facts"
           ansible.builtin.set_fact:
-            primary_node_down:              "{{ node_connectivity.results[0] is failed }}"
-            secondary_node_down:            "{{ node_connectivity.results[1] is failed }}"
+            primary_node_down:              "{{ hostvars[cluster_status_pre.primary_node][node_connectivity].results[0] is failed }}"
+            secondary_node_down:            "{{ not hostvars[cluster_status_pre.primary_node][node_connectivity].results[0] is failed }}"
 
     - name:                                 "Test Execution: Check node status on primary and secondary"
       when:
