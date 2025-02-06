@@ -51,7 +51,8 @@
 
     - name:                                 "Test Execution: Check node status on primary and secondary"
       block:
-        - name:                             "Test Execution: Check node status"
+        - name:                             "Test Execution: Check secondary node connectivity from primary node"
+          when:                             ansible_hostname == cluster_status_pre.primary_node
           delegate_to:                      localhost
           ansible.builtin.shell: |
                                             for i in $(seq 1 20); do
@@ -61,13 +62,29 @@
                                               fi
                                               sleep 1
                                             done
-          register:                         node_status
+          register:                         secondary_status
           ignore_errors:                    true
+          no_log:                           true
+
+        - name:                             "Test Execution: Check primary node connectivity from secondary node"
+          when:                             ansible_hostname == cluster_status_pre.secondary_node
+          delegate_to:                      localhost
+          ansible.builtin.shell: |
+                                            for i in $(seq 1 20); do
+                                              if ! ping -c 2 -w 1 {{ hostvars[cluster_status_pre.primary_node].ansible_host }}; then
+                                                echo "Connection failed on attempt $i"
+                                                exit 1
+                                              fi
+                                              sleep 1
+                                            done
+          register:                         primary_status
+          ignore_errors:                    true
+          no_log:                           true
 
         - name:                             "Set Node Status Facts"
           ansible.builtin.set_fact:
-            primary_node_down:              "{{ hostvars[cluster_status_pre.primary_node].node_status is failed }}"
-            secondary_node_down:            "{{ hostvars[cluster_status_pre.secondary_node].node_status is failed }}"
+            primary_node_down:              "{{ hostvars[cluster_status_pre.secondary_node].primary_status is failed }}"
+            secondary_node_down:            "{{ hostvars[cluster_status_pre.primary_node].secondary_status is failed }}"
 
     - name:                                 "Test Execution: Check node status on primary and secondary"
       when:

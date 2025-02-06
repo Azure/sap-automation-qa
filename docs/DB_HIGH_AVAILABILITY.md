@@ -2,7 +2,7 @@
 
 ## Test Case Overview
 
-| Test Case | Task Name | Description | More Info |
+| Test Case | Type | Description | More Info |
 |-----------|-----------|-------------| --------- |
 | HA Parameters Validation | Configuration |  The HA parameter validation test validates HA configuration including Corosync settings, Pacemaker resources, SBD device configuration, and HANA system replication setup. | [ha-config.yml](../src/roles/ha_db_hana/tasks/ha-config.yml) |
 | Azure Load Balancer | Configuration |  The Azure LB configuration test validates Azure Load Balancer setup including health probe configuration, backend pool settings, load balancing rules, and frontend IP configuration. | [azure-lb.yml](../src/roles/ha_db_hana/tasks/azure-lb.yml) |
