@@ -34,6 +34,7 @@
         - name:                             "Test Execution: Get the IP address of the secondary node"
           ansible.builtin.set_fact:
             secondary_node_ip:              "{{ hostvars[cluster_status_pre.secondary_node].ansible_host }}"
+            primary_node_ip:                "{{ hostvars[cluster_status_pre.primary_node].ansible_host }}"
 
         - name:                             "Test Execution: Create a firewall on primary node"
           become:                           true
@@ -44,24 +45,29 @@
           changed_when:                     firewall_rule_created.rc == 0
           failed_when:                      firewall_rule_created.rc != 0
 
+        - name:                             "Test Execution: Wait for the cluster to be in a stable state"
+          ansible.builtin.wait_for:
+            timeout:                        60
 
     - name:                                 "Test Execution: Check node status on primary and secondary"
       block:
-        - name:                             "Test Execution: Check node connectivity"
-          ansible.builtin.wait_for:
-            host:                           "{{ ansible_hostname }}"
-            port:                           "3{{ db_instance_number }}13"
-            state:                          stopped
-            delay:                          10
-            timeout:                        60
-          when:                             hostvars[cluster_status_pre.primary_node].ansible_host == ansible_hostname
-          register:                         node_connectivity
+        - name:                             "Test Execution: Check node status"
+          delegate_to:                      localhost
+          ansible.builtin.shell: |
+                                            for i in $(seq 1 20); do
+                                              if ! ping -c 2 -w 1 {{ ansible_host }}; then
+                                                echo "Connection failed on attempt $i"
+                                                exit 1
+                                              fi
+                                              sleep 1
+                                            done
+          register:                         node_status
           ignore_errors:                    true
 
         - name:                             "Set Node Status Facts"
           ansible.builtin.set_fact:
-            primary_node_down:              "{{ hostvars[cluster_status_pre.primary_node][node_connectivity].results[0] is failed }}"
-            secondary_node_down:            "{{ not hostvars[cluster_status_pre.primary_node][node_connectivity].results[0] is failed }}"
+            primary_node_down:              "{{ hostvars[cluster_status_pre.primary_node].node_status is failed }}"
+            secondary_node_down:            "{{ hostvars[cluster_status_pre.secondary_node].node_status is failed }}"
 
     - name:                                 "Test Execution: Check node status on primary and secondary"
       when:
