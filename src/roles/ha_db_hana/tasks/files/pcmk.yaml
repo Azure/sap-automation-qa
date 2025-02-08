@@ -96,6 +96,7 @@ RESOURCE_DEFAULTS:
         interval:                       "0"
         timeout:                        "3600"
       monitor:
+        interval:                       "60"
         timeout:                        "700"
 
   ipaddr:
