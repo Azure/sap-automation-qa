@@ -31,7 +31,7 @@
 
     - name:                             "Read the pcmk configuration file and set fact"
       ansible.builtin.set_fact:
-        pcmk_constants:                 "{{ lookup('ansible.builtin.file', 'files/pcmk.yaml') | from_yaml }}"
+        pcmk_constants:                 "{{ lookup('ansible.builtin.file', 'pcmk.yaml') | from_yaml }}"
 
     - name:                             "HA Configuration check for the DB nodes"
       get_pcmk_properties:
