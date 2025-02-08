@@ -1,4 +1,8 @@
-CONSTRAINTS_DEFAULTS: {}
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+
+# Description: This file contains the expected configuration for the pacemaker cluster. The values
+# are based on Microsoft's best practices and are subject to change based on the customer's requirements.
 
 CRM_CONFIG_DEFAULTS:
   cluster-infrastructure:             corosync
@@ -16,6 +20,9 @@ RSC_DEFAULTS:
   migration-threshold:                '5000'
   priority:                           '1'
   resource-stickiness:                '1000'
+
+CONSTRAINTS:
+
 
 VALID_CONFIGS:
   RHEL:
@@ -54,8 +61,6 @@ RESOURCE_DEFAULTS:
       interval:                           "3600"
       timeout:                            "120"
 
-
-
   topology:
     meta_attributes:
       clone-node-max:                   "1"
@@ -71,7 +76,6 @@ RESOURCE_DEFAULTS:
       stop:
         interval:                       "0"
         timeout:                        "300"
-
 
   hana:
     meta_attributes:
@@ -121,3 +125,12 @@ RESOURCE_DEFAULTS:
       stop:
         interval:                       "0"
         timeout:                        "120"
+
+OS_PARAMETERS:
+  DEFAULTS:
+    sysctl:
+      net.ipv4.tcp_timestamps:            "0"
+      vm.swappiness:                      "10"
+    corosync-cmapctl:
+      runtime.config.totem.token:         "30000"
+      runtime.config.totem.consensus:     "36000"
