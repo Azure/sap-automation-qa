@@ -37,7 +37,7 @@
         virtual_machine_name:           "{{ azure_instance_metadata.json.compute.name }}"
         fencing_mechanism:              "{{ database_cluster_type }}"
         os_version:                     "{{ ansible_distribution_version }}"
-        pcmk_constants:                 "{{ lookup('file', 'pcmk.yaml') }}"
+        pcmk_constants:                 "{{ lookup('file', 'pcmk.yaml') | from_yaml }}"
       register:                         test_result
 
     - name:                             "Set the test case status to PASSED"
