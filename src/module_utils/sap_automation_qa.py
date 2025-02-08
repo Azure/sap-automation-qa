@@ -192,14 +192,12 @@ class SapAutomationQA(ABC):
             os.path.dirname(__file__), "module_utils", constants_file_name
         )
 
-        # Try ansible default paths
         ansible_paths = [
             os.path.join("/usr/share/ansible", constants_file_name),
             os.path.join(os.getcwd(), constants_file_name),
             constants_file_name,
         ]
 
-        # Search for file
         for path in [module_path] + ansible_paths:
             if os.path.exists(path):
                 with open(path, "r") as f:

@@ -46,6 +46,7 @@ class HAClusterValidator(SapAutomationQA):
         instance_number,
         fencing_mechanism,
         virtual_machine_name,
+        constants,
         category=None,
     ):
         super().__init__()
@@ -56,7 +57,7 @@ class HAClusterValidator(SapAutomationQA):
         self.instance_number = instance_number
         self.fencing_mechanism = fencing_mechanism
         self.virtual_machine_name = virtual_machine_name
-        self.constants = self.load_constants("ansible/module_utils/pcmk_defaults.yaml")
+        self.constants = constants
         self.config = self.parse_ha_cluster_config()
         self.result.update(
             {
@@ -252,6 +253,7 @@ def main() -> None:
             virtual_machine_name=dict(type="str"),
             fencing_mechanism=dict(type="str"),
             os_version=dict(type="str"),
+            pcmk_constants=dict(type="dict"),
         )
     )
 
@@ -262,6 +264,7 @@ def main() -> None:
         sid=module.params["sid"],
         virtual_machine_name=module.params["virtual_machine_name"],
         fencing_mechanism=module.params["fencing_mechanism"],
+        constants=module.params["pcmk_constants"],
     )
 
     module.exit_json(**manager.result)
