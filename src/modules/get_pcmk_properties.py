@@ -231,7 +231,7 @@ class HAClusterValidator(SapAutomationQA):
             "rsc_defaults",
             "crm_config",
             "op_defaults",
-            "constraint",
+            "constraints",
             "resources",
         ]:
             self.category = scope
