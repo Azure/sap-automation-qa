@@ -290,9 +290,9 @@ class HAClusterValidator(SapAutomationQA):
                     if failed_parameters
                     else TestStatus.SUCCESS.value
                 ),
-                "message": "Successfully retrieved cluster configuration",
             }
         )
+        self.result["message"] += "HA Parameter Validation completed successfully."
 
 
 def main() -> None:
