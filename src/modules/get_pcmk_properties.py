@@ -75,7 +75,7 @@ class HAClusterValidator(SapAutomationQA):
         self.fencing_mechanism = fencing_mechanism
         self.virtual_machine_name = virtual_machine_name
         self.constants = constants
-        self.config = self.parse_ha_cluster_config()
+        self.parse_ha_cluster_config()
 
     def _get_expected_value(self, category, name):
         """
@@ -168,6 +168,8 @@ class HAClusterValidator(SapAutomationQA):
                     )
                 )
 
+        return parameters
+
     def _parse_basic_config(self, element, category, subcategory=None):
         """
         Parse basic configuration parameters
@@ -190,7 +192,6 @@ class HAClusterValidator(SapAutomationQA):
         Parse resource-specific configuration parameters
         """
         parameters = []
-
         meta = element.find(".//meta_attributes")
         if meta is not None:
             self._parse_basic_config(
@@ -217,7 +218,6 @@ class HAClusterValidator(SapAutomationQA):
                             value=op.get(op_type),
                         )
                     )
-
         return parameters
 
     def parse_ha_cluster_config(self):
@@ -271,8 +271,8 @@ class HAClusterValidator(SapAutomationQA):
                     continue
 
         # Validate OS parameters
+        parameters.extend(self._parse_os_parameters())
 
-        self._parse_os_parameters()
         failed_parameters = [
             param
             for param in parameters
@@ -289,7 +289,6 @@ class HAClusterValidator(SapAutomationQA):
                 "message": "Successfully retrieved cluster configuration",
             }
         )
-        return parameters
 
 
 def main() -> None:

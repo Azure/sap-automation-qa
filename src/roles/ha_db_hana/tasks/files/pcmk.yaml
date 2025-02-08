@@ -21,7 +21,19 @@ RSC_DEFAULTS:
   priority:                           '1'
   resource-stickiness:                '1000'
 
+# <constraints>
+#   <rsc_colocation id="col_saphana_ip_HDB_HDB00" score="4000" rsc="g_ip_HDB_HDB00" rsc-role="Started" with-rsc="msl_SAPHana_HDB_HDB00" with-rsc-role="Master"/>
+#   <rsc_order id="ord_SAPHana_HDB_HDB00" kind="Optional" first="cln_SAPHanaTopology_HDB_HDB00" then="msl_SAPHana_HDB_HDB00"/>
+# </constraints>
 CONSTRAINTS:
+  rsc_colocation:
+    score:                            "4000"
+    rsc-role:                         "Started"
+    with-rsc-role:                    "Master"
+
+  rsc_order:
+    kind:                             "Optional"
+
 
 
 VALID_CONFIGS:
