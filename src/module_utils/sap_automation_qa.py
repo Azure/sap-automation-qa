@@ -3,6 +3,7 @@ This module is used to setup the context for the test cases
 and setup base variables for the test case running in the sap-automation-qa
 """
 
+import os
 from abc import ABC
 from enum import Enum
 import sys
@@ -187,5 +188,21 @@ class SapAutomationQA(ABC):
         :return: The constants as a dictionary
         :rtype: Dict[str, Any]
         """
+        module_path = os.path.join(
+            os.path.dirname(__file__), "module_utils", constants_file_name
+        )
+
+        # Try ansible default paths
+        ansible_paths = [
+            os.path.join("/usr/share/ansible", constants_file_name),
+            os.path.join(os.getcwd(), constants_file_name),
+            constants_file_name,
+        ]
+
+        # Search for file
+        for path in [module_path] + ansible_paths:
+            if os.path.exists(path):
+                with open(path, "r") as f:
+                    return self.parse_yaml_as_dict(f.read())
         with open(constants_file_name, "r", encoding="utf-8") as yaml_output:
             return self.parse_yaml_as_dict(yaml_output)
