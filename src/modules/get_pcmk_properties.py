@@ -190,6 +190,12 @@ class HAClusterValidator(SapAutomationQA):
                 element=meta, category=category, subcategory="meta_attributes"
             )
 
+        inst = element.find(".//instance_attributes")
+        if inst is not None:
+            self._parse_basic_config(
+                element=inst, category=category, subcategory="instance_attributes"
+            )
+
         ops = element.find(".//operations")
         if ops is not None:
             for op in ops.findall(".//op"):
@@ -204,19 +210,6 @@ class HAClusterValidator(SapAutomationQA):
                             value=op.get(op_type),
                         )
                     )
-
-        inst = element.find(".//instance_attributes")
-        if inst is not None:
-            for nvpair in inst.findall(".//nvpair"):
-                parameters.append(
-                    self._create_parameter(
-                        category=category,
-                        subcategory="instance_attributes",
-                        id=nvpair.get("id"),
-                        name=nvpair.get("name"),
-                        value=nvpair.get("value"),
-                    )
-                )
 
         return parameters
 
@@ -270,16 +263,17 @@ class HAClusterValidator(SapAutomationQA):
                         "message"
                     ] += f"Failed to get resources configuration: {str(e)}"
                     continue
+        failed_parameters = [
+            param
+            for param in parameters
+            if param.get("status") == TestStatus.ERROR.value
+        ]
         self.result.update(
             {
                 "details": {"parameters": parameters},
                 "status": (
                     TestStatus.ERROR.value
-                    if any(
-                        param.get("status", TestStatus.INFO.value)
-                        == TestStatus.ERROR.value
-                        for param in parameters
-                    )
+                    if failed_parameters
                     else TestStatus.SUCCESS.value
                 ),
                 "message": "Successfully retrieved cluster configuration",
