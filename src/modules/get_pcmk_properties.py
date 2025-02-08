@@ -56,7 +56,7 @@ class HAClusterValidator(SapAutomationQA):
         self.instance_number = instance_number
         self.fencing_mechanism = fencing_mechanism
         self.virtual_machine_name = virtual_machine_name
-        self.constants = self.load_constants("pcmk_defaults.yaml")
+        self.constants = self.load_constants("ansible.module_utils.pcmk_defaults.yaml")
         self.config = self.parse_ha_cluster_config()
         self.result.update(
             {
