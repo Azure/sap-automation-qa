@@ -13,7 +13,7 @@
         font-family: system-ui, -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, 'Open Sans', 'Helvetica Neue', sans-serif;
         background-color: #f2f2f2;
       }
-      
+
       /* Layout Components */
       .navbar {
         display: flex;
@@ -26,16 +26,16 @@
         font-size: 20px;
         width: 100%;
       }
-      
+
       .main-content {
         flex: 1;
         padding: 20px;
       }
-      
+
       .navbar .system-id {
         font-weight: bold;
       }
-      
+
       .container {
         display: grid;
         grid-template-columns: minmax(0, 1fr) minmax(auto, 1400px) minmax(0, 1fr);
@@ -51,12 +51,12 @@
         grid-column: 2;
         padding: 20px;
       }
-      
+
       .system-status {
         font-weight: bold;
         color: #323130; /* Microsoft's Dark Gray */
       }
-      
+
       /* System Info Styles */
       .system-info-container {
         background-color: #fff;
@@ -66,18 +66,18 @@
         margin-bottom: 20px;
         position: relative;
       }
-      
+
       .system-info-heading {
         width: 100%;
         text-align: left;
         margin-bottom: 20px;
       }
-      
+
       .system-info-columns {
         display: flex;
         justify-content: space-between;
       }
-      
+
       .system-info-column {
         width: 40%;
         position: relative;
@@ -85,27 +85,27 @@
         display: flex;
         align-items: flex-start;
       }
-      
+
       .system-info-column:last-child {
         align-items: center;
       }
-      
+
       .system-info-container h2 {
         color: #666;
         margin-bottom: 20px;
         font-size: 14px;
       }
-      
+
       .system-info-container p {
         color: #666;
         margin-bottom: 10px;
       }
-      
+
       .system-info p strong {
         color: #666;
         font-weight: 600;
       }
-      
+
       /* Pie Chart Styles */
       .pie {
         --passed: #2a882e; /* Adjusted green to be brighter */
@@ -114,7 +114,7 @@
         --size: 150px;
         --thickness: 12px;
         --progress: 0;
-      
+
         width: var(--size);
         height: var(--size);
         border-radius: 50%;
@@ -128,7 +128,7 @@
         color: #666;
         margin: 10px;
       }
-      
+
       .pie::before {
         content: '';
         position: absolute;
@@ -138,7 +138,7 @@
         border-radius: 50%;
         z-index: 1;
       }
-      
+
       .pie span {
         position: relative;
         z-index: 2;
@@ -146,12 +146,12 @@
         animation: countUp 0.5s ease-out forwards;
         animation-delay: 1.5s;
       }
-      
+
       /* Test Case Styles */
       .test-case {
         margin-bottom: 10px;
       }
-      
+
       .test-case .title {
         cursor: pointer;
         background-color: #e9ecef;
@@ -162,47 +162,48 @@
         justify-content: space-between;
         font-size: 12px;
       }
-      
+
       .test-case .title:hover {
         background-color: #dee2e6;
       }
-      
+
       .test-case .title .name,
       .test-case .title .duration {
         display: inline-block;
       }
-      
+
       .test-case .details {
         display: none;
         padding: 10px;
         border: 1px solid #ddd;
         border-radius: 5px;
       }
-      
+
       .test-case.failed .title {
         background-color: #df3d3d;
         color: white;
       }
-      
+
       .test-case.passed .title {
         background-color: #2a882e;
         color: white;
       }
-      
+
       .test-case.warning .title {
         background-color: #fcd116;
         color: white;
       }
-      
+
       /* Table Styles */
       .cluster-table,
       .package-table,
       .details {
+        table-layout: fixed;
         width: 100%;
         border-collapse: collapse;
         margin-top: 20px;
       }
-      
+
       .details th,
       .details td {
         padding: 8px;
@@ -210,20 +211,20 @@
         word-wrap: break-word;
         vertical-align: top;
       }
-      
+
       .details th {
         background-color: #f2f2f2;
         color: #333;
       }
-      
+
       .details tr:nth-child(even) {
         background-color: #f2f2f2;
       }
-      
+
       .details tr {
         background-color: #ddd;
       }
-      
+
       /* Legend Styles */
       .legend {
         position: absolute;
@@ -234,20 +235,20 @@
         border-radius: 8px;
         box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
       }
-      
+
       .legend-item {
         display: flex;
         align-items: center;
         margin: 5px 0;
       }
-      
+
       .legend-color {
         width: 20px;
         height: 20px;
         border-radius: 4px;
         margin-right: 8px;
       }
-      
+
       .passed-color {
         background: var(--passed);
       }
@@ -257,7 +258,7 @@
       .warning-color {
         background: var(--warning);
       }
-      
+
       /* Footer Styles */
       .footer {
         bottom: 0;
@@ -268,7 +269,7 @@
         background-color: #0078d7;
         color: #ffffff;
       }
-      
+
       /* Animations */
       @keyframes countUp {
         from {
@@ -280,24 +281,24 @@
           transform: translateY(0);
         }
       }
-      
+
       /* Media Queries */
       @media only screen and (max-width: 600px) {
         .container {
           max-width: 100%;
           padding: 0 15px;
         }
-      
+
         .navbar,
         .footer {
           flex-direction: column;
           text-align: center;
         }
-      
+
         .test-case .title {
           flex-direction: column;
         }
-      
+
         .test-case .title .name,
         .test-case .title .duration {
           display: block;
@@ -450,22 +451,22 @@
                 }
                 return `"${value}"`
               })
-      
+
             const jsonObject = JSON.parse(fixedJsonString)
-      
+
             // Clear existing content
             jsonObjectElement.innerHTML = ''
-      
+
             // Create a pre element to maintain formatting
             const preElement = document.createElement('jsonobject')
             preElement.style.whiteSpace = 'pre-wrap'
             preElement.style.wordWrap = 'break-word'
-      
+
             // Function to recursively create formatted HTML
             function formatJSON(obj, indent = 0, isTopLevel = true) {
               const indentString = '    '.repeat(indent)
               let html = ''
-      
+
               if (Array.isArray(obj)) {
                 html += '[\n'
                 obj.forEach((item, index) => {
@@ -489,10 +490,10 @@
               } else {
                 html += JSON.stringify(obj)
               }
-      
+
               return html
             }
-      
+
             preElement.innerHTML = formatJSON(jsonObject)
             jsonObjectElement.appendChild(preElement)
           } catch (error) {
@@ -500,7 +501,7 @@
           }
         }
       }
-      
+
       // Function to format new line messages from /var/log/messages
       function formatNewLineMessages() {
         const messages = document.getElementsByClassName('newlinemessages')
@@ -512,19 +513,19 @@
           }
         }
       }
-      
+
       // Function to toggle the details of a test case
       function toggleDetails(element) {
         var details = element.nextElementSibling
         details.style.display = details.style.display === 'none' ? 'block' : 'none'
       }
-      
+
       // Function to create a table for package versions
       function createPackageTable(packageList) {
         const containerText = packageList.replace(/'/g, '"')
-      
+
         if (!containerText) return
-      
+
         let packages
         try {
           packages = JSON.parse(containerText)
@@ -532,12 +533,12 @@
           console.error('Failed to parse JSON:', e)
           return
         }
-      
+
         const table = document.createElement('table')
         table.className = 'package-table'
         const thead = document.createElement('thead')
         const tbody = document.createElement('tbody')
-      
+
         // Create table headers
         const headers = ['Package Name', 'Version', 'Release', 'Architecture']
         const headerRow = document.createElement('tr')
@@ -547,36 +548,36 @@
           headerRow.appendChild(th)
         })
         thead.appendChild(headerRow)
-      
+
         // Create table rows
         packages.forEach((pkg) => {
           const [packageName, details] = Object.entries(pkg)[0]
           const row = document.createElement('tr')
-      
+
           const packageNameCell = document.createElement('td')
           packageNameCell.textContent = packageName
           row.appendChild(packageNameCell)
-      
+
           const versionCell = document.createElement('td')
           versionCell.textContent = details.version
           row.appendChild(versionCell)
-      
+
           const releaseCell = document.createElement('td')
           releaseCell.textContent = details.release
           row.appendChild(releaseCell)
-      
+
           const archCell = document.createElement('td')
           archCell.textContent = details.architecture
           row.appendChild(archCell)
-      
+
           tbody.appendChild(row)
         })
-      
+
         table.appendChild(thead)
         table.appendChild(tbody)
         return table
       }
-      
+
       // Function to format package list
       function formatPackageList() {
         // Call the function to create the table for package version
@@ -592,11 +593,11 @@
           }
         }
       }
-      
+
       function createClusterTable(clusterData) {
         const table = document.createElement('table')
         table.className = 'cluster-table'
-  
+
         // Create table header
         const header = table.createTHead()
         const headerRow = header.insertRow()
@@ -605,9 +606,9 @@
             th.textContent = text
             headerRow.appendChild(th)
           })
-  
+
         const tbody = table.createTBody()
-  
+
         function addRow(category, type, name, value, expectedValue, status) {
           const row = tbody.insertRow()
           const categoryCell = row.insertCell()
@@ -616,7 +617,7 @@
           const valueCell = row.insertCell()
           const expectedValueCell = row.insertCell()
           const statusCell = row.insertCell()
-  
+
           categoryCell.textContent = category
           typeCell.textContent = type
           nameCell.textContent = name
@@ -624,14 +625,14 @@
           expectedValueCell.textContent = expectedValue
           statusCell.textContent = status
         }
-  
+
         clusterData.parameters.forEach(param => {
-          addRow(param.category, param.type, param.name, param.value, param['expected value'], param.status)
+          addRow(param.category, param.type, param.name, param.value, param.expected_value, param.status)
         })
-  
+
         return table
       }
-  
+
       // Function to parse and convert cluster data to tables
       function formatClusterData() {
         const clusterDataElements = document.getElementsByClassName('cluster-data')
@@ -646,7 +647,7 @@
           }
         }
       }
-  
+
       // Function to parse and convert cluster data to tables
       function parseClusterData() {
         const clusterElements = document.getElementsByClassName('cluster')
@@ -657,7 +658,7 @@
             clusterText = clusterText.replace(/'/g, '"').replace(/[\x00-\x1F\x7F]/g, "")
             const clusterData = JSON.parse(clusterText)
             const clusterTable = createClusterTable(clusterData)
-  
+
             clusterElement.textContent = '' // Clear the existing content
             clusterElement.appendChild(clusterTable)
           } catch (error) {
@@ -665,34 +666,34 @@
           }
         }
       }
-      
+
       // Function to update the pie chart with the test results
       function initializeTestResults(testResults) {
         const pie = document.getElementById('testResults')
         const percentSpan = pie.querySelector('span')
-      
+
         const total = testResults.length
         const counts = {
           PASSED: testResults.filter((r) => r === 'PASSED').length,
           FAILED: testResults.filter((r) => r === 'FAILED').length,
           WARNING: testResults.filter((r) => r === 'WARNING').length
         }
-      
+
         const percentages = {
           PASSED: (counts.PASSED / total) * 100,
           FAILED: (counts.FAILED / total) * 100,
           WARNING: (counts.WARNING / total) * 100
         }
-      
+
         const duration = 1500
         const steps = 60
         const stepDuration = duration / steps
         let currentStep = 0
-      
+
         const animateChart = setInterval(() => {
           currentStep++
           const progress = (currentStep / steps) * 100
-      
+
           let gradient
           if (progress <= percentages.PASSED) {
             gradient = `conic-gradient(
@@ -713,14 +714,14 @@
                             transparent ${progress}% 100%
                         )`
           }
-      
+
           pie.style.background = gradient
-      
+
           if (currentStep >= steps) {
             clearInterval(animateChart)
           }
         }, stepDuration)
-      
+
         percentSpan.textContent = `${counts.PASSED}/${total}`
       }
       formatJsonObjects()
