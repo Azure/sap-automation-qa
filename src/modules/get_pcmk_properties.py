@@ -144,7 +144,7 @@ class HAClusterValidator(SapAutomationQA):
                     id=nvpair.get("id"),
                     name=nvpair.get("name"),
                     value=nvpair.get("value"),
-                    expected_value=expected_value,
+                    expected_value=expected_value if expected_value is not None else "",
                     status=(
                         TestStatus.INFO.value
                         if expected_value is None
