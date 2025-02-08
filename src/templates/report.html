@@ -609,17 +609,17 @@
 
         const tbody = table.createTBody()
 
-        function addRow(category, type, name, value, expectedValue, status) {
+        function addRow(category, id, name, value, expectedValue, status) {
           const row = tbody.insertRow()
           const categoryCell = row.insertCell()
-          const typeCell = row.insertCell()
+          const idCell = row.insertCell()
           const nameCell = row.insertCell()
           const valueCell = row.insertCell()
           const expectedValueCell = row.insertCell()
           const statusCell = row.insertCell()
 
           categoryCell.textContent = category
-          typeCell.textContent = type
+          idCell.textContent = id
           nameCell.textContent = name
           valueCell.textContent = value
           expectedValueCell.textContent = expectedValue
@@ -627,7 +627,7 @@
         }
 
         clusterData.parameters.forEach(param => {
-          addRow(param.category, param.type, param.name, param.value, param.expected_value, param.status)
+          addRow(param.category, param.id, param.name, param.value, param.expected_value, param.status)
         })
 
         return table
