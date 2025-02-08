@@ -61,11 +61,12 @@ class HAClusterValidator(SapAutomationQA):
         self.config = self.parse_ha_cluster_config()
         self.result.update(
             {
-                "parameters": self.config,
-            }
+                "details": {"parameters": self.config},
+                "status": TestStatus.SUCCESS.value,
+            },
         )
 
-    def get_resource_expected_value(
+    def _get_resource_expected_value(
         self, resource_type, section, param_name, op_name=None
     ):
         """Get expected value for resource parameters"""
@@ -90,7 +91,7 @@ class HAClusterValidator(SapAutomationQA):
         op_name=None,
     ):
         if category in self.RESOURCE_CATEGORIES:
-            expected_value = self.get_resource_expected_value(
+            expected_value = self._get_resource_expected_value(
                 resource_type=category,
                 section=subcategory,
                 param_name=name,
@@ -122,11 +123,10 @@ class HAClusterValidator(SapAutomationQA):
             ),
         ).to_dict()
 
-    def parse_basic_config(self, element, category):
+    def _parse_basic_config(self, element, category):
         """Parse basic configuration parameters"""
         parameters = []
         _, defaults_key = self.BASIC_CATEGORIES[category]
-
         for nvpair in element.findall(".//nvpair"):
             expected_value = (
                 self.constants["VALID_CONFIGS"]
@@ -161,7 +161,6 @@ class HAClusterValidator(SapAutomationQA):
     def _parse_resource(self, element, category):
         parameters = []
 
-        # Parse meta attributes
         meta = element.find(".//meta_attributes")
         if meta is not None:
             for nvpair in meta.findall(".//nvpair"):
@@ -210,6 +209,7 @@ class HAClusterValidator(SapAutomationQA):
     def parse_ha_cluster_config(self):
         """Parse HA cluster configuration XML and return a list of properties."""
         parameters = []
+
         for scope in [
             "rsc_defaults",
             "crm_config",
@@ -228,16 +228,49 @@ class HAClusterValidator(SapAutomationQA):
 
             # Handle basic categories
             if self.category in self.BASIC_CATEGORIES:
-                xpath = self.BASIC_CATEGORIES[self.category][0]
-                for element in root.findall(xpath):
-                    parameters.extend(self.parse_basic_config(element, self.category))
+                try:
+                    xpath = self.BASIC_CATEGORIES[self.category][0]
+                    for element in root.findall(xpath):
+                        parameters.extend(
+                            self._parse_basic_config(element, self.category)
+                        )
+                except Exception as e:
+                    self.result[
+                        "message"
+                    ] += f"Failed to get {self.category} configuration: {str(e)}"
+
+                    continue
 
             # Handle resource categories
             elif self.category == "resources":
-                for sub_category, xpath in self.RESOURCE_CATEGORIES.items():
-                    elements = root.findall(xpath)
-                    for element in elements:
-                        parameters.extend(self._parse_resource(element, sub_category))
+                try:
+                    for sub_category, xpath in self.RESOURCE_CATEGORIES.items():
+                        elements = root.findall(xpath)
+                        for element in elements:
+                            parameters.extend(
+                                self._parse_resource(element, sub_category)
+                            )
+
+                except Exception as e:
+                    self.result[
+                        "message"
+                    ] += f"Failed to get resources configuration: {str(e)}"
+                    continue
+        self.result.update(
+            {
+                "details": {"parameters": parameters},
+                "status": (
+                    TestStatus.ERROR.value
+                    if any(
+                        param.get("status", TestStatus.INFO.value)
+                        == TestStatus.ERROR.value
+                        for param in parameters
+                    )
+                    else TestStatus.SUCCESS.value
+                ),
+                "message": "Successfully retrieved cluster configuration",
+            }
+        )
         return parameters
 
 
