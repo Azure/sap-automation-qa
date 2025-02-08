@@ -2,7 +2,13 @@
 # Licensed under the MIT License.
 
 """
-Python script to get and validate the cluster configuration in HANA DB node.
+Pacemaker Cluster Configuration Validator.
+
+This module provides functionality to validate Pacemaker cluster configurations
+against predefined standards for SAP HANA deployments.
+
+Classes:
+    HAClusterValidator: Main validator class for cluster configurations.
 """
 
 from ansible.module_utils.basic import AnsibleModule
@@ -22,6 +28,27 @@ except ImportError:
 
 
 class HAClusterValidator(SapAutomationQA):
+    """
+    Validates High Availability cluster configurations.
+
+    This class validates Pacemaker cluster configurations against predefined
+    standards for SAP HANA deployments. It checks both basic cluster properties
+    and resource-specific configurations.
+
+    Attributes:
+        BASIC_CATEGORIES (Dict): Mapping of basic configuration categories to their XPaths
+        RESOURCE_CATEGORIES (Dict): Mapping of resource types to their XPaths
+
+    Args:
+        os_type (str): Operating system type (e.g., 'SLES', 'RHEL')
+        os_version (str): Operating system version
+        sid (str): SAP System ID
+        instance_number (str): SAP instance number
+        fencing_mechanism (str): Cluster fencing mechanism
+        virtual_machine_name (str): Virtual machine name
+        constants (Dict): Configuration constants and defaults
+        category (Optional[str]): Specific category to validate
+    """
 
     BASIC_CATEGORIES = {
         "crm_config": (".//cluster_property_set", "CRM_CONFIG_DEFAULTS"),
@@ -66,10 +93,24 @@ class HAClusterValidator(SapAutomationQA):
             },
         )
 
+    def _get_expected_value(self, category, name):
+        """
+        Get expected value for basic configuration parameters.
+        """
+        _, defaults_key = self.BASIC_CATEGORIES[category]
+        return (
+            self.constants["VALID_CONFIGS"]
+            .get(self.os_type, {})
+            .get(self.os_version, {})
+            .get(name, self.constants[defaults_key].get(name))
+        )
+
     def _get_resource_expected_value(
         self, resource_type, section, param_name, op_name=None
     ):
-        """Get expected value for resource parameters"""
+        """
+        Get expected value for resource-specific configuration parameters.
+        """
         resource_defaults = self.constants["RESOURCE_DEFAULTS"].get(resource_type, {})
 
         if section == "meta_attributes":
@@ -90,6 +131,9 @@ class HAClusterValidator(SapAutomationQA):
         subcategory=None,
         op_name=None,
     ):
+        """
+        Create a Parameters object for a given configuration parameter.
+        """
         if category in self.RESOURCE_CATEGORIES:
             expected_value = self._get_resource_expected_value(
                 resource_type=category,
@@ -98,13 +142,7 @@ class HAClusterValidator(SapAutomationQA):
                 op_name=op_name,
             )
         else:
-            _, defaults_key = self.BASIC_CATEGORIES[category]
-            expected_value = (
-                self.constants["VALID_CONFIGS"]
-                .get(self.os_type, {})
-                .get(self.os_version, {})
-                .get(name, self.constants[defaults_key].get(name))
-            )
+            expected_value = self._get_expected_value(category, name)
 
         return Parameters(
             category=f"{category}_{subcategory}" if subcategory else category,
@@ -123,58 +161,35 @@ class HAClusterValidator(SapAutomationQA):
             ),
         ).to_dict()
 
-    def _parse_basic_config(self, element, category):
-        """Parse basic configuration parameters"""
+    def _parse_basic_config(self, element, category, subcategory=None):
+        """
+        Parse basic configuration parameters
+        """
         parameters = []
-        _, defaults_key = self.BASIC_CATEGORIES[category]
         for nvpair in element.findall(".//nvpair"):
-            expected_value = (
-                self.constants["VALID_CONFIGS"]
-                .get(self.os_type, {})
-                .get(self.os_version, {})
-                .get(
-                    nvpair.get("name"),
-                    self.constants[defaults_key].get(nvpair.get("name")),
-                )
-            )
-
             parameters.append(
-                Parameters(
+                self._create_parameter(
                     category=category,
-                    id=nvpair.get("id"),
+                    subcategory=subcategory,
                     name=nvpair.get("name"),
                     value=nvpair.get("value"),
-                    expected_value=expected_value if expected_value is not None else "",
-                    status=(
-                        TestStatus.INFO.value
-                        if expected_value is None
-                        else (
-                            TestStatus.SUCCESS.value
-                            if str(nvpair.get("value")) == str(expected_value)
-                            else TestStatus.ERROR.value
-                        )
-                    ),
-                ).to_dict()
+                    id=nvpair.get("id", ""),
+                )
             )
         return parameters
 
     def _parse_resource(self, element, category):
+        """
+        Parse resource-specific configuration parameters
+        """
         parameters = []
 
         meta = element.find(".//meta_attributes")
         if meta is not None:
-            for nvpair in meta.findall(".//nvpair"):
-                parameters.append(
-                    self._create_parameter(
-                        category=category,
-                        subcategory="meta_attributes",
-                        id=nvpair.get("id"),
-                        name=nvpair.get("name"),
-                        value=nvpair.get("value"),
-                    )
-                )
+            self._parse_basic_config(
+                element=meta, category=category, subcategory="meta_attributes"
+            )
 
-        # Parse operations
         ops = element.find(".//operations")
         if ops is not None:
             for op in ops.findall(".//op"):
@@ -190,7 +205,6 @@ class HAClusterValidator(SapAutomationQA):
                         )
                     )
 
-        # Parse instance attributes
         inst = element.find(".//instance_attributes")
         if inst is not None:
             for nvpair in inst.findall(".//nvpair"):
@@ -207,7 +221,9 @@ class HAClusterValidator(SapAutomationQA):
         return parameters
 
     def parse_ha_cluster_config(self):
-        """Parse HA cluster configuration XML and return a list of properties."""
+        """
+        Parse HA cluster configuration XML and return a list of properties.
+        """
         parameters = []
 
         for scope in [
@@ -226,7 +242,6 @@ class HAClusterValidator(SapAutomationQA):
             if not root:
                 continue
 
-            # Handle basic categories
             if self.category in self.BASIC_CATEGORIES:
                 try:
                     xpath = self.BASIC_CATEGORIES[self.category][0]
@@ -241,7 +256,6 @@ class HAClusterValidator(SapAutomationQA):
 
                     continue
 
-            # Handle resource categories
             elif self.category == "resources":
                 try:
                     for sub_category, xpath in self.RESOURCE_CATEGORIES.items():
@@ -290,7 +304,7 @@ def main() -> None:
         )
     )
 
-    manager = HAClusterValidator(
+    validator = HAClusterValidator(
         os_type=module.params["ansible_os_family"],
         os_version=module.params["os_version"],
         instance_number=module.params["instance_number"],
@@ -300,7 +314,7 @@ def main() -> None:
         constants=module.params["pcmk_constants"],
     )
 
-    module.exit_json(**manager.result)
+    module.exit_json(**validator.result)
 
 
 if __name__ == "__main__":
