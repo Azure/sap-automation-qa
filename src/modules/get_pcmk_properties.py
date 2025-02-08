@@ -11,6 +11,7 @@ Classes:
     HAClusterValidator: Main validator class for cluster configurations.
 """
 
+import logging
 from ansible.module_utils.basic import AnsibleModule
 
 try:
@@ -154,6 +155,7 @@ class HAClusterValidator(SapAutomationQA):
         parameters = []
 
         os_parameters = self.constants["OS_PARAMETERS"].get("DEFAUTLS", {})
+        self.log(logging.DEBUG, f"OS parameters: {os_parameters}")
 
         for section, params in os_parameters.items():
             for param_name, expected_value in params.items():
@@ -270,8 +272,10 @@ class HAClusterValidator(SapAutomationQA):
                     ] += f"Failed to get resources configuration: {str(e)}"
                     continue
 
-        # Validate OS parameters
-        parameters.extend(self._parse_os_parameters())
+        try:
+            parameters.extend(self._parse_os_parameters())
+        except Exception as e:
+            self.result["message"] += f"Failed to get OS parameters: {str(e)}"
 
         failed_parameters = [
             param
