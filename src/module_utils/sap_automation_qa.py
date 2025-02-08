@@ -10,6 +10,7 @@ import logging
 import subprocess
 from typing import Optional, Dict, Any
 import xml.etree.ElementTree as ET
+import yaml
 
 
 class TestStatus(Enum):
@@ -22,6 +23,27 @@ class TestStatus(Enum):
     WARNING = "WARNING"
     INFO = "INFO"
     NOT_STARTED = "NOT_STARTED"
+
+
+class Parameters:
+
+    def __init__(self, category, id, name, value, expected_value, status):
+        self.category = category
+        self.id = id
+        self.name = name
+        self.value = value
+        self.expected_value = expected_value
+        self.status = status
+
+    def to_dict(self):
+        return {
+            "category": self.category,
+            "id": self.id,
+            "name": self.name,
+            "value": self.value,
+            "expected_value": self.expected_value,
+            "status": self.status,
+        }
 
 
 class SapAutomationQA(ABC):
@@ -141,3 +163,29 @@ class SapAutomationQA(ABC):
         :rtype: dict
         """
         return self.result
+
+    def parse_yaml_as_dict(self, yaml_output: str) -> Optional[Dict[str, Any]]:
+        """
+        Parse YAML output as a dictionary.
+
+        :param yaml_output: The YAML output to parse
+        :type yaml_output: str
+        :return: The parsed YAML output as a dictionary
+        :rtype: Optional[Dict[str, Any]]
+        """
+        try:
+            return yaml.safe_load(yaml_output)
+        except Exception:
+            return None
+
+    def load_constants(self, constants_file_name: str) -> Dict[str, Any]:
+        """
+        Load constants from a YAML file.
+
+        :param constants_file_name: The name of the YAML file containing the constants
+        :type constants_file_name: str
+        :return: The constants as a dictionary
+        :rtype: Dict[str, Any]
+        """
+        with open(constants_file_name, "r", encoding="utf-8") as yaml_output:
+            return self.parse_yaml_as_dict(yaml_output)
