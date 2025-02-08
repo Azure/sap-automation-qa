@@ -38,16 +38,6 @@ class HAClusterValidator(SapAutomationQA):
     Attributes:
         BASIC_CATEGORIES (Dict): Mapping of basic configuration categories to their XPaths
         RESOURCE_CATEGORIES (Dict): Mapping of resource types to their XPaths
-
-    Args:
-        os_type (str): Operating system type (e.g., 'SLES', 'RHEL')
-        os_version (str): Operating system version
-        sid (str): SAP System ID
-        instance_number (str): SAP instance number
-        fencing_mechanism (str): Cluster fencing mechanism
-        virtual_machine_name (str): Virtual machine name
-        constants (Dict): Configuration constants and defaults
-        category (Optional[str]): Specific category to validate
     """
 
     BASIC_CATEGORIES = {
@@ -86,12 +76,6 @@ class HAClusterValidator(SapAutomationQA):
         self.virtual_machine_name = virtual_machine_name
         self.constants = constants
         self.config = self.parse_ha_cluster_config()
-        self.result.update(
-            {
-                "details": {"parameters": self.config},
-                "status": TestStatus.SUCCESS.value,
-            },
-        )
 
     def _get_expected_value(self, category, name):
         """
@@ -127,6 +111,7 @@ class HAClusterValidator(SapAutomationQA):
         category,
         name,
         value,
+        expected_value=None,
         id=None,
         subcategory=None,
         op_name=None,
@@ -134,15 +119,16 @@ class HAClusterValidator(SapAutomationQA):
         """
         Create a Parameters object for a given configuration parameter.
         """
-        if category in self.RESOURCE_CATEGORIES:
-            expected_value = self._get_resource_expected_value(
-                resource_type=category,
-                section=subcategory,
-                param_name=name,
-                op_name=op_name,
-            )
-        else:
-            expected_value = self._get_expected_value(category, name)
+        if expected_value is None:
+            if category in self.RESOURCE_CATEGORIES:
+                expected_value = self._get_resource_expected_value(
+                    resource_type=category,
+                    section=subcategory,
+                    param_name=name,
+                    op_name=op_name,
+                )
+            else:
+                expected_value = self._get_expected_value(category, name)
 
         return Parameters(
             category=f"{category}_{subcategory}" if subcategory else category,
@@ -160,6 +146,27 @@ class HAClusterValidator(SapAutomationQA):
                 )
             ),
         ).to_dict()
+
+    def _parse_os_parameters(self):
+        """
+        Parse OS-specific parameters
+        """
+        parameters = []
+
+        os_parameters = self.constants["OS_PARAMETERS"].get("DEFAUTLS", {})
+
+        for section, params in os_parameters.items():
+            for param_name, expected_value in params.items():
+                value = self.execute_command_subprocess([section, param_name]).strip()
+                parameters.append(
+                    self._create_parameter(
+                        category="os",
+                        id=section,
+                        name=param_name,
+                        value=value,
+                        expected_value=expected_value,
+                    )
+                )
 
     def _parse_basic_config(self, element, category, subcategory=None):
         """
@@ -219,6 +226,7 @@ class HAClusterValidator(SapAutomationQA):
         """
         parameters = []
 
+        # Validate HA cluster configuration
         for scope in [
             "rsc_defaults",
             "crm_config",
@@ -246,7 +254,6 @@ class HAClusterValidator(SapAutomationQA):
                     self.result[
                         "message"
                     ] += f"Failed to get {self.category} configuration: {str(e)}"
-
                     continue
 
             elif self.category == "resources":
@@ -257,12 +264,15 @@ class HAClusterValidator(SapAutomationQA):
                             parameters.extend(
                                 self._parse_resource(element, sub_category)
                             )
-
                 except Exception as e:
                     self.result[
                         "message"
                     ] += f"Failed to get resources configuration: {str(e)}"
                     continue
+
+        # Validate OS parameters
+
+        self._parse_os_parameters()
         failed_parameters = [
             param
             for param in parameters
