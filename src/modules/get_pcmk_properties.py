@@ -156,8 +156,7 @@ class HAClusterValidator(SapAutomationQA):
         """
         parameters = []
 
-        os_parameters = self.constants["OS_PARAMETERS"].get("DEFAUTLS", {})
-        self.log(logging.DEBUG, f"OS parameters: {os_parameters}")
+        os_parameters = self.constants["OS_PARAMETERS"].get("DEFAULTS", {})
 
         for section, params in os_parameters.items():
             for param_name, expected_value in params.items():
@@ -253,18 +252,10 @@ class HAClusterValidator(SapAutomationQA):
                         parameters.extend(
                             self._parse_basic_config(element, self.category)
                         )
-                    self.log(
-                        logging.DEBUG,
-                        f"Basic parameters: {parameters}",
-                    )
                 except Exception as e:
                     self.result[
                         "message"
                     ] += f"Failed to get {self.category} configuration: {str(e)}"
-                    self.log(
-                        logging.ERROR,
-                        f"Failed to get {self.category} configuration: {str(e)}",
-                    )
                     continue
 
             elif self.category == "resources":
@@ -275,28 +266,16 @@ class HAClusterValidator(SapAutomationQA):
                             parameters.extend(
                                 self._parse_resource(element, sub_category)
                             )
-                    self.log(
-                        logging.DEBUG,
-                        f"Resource parameters: {parameters}",
-                    )
                 except Exception as e:
                     self.result[
                         "message"
                     ] += f"Failed to get resources configuration: {str(e)}"
-                    self.log(
-                        logging.ERROR,
-                        f"Failed to get resources configuration: {str(e)}",
-                    )
                     continue
 
-        self.log(logging.DEBUG, "Starting OS parameter validation.")
-
         try:
-            self.log(logging.DEBUG, "Starting OS parameter validation 1.")
             parameters.extend(self._parse_os_parameters())
         except Exception as e:
             self.result["message"] += f"Failed to get OS parameters: {str(e)}"
-            self.log(logging.ERROR, f"Failed to get OS parameters: {str(e)}")
 
         failed_parameters = [
             param
