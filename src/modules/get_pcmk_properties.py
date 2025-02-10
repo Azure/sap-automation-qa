@@ -331,7 +331,7 @@ class HAClusterValidator(SapAutomationQA):
             self.result["message"] += f"Failed to get OS parameters: {str(e)}"
 
         try:
-            parameters.append(self._parse_global_ini_parameters())
+            parameters.extend(self._parse_global_ini_parameters())
         except Exception as e:
             self.result["message"] += f"Failed to get global.ini parameters: {str(e)}"
             self.log(logging.ERROR, f"Failed to get global.ini parameters: {str(e)}")
