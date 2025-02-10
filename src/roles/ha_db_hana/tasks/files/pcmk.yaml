@@ -116,6 +116,10 @@ RESOURCE_DEFAULTS:
         interval:                       "0"
         timeout:                        "120"
 
+  azurelb:
+    meta_attributes:
+      resource-stickiness:              "0"
+
 OS_PARAMETERS:
   DEFAULTS:
     sysctl:
