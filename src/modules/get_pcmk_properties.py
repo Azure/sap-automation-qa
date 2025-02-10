@@ -52,9 +52,9 @@ class HAClusterValidator(SapAutomationQA):
     RESOURCE_CATEGORIES = {
         "stonith": ".//primitive[@class='stonith']",
         "topology": ".//clone/primitive[@type='SAPHanaTopology']",
-        "topology_meta": "../clone",
+        "topology_meta": ".//clone",
         "hana": ".//master/primitive[@type='SAPHana']",
-        "hana_meta": "//master",
+        "hana_meta": ".//master",
         "ipaddr": ".//primitive[@type='IPaddr2']",
         "filesystem": ".//primitive[@type='Filesystem']",
         "azurelb": ".//primitive[@type='azure-lb']",
