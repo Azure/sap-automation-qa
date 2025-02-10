@@ -52,9 +52,12 @@ class HAClusterValidator(SapAutomationQA):
     RESOURCE_CATEGORIES = {
         "stonith": ".//primitive[@class='stonith']",
         "topology": ".//clone/primitive[@type='SAPHanaTopology']",
+        "topology_meta": "../clone",
         "hana": ".//master/primitive[@type='SAPHana']",
+        "hana_meta": "//master",
         "ipaddr": ".//primitive[@type='IPaddr2']",
         "filesystem": ".//primitive[@type='Filesystem']",
+        "azurelb": ".//primitive[@type='azure-lb']",
     }
 
     def __init__(
@@ -256,9 +259,8 @@ class HAClusterValidator(SapAutomationQA):
         """
         parameters = []
 
-        parent = element.getparent()
-        if parent is not None and parent.tag in ["clone", "master"]:
-            meta_attrs = parent.find("./meta_attributes")
+        if element.tag in ["clone", "master"]:
+            meta_attrs = element.find("./meta_attributes")
             if meta_attrs is not None:
                 parameters.extend(
                     self._parse_nvpair_elements(
@@ -325,7 +327,7 @@ class HAClusterValidator(SapAutomationQA):
                 except Exception as e:
                     self.result[
                         "message"
-                    ] += f"Failed to get {self.category} configuration: {str(e)}"
+                    ] += f"Failed to get {self.category} configuration: {str(e)} \n"
                     continue
 
             elif self.category == "resources":
@@ -339,18 +341,20 @@ class HAClusterValidator(SapAutomationQA):
                 except Exception as e:
                     self.result[
                         "message"
-                    ] += f"Failed to get resources configuration: {str(e)}"
+                    ] += f"Failed to get resources configuration: {str(e)} \n"
                     continue
 
         try:
             parameters.extend(self._parse_os_parameters())
         except Exception as e:
-            self.result["message"] += f"Failed to get OS parameters: {str(e)}"
+            self.result["message"] += f"Failed to get OS parameters: {str(e)} \n"
 
         try:
             parameters.extend(self._parse_global_ini_parameters())
         except Exception as e:
-            self.result["message"] += f"Failed to get global.ini parameters: {str(e)}"
+            self.result[
+                "message"
+            ] += f"Failed to get global.ini parameters: {str(e)} \n"
 
         failed_parameters = [
             param
