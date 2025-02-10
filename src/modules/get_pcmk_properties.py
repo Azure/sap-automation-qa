@@ -11,7 +11,6 @@ Classes:
     HAClusterValidator: Main validator class for cluster configurations.
 """
 
-import logging
 from ansible.module_utils.basic import AnsibleModule
 
 try:
@@ -257,13 +256,15 @@ class HAClusterValidator(SapAutomationQA):
         """
         parameters = []
 
-        if element.tag in ["clone", "master", "group"]:
-            meta_attrs = element.find("./meta_attributes")
+        parent = element.getparent()
+        if parent is not None and parent.tag in ["clone", "master"]:
+            meta_attrs = parent.find("./meta_attributes")
             if meta_attrs is not None:
                 parameters.extend(
                     self._parse_nvpair_elements(
                         elements=meta_attrs.findall(".//nvpair"),
                         category=category,
+                        subcategory="meta_attributes",
                     )
                 )
 
@@ -350,7 +351,6 @@ class HAClusterValidator(SapAutomationQA):
             parameters.extend(self._parse_global_ini_parameters())
         except Exception as e:
             self.result["message"] += f"Failed to get global.ini parameters: {str(e)}"
-            self.log(logging.ERROR, f"Failed to get global.ini parameters: {str(e)}")
 
         failed_parameters = [
             param
