@@ -13,10 +13,18 @@ from azure.identity import ManagedIdentityCredential
 from azure.mgmt.network import NetworkManagementClient
 
 try:
-    from ansible.module_utils.sap_automation_qa import SapAutomationQA, TestStatus
+    from ansible.module_utils.sap_automation_qa import (
+        SapAutomationQA,
+        TestStatus,
+        Parameters,
+    )
     from ansible.module_utils.db_cluster_constants import PROBES, RULES
 except ImportError:
-    from src.module_utils.sap_automation_qa import SapAutomationQA, TestStatus
+    from src.module_utils.sap_automation_qa import (
+        SapAutomationQA,
+        TestStatus,
+        Parameters,
+    )
     from src.module_utils.db_cluster_constants import PROBES, RULES
 
 
@@ -44,6 +52,7 @@ class AzureLoadBalancer(SapAutomationQA):
             )
         except Exception as e:
             self.handle_error(e)
+            self.result["message"] += f"Failed to create network client object. {e} \n"
 
     def get_load_balancers(self) -> list:
         """
@@ -61,6 +70,7 @@ class AzureLoadBalancer(SapAutomationQA):
 
         except Exception as e:
             self.handle_error(e)
+            self.result["message"] += f"Failed to create network client object. {e} \n"
 
     def _format_parameter_result(self, name: str, value: str, expected: str) -> str:
         """
@@ -83,6 +93,7 @@ class AzureLoadBalancer(SapAutomationQA):
 
         if self.result["status"] == "FAILED":
             return self.result
+
         inbound_rules = ast.literal_eval(self.module_params["inbound_rules"])
         load_balancer_ips = list(
             inbound_rule["privateIpAddress"]
@@ -108,21 +119,26 @@ class AzureLoadBalancer(SapAutomationQA):
 
         def check_parameters(entity, parameters_dict, entity_type):
             for key, value in parameters_dict.items():
-                status = "PASSED" if entity[key] == value else "FAILED"
-                parameters.append(
-                    {
-                        "category": entity["name"],
-                        "type": entity_type,
-                        "name": key,
-                        "value": str(entity[key]),
-                        "expected value": str(value),
-                        "status": status,
-                    }
+                parameters.extend(
+                    Parameters(
+                        category=entity_type,
+                        id=entity["name"],
+                        name=key,
+                        value=entity[key],
+                        expected_value=value,
+                        status=(
+                            TestStatus.SUCCESS.value
+                            if entity[key] == value
+                            else TestStatus.ERROR.value
+                        ),
+                    )
                 )
 
         try:
             if found_load_balancer:
-                self.result["message"] = (
+                self.result[
+                    "message"
+                ] += (
                     f"Validating load balancer parameters {found_load_balancer['name']}"
                 )
                 for rule in found_load_balancer["load_balancing_rules"]:
@@ -137,14 +153,14 @@ class AzureLoadBalancer(SapAutomationQA):
 
             self.result["status"] = (
                 TestStatus.SUCCESS.value
-                if all(param["status"] == "PASSED" for param in parameters)
+                if all(
+                    param["status"] == TestStatus.SUCCESS.value for param in parameters
+                )
                 else TestStatus.ERROR.value
             )
             self.result["details"] = {"parameters": parameters}
         except Exception as e:
             self.handle_error(e)
-
-        return self.result
 
 
 def run_module():
@@ -160,9 +176,9 @@ def run_module():
     module = AnsibleModule(argument_spec=module_args, supports_check_mode=True)
 
     load_balancer = AzureLoadBalancer(module_params=module.params)
-    result = load_balancer.get_load_balancers_details()
+    load_balancer.get_load_balancers_details()
 
-    module.exit_json(**result)
+    module.exit_json(**load_balancer.get_result())
 
 
 def main():
