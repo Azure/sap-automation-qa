@@ -332,11 +332,12 @@ class HAClusterValidator(SapAutomationQA):
             parameters.append(self._parse_global_ini_parameters())
         except Exception as e:
             self.result["message"] += f"Failed to get global.ini parameters: {str(e)}"
+            self.log(logging.ERROR, f"Failed to get global.ini parameters: {str(e)}")
 
         failed_parameters = [
             param
             for param in parameters
-            if param.get("status") == TestStatus.ERROR.value
+            if param.get("status", TestStatus.ERROR.value) == TestStatus.ERROR.value
         ]
         self.result.update(
             {
