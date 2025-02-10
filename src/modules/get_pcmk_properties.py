@@ -101,12 +101,12 @@ class HAClusterValidator(SapAutomationQA):
         resource_defaults = self.constants["RESOURCE_DEFAULTS"].get(resource_type, {})
 
         if section == "meta_attributes":
-            return resource_defaults.get("meta_attributes", {}).get(param_name, {})
+            return resource_defaults.get("meta_attributes", {}).get(param_name)
         elif section == "operations":
             ops = resource_defaults.get("operations", {}).get(op_name, {})
-            return ops.get(param_name, {})
+            return ops.get(param_name)
         elif section == "instance_attributes":
-            return resource_defaults.get("instance_attributes", {}).get(param_name, {})
+            return resource_defaults.get("instance_attributes", {}).get(param_name)
         return None
 
     def _create_parameter(
@@ -149,6 +149,26 @@ class HAClusterValidator(SapAutomationQA):
                 )
             ),
         ).to_dict()
+
+    def _parse_nvpair_elements(
+        self, elements, category, subcategory=None, op_name=None
+    ):
+        """
+        Parse nvpair elements and return a list of Parameters objects.
+        """
+        parameters = []
+        for nvpair in elements:
+            parameters.append(
+                self._create_parameter(
+                    category=category,
+                    subcategory=subcategory,
+                    op_name=op_name,
+                    id=nvpair.get("id", ""),
+                    name=nvpair.get("name", ""),
+                    value=nvpair.get("value", ""),
+                )
+            )
+        return parameters
 
     def _parse_os_parameters(self):
         """
@@ -236,29 +256,14 @@ class HAClusterValidator(SapAutomationQA):
         Parse resource-specific configuration parameters
         """
         parameters = []
-        meta = element.find(".//meta_attributes")
-        if meta is not None:
-            for nvpair in meta.findall(".//nvpair"):
-                parameters.append(
-                    self._create_parameter(
+        for attr in ["meta_attributes", "instance_attributes"]:
+            attr_elements = element.find(f".//{attr}")
+            if attr_elements is not None:
+                parameters.extend(
+                    self._parse_nvpair_elements(
+                        elements=attr_elements.findall(".//nvpair"),
                         category=category,
-                        subcategory="meta_attributes",
-                        id=nvpair.get("id", ""),
-                        name=nvpair.get("name", ""),
-                        value=nvpair.get("value", ""),
-                    )
-                )
-
-        inst = element.find(".//instance_attributes")
-        if inst is not None:
-            for nvpair in inst.findall(".//nvpair"):
-                parameters.append(
-                    self._create_parameter(
-                        category=category,
-                        subcategory="instance_attributes",
-                        id=nvpair.get("id", ""),
-                        name=nvpair.get("name", ""),
-                        value=nvpair.get("value", ""),
+                        subcategory=attr,
                     )
                 )
 
