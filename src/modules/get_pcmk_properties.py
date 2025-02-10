@@ -20,12 +20,14 @@ try:
         TestStatus,
         Parameters,
     )
+    from ansible.module_utils.commands import CIB_ADMIN
 except ImportError:
     from src.module_utils.sap_automation_qa import (
         SapAutomationQA,
         TestStatus,
         Parameters,
     )
+    from src.module_utils.commands import CIB_ADMIN
 
 
 class HAClusterValidator(SapAutomationQA):
@@ -159,7 +161,9 @@ class HAClusterValidator(SapAutomationQA):
 
         for section, params in os_parameters.items():
             for param_name, expected_value in params.items():
-                value = self.execute_command_subprocess([section, param_name]).strip()
+                value = self.execute_command_subprocess(
+                    command=[section, param_name], shell_command=True
+                ).strip()
                 parameters.append(
                     self._create_parameter(
                         category="os",
@@ -228,7 +232,6 @@ class HAClusterValidator(SapAutomationQA):
         """
         parameters = []
 
-        # Validate HA cluster configuration
         for scope in [
             "rsc_defaults",
             "crm_config",
@@ -238,9 +241,7 @@ class HAClusterValidator(SapAutomationQA):
         ]:
             self.category = scope
             root = self.parse_xml_output(
-                self.execute_command_subprocess(
-                    ["cibadmin", "--query", "--scope", scope]
-                )
+                self.execute_command_subprocess(CIB_ADMIN(scope=scope))
             )
             if not root:
                 continue
@@ -252,10 +253,18 @@ class HAClusterValidator(SapAutomationQA):
                         parameters.extend(
                             self._parse_basic_config(element, self.category)
                         )
+                    self.log(
+                        logging.DEBUG,
+                        f"Basic parameters: {parameters}",
+                    )
                 except Exception as e:
                     self.result[
                         "message"
                     ] += f"Failed to get {self.category} configuration: {str(e)}"
+                    self.log(
+                        logging.ERROR,
+                        f"Failed to get {self.category} configuration: {str(e)}",
+                    )
                     continue
 
             elif self.category == "resources":
@@ -266,16 +275,28 @@ class HAClusterValidator(SapAutomationQA):
                             parameters.extend(
                                 self._parse_resource(element, sub_category)
                             )
+                    self.log(
+                        logging.DEBUG,
+                        f"Resource parameters: {parameters}",
+                    )
                 except Exception as e:
                     self.result[
                         "message"
                     ] += f"Failed to get resources configuration: {str(e)}"
+                    self.log(
+                        logging.ERROR,
+                        f"Failed to get resources configuration: {str(e)}",
+                    )
                     continue
 
+        self.log(logging.DEBUG, "Starting OS parameter validation.")
+
         try:
+            self.log(logging.DEBUG, "Starting OS parameter validation 1.")
             parameters.extend(self._parse_os_parameters())
         except Exception as e:
             self.result["message"] += f"Failed to get OS parameters: {str(e)}"
+            self.log(logging.ERROR, f"Failed to get OS parameters: {str(e)}")
 
         failed_parameters = [
             param
@@ -321,7 +342,7 @@ def main() -> None:
         constants=module.params["pcmk_constants"],
     )
 
-    module.exit_json(**validator.result)
+    module.exit_json(**validator.get_result())
 
 
 if __name__ == "__main__":
