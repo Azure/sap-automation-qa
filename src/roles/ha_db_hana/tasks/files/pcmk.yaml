@@ -35,27 +35,10 @@ CONSTRAINTS:
 VALID_CONFIGS:
   RHEL:
     '8.4': {}
-    '9.0':
-      migration-threshold:            '4000'
-      priority:                       '2'
-      priority-fencing-delay:         '40'
-      record-pending:                 'false'
-      resource-stickiness:            '1500'
-      stonith-action:                 'off'
-      stonith-timeout:                120s
-      timeout:                        '700'
+    '9.0': {}
   SLES:
     '15.2': {}
-    '15.3':
-      migration-threshold:            '4500'
-      priority:                       '3'
-      priority-fencing-delay:         '25'
-      record-pending:                 'false'
-      resource-stickiness:            '1200'
-      stonith-action:                 'off'
-      stonith-enabled:                'false'
-      stonith-timeout:                100s
-      timeout:                        '650'
+    '15.3': {}
 
 RESOURCE_DEFAULTS:
   stonith:
