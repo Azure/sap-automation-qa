@@ -327,7 +327,7 @@ class HAClusterValidator(SapAutomationQA):
                 except Exception as e:
                     self.result[
                         "message"
-                    ] += f"Failed to get {self.category} configuration: {str(e)} \n"
+                    ] += f"Failed to get {self.category} configuration: {str(e)}"
                     continue
 
             elif self.category == "resources":
@@ -341,7 +341,7 @@ class HAClusterValidator(SapAutomationQA):
                 except Exception as e:
                     self.result[
                         "message"
-                    ] += f"Failed to get resources configuration for {self.category}: {str(e)} \n"
+                    ] += f"Failed to get resources configuration for {self.category}: {str(e)}"
                     continue
 
         try:
