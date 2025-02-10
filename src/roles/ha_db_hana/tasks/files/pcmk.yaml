@@ -136,8 +136,8 @@ RESOURCE_DEFAULTS:
 OS_PARAMETERS:
   DEFAULTS:
     sysctl:
-      net.ipv4.tcp_timestamps:            "0"
-      vm.swappiness:                      "10"
+      net.ipv4.tcp_timestamps:            "net.ipv4.tcp_timestamps = 0"
+      vm.swappiness:                      "vm.swappiness = 10"
     corosync-cmapctl:
-      runtime.config.totem.token:         "30000"
-      runtime.config.totem.consensus:     "36000"
+      runtime.config.totem.token:         "runtime.config.totem.token (u32) = 30000"
+      runtime.config.totem.consensus:     "runtime.config.totem.consensus (u32) = 36000"

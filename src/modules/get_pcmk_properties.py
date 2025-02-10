@@ -160,9 +160,11 @@ class HAClusterValidator(SapAutomationQA):
 
         for section, params in os_parameters.items():
             for param_name, expected_value in params.items():
-                value = self.execute_command_subprocess(
-                    command=[section, param_name]
-                ).strip()
+                value = (
+                    self.execute_command_subprocess(command=[section, param_name])
+                    .strip()
+                    .split("\n")[0]
+                )
                 parameters.append(
                     self._create_parameter(
                         category="os",
