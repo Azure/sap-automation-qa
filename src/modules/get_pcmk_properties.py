@@ -101,12 +101,12 @@ class HAClusterValidator(SapAutomationQA):
         resource_defaults = self.constants["RESOURCE_DEFAULTS"].get(resource_type, {})
 
         if section == "meta_attributes":
-            return resource_defaults.get("meta_attributes", {}).get(param_name)
+            return resource_defaults.get("meta_attributes", {}).get(param_name, {})
         elif section == "operations":
             ops = resource_defaults.get("operations", {}).get(op_name, {})
-            return ops.get(param_name)
+            return ops.get(param_name, {})
         elif section == "instance_attributes":
-            return resource_defaults.get("instance_attributes", {}).get(param_name)
+            return resource_defaults.get("instance_attributes", {}).get(param_name, {})
         return None
 
     def _create_parameter(
@@ -135,7 +135,7 @@ class HAClusterValidator(SapAutomationQA):
 
         return Parameters(
             category=f"{category}_{subcategory}" if subcategory else category,
-            id=id,
+            id=id if id else "",
             name=name if not op_name else f"{op_name}_{name}",
             value=value,
             expected_value=expected_value if expected_value is not None else "",
@@ -182,7 +182,6 @@ class HAClusterValidator(SapAutomationQA):
         Parse global.ini parameters
         """
         global_ini_defaults = self.constants["GLOBAL_INI"].get(self.os_type, {})
-        self.log(logging.INFO, f"Global.ini defaults: {global_ini_defaults}")
 
         with open(
             f"/usr/sap/{self.sid}/SYS/global/hdb/custom/config/global.ini",
@@ -190,8 +189,6 @@ class HAClusterValidator(SapAutomationQA):
             encoding="utf-8",
         ) as file:
             global_ini_content = file.read().splitlines()
-
-        self.log(logging.INFO, f"Global.ini content: {global_ini_content}")
 
         section_start = global_ini_content.index("[ha_dr_provider_SAPHanaSR]")
         properties_slice = global_ini_content[section_start + 1 : section_start + 4]
@@ -202,24 +199,17 @@ class HAClusterValidator(SapAutomationQA):
             for key, sep, val in [line.partition("=")]
             if sep
         }
-        self.log(
-            logging.INFO,
-            f"Global.ini properties: {global_ini_properties}",
-        )
 
         parameters = [
             self._create_parameter(
                 category="global_ini",
+                id="ha_dr_provider_SAPHanaSR",
                 name=param_name,
                 value=global_ini_properties.get(param_name, ""),
                 expected_value=expected_value,
             )
             for param_name, expected_value in global_ini_defaults.items()
         ]
-        self.log(
-            logging.INFO,
-            f"Global.ini parameters: {parameters}",
-        )
 
         return parameters
 
@@ -233,8 +223,8 @@ class HAClusterValidator(SapAutomationQA):
                 self._create_parameter(
                     category=category,
                     subcategory=subcategory,
-                    name=nvpair.get("name"),
-                    value=nvpair.get("value"),
+                    name=nvpair.get("name", ""),
+                    value=nvpair.get("value", ""),
                     id=nvpair.get("id", ""),
                 )
             )
@@ -252,9 +242,9 @@ class HAClusterValidator(SapAutomationQA):
                     self._create_parameter(
                         category=category,
                         subcategory="meta_attributes",
-                        id=nvpair.get("id"),
-                        name=nvpair.get("name"),
-                        value=nvpair.get("value"),
+                        id=nvpair.get("id", ""),
+                        name=nvpair.get("name", ""),
+                        value=nvpair.get("value", ""),
                     )
                 )
 
@@ -265,9 +255,9 @@ class HAClusterValidator(SapAutomationQA):
                     self._create_parameter(
                         category=category,
                         subcategory="instance_attributes",
-                        id=nvpair.get("id"),
-                        name=nvpair.get("name"),
-                        value=nvpair.get("value"),
+                        id=nvpair.get("id", ""),
+                        name=nvpair.get("name", ""),
+                        value=nvpair.get("value", ""),
                     )
                 )
 
@@ -279,10 +269,10 @@ class HAClusterValidator(SapAutomationQA):
                         self._create_parameter(
                             category=category,
                             subcategory="operations",
-                            id=op.get("id"),
+                            id=op.get("id", ""),
                             name=op_type,
-                            op_name=op.get("name"),
-                            value=op.get(op_type),
+                            op_name=op.get("name", ""),
+                            value=op.get(op_type, ""),
                         )
                     )
         return parameters
