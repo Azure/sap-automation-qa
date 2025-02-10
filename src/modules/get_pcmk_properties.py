@@ -52,9 +52,9 @@ class HAClusterValidator(SapAutomationQA):
     RESOURCE_CATEGORIES = {
         "stonith": ".//primitive[@class='stonith']",
         "topology": ".//clone/primitive[@type='SAPHanaTopology']",
-        "topology_meta": ".//clone",
+        "topology_meta": ".//clone/meta_attributes",
         "hana": ".//master/primitive[@type='SAPHana']",
-        "hana_meta": ".//master",
+        "hana_meta": "//master/meta_attributes",
         "ipaddr": ".//primitive[@type='IPaddr2']",
         "filesystem": ".//primitive[@type='Filesystem']",
         "azurelb": ".//primitive[@type='azure-lb']",
@@ -259,16 +259,14 @@ class HAClusterValidator(SapAutomationQA):
         """
         parameters = []
 
-        if element.tag in ["clone", "master"]:
-            meta_attrs = element.find(".//meta_attributes")
-            if meta_attrs is not None:
-                parameters.extend(
-                    self._parse_nvpair_elements(
-                        elements=meta_attrs.findall(".//nvpair"),
-                        category=category,
-                        subcategory="meta_attributes",
-                    )
+        if category in ["hana_meta", "topology_meta"]:
+            parameters.extend(
+                self._parse_nvpair_elements(
+                    elements=element.findall(".//nvpair"),
+                    category=category.split("_")[0],
+                    subcategory="meta_attributes",
                 )
+            )
 
         for attr in ["meta_attributes", "instance_attributes"]:
             attr_elements = element.find(f".//{attr}")
