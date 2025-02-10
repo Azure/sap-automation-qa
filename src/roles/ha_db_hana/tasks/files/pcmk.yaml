@@ -60,14 +60,14 @@ VALID_CONFIGS:
 RESOURCE_DEFAULTS:
   stonith:
     instance_attributes:
-      pcmk_delay_max:                     "30s"
-      pcmk_monitor_retries:               "4"
-      pcmk_action_limit:                  "3"
-      pcmk_reboot_timeout:                "900"
-      power_timeout:                      "240"
+      pcmk_delay_max:                   "30s"
+      pcmk_monitor_retries:             "4"
+      pcmk_action_limit:                "3"
+      pcmk_reboot_timeout:              "900"
+      power_timeout:                    "240"
     monitor:
-      interval:                           "3600"
-      timeout:                            "120"
+      interval:                         "3600"
+      timeout:                          "120"
 
   topology:
     meta_attributes:
@@ -136,8 +136,21 @@ RESOURCE_DEFAULTS:
 OS_PARAMETERS:
   DEFAULTS:
     sysctl:
-      net.ipv4.tcp_timestamps:            "net.ipv4.tcp_timestamps = 0"
-      vm.swappiness:                      "vm.swappiness = 10"
+      net.ipv4.tcp_timestamps:          "net.ipv4.tcp_timestamps = 0"
+      vm.swappiness:                    "vm.swappiness = 10"
     corosync-cmapctl:
-      runtime.config.totem.token:         "runtime.config.totem.token (u32) = 30000"
-      runtime.config.totem.consensus:     "runtime.config.totem.consensus (u32) = 36000"
+      runtime.config.totem.token:       "runtime.config.totem.token (u32) = 30000"
+      runtime.config.totem.consensus:   "runtime.config.totem.consensus (u32) = 36000"
+
+GLOBAL_INI:
+  SUSE:
+    provider:                           "SAPHanaSR"
+    path:                               "/usr/share/SAPHanaSR"
+    execution_order:                    "1"
+
+  REDHAT:
+    provider:                           "SAPHanaSR"
+    path:                               "/hana/shared/myHooks"
+    execution_order:                    "1"
+
+

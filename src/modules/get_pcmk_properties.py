@@ -177,6 +177,41 @@ class HAClusterValidator(SapAutomationQA):
 
         return parameters
 
+    def _parse_global_ini_parameters(self):
+        """
+        Parse global.ini parameters
+        """
+        global_ini_defaults = self.constants["GLOBAL_INI"].get(self.os_type, {})
+
+        with open(
+            f"/usr/sap/{self.sid}/SYS/global/hdb/custom/config/global.ini",
+            "r",
+            encoding="utf-8",
+        ) as file:
+            global_ini_content = file.read().splitlines()
+
+        section_start = global_ini_content.index("[ha_dr_provider_SAPHanaSR]")
+        properties_slice = global_ini_content[section_start + 1 : section_start + 4]
+
+        global_ini_properties = {
+            key.strip(): val.strip()
+            for line in properties_slice
+            for key, sep, val in [line.partition("=")]
+            if sep
+        }
+
+        parameters = [
+            self._create_parameter(
+                category="global_ini",
+                name=param_name,
+                value=global_ini_properties.get(param_name, ""),
+                expected_value=expected_value,
+            )
+            for param_name, expected_value in global_ini_defaults.items()
+        ]
+
+        return parameters
+
     def _parse_basic_config(self, element, category, subcategory=None):
         """
         Parse basic configuration parameters
@@ -292,6 +327,11 @@ class HAClusterValidator(SapAutomationQA):
             parameters.extend(self._parse_os_parameters())
         except Exception as e:
             self.result["message"] += f"Failed to get OS parameters: {str(e)}"
+
+        try:
+            parameters.append(self._parse_global_ini_parameters())
+        except Exception as e:
+            self.result["message"] += f"Failed to get global.ini parameters: {str(e)}"
 
         failed_parameters = [
             param
