@@ -51,3 +51,5 @@ RSC_CLEAR = {
     "SUSE": lambda rsc: ["crm", "resource", "clear", rsc],
     "REDHAT": lambda rsc: ["pcs", "resource", "clear", rsc],
 }
+
+CIB_ADMIN = lambda scope: ["cibadmin", "--query", "--scope", scope]
