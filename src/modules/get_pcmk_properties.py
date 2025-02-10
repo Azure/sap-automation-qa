@@ -256,6 +256,17 @@ class HAClusterValidator(SapAutomationQA):
         Parse resource-specific configuration parameters
         """
         parameters = []
+
+        if element.tag in ["clone", "master", "group"]:
+            meta_attrs = element.find("./meta_attributes")
+            if meta_attrs is not None:
+                parameters.extend(
+                    self._parse_nvpair_elements(
+                        elements=meta_attrs.findall(".//nvpair"),
+                        category=category,
+                    )
+                )
+
         for attr in ["meta_attributes", "instance_attributes"]:
             attr_elements = element.find(f".//{attr}")
             if attr_elements is not None:
