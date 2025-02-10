@@ -201,14 +201,18 @@ class HAClusterValidator(SapAutomationQA):
         parameters = []
         meta = element.find(".//meta_attributes")
         if meta is not None:
-            self._parse_basic_config(
-                element=meta, category=category, subcategory="meta_attributes"
+            parameters.append(
+                self._parse_basic_config(
+                    element=meta, category=category, subcategory="meta_attributes"
+                )
             )
 
         inst = element.find(".//instance_attributes")
         if inst is not None:
-            self._parse_basic_config(
-                element=inst, category=category, subcategory="instance_attributes"
+            parameters.append(
+                self._parse_basic_config(
+                    element=inst, category=category, subcategory="instance_attributes"
+                )
             )
 
         ops = element.find(".//operations")
