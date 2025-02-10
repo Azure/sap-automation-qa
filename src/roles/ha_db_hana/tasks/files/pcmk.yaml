@@ -52,11 +52,13 @@ RESOURCE_DEFAULTS:
       interval:                         "3600"
       timeout:                          "120"
 
-  topology:
+  topology_meta:
     meta_attributes:
       clone-node-max:                   "1"
       target-role:                      "Started"
       interleave:                       "true"
+
+  topology:
     operations:
       monitor:
         interval:                       "10"
@@ -68,7 +70,7 @@ RESOURCE_DEFAULTS:
         interval:                       "0"
         timeout:                        "300"
 
-  hana:
+  hana_meta:
     meta_attributes:
       notify:                           "true"
       clone-max:                        "2"
@@ -76,6 +78,8 @@ RESOURCE_DEFAULTS:
       target-role:                      "Started"
       interleave:                       "true"
       priority:                         "100"
+
+  hana:
     instance_attributes:
       PREFER_SITE_TAKEOVER:             "true"
       DUPLICATE_PRIMARY_TIMEOUT:        "7200"
