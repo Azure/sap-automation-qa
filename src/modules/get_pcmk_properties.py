@@ -181,6 +181,7 @@ class HAClusterValidator(SapAutomationQA):
         """
         Parse global.ini parameters
         """
+        parameters = []
         global_ini_defaults = self.constants["GLOBAL_INI"].get(self.os_type, {})
 
         with open(
@@ -200,16 +201,16 @@ class HAClusterValidator(SapAutomationQA):
             if sep
         }
 
-        parameters = [
-            self._create_parameter(
-                category="global_ini",
-                id="ha_dr_provider_SAPHanaSR",
-                name=param_name,
-                value=global_ini_properties.get(param_name, ""),
-                expected_value=expected_value,
+        for param_name, expected_value in global_ini_defaults.items():
+            value = global_ini_properties.get(param_name, "")
+            parameters.append(
+                self._create_parameter(
+                    category="global_ini",
+                    name=param_name,
+                    value=value,
+                    expected_value=expected_value,
+                )
             )
-            for param_name, expected_value in global_ini_defaults.items()
-        ]
 
         return parameters
 
