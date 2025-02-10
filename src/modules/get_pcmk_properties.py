@@ -182,6 +182,7 @@ class HAClusterValidator(SapAutomationQA):
         Parse global.ini parameters
         """
         global_ini_defaults = self.constants["GLOBAL_INI"].get(self.os_type, {})
+        self.log(logging.INFO, f"Global.ini defaults: {global_ini_defaults}")
 
         with open(
             f"/usr/sap/{self.sid}/SYS/global/hdb/custom/config/global.ini",
@@ -189,6 +190,8 @@ class HAClusterValidator(SapAutomationQA):
             encoding="utf-8",
         ) as file:
             global_ini_content = file.read().splitlines()
+
+        self.log(logging.INFO, f"Global.ini content: {global_ini_content}")
 
         section_start = global_ini_content.index("[ha_dr_provider_SAPHanaSR]")
         properties_slice = global_ini_content[section_start + 1 : section_start + 4]
@@ -199,6 +202,10 @@ class HAClusterValidator(SapAutomationQA):
             for key, sep, val in [line.partition("=")]
             if sep
         }
+        self.log(
+            logging.INFO,
+            f"Global.ini properties: {global_ini_properties}",
+        )
 
         parameters = [
             self._create_parameter(
@@ -209,6 +216,10 @@ class HAClusterValidator(SapAutomationQA):
             )
             for param_name, expected_value in global_ini_defaults.items()
         ]
+        self.log(
+            logging.INFO,
+            f"Global.ini parameters: {parameters}",
+        )
 
         return parameters
 
