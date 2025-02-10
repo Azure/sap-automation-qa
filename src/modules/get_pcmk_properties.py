@@ -54,7 +54,7 @@ class HAClusterValidator(SapAutomationQA):
         "topology": ".//clone/primitive[@type='SAPHanaTopology']",
         "topology_meta": ".//clone/meta_attributes",
         "hana": ".//master/primitive[@type='SAPHana']",
-        "hana_meta": "//master/meta_attributes",
+        "hana_meta": ".//master/meta_attributes",
         "ipaddr": ".//primitive[@type='IPaddr2']",
         "filesystem": ".//primitive[@type='Filesystem']",
         "azurelb": ".//primitive[@type='azure-lb']",
