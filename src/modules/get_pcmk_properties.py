@@ -260,7 +260,7 @@ class HAClusterValidator(SapAutomationQA):
         parameters = []
 
         if element.tag in ["clone", "master"]:
-            meta_attrs = element.find("./meta_attributes")
+            meta_attrs = element.find(".//meta_attributes")
             if meta_attrs is not None:
                 parameters.extend(
                     self._parse_nvpair_elements(
@@ -341,7 +341,7 @@ class HAClusterValidator(SapAutomationQA):
                 except Exception as e:
                     self.result[
                         "message"
-                    ] += f"Failed to get resources configuration: {str(e)} \n"
+                    ] += f"Failed to get resources configuration for {self.category}: {str(e)} \n"
                     continue
 
         try:
