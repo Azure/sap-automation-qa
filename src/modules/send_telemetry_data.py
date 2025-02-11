@@ -226,9 +226,7 @@ class TelemetryDataSender(SapAutomationQA):
                     "send_telemetry_data_to_"
                     + f"{self.module_params['telemetry_data_destination']}"
                 )
-                self.result["details"] = getattr(self, method_name)(
-                    json.dumps(self.result["telemetry_data"])
-                )
+                getattr(self, method_name)(json.dumps(self.result["telemetry_data"]))
                 self.result["status"] = TestStatus.SUCCESS.value
                 self.result["data_sent"] = True
             except Exception as e:
