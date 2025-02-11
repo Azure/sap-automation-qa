@@ -20,18 +20,12 @@ from ansible.module_utils.basic import AnsibleModule
 
 try:
     from ansible.module_utils.sap_automation_qa import SapAutomationQA, TestStatus
-    from ansible.module_utils.db_cluster_constants import (
-        LAWS_METHOD,
-        LAWS_CONTENT_TYPE,
-        LAWS_RESOURCE,
-    )
 except ImportError:
     from src.module_utils.sap_automation_qa import SapAutomationQA, TestStatus
-    from src.module_utils.db_cluster_constants import (
-        LAWS_METHOD,
-        LAWS_CONTENT_TYPE,
-        LAWS_RESOURCE,
-    )
+
+LAWS_RESOURCE = "/api/logs"
+LAWS_METHOD = "POST"
+LAWS_CONTENT_TYPE = "application/json"
 
 
 class TelemetryDataSender(SapAutomationQA):

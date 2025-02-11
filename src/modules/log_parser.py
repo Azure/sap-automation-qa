@@ -15,6 +15,45 @@ except ImportError:
     from src.module_utils.sap_automation_qa import SapAutomationQA, TestStatus
     from src.module_utils.db_cluster_constants import PCMK_KEYWORDS, SYS_KEYWORDS
 
+PCMK_KEYWORDS = {
+    "LogAction",
+    "LogNodeActions",
+    "pacemaker-fenced",
+    "check_migration_threshold",
+    "corosync",
+    "Result of",
+    "reboot",
+    "cannot run anywhere",
+    "attrd_peer_update",
+    "High CPU load detected",
+    "cli-ban",
+    "cli-prefer",
+    "cib-bootstrap-options-maintenance-mode",
+    "-is-managed",
+    "-maintenance",
+    "-standby",
+    "sbd",
+    "pacemaker-controld",
+    "pacemaker-execd",
+    "pacemaker-based",
+    "pacemaker-attrd",
+}
+SYS_KEYWORDS = {
+    "SAPHana",
+    "SAPHanaController",
+    "SAPHanaTopology",
+    "SAPInstance",
+    "fence_azure_arm",
+    "rsc_st_azure",
+    "rsc_ip_",
+    "rsc_nc_",
+    "rsc_Db2_",
+    "rsc_HANA_",
+    "corosync",
+    "Result of",
+    "reboot",
+}
+
 
 class LogParser(SapAutomationQA):
     """
