@@ -54,6 +54,7 @@ class TelemetryDataSender(SapAutomationQA):
                 "start": datetime.now(),
                 "end": datetime.now(),
                 "data_sent": False,
+                "data_logged": False,
             }
         )
 
@@ -93,28 +94,25 @@ class TelemetryDataSender(SapAutomationQA):
         :param telemetry_json_data: The JSON data to be sent to Azure Data Explorer.
         :return: The response from the Kusto API.
         """
-        try:
-            import pandas as pd
+        import pandas as pd
 
-            telemetry_json_data = json.loads(telemetry_json_data)
-            data_frame = pd.DataFrame(
-                [telemetry_json_data.values()], columns=telemetry_json_data.keys()
-            )
-            ingestion_properties = IngestionProperties(
-                database=self.module_params["adx_database_name"],
-                table=self.module_params["telemetry_table_name"],
-                data_format=DataFormat.JSON,
-                report_level=ReportLevel.FailuresAndSuccesses,
-            )
-            kcsb = KustoConnectionStringBuilder.with_aad_managed_service_identity_authentication(
-                connection_string=self.module_params["adx_cluster_fqdn"],
-                client_id=self.module_params["adx_client_id"],
-            )
-            client = QueuedIngestClient(kcsb)
-            response = client.ingest_from_dataframe(data_frame, ingestion_properties)
-            return response
-        except Exception as ex:
-            self.handle_error(ex)
+        telemetry_json_data = json.loads(telemetry_json_data)
+        data_frame = pd.DataFrame(
+            [telemetry_json_data.values()], columns=telemetry_json_data.keys()
+        )
+        ingestion_properties = IngestionProperties(
+            database=self.module_params["adx_database_name"],
+            table=self.module_params["telemetry_table_name"],
+            data_format=DataFormat.JSON,
+            report_level=ReportLevel.FailuresAndSuccesses,
+        )
+        kcsb = KustoConnectionStringBuilder.with_aad_managed_service_identity_authentication(
+            connection_string=self.module_params["adx_cluster_fqdn"],
+            client_id=self.module_params["adx_client_id"],
+        )
+        client = QueuedIngestClient(kcsb)
+        response = client.ingest_from_dataframe(data_frame, ingestion_properties)
+        return response
 
     def send_telemetry_data_to_azureloganalytics(
         self, telemetry_json_data: str
@@ -125,30 +123,27 @@ class TelemetryDataSender(SapAutomationQA):
         :param telemetry_json_data: JSON data to be sent to Log Analytics.
         :return: Response from the Log Analytics API.
         """
-        try:
-            utc_datetime = datetime.now().strftime("%a, %d %b %Y %H:%M:%S GMT")
-            authorization_header = self._get_authorization_for_log_analytics(
-                workspace_id=self.module_params["laws_workspace_id"],
-                workspace_shared_key=self.module_params["laws_shared_key"],
-                content_length=len(telemetry_json_data),
-                date=utc_datetime,
-            )
+        utc_datetime = datetime.now().strftime("%a, %d %b %Y %H:%M:%S GMT")
+        authorization_header = self._get_authorization_for_log_analytics(
+            workspace_id=self.module_params["laws_workspace_id"],
+            workspace_shared_key=self.module_params["laws_shared_key"],
+            content_length=len(telemetry_json_data),
+            date=utc_datetime,
+        )
 
-            response = requests.post(
-                url=f"https://{self.module_params['laws_workspace_id']}.ods.opinsights.azure.com"
-                + f"{LAWS_RESOURCE}?api-version=2016-04-01",
-                data=telemetry_json_data,
-                headers={
-                    "content-type": LAWS_CONTENT_TYPE,
-                    "Authorization": authorization_header,
-                    "Log-Type": self.module_params["telemetry_table_name"],
-                    "x-ms-date": utc_datetime,
-                },
-                timeout=30,
-            )
-            return response
-        except Exception as ex:
-            self.handle_error(ex)
+        response = requests.post(
+            url=f"https://{self.module_params['laws_workspace_id']}.ods.opinsights.azure.com"
+            + f"{LAWS_RESOURCE}?api-version=2016-04-01",
+            data=telemetry_json_data,
+            headers={
+                "content-type": LAWS_CONTENT_TYPE,
+                "Authorization": authorization_header,
+                "Log-Type": self.module_params["telemetry_table_name"],
+                "x-ms-date": utc_datetime,
+            },
+            timeout=30,
+        )
+        return response
 
     def validate_params(self) -> bool:
         """
@@ -195,6 +190,9 @@ class TelemetryDataSender(SapAutomationQA):
             with open(log_file_path, "a", encoding="utf-8") as log_file:
                 log_file.write(json.dumps(self.result["telemetry_data"]))
                 log_file.write("\n")
+
+            self.result["status"] = TestStatus.SUCCESS.value
+            self.result["data_logged"] = True
         except Exception as e:
             self.handle_error(e)
 
