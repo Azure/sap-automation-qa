@@ -191,8 +191,13 @@ class TelemetryDataSender(SapAutomationQA):
                 log_file.write(json.dumps(self.result["telemetry_data"]))
                 log_file.write("\n")
 
-            self.result["status"] = TestStatus.SUCCESS.value
-            self.result["data_logged"] = True
+            self.result["message"] += f"Telemetry data written to {log_file_path}. "
+            self.result.update(
+                {
+                    "status": TestStatus.SUCCESS.value,
+                    "data_sent": True,
+                }
+            )
         except Exception as e:
             self.handle_error(e)
 
@@ -225,8 +230,15 @@ class TelemetryDataSender(SapAutomationQA):
                     + f"{self.module_params['telemetry_data_destination']}"
                 )
                 getattr(self, method_name)(json.dumps(self.result["telemetry_data"]))
-                self.result["status"] = TestStatus.SUCCESS.value
-                self.result["data_sent"] = True
+                self.result[
+                    "message"
+                ] += f"Telemetry data sent to {self.module_params['telemetry_data_destination']}. "
+                self.result.update(
+                    {
+                        "status": TestStatus.SUCCESS.value,
+                        "data_sent": True,
+                    }
+                )
             except Exception as e:
                 self.handle_error(e)
         else:
