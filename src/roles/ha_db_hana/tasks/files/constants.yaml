@@ -56,7 +56,7 @@ VALID_CONFIGS:
 # === Resource Defaults ===
 # cibadmin --query --scope resources
 RESOURCE_DEFAULTS:
-  SLES:
+  SUSE:
     stonith:
       instance_attributes:
         pcmk_delay_max:                   "30s"
