@@ -91,6 +91,7 @@ class HAClusterValidator(SapAutomationQA):
             self.constants["VALID_CONFIGS"]
             .get(self.os_type, {})
             .get(self.os_version, {})
+            .get(self.fencing_mechanism, {})
             .get(name, self.constants[defaults_key].get(name))
         )
 
@@ -100,7 +101,11 @@ class HAClusterValidator(SapAutomationQA):
         """
         Get expected value for resource-specific configuration parameters.
         """
-        resource_defaults = self.constants["RESOURCE_DEFAULTS"].get(resource_type, {})
+        resource_defaults = (
+            self.constants["RESOURCE_DEFAULTS"]
+            .get(self.os_type, {})
+            .get(resource_type, {})
+        )
 
         if section == "meta_attributes":
             return resource_defaults.get("meta_attributes", {}).get(param_name)

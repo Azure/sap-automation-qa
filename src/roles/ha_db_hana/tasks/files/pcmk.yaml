@@ -6,11 +6,13 @@
 
 CRM_CONFIG_DEFAULTS:
   cluster-infrastructure:             corosync
-  have-watchdog:                      'true'
   priority-fencing-delay:             '30'
   stonith-action:                     reboot
   stonith-enabled:                    'true'
-  stonith-timeout:                    144s
+  concurrent-fencing:                 'true'
+  maintenance-mode:                   'false'
+  node-health-strategy:               'custom'
+  azure-events-az_globalPullState:    'IDLE'
 
 OP_DEFAULTS:
   record-pending:                     'true'
@@ -30,8 +32,6 @@ CONSTRAINTS:
   rsc_order:
     kind:                             "Optional"
 
-
-
 VALID_CONFIGS:
   RHEL:
     '8.4': {}
@@ -39,86 +39,200 @@ VALID_CONFIGS:
   SLES:
     '15.2': {}
     '15.3': {}
+  AFA:
+    have-watchdog:                    "false"
+    stonith-timeout:                  "144s"
+  ISCSI:
+    have-watchdog:                    "true"
+    stonith-timeout:                  "900"
+
 
 RESOURCE_DEFAULTS:
-  stonith:
-    instance_attributes:
-      pcmk_delay_max:                   "30s"
-      pcmk_monitor_retries:             "4"
-      pcmk_action_limit:                "3"
-      pcmk_reboot_timeout:              "900"
-      power_timeout:                    "240"
-    monitor:
-      interval:                         "3600"
-      timeout:                          "120"
-
-  topology:
-    meta_attributes:
-      clone-node-max:                   "1"
-      target-role:                      "Started"
-      interleave:                       "true"
-    operations:
+  SLES:
+    stonith:
+      instance_attributes:
+        pcmk_delay_max:                   "30s"
+        pcmk_monitor_retries:             "4"
+        pcmk_action_limit:                "3"
+        pcmk_reboot_timeout:              "900"
+        power_timeout:                    "240"
       monitor:
-        interval:                       "10"
-        timeout:                        "600"
-      start:
-        interval:                       "0"
-        timeout:                        "600"
-      stop:
-        interval:                       "0"
-        timeout:                        "300"
+        interval:                         "3600"
+        timeout:                          "120"
 
-  hana:
-    meta_attributes:
-      notify:                           "true"
-      clone-max:                        "2"
-      clone-node-max:                   "1"
-      target-role:                      "Started"
-      interleave:                       "true"
-      priority:                         "100"
-    instance_attributes:
-      PREFER_SITE_TAKEOVER:             "true"
-      DUPLICATE_PRIMARY_TIMEOUT:        "7200"
-      AUTOMATED_REGISTER:               "true"
-    operations:
-      start:
-        interval:                       "0"
-        timeout:                        "3600"
-      stop:
-        interval:                       "0"
-        timeout:                        "3600"
-      promote:
-        interval:                       "0"
-        timeout:                        "3600"
+    topology:
+      meta_attributes:
+        clone-node-max:                   "1"
+        target-role:                      "Started"
+        interleave:                       "true"
+      operations:
+        monitor:
+          interval:                       "10"
+          timeout:                        "600"
+        start:
+          interval:                       "0"
+          timeout:                        "600"
+        stop:
+          interval:                       "0"
+          timeout:                        "300"
+
+    hana:
+      meta_attributes:
+        notify:                           "true"
+        clone-max:                        "2"
+        clone-node-max:                   "1"
+        target-role:                      "Started"
+        interleave:                       "true"
+        priority:                         "100"
+      instance_attributes:
+        PREFER_SITE_TAKEOVER:             "true"
+        DUPLICATE_PRIMARY_TIMEOUT:        "7200"
+        AUTOMATED_REGISTER:               "true"
+      operations:
+        start:
+          interval:                       "0"
+          timeout:                        "3600"
+        stop:
+          interval:                       "0"
+          timeout:                        "3600"
+        promote:
+          interval:                       "0"
+          timeout:                        "3600"
+        monitor:
+          timeout:                        "700"
+
+    ipaddr:
+      meta_attributes:
+        target-role:                      "Started"
+      operations:
+        monitor:
+          interval:                       "10s"
+          timeout:                        "20s"
+
+    filesystem:
+      meta_attributes:
+        clone-node-max:                   "1"
+        interleave:                       "true"
+      operations:
+        monitor:
+          interval:                       "120"
+          timeout:                        "120"
+        start:
+          interval:                       "0"
+          timeout:                        "120"
+        stop:
+          interval:                       "0"
+          timeout:                        "120"
+
+    azurelb:
+      meta_attributes:
+        resource-stickiness:              "0"
+
+  REDHAT:
+    stonith:
+      instance_attributes:
+        pcmk_delay_max:                   "30s"
+        pcmk_monitor_retries:             "4"
+        pcmk_action_limit:                "3"
+        pcmk_reboot_timeout:              "900"
+        power_timeout:                    "240"
+        pcmk_monitor_timeout:             "120"
       monitor:
-        timeout:                        "700"
+        interval:                         "3600"
+        timeout:                          "120"
 
-  ipaddr:
-    meta_attributes:
-      target-role:                      "Started"
-    operations:
-      monitor:
-        interval:                       "10s"
-        timeout:                        "20s"
+    topology:
+      meta_attributes:
+        clone-node-max:                   "1"
+        clone-max:                        "2"
+        target-role:                      "Started"
+        interleave:                       "true"
+        failure-timeout:                  "120s"
+      operations:
+        monitor:
+          interval:                       "10"
+          timeout:                        "600"
+        start:
+          interval:                       "0s"
+          timeout:                        "600"
+        stop:
+          interval:                       "0s"
+          timeout:                        "300"
+        methods:
+          timeout:                        "5"
+          interval:                       "0s"
+        reload:
+          timeout:                        "5"
+          interval:                       "0s"
 
-  filesystem:
-    meta_attributes:
-      clone-node-max:                   "1"
-      interleave:                       "true"
-    operations:
-      monitor:
-        interval:                       "120"
-        timeout:                        "120"
-      start:
-        interval:                       "0"
-        timeout:                        "120"
-      stop:
-        interval:                       "0"
-        timeout:                        "120"
+    hana:
+      meta_attributes:
+        notify:                           "true"
+        clone-max:                        "2"
+        clone-node-max:                   "1"
+        target-role:                      "Started"
+        interleave:                       "true"
+        priority:                         "100"
+      instance_attributes:
+        PREFER_SITE_TAKEOVER:             "true"
+        DUPLICATE_PRIMARY_TIMEOUT:        "7200"
+        AUTOMATED_REGISTER:               "true"
+      operations:
+        start:
+          interval:                       "0"
+          timeout:                        "3600"
+        stop:
+          interval:                       "0"
+          timeout:                        "3600"
+        promote:
+          interval:                       "0"
+          timeout:                        "3600"
+        monitor:
+          timeout:                        "700"
 
-  azurelb:
-    meta_attributes:
-      resource-stickiness:              "0"
+    ipaddr:
+      meta_attributes:
+        target-role:                      "Started"
+      operations:
+        monitor:
+          interval:                       "10s"
+          timeout:                        "20s"
+        start:
+          interval:                       "0s"
+          timeout:                        "20s"
+        stop:
+          interval:                       "0s"
+          timeout:                        "20s"
+
+    filesystem:
+      meta_attributes:
+        clone-node-max:                   "1"
+        interleave:                       "true"
+      operations:
+        monitor:
+          interval:                       "120"
+          timeout:                        "120"
+        start:
+          interval:                       "0"
+          timeout:                        "120"
+        stop:
+          interval:                       "0"
+          timeout:                        "120"
+
+    azurelb:
+      meta_attributes:
+        resource-stickiness:              "0"
+      operations:
+        monitor:
+          interval:                       "10s"
+          timeout:                        "20s"
+        start:
+          interval:                       "0s"
+          timeout:                        "20s"
+        stop:
+          interval:                       "0s"
+          timeout:                        "20s"
+
 
 OS_PARAMETERS:
   DEFAULTS:
