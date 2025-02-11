@@ -14,6 +14,15 @@ import xml.etree.ElementTree as ET
 import yaml
 
 
+class TelemetryDataDestination(Enum):
+    """
+    Enum for the destination of the telemetry data.
+    """
+
+    KUSTO = "azuazuredataexplorer"
+    LOG_ANALYTICS = "azureloganalytics"
+
+
 class TestStatus(Enum):
     """
     Enum for the status of the test case/step.
