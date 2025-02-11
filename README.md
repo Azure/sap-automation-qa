@@ -35,12 +35,6 @@ There are two primary ways to get started with the SAP Automated Testing Framewo
 
 If you already have [SDAF](https://github.com/Azure/sap-automation) environment set up, integrating the Automated Testing Framework is a natural extension that allows you to leverage existing deployment pipelines and configurations.
 
-**Key Benefits:**
-
-- **Unified Workflow:** Combine deployment and testing into a single automated pipeline.
-- **Centralized Management:** Manage both SAP system deployments and testing from a single interface.
-- **Enhanced Visibility:** Gain deeper insights into system health with integrated telemetry and reporting.
-
 ### [Getting Started with High Availability Testing (Standalone)](./docs/GETTING_STARTED.md)
 
 For users focused solely on validating SAP functionality and configurations, the standalone approach offers a streamlined process to test critical SAP components without the complexity of full deployment integration.
