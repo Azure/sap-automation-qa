@@ -36,6 +36,7 @@ class AzureLoadBalancer(SapAutomationQA):
         self.credential = None
         self.module_params = module_params
         self.network_client = None
+        self.constants = module_params["lb_constants"]
 
     def _create_network_client(self):
         """
@@ -142,14 +143,14 @@ class AzureLoadBalancer(SapAutomationQA):
                 for rule in found_load_balancer["load_balancing_rules"]:
                     check_parameters(
                         rule,
-                        self.module_params["AZURE_LOADBALANCER"],
+                        self.constants["RULES"],
                         "load_balancing_rule",
                     )
 
                 for probe in found_load_balancer["probes"]:
                     check_parameters(
                         probe,
-                        self.module_params["AZURE_LOADBALANCER"]["PROBES"],
+                        self.constants["PROBES"],
                         "probes",
                     )
 
