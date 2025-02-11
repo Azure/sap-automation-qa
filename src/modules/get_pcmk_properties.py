@@ -46,8 +46,9 @@ class HAClusterValidator(SapAutomationQA):
         "crm_config": (".//cluster_property_set", "CRM_CONFIG_DEFAULTS"),
         "rsc_defaults": (".//meta_attributes", "RSC_DEFAULTS"),
         "op_defaults": (".//meta_attributes", "OP_DEFAULTS"),
-        "constraints": (".//*", "CONSTRAINTS_DEFAULTS"),
     }
+
+    CONSTRAINTS_CATEGORIES = (".//*", "CONSTRAINTS_DEFAULTS")
 
     RESOURCE_CATEGORIES = {
         "stonith": ".//primitive[@class='stonith']",
@@ -299,6 +300,31 @@ class HAClusterValidator(SapAutomationQA):
                     )
         return parameters
 
+    def _parse_constraints(self, root):
+        """
+        Parse constraints configuration parameters
+        """
+        parameters = []
+        for element in root:
+            tag = element.tag
+            if tag in self.constants["CONSTRAINTS"]:
+                for attr, expected in self.constants["CONSTRAINTS"][tag].items():
+                    parameters.append(
+                        {
+                            self._create_parameter(
+                                category="constraints",
+                                subcategory=tag,
+                                id=element.get("id", ""),
+                                name=attr,
+                                value=element.get(attr),
+                                expected_value=expected,
+                            )
+                        }
+                    )
+            else:
+                continue
+        return parameters
+
     def parse_ha_cluster_config(self):
         """
         Parse HA cluster configuration XML and return a list of properties.
@@ -346,6 +372,15 @@ class HAClusterValidator(SapAutomationQA):
                     self.result[
                         "message"
                     ] += f"Failed to get resources configuration for {self.category}: {str(e)}"
+                    continue
+
+            elif self.category == "constraints":
+                try:
+                    parameters.extend(self._parse_constraints(root))
+                except Exception as e:
+                    self.result[
+                        "message"
+                    ] += f"Failed to get constraints configuration: {str(e)}"
                     continue
 
         try:
