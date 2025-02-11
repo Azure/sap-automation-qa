@@ -114,7 +114,7 @@ class AzureLoadBalancer(SapAutomationQA):
                 f"Checking parameters for {entity_type}, {entity}, {parameters_dict}",
             )
             for key, expected_value in parameters_dict.items():
-                parameters.extend(
+                parameters.append(
                     Parameters(
                         category=entity_type,
                         id=entity["name"],
