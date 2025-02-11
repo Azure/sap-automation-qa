@@ -5,6 +5,7 @@
 Module to send telemetry data to Kusto Cluster/Log Analytics Workspace and create an HTML report.
 """
 
+import logging
 import os
 from datetime import datetime
 from typing import Dict, Any
@@ -213,11 +214,10 @@ class TelemetryDataSender(SapAutomationQA):
             except Exception as e:
                 self.handle_error(e)
         else:
-            self.handle_error(
-                ValueError(
-                    f"Invalid telemetry data destination: "
-                    f"{self.module_params['telemetry_data_destination']}"
-                )
+            self.log(
+                logging.ERROR,
+                "Invalid telemetry data destination specified "
+                + f"{self.module_params['telemetry_data_destination']}",
             )
 
     def get_result(self) -> Dict[str, Any]:
