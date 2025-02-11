@@ -27,9 +27,26 @@ Through automated and consistent testing procedures, the framework helps maintai
 **Automation**:
 Manual testing of HA configurations is time-consuming and prone to human error. This framework automates the entire testing process, from setup to execution and reporting, significantly reducing the operational overhead of HA testing while improving accuracy and consistency.
 
-## [Integration with SAP Deployment Automation Framework (SDAF)](./docs/SDAF_INTEGRATION.md)
-## [Getting Started with High Availability Testing](./GETTING_STARTED.md)
-## [Architecture and Components](./docs/ARCHITECTURE.md)
+## Get Started
+
+There are two primary ways to get started with the SAP Automated Testing Framework. Choose the path that best fits your current environment and objectives:
+
+### [Integration with SAP Deployment Automation Framework (SDAF)](./docs/SDAF_INTEGRATION.md)
+
+If you already have [SDAF](https://github.com/Azure/sap-automation) environment set up, integrating the Automated Testing Framework is a natural extension that allows you to leverage existing deployment pipelines and configurations.
+
+**Key Benefits:**
+
+- **Unified Workflow:** Combine deployment and testing into a single automated pipeline.
+- **Centralized Management:** Manage both SAP system deployments and testing from a single interface.
+- **Enhanced Visibility:** Gain deeper insights into system health with integrated telemetry and reporting.
+
+### [Getting Started with High Availability Testing (Standalone)](./docs/GETTING_STARTED.md)
+
+For users focused solely on validating SAP functionality and configurations, the standalone approach offers a streamlined process to test critical SAP components without the complexity of full deployment integration.
+
+
+### [Architecture and Components](./docs/ARCHITECTURE.md)
 
 ## License
 
