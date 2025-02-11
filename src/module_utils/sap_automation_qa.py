@@ -19,7 +19,7 @@ class TelemetryDataDestination(Enum):
     Enum for the destination of the telemetry data.
     """
 
-    KUSTO = "azuazuredataexplorer"
+    KUSTO = "azuredataexplorer"
     LOG_ANALYTICS = "azureloganalytics"
 
 
