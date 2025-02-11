@@ -20,9 +20,17 @@ from azure.kusto.ingest import QueuedIngestClient, IngestionProperties, ReportLe
 from ansible.module_utils.basic import AnsibleModule
 
 try:
-    from ansible.module_utils.sap_automation_qa import SapAutomationQA, TestStatus
+    from ansible.module_utils.sap_automation_qa import (
+        SapAutomationQA,
+        TestStatus,
+        TelemetryDataDestination,
+    )
 except ImportError:
-    from src.module_utils.sap_automation_qa import SapAutomationQA, TestStatus
+    from src.module_utils.sap_automation_qa import (
+        SapAutomationQA,
+        TestStatus,
+        TelemetryDataDestination,
+    )
 
 LAWS_RESOURCE = "/api/logs"
 LAWS_METHOD = "POST"
@@ -152,13 +160,14 @@ class TelemetryDataSender(SapAutomationQA):
             "telemetry_data_destination"
         )
 
-        if telemetry_data_destination == "azureloganalytics":
+        if telemetry_data_destination == TelemetryDataDestination.LOG_ANALYTICS.value:
             if (
                 "laws_workspace_id" not in self.module_params
                 or "laws_shared_key" not in self.module_params
+                or "telemetry_table_name" not in self.module_params
             ):
                 return False
-        elif telemetry_data_destination == "azuredataexplorer":
+        elif telemetry_data_destination == TelemetryDataDestination.KUSTO.value:
             required_params = [
                 "adx_database_name",
                 "telemetry_table_name",
@@ -193,12 +202,12 @@ class TelemetryDataSender(SapAutomationQA):
         """
         Sends telemetry data to the specified destination.
         """
-        if self.module_params["telemetry_data_destination"] in [
-            "azureloganalytics",
-            "azuredataexplorer",
-        ]:
+        if (
+            self.module_params["telemetry_data_destination"]
+            in TelemetryDataDestination._value2member_map_
+        ):
             self.log(
-                logging.INFO, f"Validating parameters for telemetry data destination "
+                logging.INFO, "Validating parameters for telemetry data destination "
             )
 
             if not self.validate_params():
@@ -218,6 +227,9 @@ class TelemetryDataSender(SapAutomationQA):
                     + f"{self.module_params['telemetry_data_destination']}"
                 )
                 getattr(self, method_name)(json.dumps(self.result["telemetry_data"]))
+                self.result["details"] = getattr(self, method_name)(
+                    json.dumps(self.result["telemetry_data"])
+                )
                 self.result["status"] = TestStatus.SUCCESS.value
                 self.result["data_sent"] = True
             except Exception as e:

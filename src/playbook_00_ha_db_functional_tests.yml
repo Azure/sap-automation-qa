@@ -20,6 +20,7 @@
           - azure-kusto-ingest
           - azure-identity
           - azure-mgmt-network
+          - pandas
 
 - hosts:                               "{{ sap_sid | upper }}_DB"
   name:                                "Host tasks"
@@ -45,7 +46,7 @@
 
     - name:                            Display the variable
       ansible.builtin.debug:
-        msg: 
+        msg:
           - "network_data_1:           {{ network_info_parsed }}"
       failed_when:                     false
 
