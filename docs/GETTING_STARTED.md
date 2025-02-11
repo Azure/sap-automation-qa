@@ -2,11 +2,11 @@
 
 ## Overview
 
-One key component of the SAP Automated Testing framework is the SAP High Availability (HA) Testing Framework, which is designed to ensure that your SAP deployments meet strict reliability and availability requirements.
+One key component of the SAP Testing Automation framework is the SAP High Availability (HA) Testing Framework, which is designed to ensure that your SAP deployments meet strict reliability and availability requirements.
 
 The SAP High Availability Testing component operates by executing a series of carefully designed test scenarios that simulate real-world failure conditions and validate system recovery capabilities. By leveraging Ansible's powerful automation features, it orchestrates complex test scenarios across multiple components, while maintaining detailed logs and generating comprehensive reports of test outcomes.
 
-In summary, SAP High Availability testing is an integral part of the overall SAP Automated Testing Framework, complementing other testing modules to provide a robust, end-to-end validation of your SAP environments.
+In summary, SAP High Availability testing is an integral part of the overall SAP Testing Automation Framework, complementing other testing modules to provide a robust, end-to-end validation of your SAP environments.
 
 ### Core Framework
 

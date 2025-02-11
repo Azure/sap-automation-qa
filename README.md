@@ -1,8 +1,8 @@
-# SAP Automated Testing Framework
+# SAP Testing Automation Framework
 
 ## Overview
 
-The SAP Automated Testing Framework is a automation solution designed to validate the configuration and performance of SAP systems on Azure under a wide array of scenarios. This framework not only streamlines the testing of SAP environments but also brings confidence and assurance by simulating real-world conditions.
+The SAP Testing Automation Framework is a automation solution designed to validate the configuration and performance of SAP systems on Azure under a wide array of scenarios. This framework not only streamlines the testing of SAP environments but also brings confidence and assurance by simulating real-world conditions.
 
 Currently, the framework offers test scenarios focusing on high availability functional testing and configuration checks. Under the high availability category, we address critical components including:
 
@@ -29,11 +29,11 @@ Manual testing of HA configurations is time-consuming and prone to human error. 
 
 ## Get Started
 
-There are two primary ways to get started with the SAP Automated Testing Framework. Choose the path that best fits your current environment and objectives:
+There are two primary ways to get started with the SAP Testing Automated Framework. Choose the path that best fits your current environment and objectives:
 
 ### [Integration with SAP Deployment Automation Framework (SDAF)](./docs/SDAF_INTEGRATION.md)
 
-If you already have [SDAF](https://github.com/Azure/sap-automation) environment set up, integrating the Automated Testing Framework is a natural extension that allows you to leverage existing deployment pipelines and configurations.
+If you already have [SDAF](https://github.com/Azure/sap-automation) environment set up, integrating the SAP Testing Automation Framework is a natural extension that allows you to leverage existing deployment pipelines and configurations.
 
 ### [Getting Started with High Availability Testing (Standalone)](./docs/GETTING_STARTED.md)
 

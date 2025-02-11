@@ -2,9 +2,9 @@
 
 ## Overview
 
-The SAP Automated Testing Framework started as an addition to the SAP Deployment Automation Framework (SDAF) to provide a comprehensive testing solution for SAP systems on Azure. The framework is designed to validate the configuration and performance of SAP systems under a wide array of scenarios, bringing confidence and assurance by simulating real-world conditions.
+The SAP Testing Automation Framework started as an addition to the SAP Deployment Automation Framework (SDAF) to provide a comprehensive testing solution for SAP systems on Azure. The framework is designed to validate the configuration and performance of SAP systems under a wide array of scenarios, bringing confidence and assurance by simulating real-world conditions.
 
-This guide will help you set up your existing SAP Deployment Automation Framework environment to include the SAP Automated Testing Framework. The integration will allow you to run automated tests on your SAP systems, ensuring that they meet strict reliability and availability requirements.
+This guide will help you set up your existing SAP Deployment Automation Framework environment to include the SAP Testing Automation Framework. The integration will allow you to run automated tests on your SAP systems, ensuring that they meet strict reliability and availability requirements.
 
 ## Steps (Internal Bug Bash, to be updated later for public release)
 
