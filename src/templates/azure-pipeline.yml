@@ -1,0 +1,83 @@
+---
+# /*---------------------------------------------------------------------------8
+# |                                                                            |
+# |               This pipeline performs the SAP quality assurance             |
+# |              tests and must run on a self hosted deployment agent          |
+# |                      due to long run time.                                 |
+# |                                                                            |
+# +------------------------------------4--------------------------------------*/
+
+name:                                  SAP Quality Assurance $(sap_system_configuration_name)
+
+parameters:
+  - name:                              sap_system_configuration_name
+    displayName:                       "SAP System configuration name, use the following syntax: ENV-LOCA-VNET-SID"
+    type:                              string
+    default:                           DEV-WEEU-SAP01-X00
+
+  - name:                              environment
+    displayName:                       Workload Environment (DEV, QUA, PRD, ...)
+    type:                              string
+    default:                           DEV
+
+  - name:                              extra_params
+    displayName:                       Extra Parameters
+    type:                              string
+    default:                           ''
+
+  - name:                              sap_on_azure_quality_checks
+    displayName:                       SAP on Azure Quality Checks
+    type:                              boolean
+    default:                           true
+
+
+  - name:                              sap_functional_tests
+    displayName:                       SAP Functional Tests
+    type:                              boolean
+    default:                           true
+
+  - name:                              sap_functional_test_type
+    displayName:                       SAP Functional Tests Type
+    type:                              string
+    default:                           "DatabaseHighAvailability"
+    values:
+      - "DatabaseHighAvailability"
+      - "CentralServicesHighAvailability"
+
+  - name:                              telemetry_data_destination
+    displayName:                       Telemetry Data Destination (Provide connection settings in Extra Parameters)
+    type:                              string
+    default:                           ""
+    values:
+      - "AzureLogAnalytics"
+      - "AzureDataExplorer"
+
+
+#--------------------------------------+---------------------------------------8
+#                                                                              |
+# Calls playbook_06_03_sap_functional_tests.yaml from the code repository               |
+# If an Agent pool is defined it will be used otherwise Microsoft hosted       |
+#                                                                              |
+#--------------------------------------+---------------------------------------8
+trigger:                                   none
+
+
+
+pool:
+  name:                                    $[coalesce(variables['POOL'], variables['Agent'])]
+
+extends:
+  template:                                ./resources.yml
+  parameters:
+    stages:
+      - template:                          deploy\pipelines\13-sap-quality-assurance.yaml@sap-automation
+        parameters:
+          sap_system_configuration_name:   ${{ parameters.sap_system_configuration_name }}
+          environment:                     ${{ parameters.environment }}
+          sap_on_azure_quality_checks:     ${{ parameters.sap_on_azure_quality_checks }}
+          sap_automation_repo_path:        $(Build.SourcesDirectory)/sap-automation
+          config_repo_path:                $(Build.SourcesDirectory)/config
+          extra_params:                    ${{ parameters.extra_params }}
+          sap_functional_tests:            ${{ parameters.sap_functional_tests }}
+          sap_functional_test_type:        ${{ parameters.sap_functional_test_type }}
+          telemetry_data_destination:      ${{ parameters.telemetry_data_destination }}
