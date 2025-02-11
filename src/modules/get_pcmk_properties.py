@@ -91,7 +91,7 @@ class HAClusterValidator(SapAutomationQA):
         fence_config = self.constants["VALID_CONFIGS"].get(self.fencing_mechanism, {})
         os_config = self.constants["VALID_CONFIGS"].get(self.os_type, {})
 
-        return fence_config.get(name) or os_config.get(self.os_version, {}).get(
+        return fence_config.get(name) or os_config.get(
             name, self.constants[defaults_key].get(name)
         )
 

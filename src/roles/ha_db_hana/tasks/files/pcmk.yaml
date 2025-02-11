@@ -48,10 +48,10 @@ VALID_CONFIGS:
   SLES: {}
   AFA:
     have-watchdog:                    "false"
-    stonith-timeout:                  "144s"
+    stonith-timeout:                  "900"
   ISCSI:
     have-watchdog:                    "true"
-    stonith-timeout:                  "900"
+    stonith-timeout:                  "144s"
 
 
 # === Resource Defaults ===
