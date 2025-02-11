@@ -130,7 +130,7 @@ class AzureLoadBalancer(SapAutomationQA):
                             if entity[key] == value
                             else TestStatus.ERROR.value
                         ),
-                    )
+                    ).to_dict()
                 )
 
         try:
