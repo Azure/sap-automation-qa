@@ -95,8 +95,6 @@ class AzureLoadBalancer(SapAutomationQA):
         )
         found_load_balancer = None
 
-        self.log(logging.INFO, f"Load balancer IPs: {load_balancer_ips}")
-
         found_load_balancer = next(
             (
                 lb
@@ -109,10 +107,6 @@ class AzureLoadBalancer(SapAutomationQA):
         parameters = []
 
         def check_parameters(entity, parameters_dict, entity_type):
-            self.log(
-                logging.INFO,
-                f"Checking parameters for {entity_type}, {entity}, {parameters_dict}",
-            )
             for key, expected_value in parameters_dict.items():
                 parameters.append(
                     Parameters(
@@ -166,15 +160,20 @@ class AzureLoadBalancer(SapAutomationQA):
                         )
                         continue
 
-                self.log(
-                    logging.INFO,
-                    f"parameters: {parameters}",
-                )
-
+                failed_parameters = [
+                    param
+                    for param in parameters
+                    if param.get("status", TestStatus.ERROR.value)
+                    == TestStatus.ERROR.value
+                ]
                 self.result.update(
                     {
                         "details": {"parameters": parameters},
-                        "status": TestStatus.ERROR.value,
+                        "status": (
+                            TestStatus.ERROR.value
+                            if failed_parameters
+                            else TestStatus.SUCCESS.value
+                        ),
                     }
                 )
                 self.result[
