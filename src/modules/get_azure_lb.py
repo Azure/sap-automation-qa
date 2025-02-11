@@ -166,6 +166,11 @@ class AzureLoadBalancer(SapAutomationQA):
                         )
                         continue
 
+                self.log(
+                    logging.INFO,
+                    f"parameters: {parameters}",
+                )
+
                 failed_parameters = [
                     param
                     for param in parameters
