@@ -114,9 +114,11 @@ class AzureLoadBalancer(SapAutomationQA):
         )
         parameters = []
 
-        self.log(logging.INFO, f"Required load balancer: {found_load_balancer}")
-
         def check_parameters(entity, parameters_dict, entity_type):
+            self.log(
+                logging.INFO,
+                f"Checking parameters for {entity_type}, {entity}, {parameters_dict}",
+            )
             for key, value in parameters_dict.items():
                 parameters.extend(
                     Parameters(
@@ -141,27 +143,54 @@ class AzureLoadBalancer(SapAutomationQA):
                     f"Validating load balancer parameters {found_load_balancer['name']}"
                 )
                 for rule in found_load_balancer["load_balancing_rules"]:
-                    check_parameters(
-                        rule,
-                        self.constants["RULES"],
-                        "load_balancing_rule",
-                    )
+                    try:
+                        check_parameters(
+                            rule,
+                            self.constants["RULES"],
+                            "load_balancing_rule",
+                        )
+                    except Exception as e:
+                        self.handle_error(e)
+                        self.result[
+                            "message"
+                        ] += f"Failed to validate load balancer rule parameters. {e} \n"
+                        continue
 
                 for probe in found_load_balancer["probes"]:
-                    check_parameters(
-                        probe,
-                        self.constants["PROBES"],
-                        "probes",
-                    )
+                    try:
+                        check_parameters(
+                            probe,
+                            self.constants["PROBES"],
+                            "probes",
+                        )
+                    except Exception as e:
+                        self.handle_error(e)
+                        self.result[
+                            "message"
+                        ] += (
+                            f"Failed to validate load balancer probe parameters. {e} \n"
+                        )
+                        continue
 
-            self.result["status"] = (
-                TestStatus.SUCCESS.value
-                if all(
-                    param["status"] == TestStatus.SUCCESS.value for param in parameters
+                self.result.update(
+                    {
+                        "status": (
+                            TestStatus.SUCCESS.value
+                            if all(
+                                param["status"] == TestStatus.SUCCESS.value
+                                for param in parameters
+                            )
+                            else TestStatus.ERROR.value
+                        ),
+                        "details": {"parameters": parameters},
+                    }
                 )
-                else TestStatus.ERROR.value
-            )
-            self.result["details"] = {"parameters": parameters}
+                self.result[
+                    "message"
+                ] += "Successfully validated load balancer parameters"
+            else:
+                self.result["message"] += "No load balancer found"
+
         except Exception as e:
             self.handle_error(e)
 
