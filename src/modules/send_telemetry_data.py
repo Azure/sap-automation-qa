@@ -197,11 +197,20 @@ class TelemetryDataSender(SapAutomationQA):
             "azureloganalytics",
             "azuredataexplorer",
         ]:
+            self.log(
+                logging.INFO, f"Validating parameters for telemetry data destination "
+            )
+
             if not self.validate_params():
                 self.result["status"] = (
                     "Invalid parameters for telemetry data destination. Data will not be sent."
                 )
                 return
+
+            self.log(
+                logging.INFO,
+                f"Sending telemetry data to {self.module_params['telemetry_data_destination']}",
+            )
 
             try:
                 method_name = (
