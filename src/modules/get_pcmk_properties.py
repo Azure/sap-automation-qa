@@ -140,7 +140,7 @@ class HAClusterValidator(SapAutomationQA):
             else:
                 expected_value = self._get_expected_value(category, name)
 
-        if value is None:
+        if value is None or value == "":
             return
 
         return Parameters(
