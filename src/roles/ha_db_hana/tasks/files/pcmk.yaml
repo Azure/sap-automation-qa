@@ -43,7 +43,7 @@ CONSTRAINTS:
 # === Valid Configurations for different OS versions ===
 # Specify the properties that are different for different OS versions
 VALID_CONFIGS:
-  RHEL:
+  REDHAT:
     priority-fencing-delay:           '15s'
   SLES: {}
   AFA:
@@ -146,9 +146,10 @@ RESOURCE_DEFAULTS:
         pcmk_reboot_timeout:              "900"
         power_timeout:                    "240"
         pcmk_monitor_timeout:             "120"
-      monitor:
-        interval:                         "3600"
-        timeout:                          "120"
+      operations:
+        monitor:
+          interval:                       "3600"
+          timeout:                        "120"
 
     topology:
       meta_attributes:
