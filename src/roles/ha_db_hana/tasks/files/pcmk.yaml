@@ -44,11 +44,8 @@ CONSTRAINTS:
 # Specify the properties that are different for different OS versions
 VALID_CONFIGS:
   RHEL:
-    '8.4': {}
-    '9.0': {}
-  SLES:
-    '15.2': {}
-    '15.3': {}
+    priority-fencing-delay:           '15s'
+  SLES: {}
   AFA:
     have-watchdog:                    "false"
     stonith-timeout:                  "144s"
