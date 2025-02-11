@@ -4,6 +4,8 @@
 # Description: This file contains the expected configuration for the pacemaker cluster. The values
 # are based on Microsoft's best practices and are subject to change based on the customer's requirements.
 
+# === CRM Configuration Defaults ===
+# cibadmin --query --scope crm_config
 CRM_CONFIG_DEFAULTS:
   cluster-infrastructure:             corosync
   priority-fencing-delay:             '30'
@@ -14,15 +16,21 @@ CRM_CONFIG_DEFAULTS:
   node-health-strategy:               'custom'
   azure-events-az_globalPullState:    'IDLE'
 
+# === Operation Defaults ===
+# cibadmin --query --scope op_defaults
 OP_DEFAULTS:
   record-pending:                     'true'
   timeout:                            '600'
 
+# === Resource Defaults ===
+# cibadmin --query --scope rsc_defaults
 RSC_DEFAULTS:
   migration-threshold:                '5000'
   priority:                           '1'
   resource-stickiness:                '1000'
 
+# === Constraints ===
+# cibadmin --query --scope constraints
 CONSTRAINTS:
   rsc_colocation:
     score:                            "4000"
@@ -32,6 +40,8 @@ CONSTRAINTS:
   rsc_order:
     kind:                             "Optional"
 
+# === Valid Configurations for different OS versions ===
+# Specify the properties that are different for different OS versions
 VALID_CONFIGS:
   RHEL:
     '8.4': {}
@@ -47,6 +57,8 @@ VALID_CONFIGS:
     stonith-timeout:                  "900"
 
 
+# === Resource Defaults ===
+# cibadmin --query --scope resources
 RESOURCE_DEFAULTS:
   SLES:
     stonith:
@@ -234,6 +246,9 @@ RESOURCE_DEFAULTS:
           timeout:                        "20s"
 
 
+# === OS Parameters ===
+# Run command as root. Format of command is: "parent_key child_key"
+# Example: sysctl net.ipv4.tcp_timestamps
 OS_PARAMETERS:
   DEFAULTS:
     sysctl:
@@ -243,6 +258,8 @@ OS_PARAMETERS:
       runtime.config.totem.token:       "runtime.config.totem.token (u32) = 30000"
       runtime.config.totem.consensus:   "runtime.config.totem.consensus (u32) = 36000"
 
+# === Global INI ===
+# Reading the global.ini file to get the provider and path for the SAPHanaSR resource agent
 GLOBAL_INI:
   SUSE:
     provider:                           "SAPHanaSR"
