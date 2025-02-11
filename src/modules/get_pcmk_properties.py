@@ -310,14 +310,14 @@ class HAClusterValidator(SapAutomationQA):
             if tag in self.constants["CONSTRAINTS"]:
                 for attr, expected in self.constants["CONSTRAINTS"][tag].items():
                     parameters.append(
-                            self._create_parameter(
-                                category="constraints",
-                                subcategory=tag,
-                                id=element.get("id", ""),
-                                name=attr,
-                                value=element.get(attr),
-                                expected_value=expected,
-                            )
+                        self._create_parameter(
+                            category="constraints",
+                            subcategory=tag,
+                            id=element.get("id", ""),
+                            name=attr,
+                            value=element.get(attr),
+                            expected_value=expected,
+                        )
                     )
             else:
                 continue
