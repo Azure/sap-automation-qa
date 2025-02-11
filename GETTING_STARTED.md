@@ -54,7 +54,7 @@ Ensure you are logged into the Ubuntu Jump Host that is connected to the SAP sys
 
 B. **Clone the repository**:
   ```bash
-  git clone https://github.com/devanshjainms/sap-automaiton-qa.git
+  git clone https://github.com/devanshjainms/sap-automation-qa.git
   cd sap-automation-qa
   ```
 

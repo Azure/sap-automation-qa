@@ -10,10 +10,23 @@ from ansible.module_utils.basic import AnsibleModule
 
 try:
     from ansible.module_utils.sap_automation_qa import SapAutomationQA, TestStatus
-    from ansible.module_utils.db_cluster_constants import PACKAGE_LIST
 except ImportError:
     from src.module_utils.sap_automation_qa import SapAutomationQA, TestStatus
-    from src.module_utils.db_cluster_constants import PACKAGE_LIST
+
+PACKAGE_LIST = [
+    {"name": "Corosync Lib", "key": "corosynclib"},
+    {"name": "Corosync", "key": "corosync"},
+    {"name": "Fence Agents Common", "key": "fence-agents-common"},
+    {"name": "Fencing Agent", "key": "fence-agents-azure-arm"},
+    {"name": "Pacemaker CLI", "key": "pacemaker-cli"},
+    {"name": "Pacemaker Libs", "key": "pacemaker-libs"},
+    {"name": "Pacemaker Schemas", "key": "pacemaker-schemas"},
+    {"name": "Pacemaker", "key": "pacemaker"},
+    {"name": "Resource Agent", "key": "resource-agents"},
+    {"name": "SAP Cluster Connector", "key": "sap-cluster-connector"},
+    {"name": "SAPHanaSR", "key": "SAPHanaSR"},
+    {"name": "Socat", "key": "socat"},
+]
 
 
 class PackageListFormatter(SapAutomationQA):
