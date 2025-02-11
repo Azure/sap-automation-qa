@@ -36,7 +36,7 @@ class AzureLoadBalancer(SapAutomationQA):
         self.credential = None
         self.module_params = module_params
         self.network_client = None
-        self.constants = module_params["lb_constants"]["AZURE_LOADBALANCER"]
+        self.constants = module_params["constants"].get("AZURE_LOADBALANCER", {})
 
     def _create_network_client(self):
         """
@@ -71,12 +71,6 @@ class AzureLoadBalancer(SapAutomationQA):
             self.handle_error(e)
             self.result["message"] += f"Failed to create network client object. {e} \n"
 
-    def _format_parameter_result(self, name: str, value: str, expected: str) -> str:
-        """
-        Formats the parameter result for reporting.
-        """
-        return f"Name: {name}, Value: {value}, Expected Value: {expected}"
-
     def get_load_balancers_details(self) -> dict:
         """
         Get the details of the DB/SCS/ERS load balancers in a specific resource group.
@@ -85,12 +79,12 @@ class AzureLoadBalancer(SapAutomationQA):
         """
         self._create_network_client()
 
-        if self.result["status"] == "FAILED":
+        if self.result["status"] == TestStatus.ERROR.value:
             return self.result
 
         load_balancers = self.get_load_balancers()
 
-        if self.result["status"] == "FAILED":
+        if self.result["status"] == TestStatus.ERROR.value:
             return self.result
 
         inbound_rules = ast.literal_eval(self.module_params["inbound_rules"])
@@ -172,17 +166,20 @@ class AzureLoadBalancer(SapAutomationQA):
                         )
                         continue
 
+                failed_parameters = [
+                    param
+                    for param in parameters
+                    if param.get("status", TestStatus.ERROR.value)
+                    == TestStatus.ERROR.value
+                ]
                 self.result.update(
                     {
-                        "status": (
-                            TestStatus.SUCCESS.value
-                            if all(
-                                param["status"] == TestStatus.SUCCESS.value
-                                for param in parameters
-                            )
-                            else TestStatus.ERROR.value
-                        ),
                         "details": {"parameters": parameters},
+                        "status": (
+                            TestStatus.ERROR.value
+                            if failed_parameters
+                            else TestStatus.SUCCESS.value
+                        ),
                     }
                 )
                 self.result[
@@ -203,7 +200,7 @@ def run_module():
         subscription_id=dict(type="str", required=True),
         region=dict(type="str", required=True),
         inbound_rules=dict(type="str", required=True),
-        lb_constants=dict(type="dict", required=True),
+        constants=dict(type="dict", required=True),
     )
 
     module = AnsibleModule(argument_spec=module_args, supports_check_mode=True)

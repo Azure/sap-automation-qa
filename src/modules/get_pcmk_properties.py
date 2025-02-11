@@ -140,23 +140,22 @@ class HAClusterValidator(SapAutomationQA):
             else:
                 expected_value = self._get_expected_value(category, name)
 
-        if value:
-            return Parameters(
-                category=f"{category}_{subcategory}" if subcategory else category,
-                id=id if id else "",
-                name=name if not op_name else f"{op_name}_{name}",
-                value=value,
-                expected_value=expected_value if expected_value is not None else "",
-                status=(
-                    TestStatus.INFO.value
-                    if expected_value is None
-                    else (
-                        TestStatus.SUCCESS.value
-                        if str(value) == str(expected_value)
-                        else TestStatus.ERROR.value
-                    )
-                ),
-            ).to_dict()
+        return Parameters(
+            category=f"{category}_{subcategory}" if subcategory else category,
+            id=id if id else "",
+            name=name if not op_name else f"{op_name}_{name}",
+            value=value,
+            expected_value=expected_value if expected_value is not None else "",
+            status=(
+                TestStatus.INFO.value
+                if expected_value is None or value == ""
+                else (
+                    TestStatus.SUCCESS.value
+                    if str(value) == str(expected_value)
+                    else TestStatus.ERROR.value
+                )
+            ),
+        ).to_dict()
 
     def _parse_nvpair_elements(
         self, elements, category, subcategory=None, op_name=None
@@ -266,13 +265,12 @@ class HAClusterValidator(SapAutomationQA):
         parameters = []
 
         if category in ["hana_meta", "topology_meta"]:
-            parameters.extend(
-                self._parse_nvpair_elements(
-                    elements=element.findall(".//nvpair"),
-                    category=category.split("_")[0],
-                    subcategory="meta_attributes",
-                )
+            param_dict = self._parse_nvpair_elements(
+                elements=element.findall(".//nvpair"),
+                category=category.split("_")[0],
+                subcategory="meta_attributes",
             )
+            parameters.extend(param_dict)
 
         for attr in ["meta_attributes", "instance_attributes"]:
             attr_elements = element.find(f".//{attr}")
