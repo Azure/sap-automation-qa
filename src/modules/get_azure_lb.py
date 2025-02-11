@@ -18,14 +18,12 @@ try:
         TestStatus,
         Parameters,
     )
-    from ansible.module_utils.db_cluster_constants import PROBES, RULES
 except ImportError:
     from src.module_utils.sap_automation_qa import (
         SapAutomationQA,
         TestStatus,
         Parameters,
     )
-    from src.module_utils.db_cluster_constants import PROBES, RULES
 
 
 class AzureLoadBalancer(SapAutomationQA):
@@ -144,12 +142,16 @@ class AzureLoadBalancer(SapAutomationQA):
                 for rule in found_load_balancer["load_balancing_rules"]:
                     check_parameters(
                         rule,
-                        RULES,
+                        self.module_params["AZURE_LOADBALANCER"],
                         "load_balancing_rule",
                     )
 
                 for probe in found_load_balancer["probes"]:
-                    check_parameters(probe, PROBES, "probes")
+                    check_parameters(
+                        probe,
+                        self.module_params["AZURE_LOADBALANCER"]["PROBES"],
+                        "probes",
+                    )
 
             self.result["status"] = (
                 TestStatus.SUCCESS.value
@@ -171,6 +173,7 @@ def run_module():
         subscription_id=dict(type="str", required=True),
         region=dict(type="str", required=True),
         inbound_rules=dict(type="str", required=True),
+        lb_constants=dict(type="dict", required=True),
     )
 
     module = AnsibleModule(argument_spec=module_args, supports_check_mode=True)
