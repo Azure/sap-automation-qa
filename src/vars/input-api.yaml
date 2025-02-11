@@ -19,10 +19,10 @@ test_groups:
         description:                This validates the HA configuration
         enabled:                    true
 
-      # - name:                       Azure Load Balancer Validation
-      #   task_name:                  azure-lb
-      #   description:                This validates the Azure Load Balancer configuration
-      #   enabled:                    true
+      - name:                       Azure Load Balancer Validation
+        task_name:                  azure-lb
+        description:                This validates the Azure Load Balancer configuration
+        enabled:                    true
 
       # - name:                       HA Functional Test- Resource Migration
       #   task_name:                  resource-migration
@@ -95,26 +95,6 @@ test_groups:
       #   task_name:                  kill-message-server
       #   description:                "Tests recovery after message server process kill"
       #   enabled:                    false
-
-      # - name:                       "Kill Enqueue Server Process"
-      #   task_name:                  kill-enqueue-server
-      #   description:                "Tests recovery after enqueue server process kill"
-      #   enabled:                    false
-
-      # - name:                       "Kill Enqueue Replication Process"
-      #   task_name:                  kill-enqueue-replication
-      #   description:                "Tests recovery after enqueue replication process kill"
-      #   enabled:                    false
-
-      # - name:                       "Block Network Communication"
-      #   task_name:                  block-network
-      #   description:                "Tests behavior during network communication loss"
-      #   enabled:                    true
-
-      # - name:                       "Node Crash Simulation"
-      #   task_name:                  node-crash
-      #   description:                "Tests recovery after node crash"
-      #   enabled:                    true
 
 # Commands for HANA DB HA Test Cases based on OS family
 commands:
