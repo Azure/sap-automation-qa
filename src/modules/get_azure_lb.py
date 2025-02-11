@@ -113,17 +113,17 @@ class AzureLoadBalancer(SapAutomationQA):
                 logging.INFO,
                 f"Checking parameters for {entity_type}, {entity}, {parameters_dict}",
             )
-            for key, value in parameters_dict.items():
+            for key, expected_value in parameters_dict.items():
                 parameters.extend(
                     Parameters(
                         category=entity_type,
                         id=entity["name"],
                         name=key,
                         value=entity[key],
-                        expected_value=value,
+                        expected_value=expected_value,
                         status=(
                             TestStatus.SUCCESS.value
-                            if entity[key] == value
+                            if entity[key] == expected_value
                             else TestStatus.ERROR.value
                         ),
                     ).to_dict()
@@ -171,20 +171,10 @@ class AzureLoadBalancer(SapAutomationQA):
                     f"parameters: {parameters}",
                 )
 
-                failed_parameters = [
-                    param
-                    for param in parameters
-                    if param.get("status", TestStatus.ERROR.value)
-                    == TestStatus.ERROR.value
-                ]
                 self.result.update(
                     {
                         "details": {"parameters": parameters},
-                        "status": (
-                            TestStatus.ERROR.value
-                            if failed_parameters
-                            else TestStatus.SUCCESS.value
-                        ),
+                        "status": TestStatus.ERROR.value,
                     }
                 )
                 self.result[
