@@ -36,7 +36,7 @@ class AzureLoadBalancer(SapAutomationQA):
         self.credential = None
         self.module_params = module_params
         self.network_client = None
-        self.constants = module_params["lb_constants"]
+        self.constants = module_params["lb_constants"]["AZURE_LOADBALANCER"]
 
     def _create_network_client(self):
         """
