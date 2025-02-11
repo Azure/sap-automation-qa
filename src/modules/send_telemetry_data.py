@@ -45,10 +45,11 @@ class TelemetryDataSender(SapAutomationQA):
                 ],
                 "start": datetime.now(),
                 "end": datetime.now(),
+                "data_sent": False,
             }
         )
 
-    def get_authorization_for_log_analytics(
+    def _get_authorization_for_log_analytics(
         self,
         workspace_id: str,
         workspace_shared_key: str,
@@ -118,7 +119,7 @@ class TelemetryDataSender(SapAutomationQA):
         """
         try:
             utc_datetime = datetime.now().strftime("%a, %d %b %Y %H:%M:%S GMT")
-            authorization_header = self.get_authorization_for_log_analytics(
+            authorization_header = self._get_authorization_for_log_analytics(
                 workspace_id=self.module_params["laws_workspace_id"],
                 workspace_shared_key=self.module_params["laws_shared_key"],
                 content_length=len(telemetry_json_data),
@@ -207,10 +208,9 @@ class TelemetryDataSender(SapAutomationQA):
                     "send_telemetry_data_to_"
                     + f"{self.module_params['telemetry_data_destination']}"
                 )
-                response = getattr(self, method_name)(
-                    json.dumps(self.result["telemetry_data"])
-                )
+                getattr(self, method_name)(json.dumps(self.result["telemetry_data"]))
                 self.result["status"] = TestStatus.SUCCESS.value
+                self.result["data_sent"] = True
             except Exception as e:
                 self.handle_error(e)
         else:
