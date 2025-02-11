@@ -44,7 +44,7 @@ CONSTRAINTS:
 VALID_CONFIGS:
   REDHAT:
     priority-fencing-delay:           '15s'
-  SLES: {}
+  SUSE: {}
   AFA:
     have-watchdog:                    "false"
     stonith-timeout:                  "900"
