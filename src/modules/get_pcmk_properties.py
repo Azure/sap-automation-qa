@@ -313,6 +313,8 @@ class HAClusterValidator(SapAutomationQA):
             "constraints",
             "resources",
         ]:
+            if scope == "op_defaults" and self.os_type == "REDHAT":
+                continue
             self.category = scope
             root = self.parse_xml_output(
                 self.execute_command_subprocess(CIB_ADMIN(scope=scope))
