@@ -113,8 +113,8 @@ class AzureLoadBalancer(SapAutomationQA):
                         category=entity_type,
                         id=entity["name"],
                         name=key,
-                        value=entity[key],
-                        expected_value=expected_value,
+                        value=str(entity[key]),
+                        expected_value=str(expected_value),
                         status=(
                             TestStatus.SUCCESS.value
                             if entity[key] == expected_value
