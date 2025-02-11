@@ -270,3 +270,15 @@ GLOBAL_INI:
     execution_order:                    "1"
 
 
+# === Azure Load Balancer ===
+# Azure Load Balancer configuration
+AZURE_LOADBALANCER:
+  PROBES:
+    probe_threshold:                    2
+    interval_in_seconds:                5
+    number_of_probes:                   2
+
+  RULES:
+    idle_timeout_in_minutes:            30
+    enable_floating_ip:                 true
+    enable_tcp_reset:                   false

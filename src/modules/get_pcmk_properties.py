@@ -140,6 +140,9 @@ class HAClusterValidator(SapAutomationQA):
             else:
                 expected_value = self._get_expected_value(category, name)
 
+        if value is None:
+            return
+
         return Parameters(
             category=f"{category}_{subcategory}" if subcategory else category,
             id=id if id else "",
