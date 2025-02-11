@@ -204,7 +204,7 @@ class TelemetryDataSender(SapAutomationQA):
         """
         if (
             self.module_params["telemetry_data_destination"]
-            in TelemetryDataDestination._value2member_map_
+            in [TelemetryDataDestination.KUSTO.value, TelemetryDataDestination.LOG_ANALYTICS.value]
         ):
             self.log(
                 logging.INFO, "Validating parameters for telemetry data destination "
