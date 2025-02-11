@@ -202,10 +202,10 @@ class TelemetryDataSender(SapAutomationQA):
         """
         Sends telemetry data to the specified destination.
         """
-        if (
-            self.module_params["telemetry_data_destination"]
-            in [TelemetryDataDestination.KUSTO.value, TelemetryDataDestination.LOG_ANALYTICS.value]
-        ):
+        if self.module_params["telemetry_data_destination"] in [
+            TelemetryDataDestination.KUSTO.value,
+            TelemetryDataDestination.LOG_ANALYTICS.value,
+        ]:
             self.log(
                 logging.INFO, "Validating parameters for telemetry data destination "
             )
@@ -226,7 +226,6 @@ class TelemetryDataSender(SapAutomationQA):
                     "send_telemetry_data_to_"
                     + f"{self.module_params['telemetry_data_destination']}"
                 )
-                getattr(self, method_name)(json.dumps(self.result["telemetry_data"]))
                 self.result["details"] = getattr(self, method_name)(
                     json.dumps(self.result["telemetry_data"])
                 )
