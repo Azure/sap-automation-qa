@@ -279,6 +279,6 @@ AZURE_LOADBALANCER:
     number_of_probes:                   2
 
   RULES:
-    idle_timeout_in_minutes:            4
+    idle_timeout_in_minutes:            30
     enable_floating_ip:                 true
     enable_tcp_reset:                   false
