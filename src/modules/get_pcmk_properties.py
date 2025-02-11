@@ -88,13 +88,12 @@ class HAClusterValidator(SapAutomationQA):
         """
         _, defaults_key = self.BASIC_CATEGORIES[category]
 
-        fence_config = self.constants["VALID_CONFIGS"].get(self.fencing_mehanism, {})
-        os_config = self.constants["VALID_CONFIGS"].get(
-            self.os_type, {}.get(self.os_version, {})
+        fence_config = self.constants["VALID_CONFIGS"].get(self.fencing_mechanism, {})
+        os_config = self.constants["VALID_CONFIGS"].get(self.os_type, {})
+
+        return fence_config.get(name) or os_config.get(self.os_version, {}).get(
+            name, self.constants[defaults_key].get(name)
         )
-        return fence_config.get(self.os_version, {}).get(name) or os_config.get(
-            self.os_version, {}
-        ).get(name, self.constants[defaults_key].get(name))
 
     def _get_resource_expected_value(
         self, resource_type, section, param_name, op_name=None
