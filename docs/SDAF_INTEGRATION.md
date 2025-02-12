@@ -46,7 +46,7 @@ This guide will help you set up your existing SAP Deployment Automation Framewor
     - **Extra Parameters**
       - Refer to the [telemetry setup guide](../docs/TELEMETRY_SETUP.md) to setup the telemetry data ingestion in Azure Log Analytics or Azure Data Explorer.
       - Required for internal Testing:
-        - github_pat: Personal Access Token for GitHub
+        - github_pat: Personal Access Token to pull the private repository devanshjainms/sap-automation-qa
       - Required if you want to test the telemetry data ingestion (AzureLogAnalytics):
         - laws_workspace_id: Log Analytics Workspace ID
         - laws_shared_key: Log Analytics Shared Key
