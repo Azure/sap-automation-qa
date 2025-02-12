@@ -1,17 +1,13 @@
 exclude_paths:
-  - deploy/pipelines
-  - deploy/terraform
+  - src/modules
+  - src/module_utils
   - .github
 
-warn_list:
-  # FIXME: Experimental violations should be fixed in separate PR
-  - experimental
-
 skip_list:
-  - no-handler   # Ignored because there is no easier way to do
-  - key-order[task] # Refactor needed
-  - key-order[play] # Refactor needed
-  - name[casing] # Following are ignored because of readability:
+  - no-handler
+  - key-order[task]
+  - key-order[play]
+  - name[casing]
   - no-changed-when
   - role-name
   - var-naming
@@ -22,5 +18,5 @@ skip_list:
   - yaml[line-length]
   - yaml[octal-values]
   - name[template]
-  - command-instead-of-shell # csh is not supported in commands
+  - command-instead-of-shell
   - jinja[spacing]
