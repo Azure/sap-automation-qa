@@ -52,7 +52,7 @@ jobs:
         uses: actions/github-script@v6
         with:
           script: |
-            const core = require('@actions/core');
+            const coreLib = require('@actions/core');
             const pr = await github.rest.pulls.get({
               owner: context.repo.owner,
               repo: context.repo.repo,
@@ -65,6 +65,6 @@ jobs:
               "Checklist",
             ];
             const missingSections = requiredSections.filter(section => !body.includes(section));
-            if(missingSections.length > 0) {
-              core.setFailed(`PR Description is missing the following sections: ${missingSections.join(", ")}`);
+            if (missingSections.length > 0) {
+              coreLib.setFailed(`PR Description is missing the following sections: ${missingSections.join(", ")}`);
             }
