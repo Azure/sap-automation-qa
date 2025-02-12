@@ -396,3 +396,13 @@ FodyWeavers.xsd
 
 # JetBrains Rider
 *.sln.iml
+
+
+# Python virtual environment
+.venv
+.vscode
+
+# System configuration files
+WORKSPACES/*
+.ppk
+VMWPASSWORD

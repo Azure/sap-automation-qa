@@ -1,14 +1,62 @@
-# Project
+# SAP Testing Automation Framework
 
-> This repo has been populated by an initial template to help get you started. Please
-> make sure to update the content to build a great experience for community-building.
+## Overview
 
-As the maintainer of this project, please make a few updates:
+The SAP Testing Automation Framework is a automation solution designed to validate the configuration and performance of SAP systems on Azure under a wide array of scenarios. This framework not only streamlines the testing of SAP environments but also brings confidence and assurance by simulating real-world conditions.
 
-- Improving this README.MD file to provide a great experience
-- Updating SUPPORT.MD with content about this project's support experience
-- Understanding the security reporting process in SECURITY.MD
-- Remove this section from the README
+Currently, the framework offers test scenarios focusing on high availability functional testing and configuration checks. Under the high availability category, we address critical components including:
+
+- **SAP HANA Database HA Configurations:** Validate SAP HANA database configurations, ensuring resilience, rapid failover, and optimal performance even in adverse conditions.
+- **SAP Central Services (SCS/ERS) HA Setups:** Test and verify the configuration integrity and robustness of SAP Central Services, including load balancing, failover mechanisms, and component interoperability.
+
+By integrating comprehensive monitoring, detailed logging, and automated evaluation, our framework transforms how organizations maintain and enhance the reliability of their SAP landscapes on Azure.
+
+### Purpose
+
+Testing is crucial for maintaining business continuity in SAP environments. This framework addresses several critical needs:
+
+**Risk Mitigation**:
+The framework provides systematic testing of failure scenarios, helping organizations identify and address potential issues before they impact production systems. It simulates various failure modes, including node failures, network interruptions, and storage issues, ensuring that recovery mechanisms function as designed.
+
+**Compliance**:
+Organizations must often demonstrate that their SAP systems meet specific availability requirements. This framework provides documented evidence of HA testing, including detailed logs and reports that can be used for audit purposes. It helps ensure that HA implementations align with organizational standards and regulatory requirements.
+
+**Quality Assurance**:
+Through automated and consistent testing procedures, the framework helps maintain high quality standards across SAP infrastructure components. It validates that all HA mechanisms, including clustering software, storage replication, and application-level failover, work together seamlessly.
+
+**Automation**:
+Manual testing of HA configurations is time-consuming and prone to human error. This framework automates the entire testing process, from setup to execution and reporting, significantly reducing the operational overhead of HA testing while improving accuracy and consistency.
+
+## Get Started
+
+There are two primary ways to get started with the SAP Testing Automated Framework. Choose the path that best fits your current environment and objectives:
+
+### [Integration with SAP Deployment Automation Framework (SDAF)](./docs/SDAF_INTEGRATION.md)
+
+If you already have [SDAF](https://github.com/Azure/sap-automation) environment set up, integrating the SAP Testing Automation Framework is a natural extension that allows you to leverage existing deployment pipelines and configurations.
+
+### [Getting Started with High Availability Testing (Standalone)](./docs/GETTING_STARTED.md)
+
+For users focused solely on validating SAP functionality and configurations, the standalone approach offers a streamlined process to test critical SAP components without the complexity of full deployment integration.
+
+
+### [Architecture and Components](./docs/ARCHITECTURE.md)
+
+## License
+
+Copyright (c) Microsoft Corporation.
+Licensed under the MIT License.
+
+## Support
+
+For support and questions, please:
+1. Check existing issues
+2. Create new issue if needed
+3. Provide detailed information about the problem
+
+## Additional Resources
+- [Azure SAP Documentation](https://docs.microsoft.com/azure/sap)
+- [SAP on Azure: High Availability Guide](https://docs.microsoft.com/azure/sap/workloads/sap-high-availability-guide-start)
 
 ## Contributing
 

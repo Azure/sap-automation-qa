@@ -1,0 +1,58 @@
+[tool.black]
+line_length = 100
+
+[tool.pylint.main]
+load-plugins = ["pylint.extensions.docparams"]
+
+[tool.pylint.basic]
+argument-naming-style = "snake_case"
+attr-naming-style = "snake_case"
+bad-names = ["foo", "bar", "baz", "toto", "tutu", "tata"]
+class-naming-style = "PascalCase"
+docstring-min-length = 10
+function-naming-style = "snake_case"
+variable-naming-style = "snake_case"
+
+
+[tool.pylint.format]
+max-line-length = 100
+max-module-lines = 1000
+
+[tool.pylint."messages control"]
+enable = [
+    "C0116",
+    "C0115",
+    "C0114",
+    "C0301",
+    "E1101",
+    "W0611",
+]
+disable = [
+    "W0702",  # bare-except
+    "W0703",  # broad-except
+    "W4901",  # global-statement
+    "R0902",  # too-many-instance-attributes
+    "R0903",  # too-few-public-methods
+    "R1702",
+    "R0801",
+    "W0108"
+]
+
+[tool.pylint.design]
+max-args = 5
+
+[tool.pylint.docs]
+docstring-min-length = 10
+
+[tool.pylint.variables]
+init-import = false
+dummy-variables-rgx = "_.*|dummy"
+
+[tool.pylint.refactoring]
+max-nested-blocks = 3
+
+[tool.pylint.errors]
+enable = [
+    "E1101",
+    "W0611",
+]

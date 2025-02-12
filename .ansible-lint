@@ -1,0 +1,22 @@
+exclude_paths:
+  - src/modules
+  - src/module_utils
+  - .github
+
+skip_list:
+  - no-handler
+  - key-order[task]
+  - key-order[play]
+  - name[casing]
+  - no-changed-when
+  - role-name
+  - var-naming
+  - yaml[braces]
+  - yaml[colons]
+  - yaml[commas]
+  - yaml[indentation]
+  - yaml[line-length]
+  - yaml[octal-values]
+  - name[template]
+  - command-instead-of-shell
+  - jinja[spacing]
