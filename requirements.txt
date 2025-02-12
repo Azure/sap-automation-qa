@@ -1,5 +1,5 @@
 ansible-compat==24.6.1
-ansible-core==2.17.1
+ansible-core==2.17.7
 ansible-lint==24.6.1
 ansible-runner==2.4.0
 attrs==25.1.0
