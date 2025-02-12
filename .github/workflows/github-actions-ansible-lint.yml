@@ -40,9 +40,9 @@ jobs:
         run: |
           ansible-lint src/ -c .ansible-lint
 
-      # - name: Run pytest with coverage
-      #   run: |
-      #     pytest --cov=src/ --cov-report=xml tests/
+      - name: Run pytest with coverage
+        run: |
+          pytest --cov=src/ --cov-report=xml tests/
 
       - name: Check code formatting with black
         run: |
