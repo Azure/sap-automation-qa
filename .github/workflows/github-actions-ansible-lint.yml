@@ -47,23 +47,3 @@ jobs:
       - name: Check code formatting with black
         run: |
           black --check src/ --config pyproject.toml
-
-      - name: Validate PR Description
-        uses: actions/github-script@v6
-        with:
-          script: |
-            const pr = await github.rest.pulls.get({
-              owner: context.repo.owner,
-              repo: context.repo.repo,
-              pull_number: context.payload.pull_request.number,
-            });
-            const body = pr.data.body || "";
-            const requiredSections = [
-              "Description",
-              "Test Cases",
-              "Checklist",
-            ];
-            const missingSections = requiredSections.filter(section => !body.includes(section));
-            if (missingSections.length > 0) {
-              coreLib.setFailed(`PR Description is missing the following sections: ${missingSections.join(", ")}`);
-            }
