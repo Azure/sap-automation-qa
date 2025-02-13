@@ -5,8 +5,8 @@
 Unit tests for the get_pcmk_properties module.
 """
 
+import io
 import pytest
-from mock import mock_open
 from src.modules.get_pcmk_properties import HAClusterValidator, main
 
 DUMMY_XML_RSC = """<rsc_defaults>
@@ -125,6 +125,22 @@ DUMMY_CONSTANTS = {
 }
 
 
+def fake_open_factory(file_content):
+    """
+    Factory function to create a fake open function that returns a StringIO object.
+
+    :param file_content: Content to be returned by the fake open function.
+    :type file_content: str
+    :return: Fake open function.
+    :rtype: function
+    """
+
+    def fake_open(*args, **kwargs):
+        return io.StringIO("\n".join(file_content))
+
+    return fake_open
+
+
 class TestHAClusterValidator:
     """
     Test cases for the HAClusterValidator class.
@@ -169,23 +185,11 @@ class TestHAClusterValidator:
                 return DUMMY_OS_COMMAND
             return mock_xml_outputs.get(command[-1], "")
 
-        def mock_open_file(*args):
-            """
-            Mock function to replace open.
-
-            :return: Mocked file object.
-            :rtype: mock_open
-            """
-            if "global.ini" in str(args[0]):
-                return mock_open(read_data=DUMMY_GLOBAL_INI)()
-            return mock_open()()
-
         monkeypatch.setattr(
             "src.module_utils.sap_automation_qa.SapAutomationQA.execute_command_subprocess",
             mock_execute_command,
         )
-        monkeypatch.setattr("builtins.open", mock_open_file)
-
+        monkeypatch.setattr("builtins.open", fake_open_factory(DUMMY_GLOBAL_INI))
         return HAClusterValidator(
             os_type="REDHAT",
             os_version="9.2",
