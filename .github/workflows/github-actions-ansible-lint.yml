@@ -42,7 +42,7 @@ jobs:
 
       - name: Run pytest with coverage
         run: |
-          pytest --cov=src/ --cov-report=xml tests/
+          pytest --cov=src/ --cov-fail-under=85 --cov-report=xml tests/
 
       - name: Check code formatting with black
         run: |
