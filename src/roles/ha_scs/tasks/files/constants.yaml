@@ -67,10 +67,35 @@ RESOURCE_DEFAULTS:
         interval:                         "3600"
         timeout:                          "120"
 
-    sapinstance:
+    ascs:
       instance_attributes:
         AUTOMATIC_RECOVER:                "false"
         MINIMAL_PROBE:                    "true"
+      meta_attributes:
+        resource-stickiness:              "5000"
+        priority:                         "100"
+      operations:
+        monitor:
+          interval:                       "11"
+          timeout:                        "60"
+        start:
+          interval:                       "0s"
+          timeout:                        "180s"
+        stop:
+          interval:                       "0s"
+          timeout:                        "240s"
+        promote:
+          interval:                       "0s"
+          timeout:                        "320s"
+        demote:
+          interval:                       "0s"
+          timeout:                        "320s"
+
+    ers:
+      instance_attributes:
+        AUTOMATIC_RECOVER:                "false"
+        MINIMAL_PROBE:                    "true"
+        IS_ERS:                           "true"
       meta_attributes:
         resource-stickiness:              "5000"
         priority:                         "100"

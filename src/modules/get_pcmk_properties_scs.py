@@ -5,7 +5,7 @@
 Pacemaker Cluster Configuration Validator.
 
 This module provides functionality to validate Pacemaker cluster configurations
-against predefined standards for SAP HANA deployments.
+against predefined standards for SAP Application Tier ASCS/ERS deployments.
 
 Classes:
     HAClusterValidator: Main validator class for cluster configurations.
@@ -52,8 +52,6 @@ class HAClusterValidator(SapAutomationQA):
 
     RESOURCE_CATEGORIES = {
         "stonith": ".//primitive[@class='stonith']",
-        "ascs": ".//group[ends-with(@id,'ASCS')]//primitive[@type='SAPInstance']",
-        "ers": ".//group[ends-with(@id,'ERS')]//primitive[@type='SAPInstance']",
         "ipaddr": ".//primitive[@type='IPaddr2']",
         "azurelb": ".//primitive[@type='azure-lb']",
         "azureevents": ".//primitive[@type='azure-events-az']",
@@ -150,6 +148,39 @@ class HAClusterValidator(SapAutomationQA):
             ),
         ).to_dict()
 
+    def _parse_resource(self, element, category):
+        """
+        Parse resource-specific configuration parameters
+        """
+        parameters = []
+
+        for attr in ["meta_attributes", "instance_attributes"]:
+            attr_elements = element.find(f".//{attr}")
+            if attr_elements is not None:
+                parameters.extend(
+                    self._parse_nvpair_elements(
+                        elements=attr_elements.findall(".//nvpair"),
+                        category=category,
+                        subcategory=attr,
+                    )
+                )
+
+        ops = element.find(".//operations")
+        if ops is not None:
+            for op in ops.findall(".//op"):
+                for op_type in ["timeout", "interval"]:
+                    parameters.append(
+                        self._create_parameter(
+                            category=category,
+                            subcategory="operations",
+                            id=op.get("id", ""),
+                            name=op_type,
+                            op_name=op.get("name", ""),
+                            value=op.get(op_type, ""),
+                        )
+                    )
+        return parameters
+
     def _parse_basic_config(self, element, category, subcategory=None):
         """
         Parse basic configuration parameters
@@ -194,6 +225,18 @@ class HAClusterValidator(SapAutomationQA):
                     self.result[
                         "message"
                     ] += f"Failed to get {self.category} configuration: {str(e)}"
+                    continue
+
+            elif self.category == "resources":
+                try:
+                    for sub_category, xpath in self.RESOURCE_CATEGORIES.items():
+                        elements = root.findall(xpath)
+                        for element in elements:
+                            parameters.extend(self._parse_resource(element, sub_category))
+                except Exception as e:
+                    self.result[
+                        "message"
+                    ] += f"Failed to get resources configuration for {self.category}: {str(e)}"
                     continue
 
         failed_parameters = [
