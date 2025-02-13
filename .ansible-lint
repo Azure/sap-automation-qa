@@ -6,8 +6,8 @@ exclude_paths:
 
 skip_list:
   - no-handler
-  - run_once[task]
-  - run_once[play]
+  - run-once[task]
+  - run-once[play]
   - key-order[task]
   - key-order[play]
   - name[casing]
