@@ -21,3 +21,4 @@ skip_list:
   - name[template]
   - command-instead-of-shell
   - jinja[spacing]
+  - ANSIBLE0012
