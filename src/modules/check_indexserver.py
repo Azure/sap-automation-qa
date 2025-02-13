@@ -5,6 +5,7 @@
 This module is used to check if SAP HANA indexserver is configured.
 """
 
+import logging
 from ansible.module_utils.basic import AnsibleModule
 
 try:
@@ -65,21 +66,27 @@ class IndexServerCheck(SapAutomationQA):
             )
             return
 
-        global_ini_path = (
-            f"/usr/sap/{self.database_sid}/SYS/global/hdb/custom/config/global.ini"
-        )
-
+        global_ini_path = f"/usr/sap/{self.database_sid}/SYS/global/hdb/custom/config/global.ini"
+        global_ini = []
         try:
             with open(global_ini_path, "r", encoding="utf-8") as file:
                 global_ini = [line.strip() for line in file.readlines()]
 
-            for os_props in (
-                os_props_list if isinstance(os_props_list, list) else [os_props_list]
-            ):
+            self.log(
+                logging.INFO,
+                f"Successfully read the global.ini file: {global_ini}",
+            )
+
+            for os_props in os_props_list if isinstance(os_props_list, list) else [os_props_list]:
                 section_title = list(os_props.keys())[0]
                 if section_title in global_ini:
                     section_start = global_ini.index(section_title)
                     properties_slice = global_ini[section_start + 1 : section_start + 4]
+
+                    self.log(
+                        logging.INFO,
+                        f"Extracted properties: {properties_slice}",
+                    )
 
                     extracted_properties = {
                         prop.split("=")[0].strip(): prop.split("=")[1].strip()

@@ -31,9 +31,7 @@ class LocationConstraintsManager(SapAutomationQA):
             }
         )
 
-    def remove_location_constraints(
-        self, location_constraints: List[ET.Element]
-    ) -> None:
+    def remove_location_constraints(self, location_constraints: List[ET.Element]) -> None:
         """
         Removes the specified location constraints.
 
@@ -43,8 +41,15 @@ class LocationConstraintsManager(SapAutomationQA):
         for location_constraint in location_constraints:
             rsc = location_constraint.attrib.get("rsc")
             if rsc:
-                self.execute_command_subprocess(RSC_CLEAR[self.ansible_os_family](rsc))
-                self.result["changed"] = True
+                command_output = self.execute_command_subprocess(
+                    RSC_CLEAR[self.ansible_os_family](rsc)
+                )
+                self.result.update(
+                    {
+                        "details": command_output,
+                        "changed": True,
+                    }
+                )
             else:
                 self.result["changed"] = False
 
@@ -58,11 +63,7 @@ class LocationConstraintsManager(SapAutomationQA):
         try:
             xml_output = self.execute_command_subprocess(CONSTRAINTS)
             self.result["details"] = xml_output
-            return (
-                ET.fromstring(xml_output).findall(".//rsc_location")
-                if xml_output
-                else []
-            )
+            return ET.fromstring(xml_output).findall(".//rsc_location") if xml_output else []
         except Exception as e:
             self.handle_exception(e)
 

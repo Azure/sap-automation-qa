@@ -11,7 +11,6 @@ import logging
 import subprocess
 from typing import Optional, Dict, Any
 import xml.etree.ElementTree as ET
-import yaml
 
 
 class TelemetryDataDestination(Enum):
@@ -36,6 +35,9 @@ class TestStatus(Enum):
 
 
 class Parameters:
+    """
+    This class is used to store the parameters for the test case
+    """
 
     def __init__(self, category, id, name, value, expected_value, status):
         self.category = category
@@ -45,7 +47,13 @@ class Parameters:
         self.expected_value = expected_value
         self.status = status
 
-    def to_dict(self):
+    def to_dict(self) -> Dict[str, Any]:
+        """
+        This method is used to convert the parameters to a dictionary
+
+        :return: Dictionary containing the parameters
+        :rtype: dict
+        """
         return {
             "category": self.category,
             "id": self.id,
@@ -117,9 +125,7 @@ class SapAutomationQA(ABC):
         self.result["message"] = error_message
         self.result["logs"].append(error_message)
 
-    def execute_command_subprocess(
-        self, command: str, shell_command: bool = False
-    ) -> str:
+    def execute_command_subprocess(self, command: str, shell_command: bool = False) -> str:
         """
         Executes a shell command using subprocess with a timeout and logs output or errors.
 
@@ -130,9 +136,7 @@ class SapAutomationQA(ABC):
         :return: Standard output from the command
         :rtype: str
         """
-        command_string = (
-            command if isinstance(command, str) else " ".join(command).replace("'", "")
-        )
+        command_string = command if isinstance(command, str) else " ".join(command).replace("'", "")
         self.log(
             logging.INFO,
             f"Executing command: {command_string}",
@@ -159,7 +163,12 @@ class SapAutomationQA(ABC):
 
     def parse_xml_output(self, xml_output: str) -> Optional[ET.Element]:
         """
-        Parses the XML output of a command.
+        Parses the XML output and returns the root element.
+
+        :param xml_output: XML output to parse
+        :type xml_output: str
+        :return: The root element of the XML output
+        :rtype: Optional[ET.Element]
         """
         if xml_output.startswith("<"):
             return ET.fromstring(xml_output)

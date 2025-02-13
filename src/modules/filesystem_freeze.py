@@ -4,6 +4,7 @@
 """
 Custom ansible module for formatting the packages list
 """
+import logging
 from typing import Dict, Any
 from ansible.module_utils.basic import AnsibleModule
 
@@ -49,14 +50,18 @@ class FileSystemFreeze(SapAutomationQA):
         """
         file_system = self._find_filesystem()
 
+        self.log(
+            logging.INFO,
+            f"Found the filesystem mounted on /hana/shared: {file_system}",
+        )
+
         if file_system:
-            read_only_output = self.execute_command_subprocess(
-                FREEZE_FILESYSTEM(file_system)
-            )
+            read_only_output = self.execute_command_subprocess(FREEZE_FILESYSTEM(file_system))
+            self.log(logging.INFO, read_only_output)
             self.result.update(
                 {
                     "changed": True,
-                    "message": "The file system (/hana/shared) was successfully mounted as read-only.",
+                    "message": "The file system (/hana/shared) was successfully mounted read-only.",
                     "status": TestStatus.SUCCESS.value,
                     "details": read_only_output,
                 }

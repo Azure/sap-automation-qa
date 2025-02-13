@@ -8,9 +8,9 @@ Custom ansible module for getting Azure Load Balancer details
 import logging
 import ast
 from typing import Dict
-from ansible.module_utils.basic import AnsibleModule
 from azure.identity import ManagedIdentityCredential
 from azure.mgmt.network import NetworkManagementClient
+from ansible.module_utils.basic import AnsibleModule
 
 try:
     from ansible.module_utils.sap_automation_qa import (
@@ -55,8 +55,9 @@ class AzureLoadBalancer(SapAutomationQA):
 
     def get_load_balancers(self) -> list:
         """
-        Get all load balancers in a specific resource group.
+        Get the list of load balancers in a specific resource group.
 
+        :return: List of load balancers
         :rtype: list
         """
         try:
@@ -73,8 +74,9 @@ class AzureLoadBalancer(SapAutomationQA):
 
     def get_load_balancers_details(self) -> dict:
         """
-        Get the details of the DB/SCS/ERS load balancers in a specific resource group.
+        Get the details of the load balancers in a specific resource group.
 
+        :return: Dictionary containing the result of the test case.
         :rtype: dict
         """
         self._create_network_client()
@@ -125,11 +127,13 @@ class AzureLoadBalancer(SapAutomationQA):
 
         try:
             if found_load_balancer:
+                self.log(
+                    logging.INFO,
+                    f"Found load balancer {found_load_balancer['name']}",
+                )
                 self.result[
                     "message"
-                ] += (
-                    f"Validating load balancer parameters {found_load_balancer['name']}"
-                )
+                ] += f"Validating load balancer parameters {found_load_balancer['name']}"
                 for rule in found_load_balancer["load_balancing_rules"]:
                     try:
                         check_parameters(
@@ -155,16 +159,13 @@ class AzureLoadBalancer(SapAutomationQA):
                         self.handle_error(e)
                         self.result[
                             "message"
-                        ] += (
-                            f"Failed to validate load balancer probe parameters. {e} \n"
-                        )
+                        ] += f"Failed to validate load balancer probe parameters. {e} \n"
                         continue
 
                 failed_parameters = [
                     param
                     for param in parameters
-                    if param.get("status", TestStatus.ERROR.value)
-                    == TestStatus.ERROR.value
+                    if param.get("status", TestStatus.ERROR.value) == TestStatus.ERROR.value
                 ]
                 self.result.update(
                     {
@@ -176,9 +177,7 @@ class AzureLoadBalancer(SapAutomationQA):
                         ),
                     }
                 )
-                self.result[
-                    "message"
-                ] += "Successfully validated load balancer parameters"
+                self.result["message"] += "Successfully validated load balancer parameters"
             else:
                 self.result["message"] += "No load balancer found"
 

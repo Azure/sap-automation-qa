@@ -48,9 +48,7 @@ class TelemetryDataSender(SapAutomationQA):
         self.result.update(
             {
                 "telemetry_data": module_params["test_group_json_data"],
-                "telemetry_data_destination": module_params[
-                    "telemetry_data_destination"
-                ],
+                "telemetry_data_destination": module_params["telemetry_data_destination"],
                 "start": datetime.now(),
                 "end": datetime.now(),
                 "data_sent": False,
@@ -112,6 +110,10 @@ class TelemetryDataSender(SapAutomationQA):
         )
         client = QueuedIngestClient(kcsb)
         response = client.ingest_from_dataframe(data_frame, ingestion_properties)
+        self.log(
+            logging.INFO,
+            f"Response from Kusto: {response}",
+        )
         return response
 
     def send_telemetry_data_to_azureloganalytics(
@@ -143,6 +145,10 @@ class TelemetryDataSender(SapAutomationQA):
             },
             timeout=30,
         )
+        self.log(
+            logging.INFO,
+            f"Response from Log Analytics: {response}",
+        )
         return response
 
     def validate_params(self) -> bool:
@@ -151,9 +157,7 @@ class TelemetryDataSender(SapAutomationQA):
 
         :return: True if the parameters are valid, False otherwise.
         """
-        telemetry_data_destination = self.module_params.get(
-            "telemetry_data_destination"
-        )
+        telemetry_data_destination = self.module_params.get("telemetry_data_destination")
 
         if telemetry_data_destination == TelemetryDataDestination.LOG_ANALYTICS.value:
             if (
@@ -169,9 +173,7 @@ class TelemetryDataSender(SapAutomationQA):
                 "adx_cluster_fqdn",
                 "adx_client_id",
             ]
-            missing_params = [
-                param for param in required_params if param not in self.module_params
-            ]
+            missing_params = [param for param in required_params if param not in self.module_params]
             if missing_params:
                 return False
         return True
@@ -209,9 +211,7 @@ class TelemetryDataSender(SapAutomationQA):
             TelemetryDataDestination.KUSTO.value,
             TelemetryDataDestination.LOG_ANALYTICS.value,
         ]:
-            self.log(
-                logging.INFO, "Validating parameters for telemetry data destination "
-            )
+            self.log(logging.INFO, "Validating parameters for telemetry data destination ")
 
             if not self.validate_params():
                 self.result["status"] = (

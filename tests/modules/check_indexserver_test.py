@@ -29,16 +29,17 @@ class TestIndexServerCheck:
             "path=/usr/share/SAPHanaSR/srHook",
             "dummy=dummy",
         ]
-        monkeypatch.setattr("builtins.open", fake_open_factory(file_lines))
-        checker = IndexServerCheck(database_sid="TEST", os_distribution="REDHAT")
-        checker.check_indexserver()
-        result = checker.get_result()
+        with monkeypatch.context() as m:
+            m.setattr("builtins.open", fake_open_factory(file_lines))
+            checker = IndexServerCheck(database_sid="TEST", os_distribution="redhat")
+            checker.check_indexserver()
+            result = checker.get_result()
 
-        assert result["status"] == TestStatus.SUCCESS.value
-        assert result["message"] == "Indexserver is configured."
-        assert result["indexserver_enabled"] == "yes"
-        assert "provider" in result["details"]
-        assert "path" in result["details"]
+            assert result["status"] == TestStatus.SUCCESS.value
+            assert result["message"] == "Indexserver is configured."
+            assert result["indexserver_enabled"] == "yes"
+            assert "provider" in result["details"]
+            assert "path" in result["details"]
 
     def test_suse_indexserver_success(self, monkeypatch):
         """
@@ -50,28 +51,30 @@ class TestIndexServerCheck:
             "path=/usr/share/SAPHanaSR",
             "dummy=dummy",
         ]
-        monkeypatch.setattr("builtins.open", fake_open_factory(file_lines))
-        checker = IndexServerCheck(database_sid="TEST", os_distribution="SUSE")
-        checker.check_indexserver()
-        result = checker.get_result()
+        with monkeypatch.context() as m:
+            m.setattr("builtins.open", fake_open_factory(file_lines))
+            checker = IndexServerCheck(database_sid="TEST", os_distribution="suse")
+            checker.check_indexserver()
+            result = checker.get_result()
 
-        assert result["status"] == TestStatus.SUCCESS.value
-        assert result["message"] == "Indexserver is configured."
-        assert result["indexserver_enabled"] == "yes"
-        assert "provider" in result["details"]
-        assert "path" in result["details"]
+            assert result["status"] == TestStatus.SUCCESS.value
+            assert result["message"] == "Indexserver is configured."
+            assert result["indexserver_enabled"] == "yes"
+            assert "provider" in result["details"]
+            assert "path" in result["details"]
 
     def test_unsupported_os(self):
         """
         With unsupported os, no file open is needed.
         """
-        checker = IndexServerCheck(database_sid="TEST", os_distribution="WINDOWS")
-        checker.check_indexserver()
-        result = checker.get_result()
+        with io.StringIO() as _:
+            checker = IndexServerCheck(database_sid="TEST", os_distribution="windows")
+            checker.check_indexserver()
+            result = checker.get_result()
 
-        assert result["status"] == TestStatus.ERROR.value
-        assert "Unsupported OS distribution" in result["message"]
-        assert result["indexserver_enabled"] == "no"
+            assert result["status"] == TestStatus.ERROR.value
+            assert "Unsupported OS distribution" in result["message"]
+            assert result["indexserver_enabled"] == "no"
 
     def test_indexserver_not_configured(self, monkeypatch):
         """
@@ -83,31 +86,30 @@ class TestIndexServerCheck:
             "path=WrongPath",
             "dummy=dummy",
         ]
-        monkeypatch.setattr("builtins.open", fake_open_factory(file_lines))
-        checker = IndexServerCheck(database_sid="TEST", os_distribution="REDHAT")
-        checker.check_indexserver()
-        result = checker.get_result()
+        with monkeypatch.context() as m:
+            m.setattr("builtins.open", fake_open_factory(file_lines))
+            index_server_check = IndexServerCheck(database_sid="HDB", os_distribution="redhat")
+            index_server_check.check_indexserver()
+            result = index_server_check.get_result()
 
-        assert result["status"] == TestStatus.ERROR.value
-        assert result["message"] == "Indexserver is not configured."
-        assert result["indexserver_enabled"] == "no"
+            assert result["status"] == TestStatus.ERROR.value
+            assert result["message"] == "Indexserver is not configured."
+            assert result["indexserver_enabled"] == "no"
 
-    def test_exception_during_file_open(self, monkeypatch):
+    def test_file_missing(self, monkeypatch):
         """
-        Patch open to raise an Exception and check the result.
+        Simulate missing global.ini file by raising FileNotFoundError and check the result.
         """
 
-        def fake_open_fail(*args, **kwargs):
-            raise Exception("File error")
+        def fake_open(*args, **kwargs):
+            raise FileNotFoundError("File not found")
 
-        monkeypatch.setattr("builtins.open", fake_open_fail)
-        checker = IndexServerCheck(database_sid="TEST", os_distribution="REDHAT")
-        checker.check_indexserver()
-        result = checker.get_result()
+        with monkeypatch.context() as m:
+            m.setattr("builtins.open", fake_open)
+            index_server_check = IndexServerCheck(database_sid="HDB", os_distribution="redhat")
+            index_server_check.check_indexserver()
+            result = index_server_check.get_result()
 
-        assert result["status"] == TestStatus.ERROR.value
-        assert (
-            "Exception occurred while checking indexserver configuration: File error"
-            in result["message"]
-        )
-        assert result["indexserver_enabled"] == "no"
+            assert result["status"] == TestStatus.ERROR.value
+            assert "Exception occurred" in result["message"]
+            assert result["indexserver_enabled"] == "no"

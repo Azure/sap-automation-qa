@@ -98,9 +98,7 @@ class LogParser(SapAutomationQA):
                             )
                             log_time = log_time.replace(year=start_dt.year)
                         elif self.ansible_os_family == "SUSE":
-                            log_time = datetime.strptime(
-                                line.split(".")[0], "%Y-%m-%dT%H:%M:%S"
-                            )
+                            log_time = datetime.strptime(line.split(".")[0], "%Y-%m-%dT%H:%M:%S")
                         else:
                             continue
 
@@ -108,15 +106,17 @@ class LogParser(SapAutomationQA):
                             keyword in line for keyword in self.keywords
                         ):
                             self.result["filtered_logs"].append(
-                                line.translate(
-                                    str.maketrans({"\\": "", '"': "", "'": ""})
-                                )
+                                line.translate(str.maketrans({"\\": "", '"': "", "'": ""}))
                             )
                     except ValueError:
                         continue
 
-            self.result["filtered_logs"] = json.dumps(self.result["filtered_logs"])
-            self.result["status"] = TestStatus.SUCCESS.value
+            self.result.update(
+                {
+                    "filtered_logs": json.dumps(self.result["filtered_logs"]),
+                    "status": TestStatus.SUCCESS.value,
+                }
+            )
         except FileNotFoundError as ex:
             self.handle_error(ex)
         except Exception as e:

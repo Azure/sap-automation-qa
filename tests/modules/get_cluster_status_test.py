@@ -22,9 +22,12 @@ class TestClusterStatusChecker:
         """
         Test the run method for a primary node.
         """
-        mock_check_output = mocker.patch("subprocess.run")
+        mock_check_output = mocker.patch(
+            "src.module_utils.sap_automation_qa.SapAutomationQA.execute_command_subprocess"
+        )
         mock_check_output.side_effect = [
-            b"""
+            "reboot",
+            """
         <cluster_status>
             <summary>
                 <nodes_configured number="2"/>
@@ -40,12 +43,11 @@ class TestClusterStatusChecker:
             </node_attributes>
         </cluster_status>
         """,
-            b"active",
+            "active",
+            "True",
         ]
 
-        mock_ansible_module = mocker.patch(
-            "src.modules.get_cluster_status.AnsibleModule"
-        )
+        mock_ansible_module = mocker.patch("src.modules.get_cluster_status.AnsibleModule")
         mock_ansible_module.return_value.params = {
             "operation_step": "check",
             "database_sid": "TEST",
@@ -60,9 +62,12 @@ class TestClusterStatusChecker:
         """
         Test the run method for a secondary node.
         """
-        mock_check_output = mocker.patch("subprocess.run")
+        mock_check_output = mocker.patch(
+            "src.module_utils.sap_automation_qa.SapAutomationQA.execute_command_subprocess"
+        )
         mock_check_output.side_effect = [
-            b"""
+            "reboot",
+            """
         <cluster_status>
             <summary>
                 <nodes_configured number="2"/>
@@ -82,11 +87,10 @@ class TestClusterStatusChecker:
             </node_attributes>
         </cluster_status>
         """,
-            b"active",
+            "active",
+            "True",
         ]
-        mock_ansible_module = mocker.patch(
-            "src.modules.get_cluster_status.AnsibleModule"
-        )
+        mock_ansible_module = mocker.patch("src.modules.get_cluster_status.AnsibleModule")
         mock_ansible_module.return_value.params = {
             "operation_step": "check",
             "database_sid": "TEST",

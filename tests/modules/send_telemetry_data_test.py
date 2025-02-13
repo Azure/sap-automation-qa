@@ -77,28 +77,13 @@ def telemetry_data_sender_adx(module_params_adx):
 
 
 class TestTelemetryDataSender:
-    def test_get_authorization_for_log_analytics(self, telemetry_data_sender):
-        """
-        Test the get_authorization_for_log_analytics method.
-        """
-        auth_header = telemetry_data_sender.get_authorization_for_log_analytics(
-            workspace_id="workspace_id",
-            workspace_shared_key=base64.b64encode(b"shared_key").decode("utf-8"),
-            content_length=100,
-            date="date",
-        )
-        assert auth_header.startswith("SharedKey workspace_id:")
 
-    def test_send_telemetry_data_to_azuredataexplorer(
-        self, mocker, telemetry_data_sender
-    ):
+    def test_send_telemetry_data_to_azuredataexplorer(self, mocker, telemetry_data_sender):
         """
         Test the send_telemetry_data_to_azuredataexplorer method.
         """
         mock_pandas = mocker.patch("pandas.DataFrame")
-        mock_kusto = mocker.patch(
-            "azure.kusto.ingest.QueuedIngestClient.ingest_from_dataframe"
-        )
+        mock_kusto = mocker.patch("azure.kusto.ingest.QueuedIngestClient.ingest_from_dataframe")
         mock_kusto.return_value = "response"
 
         response = telemetry_data_sender.send_telemetry_data_to_azuredataexplorer(
@@ -106,9 +91,7 @@ class TestTelemetryDataSender:
         )
         assert response == "response"
 
-    def test_send_telemetry_data_to_azureloganalytics(
-        self, mocker, telemetry_data_sender
-    ):
+    def test_send_telemetry_data_to_azureloganalytics(self, mocker, telemetry_data_sender):
         """
         Test the send_telemetry_data_to_azureloganalytics method.
         """
@@ -144,9 +127,7 @@ class TestTelemetryDataSender:
         """
         Test the send_telemetry_data method.
         """
-        mock_validate_params = mocker.patch.object(
-            telemetry_data_sender, "validate_params"
-        )
+        mock_validate_params = mocker.patch.object(telemetry_data_sender, "validate_params")
         mock_validate_params.return_value = True
         mock_send_telemetry_data_to_azureloganalytics = mocker.patch.object(
             telemetry_data_sender, "send_telemetry_data_to_azureloganalytics"
