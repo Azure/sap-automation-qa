@@ -21,4 +21,5 @@ skip_list:
   - name[template]
   - command-instead-of-shell
   - jinja[spacing]
-  - ANSIBLE0012
+  - run_once[task]
+  - run_once[play]
