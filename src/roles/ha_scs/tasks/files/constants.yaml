@@ -10,7 +10,7 @@ CRM_CONFIG_DEFAULTS:
   cluster-infrastructure:             corosync
   priority-fencing-delay:             '30'
   stonith-action:                     reboot
-  stonith-enabled:                    'true'
+  stonith-enabled:                    'false'
   concurrent-fencing:                 'true'
   maintenance-mode:                   'false'
   node-health-strategy:               'custom'

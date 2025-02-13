@@ -67,6 +67,7 @@ class HAClusterValidator(SapAutomationQA):
         ers_instance_number,
         virtual_machine_name,
         constants,
+        fencing_mechanism,
         category=None,
     ):
         super().__init__()
@@ -76,6 +77,7 @@ class HAClusterValidator(SapAutomationQA):
         self.scs_instance_number = scs_instance_number
         self.ers_instance_number = ers_instance_number
         self.virtual_machine_name = virtual_machine_name
+        self.fencing_mechanism = fencing_mechanism
         self.constants = constants
         self.parse_ha_cluster_config()
 
@@ -84,11 +86,11 @@ class HAClusterValidator(SapAutomationQA):
         Get expected value for basic configuration parameters.
         """
         _, defaults_key = self.BASIC_CATEGORIES[category]
-        return (
-            self.constants["VALID_CONFIGS"]
-            .get(self.os_type, {})
-            .get(name, self.constants[defaults_key].get(name))
-        )
+
+        fence_config = self.constants["VALID_CONFIGS"].get(self.fencing_mechanism, {})
+        os_config = self.constants["VALID_CONFIGS"].get(self.os_type, {})
+
+        return fence_config.get(name) or os_config.get(name, self.constants[defaults_key].get(name))
 
     def _get_resource_expected_value(self, resource_type, section, param_name, op_name=None):
         """
@@ -222,6 +224,7 @@ def main() -> None:
             ansible_os_family=dict(type="str"),
             virtual_machine_name=dict(type="str"),
             pcmk_constants=dict(type="dict"),
+            fencing_mechanism=dict(type="str"),
         )
     )
 
@@ -232,6 +235,7 @@ def main() -> None:
         os_type=module.params["ansible_os_family"],
         virtual_machine_name=module.params["virtual_machine_name"],
         constants=module.params["pcmk_constants"],
+        fencing_mechanism=module.params["fencing_mechanism"],
     )
     module.exit_json(**validator.get_result())
 
