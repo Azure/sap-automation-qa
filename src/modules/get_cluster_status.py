@@ -66,9 +66,7 @@ class ClusterStatusChecker(SapAutomationQA):
         Retrieves the STONITH action from the crm_attribute.
         """
         try:
-            stonith_action = self.execute_command_subprocess(
-                STONITH_ACTION[self.ansible_os_family]
-            )
+            stonith_action = self.execute_command_subprocess(STONITH_ACTION[self.ansible_os_family])
             stonith_action = (
                 stonith_action.split("stonith-action:")[-1]
                 if self.ansible_os_family == "REDHAT"
@@ -166,28 +164,19 @@ class ClusterStatusChecker(SapAutomationQA):
 
         try:
             while self.result["primary_node"] == "":
-                self.result["cluster_status"] = self.execute_command_subprocess(
-                    CLUSTER_STATUS
-                )
+                self.result["cluster_status"] = self.execute_command_subprocess(CLUSTER_STATUS)
                 cluster_status_xml = ET.fromstring(self.result["cluster_status"])
                 self.log(logging.INFO, "Cluster status retrieved")
 
-                if (
-                    self.execute_command_subprocess(PACEMAKER_STATUS).strip()
-                    == "active"
-                ):
+                if self.execute_command_subprocess(PACEMAKER_STATUS).strip() == "active":
                     self.result["pacemaker_status"] = "running"
                 else:
                     self.result["pacemaker_status"] = "stopped"
-                self.log(
-                    logging.INFO, f"Pacemaker status: {self.result['pacemaker_status']}"
-                )
+                self.log(logging.INFO, f"Pacemaker status: {self.result['pacemaker_status']}")
 
                 if (
                     int(
-                        cluster_status_xml.find("summary")
-                        .find("nodes_configured")
-                        .attrib["number"]
+                        cluster_status_xml.find("summary").find("nodes_configured").attrib["number"]
                     )
                     < 2
                 ):
@@ -199,16 +188,12 @@ class ClusterStatusChecker(SapAutomationQA):
                 nodes = cluster_status_xml.find("nodes")
                 for node in nodes:
                     if node.attrib["online"] != "true":
-                        self.result["message"] = (
-                            f"Node {node.attrib['name']} is not online"
-                        )
+                        self.result["message"] = f"Node {node.attrib['name']} is not online"
                         self.log(logging.WARNING, self.result["message"])
 
                 # Process node attributes, get primary and secondary nodes, and update the result
                 self.result.update(
-                    self._process_node_attributes(
-                        cluster_status_xml.find("node_attributes")
-                    )
+                    self._process_node_attributes(cluster_status_xml.find("node_attributes"))
                 )
 
             if self.result["primary_node"] == "" or self.result["secondary_node"] == "":

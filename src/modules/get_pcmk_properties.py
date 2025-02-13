@@ -92,20 +92,14 @@ class HAClusterValidator(SapAutomationQA):
         fence_config = self.constants["VALID_CONFIGS"].get(self.fencing_mechanism, {})
         os_config = self.constants["VALID_CONFIGS"].get(self.os_type, {})
 
-        return fence_config.get(name) or os_config.get(
-            name, self.constants[defaults_key].get(name)
-        )
+        return fence_config.get(name) or os_config.get(name, self.constants[defaults_key].get(name))
 
-    def _get_resource_expected_value(
-        self, resource_type, section, param_name, op_name=None
-    ):
+    def _get_resource_expected_value(self, resource_type, section, param_name, op_name=None):
         """
         Get expected value for resource-specific configuration parameters.
         """
         resource_defaults = (
-            self.constants["RESOURCE_DEFAULTS"]
-            .get(self.os_type, {})
-            .get(resource_type, {})
+            self.constants["RESOURCE_DEFAULTS"].get(self.os_type, {}).get(resource_type, {})
         )
 
         if section == "meta_attributes":
@@ -158,9 +152,7 @@ class HAClusterValidator(SapAutomationQA):
             ),
         ).to_dict()
 
-    def _parse_nvpair_elements(
-        self, elements, category, subcategory=None, op_name=None
-    ):
+    def _parse_nvpair_elements(self, elements, category, subcategory=None, op_name=None):
         """
         Parse nvpair elements and return a list of Parameters objects.
         """
@@ -342,9 +334,7 @@ class HAClusterValidator(SapAutomationQA):
             if scope == "op_defaults" and self.os_type == "REDHAT":
                 continue
             self.category = scope
-            root = self.parse_xml_output(
-                self.execute_command_subprocess(CIB_ADMIN(scope=scope))
-            )
+            root = self.parse_xml_output(self.execute_command_subprocess(CIB_ADMIN(scope=scope)))
             if not root:
                 continue
 
@@ -352,9 +342,7 @@ class HAClusterValidator(SapAutomationQA):
                 try:
                     xpath = self.BASIC_CATEGORIES[self.category][0]
                     for element in root.findall(xpath):
-                        parameters.extend(
-                            self._parse_basic_config(element, self.category)
-                        )
+                        parameters.extend(self._parse_basic_config(element, self.category))
                 except Exception as e:
                     self.result[
                         "message"
@@ -366,9 +354,7 @@ class HAClusterValidator(SapAutomationQA):
                     for sub_category, xpath in self.RESOURCE_CATEGORIES.items():
                         elements = root.findall(xpath)
                         for element in elements:
-                            parameters.extend(
-                                self._parse_resource(element, sub_category)
-                            )
+                            parameters.extend(self._parse_resource(element, sub_category))
                 except Exception as e:
                     self.result[
                         "message"
@@ -379,9 +365,7 @@ class HAClusterValidator(SapAutomationQA):
                 try:
                     parameters.extend(self._parse_constraints(root))
                 except Exception as e:
-                    self.result[
-                        "message"
-                    ] += f"Failed to get constraints configuration: {str(e)}"
+                    self.result["message"] += f"Failed to get constraints configuration: {str(e)}"
                     continue
 
         try:
@@ -392,9 +376,7 @@ class HAClusterValidator(SapAutomationQA):
         try:
             parameters.extend(self._parse_global_ini_parameters())
         except Exception as e:
-            self.result[
-                "message"
-            ] += f"Failed to get global.ini parameters: {str(e)} \n"
+            self.result["message"] += f"Failed to get global.ini parameters: {str(e)} \n"
 
         failed_parameters = [
             param
@@ -405,9 +387,7 @@ class HAClusterValidator(SapAutomationQA):
             {
                 "details": {"parameters": parameters},
                 "status": (
-                    TestStatus.ERROR.value
-                    if failed_parameters
-                    else TestStatus.SUCCESS.value
+                    TestStatus.ERROR.value if failed_parameters else TestStatus.SUCCESS.value
                 ),
             }
         )

@@ -207,9 +207,7 @@ class OSParameterValidator(ValidatorBase, ParameterValidatorMixin):
         Validates the standard and custom OS parameters.
         """
         for param_type, params in standard_params.items():
-            base_args = (
-                ["sysctl"] if param_type == "sysctl" else ["corosync-cmapctl", "-g"]
-            )
+            base_args = ["sysctl"] if param_type == "sysctl" else ["corosync-cmapctl", "-g"]
             for param, details in params.items():
                 output = self.context.cmd_executor.run_subprocess(base_args + [param])
                 value = output.split("=")[1].strip()
@@ -282,21 +280,15 @@ class FenceValidator(ValidatorBase):
 
                 return ValidationResult(
                     TestStatus.ERROR,
-                    {
-                        "Fence agent permissions": f"VM not found in list: {fence_output}"
-                    },
+                    {"Fence agent permissions": f"VM not found in list: {fence_output}"},
                 )
 
             return ValidationResult(
                 TestStatus.SUCCESS,
-                {
-                    "Fence agent permissions": "MSI value not found or using SPN configuration"
-                },
+                {"Fence agent permissions": "MSI value not found or using SPN configuration"},
             )
         except Exception as e:
-            return ValidationResult(
-                TestStatus.ERROR, {"Fence agent permissions": str(e)}
-            )
+            return ValidationResult(TestStatus.ERROR, {"Fence agent permissions": str(e)})
 
     def _get_msi_value(self) -> Optional[str]:
         if self.context.ansible_os_family == "REDHAT":
@@ -367,9 +359,7 @@ class ConstraintValidator(ValidatorBase, ParameterValidatorMixin):
                 TestStatus.SUCCESS, {"Valid Constraints parameter": valid_parameters}
             )
         except Exception as e:
-            return ValidationResult(
-                TestStatus.ERROR, {"Constraints validation": str(e)}
-            )
+            return ValidationResult(TestStatus.ERROR, {"Constraints validation": str(e)})
 
     def _validate_constraint(
         self,
@@ -419,14 +409,10 @@ class GlobalIniValidator(ValidatorBase):
             expected_properties = self._get_expected_properties()
 
             if properties == expected_properties:
-                return ValidationResult(
-                    TestStatus.SUCCESS, {"SAPHanaSR Properties": properties}
-                )
+                return ValidationResult(TestStatus.SUCCESS, {"SAPHanaSR Properties": properties})
             return ValidationResult(
                 TestStatus.ERROR,
-                {
-                    "SAPHanaSR Properties validation failed with expected properties": properties
-                },
+                {"SAPHanaSR Properties validation failed with expected properties": properties},
             )
         except FileNotFoundError as e:
             return ValidationResult(
@@ -441,9 +427,7 @@ class GlobalIniValidator(ValidatorBase):
         """
         Reads the global.ini properties.
         """
-        global_ini_path = (
-            f"/usr/sap/{self.context.sid}/SYS/global/hdb/custom/config/global.ini"
-        )
+        global_ini_path = f"/usr/sap/{self.context.sid}/SYS/global/hdb/custom/config/global.ini"
         with open(global_ini_path, "r", encoding="utf-8") as file:
             global_ini = [line.strip() for line in file.readlines()]
 
@@ -452,8 +436,7 @@ class GlobalIniValidator(ValidatorBase):
             properties_slice = global_ini[section_start + 1 : section_start + 4]
 
             return {
-                prop.split("=")[0].strip(): prop.split("=")[1].strip()
-                for prop in properties_slice
+                prop.split("=")[0].strip(): prop.split("=")[1].strip() for prop in properties_slice
             }
         except (ValueError, IndexError) as e:
             raise ValueError(f"Failed to parse global.ini: {str(e)}")
@@ -521,9 +504,7 @@ class ClusterParamValidator(ValidatorBase, ParameterValidatorMixin):
         except Exception as e:
             return ValidationResult(TestStatus.ERROR, {"Error": str(e)})
 
-    def _validate_cluster_properties(
-        self, drift_parameters: dict, valid_parameters: dict
-    ) -> None:
+    def _validate_cluster_properties(self, drift_parameters: dict, valid_parameters: dict) -> None:
         for resource_operation in CLUSTER_PROPERTIES.keys():
             root = self.context.cmd_executor.parse_xml_output(
                 ["cibadmin", "--query", "--scope", resource_operation]
@@ -534,12 +515,8 @@ class ClusterParamValidator(ValidatorBase, ParameterValidatorMixin):
                     for nvpair in element.findall(".//nvpair"):
                         name = nvpair.get("name")
                         value = nvpair.get("value")
-                        if name in CLUSTER_PROPERTIES[resource_operation].get(
-                            primitive_id, {}
-                        ):
-                            expected = CLUSTER_PROPERTIES[resource_operation][
-                                primitive_id
-                            ][name]
+                        if name in CLUSTER_PROPERTIES[resource_operation].get(primitive_id, {}):
+                            expected = CLUSTER_PROPERTIES[resource_operation][primitive_id][name]
                             self._check_and_add_parameter(
                                 name,
                                 value,
@@ -550,9 +527,7 @@ class ClusterParamValidator(ValidatorBase, ParameterValidatorMixin):
                                 valid_parameters,
                             )
 
-    def _validate_resource_parameters(
-        self, drift_parameters: dict, valid_parameters: dict
-    ) -> None:
+    def _validate_resource_parameters(self, drift_parameters: dict, valid_parameters: dict) -> None:
         root = self.context.cmd_executor.parse_xml_output(
             ["cibadmin", "--query", "--scope", "resources"]
         )
@@ -591,8 +566,7 @@ class ClusterParamValidator(ValidatorBase, ParameterValidatorMixin):
 
         if resource_type == "SAPInstance":
             properties = {
-                prop.get("name"): prop.get("value")
-                for prop in primitive.findall(".//nvpair")
+                prop.get("name"): prop.get("value") for prop in primitive.findall(".//nvpair")
             }
             if "IS_ERS" in properties and properties["IS_ERS"] == "true":
                 resource_full_type += ":ERS"
@@ -756,8 +730,7 @@ class ClusterManager:
         Processes the validation results and exits the module with the appropriate status.
         """
         has_errors = any(
-            param["status"] == TestStatus.ERROR.value
-            for param in self.result_aggregator.parameters
+            param["status"] == TestStatus.ERROR.value for param in self.result_aggregator.parameters
         )
         result = {
             "changed": False,

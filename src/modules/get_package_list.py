@@ -48,15 +48,9 @@ class PackageListFormatter(SapAutomationQA):
             self.result["details"] = [
                 {
                     package["name"]: {
-                        "version": self.package_facts_list[package["key"]][0].get(
-                            "version"
-                        ),
-                        "release": self.package_facts_list[package["key"]][0].get(
-                            "release"
-                        ),
-                        "architecture": self.package_facts_list[package["key"]][0].get(
-                            "arch"
-                        ),
+                        "version": self.package_facts_list[package["key"]][0].get("version"),
+                        "release": self.package_facts_list[package["key"]][0].get("release"),
+                        "architecture": self.package_facts_list[package["key"]][0].get("arch"),
                     }
                 }
                 for package in PACKAGE_LIST
