@@ -43,6 +43,7 @@ class PackageListFormatter(SapAutomationQA):
         Formats the package list based on the provided package facts list.
 
         :return: A dictionary containing the formatted package list.
+        :rtype: Dict[str, Any]
         """
         try:
             self.result["details"] = [

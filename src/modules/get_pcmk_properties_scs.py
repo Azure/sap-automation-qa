@@ -68,7 +68,7 @@ class CommandExecutor:
     @staticmethod
     def run_subprocess(command: Union[List[str], str]) -> str:
         """
-        Runs a subprocess command and returns its output.
+        Runs a subprocess command and returns the output.
         """
         try:
             with subprocess.Popen(
@@ -119,9 +119,6 @@ class ValidatorBase(ABC):
     """
 
     def __init__(self, context: ValidationContext):
-        """
-        Initializes the validator with the given context.
-        """
         self.context = context
 
     @abstractmethod

@@ -52,7 +52,7 @@ class Parameters:
         This method is used to convert the parameters to a dictionary
 
         :return: Dictionary containing the parameters
-        :rtype: dict
+        :rtype: Dict[str, Any]
         """
         return {
             "category": self.category,
@@ -179,6 +179,6 @@ class SapAutomationQA(ABC):
         Returns the result dictionary.
 
         :return: The result dictionary containing the status, message, details, and logs.
-        :rtype: dict
+        :rtype: Dict[str, Any]
         """
         return self.result

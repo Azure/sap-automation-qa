@@ -40,9 +40,7 @@ class AzureLoadBalancer(SapAutomationQA):
 
     def _create_network_client(self):
         """
-        Get the network client object.
-
-        :rtype: NetworkManagementClient
+        Create the network client object.
         """
         try:
             self.credential = ManagedIdentityCredential()

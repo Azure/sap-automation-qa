@@ -31,6 +31,7 @@ class FileSystemFreeze(SapAutomationQA):
         Find the filesystem mounted on /hana/shared.
 
         :return: The filesystem mounted on /hana/shared.
+        :rtype: str
         """
         try:
             with open("/proc/mounts", "r", encoding="utf-8") as mounts_file:
@@ -47,6 +48,7 @@ class FileSystemFreeze(SapAutomationQA):
         Run the test case when the filesystem is frozen.
 
         :return: A dictionary containing the result of the test case.
+        :rtype: Dict[str, Any]
         """
         file_system = self._find_filesystem()
 

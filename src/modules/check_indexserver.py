@@ -18,8 +18,10 @@ class IndexServerCheck(SapAutomationQA):
     """
     This class is used to check if SAP HANA indexserver is configured.
 
-    :param SapAutomationQA: Base class for SAP Automation QA.
-    :type SapAutomationQA: class
+    :param database_sid: SAP HANA database SID.
+    :type database_sid: str
+    :param os_distribution: Operating system distribution.
+    :type os_distribution: str
     """
 
     def __init__(self, database_sid: str, os_distribution: str):

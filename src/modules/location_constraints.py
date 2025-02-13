@@ -36,7 +36,7 @@ class LocationConstraintsManager(SapAutomationQA):
         Removes the specified location constraints.
 
         :param location_constraints: A list of location constraints to be removed.
-        :type location_constraints: list
+        :type location_constraints: List[ET.Element]
         """
         for location_constraint in location_constraints:
             rsc = location_constraint.attrib.get("rsc")
@@ -58,7 +58,7 @@ class LocationConstraintsManager(SapAutomationQA):
         Checks if location constraints exist.
 
         :return: A list of location constraints if they exist, otherwise an empty list.
-        :rtype: list
+        :rtype: List[ET.Element]
         """
         try:
             xml_output = self.execute_command_subprocess(CONSTRAINTS)

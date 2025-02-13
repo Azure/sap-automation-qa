@@ -1,10 +1,12 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+
 """
 Unit tests for the render_html_report module.
 """
 
 import pytest
-from ansible.module_utils.basic import AnsibleModule
-from src.modules.render_html_report import HTMLReportRenderer
+from src.modules.render_html_report import HTMLReportRenderer, main
 
 
 @pytest.fixture
@@ -48,7 +50,12 @@ class TestHTMLReportRenderer:
 
     def test_render_report(self, mocker, html_report_renderer):
         """
-        Test the render_report method.
+        Test the render_report method of the HTMLReportRenderer class.
+
+        :param mocker: Mocker fixture for mocking functions.
+        :type mocker: pytest_mock.MockerFixture
+        :param html_report_renderer: HTMLReportRenderer instance.
+        :type html_report_renderer: HTMLReportRenderer
         """
         mock_open = mocker.patch(
             "builtins.open",
@@ -89,3 +96,33 @@ class TestHTMLReportRenderer:
         )
         handle = mock_open()
         handle.write.assert_called()
+
+    def test_main(self, monkeypatch):
+        """
+        Test the main function of the render_html_report module.
+
+        :param monkeypatch: Monkeypatch fixture for mocking.
+        :type monkeypatch: pytest.MonkeyPatch
+        """
+        mock_result = {}
+
+        class MockAnsibleModule:
+            """
+            Mock class for Ansible  Module.
+            """
+
+            def __init__(self, argument_spec, supports_check_mode):
+                self.params = {
+                    "test_group_invocation_id": "12345",
+                    "test_group_name": "test_group",
+                    "report_template": "report_template.html",
+                    "workspace_directory": "/tmp",
+                }
+                self.check_mode = False
+
+            def exit_json(self, **kwargs):
+                mock_result.update(kwargs)
+
+        monkeypatch.setattr("src.modules.render_html_report.AnsibleModule", MockAnsibleModule)
+        main()
+        assert mock_result["status"] == "PASSED"

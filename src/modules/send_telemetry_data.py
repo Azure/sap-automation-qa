@@ -67,10 +67,15 @@ class TelemetryDataSender(SapAutomationQA):
         Builds the authorization header for Azure Log Analytics.
 
         :param workspace_id: Workspace ID for Azure Log Analytics.
+        :type workspace_id: str
         :param workspace_shared_key: Workspace Key for Azure Log Analytics.
+        :type workspace_shared_key: str
         :param content_length: Length of the payload.
+        :type content_length: int
         :param date: Date and time of the request.
+        :type date: str
         :return: Authorization header.
+        :rtype: str
         """
         string_to_hash = (
             f"{LAWS_METHOD}\n{content_length}\n{LAWS_CONTENT_TYPE}\nx-ms-date:"
@@ -90,7 +95,9 @@ class TelemetryDataSender(SapAutomationQA):
         Sends telemetry data to Azure Data Explorer.
 
         :param telemetry_json_data: The JSON data to be sent to Azure Data Explorer.
+        :type telemetry_json_data: str
         :return: The response from the Kusto API.
+        :rtype: Any
         """
         import pandas as pd
 
@@ -123,7 +130,9 @@ class TelemetryDataSender(SapAutomationQA):
         Sends telemetry data to Azure Log Analytics Workspace.
 
         :param telemetry_json_data: JSON data to be sent to Log Analytics.
+        :type telemetry_json_data: str
         :return: Response from the Log Analytics API.
+        :rtype: requests.Response
         """
         utc_datetime = datetime.now().strftime("%a, %d %b %Y %H:%M:%S GMT")
         authorization_header = self._get_authorization_for_log_analytics(
@@ -156,6 +165,7 @@ class TelemetryDataSender(SapAutomationQA):
         Validate the telemetry data destination parameters.
 
         :return: True if the parameters are valid, False otherwise.
+        :rtype: bool
         """
         telemetry_data_destination = self.module_params.get("telemetry_data_destination")
 
@@ -253,7 +263,7 @@ class TelemetryDataSender(SapAutomationQA):
         Returns the result dictionary.
 
         :return: The result dictionary containing the status of the operation.
-        :rtype: dict
+        :rtype: Dict[str, Any]
         """
         self.result["end"] = datetime.now()
         return self.result

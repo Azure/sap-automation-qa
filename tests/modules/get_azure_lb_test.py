@@ -4,10 +4,14 @@ Unit tests for the get_azure_lb module.
 
 import pytest
 import json
-from src.modules.get_azure_lb import AzureLoadBalancer
+from src.modules.get_azure_lb import AzureLoadBalancer, main
 
 
 class LoadBalancer:
+    """
+    Mock class to simulate Azure Load Balancer.
+    """
+
     def __init__(self, location, ip_addr):
         self.name = "test"
         self.location = location
@@ -29,6 +33,12 @@ class LoadBalancer:
         ]
 
     def as_dict(self):
+        """
+        Convert the LoadBalancer instance to a dictionary.
+
+        :return: Dictionary representation of the LoadBalancer instance.
+        :rtype: dict
+        """
         return {
             "name": self.name,
             "location": self.location,
@@ -80,17 +90,58 @@ def azure_lb(mocker):
 
 
 class TestAzureLoadBalancer:
-    def test_get_load_balancers(self, mocker, azure_lb):
+    """
+    Test cases for the AzureLoadBalancer class.
+    """
+
+    def test_get_load_balancers(self, azure_lb):
         """
         Test the get_load_balancers method.
+
+        :param azure_lb: AzureLoadBalancer instance
+        :type azure_lb: AzureLoadBalancer
         """
         azure_lb._create_network_client()
         assert len(azure_lb.get_load_balancers()) == 1
 
-    def test_get_load_balancers_details(self, mocker, azure_lb):
+    def test_get_load_balancers_details(self, azure_lb):
         """
         Test the get_load_balancers_details method.
+
+        :param azure_lb: AzureLoadBalancer instance
+        :type azure_lb: AzureLoadBalancer
         """
         azure_lb.get_load_balancers_details()
-        assert  azure_lb.result["status"] == "PASSED"
+        assert azure_lb.result["status"] == "PASSED"
         assert azure_lb.result["details"]["parameters"] is not None
+
+    def test_main(self, monkeypatch):
+        """
+        Test the main function.
+        """
+        mock_result = {}
+
+        class MockAnsibleModule:
+            """
+            Mock class for AnsibleModule.
+            """
+
+            def __init__(self, *args, **kwargs):
+                self.params = {
+                    "subscription_id": "test",
+                    "region": "test",
+                    "inbound_rules": repr([{}]),
+                    "constants": {},
+                }
+
+            def exit_json(self, **kwargs):
+                """
+                Mock exit_json method.
+                """
+                nonlocal mock_result
+                mock_result = kwargs
+
+        with monkeypatch.context() as m:
+            m.setattr("src.modules.get_azure_lb.AnsibleModule", MockAnsibleModule)
+            main()
+            assert mock_result["status"] == "FAILED"

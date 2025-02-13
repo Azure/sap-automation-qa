@@ -91,9 +91,9 @@ class ClusterStatusChecker(SapAutomationQA):
         Processes node attributes and identifies primary/secondary nodes.
 
         :param node_attributes: The XML element containing node attributes.
-        :type node_attributes: xml.etree.ElementTree.Element
+        :type node_attributes: ET.Element
         :return: A dictionary containing the primary and secondary node information, plus cluster status.
-        :rtype: dict
+        :rtype: Dict[str, Any]
         """
         result = {
             "primary_node": "",
@@ -157,6 +157,7 @@ class ClusterStatusChecker(SapAutomationQA):
         - Checks the attributes of each node in the cluster.
 
         :return: A dictionary containing the result of the cluster status checks.
+        :rtype: Dict[str, str]
         """
         self.log(logging.INFO, "Starting cluster status check")
 
@@ -208,7 +209,6 @@ class ClusterStatusChecker(SapAutomationQA):
         self.result["end"] = datetime.now()
         self.result["status"] = TestStatus.SUCCESS.value
         self.log(logging.INFO, "Cluster status check completed")
-        return self.result
 
 
 def run_module() -> None:
@@ -227,9 +227,9 @@ def run_module() -> None:
         database_sid=module.params["database_sid"],
         ansible_os_family=module.params["ansible_os_family"],
     )
-    result = checker.run()
+    checker.run()
 
-    module.exit_json(**result)
+    module.exit_json(**checker.get_result())
 
 
 def main() -> None:

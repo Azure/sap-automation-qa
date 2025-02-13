@@ -47,7 +47,7 @@ class HTMLReportRenderer(SapAutomationQA):
         Reads the log file and returns the test case results.
 
         :return: A list of test case results.
-        :rtype: list
+        :rtype: List[Dict[str, Any]]
         """
         log_file_path = os.path.join(
             self.workspace_directory, "logs", f"{self.test_group_invocation_id}.log"
@@ -68,7 +68,7 @@ class HTMLReportRenderer(SapAutomationQA):
         Renders the HTML report using the provided template and test case results.
 
         :param test_case_results: A list of test case results.
-        :type test_case_results: list
+        :type test_case_results: List[Dict[str, Any]]
         """
         try:
             report_path = os.path.join(
