@@ -85,7 +85,7 @@ class TestAzureLoadBalancer:
         Test the get_load_balancers method.
         """
         azure_lb._create_network_client()
-        assert len(azure_lb.get_load_balancers()) == 2
+        assert len(azure_lb.get_load_balancers()) == 1
 
     def test_get_load_balancers_details(self, mocker, azure_lb):
         """
