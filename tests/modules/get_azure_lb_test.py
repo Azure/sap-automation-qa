@@ -92,5 +92,5 @@ class TestAzureLoadBalancer:
         Test the get_load_balancers_details method.
         """
         azure_lb.get_load_balancers_details()
-        azure_lb.result["status"] == "PASSED"
-        azure_lb.result["details"]["parameters"] is not None
+        assert  azure_lb.result["status"] == "PASSED"
+        assert azure_lb.result["details"]["parameters"] is not None
