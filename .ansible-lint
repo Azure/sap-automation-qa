@@ -6,6 +6,8 @@ exclude_paths:
 
 skip_list:
   - no-handler
+  - run_once[task]
+  - run_once[play]
   - key-order[task]
   - key-order[play]
   - name[casing]
@@ -21,5 +23,3 @@ skip_list:
   - name[template]
   - command-instead-of-shell
   - jinja[spacing]
-  - run_once[task]
-  - run_once[play]
