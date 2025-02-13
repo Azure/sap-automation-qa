@@ -148,6 +148,24 @@ class HAClusterValidator(SapAutomationQA):
             ),
         ).to_dict()
 
+    def _parse_nvpair_elements(self, elements, category, subcategory=None, op_name=None):
+        """
+        Parse nvpair elements and return a list of Parameters objects.
+        """
+        parameters = []
+        for nvpair in elements:
+            parameters.append(
+                self._create_parameter(
+                    category=category,
+                    subcategory=subcategory,
+                    op_name=op_name,
+                    id=nvpair.get("id", ""),
+                    name=nvpair.get("name", ""),
+                    value=nvpair.get("value", ""),
+                )
+            )
+        return parameters
+
     def _parse_resource(self, element, category):
         """
         Parse resource-specific configuration parameters
