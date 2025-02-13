@@ -217,7 +217,7 @@ def main() -> None:
     module = AnsibleModule(
         argument_spec=dict(
             sid=dict(type="str"),
-            scs_instance_number=dict(type="str"),
+            ascs_instance_number=dict(type="str"),
             ers_instance_number=dict(type="str"),
             ansible_os_family=dict(type="str"),
             virtual_machine_name=dict(type="str"),
@@ -227,7 +227,7 @@ def main() -> None:
 
     validator = HAClusterValidator(
         sid=module.params["sid"],
-        scs_instance_number=module.params["scs_instance_number"],
+        scs_instance_number=module.params["ascs_instance_number"],
         ers_instance_number=module.params["ers_instance_number"],
         os_type=module.params["ansible_os_family"],
         virtual_machine_name=module.params["virtual_machine_name"],
