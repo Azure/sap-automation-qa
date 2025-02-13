@@ -1,0 +1,147 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+
+# Description: This file contains the expected configuration for the pacemaker cluster. The values
+# are based on Microsoft's best practices and are subject to change based on the customer's requirements.
+
+# === CRM Configuration Defaults ===
+# cibadmin --query --scope crm_config
+CRM_CONFIG_DEFAULTS:
+  cluster-infrastructure:             corosync
+  priority-fencing-delay:             '30'
+  stonith-action:                     reboot
+  stonith-enabled:                    'true'
+  concurrent-fencing:                 'true'
+  maintenance-mode:                   'false'
+  node-health-strategy:               'custom'
+  azure-events-az_globalPullState:    'IDLE'
+
+# === Operation Defaults ===
+# cibadmin --query --scope op_defaults
+OP_DEFAULTS:
+  record-pending:                     'true'
+  timeout:                            '600'
+
+# === Resource Defaults ===
+# cibadmin --query --scope rsc_defaults
+RSC_DEFAULTS:
+  migration-threshold:                '3'
+  priority:                           '1'
+  resource-stickiness:                '1'
+
+# === Constraints ===
+# cibadmin --query --scope constraints
+CONSTRAINTS:
+  rsc_colocation:
+    score:                            "4000"
+    rsc-role:                         "Started"
+
+  rsc_order:
+    kind:                             "Optional"
+
+# === Valid Configurations for different OS versions ===
+# Specify the properties that are different for different OS versions
+VALID_CONFIGS:
+  REDHAT:
+    priority-fencing-delay:           '15s'
+  SUSE: {}
+  AFA:
+    have-watchdog:                    "false"
+    stonith-timeout:                  "900"
+  ISCSI:
+    have-watchdog:                    "true"
+    stonith-timeout:                  "144s"
+
+# === Resource Defaults ===
+# cibadmin --query --scope resources
+RESOURCE_DEFAULTS:
+  SUSE:
+    stonith:
+      instance_attributes:
+        pcmk_delay_max:                   "15"
+        pcmk_monitor_retries:             "4"
+        pcmk_action_limit:                "3"
+        pcmk_reboot_timeout:              "900"
+        power_timeout:                    "240"
+      monitor:
+        interval:                         "3600"
+        timeout:                          "120"
+
+    sapinstance:
+      instance_attributes:
+        AUTOMATIC_RECOVER:                "false"
+        MINIMAL_PROBE:                    "true"
+      meta_attributes:
+        resource-stickiness:              "5000"
+        priority:                         "100"
+      operations:
+        monitor:
+          interval:                       "11"
+          timeout:                        "60"
+        start:
+          interval:                       "0s"
+          timeout:                        "180s"
+        stop:
+          interval:                       "0s"
+          timeout:                        "240s"
+        promote:
+          interval:                       "0s"
+          timeout:                        "320s"
+        demote:
+          interval:                       "0s"
+          timeout:                        "320s"
+
+    ipaddr:
+      meta_attributes:
+        target-role:                      "Started"
+      operations:
+        monitor:
+          interval:                       "10s"
+          timeout:                        "20s"
+        start:
+          interval:                       "0s"
+          timeout:                        "20s"
+        stop:
+          interval:                       "0s"
+          timeout:                        "20s"
+
+    azurelb:
+      meta_attributes:
+        resource-stickiness:              "0"
+      operations:
+        monitor:
+          interval:                       "10s"
+          timeout:                        "20s"
+        start:
+          interval:                       "0s"
+          timeout:                        "20s"
+        stop:
+          interval:                       "0s"
+          timeout:                        "20s"
+
+
+
+# === OS Parameters ===
+# Run command as root. Format of command is: "parent_key child_key"
+# Example: sysctl net.ipv4.tcp_timestamps
+OS_PARAMETERS:
+  DEFAULTS:
+    sysctl:
+      net.ipv4.tcp_timestamps:          "net.ipv4.tcp_timestamps = 0"
+      vm.swappiness:                    "vm.swappiness = 10"
+    corosync-cmapctl:
+      runtime.config.totem.token:       "runtime.config.totem.token (u32) = 30000"
+      runtime.config.totem.consensus:   "runtime.config.totem.consensus (u32) = 36000"
+
+# === Azure Load Balancer ===
+# Azure Load Balancer configuration
+AZURE_LOADBALANCER:
+  PROBES:
+    probe_threshold:                    2
+    interval_in_seconds:                5
+    number_of_probes:                   2
+
+  RULES:
+    idle_timeout_in_minutes:            30
+    enable_floating_ip:                 true
+    enable_tcp_reset:                   false

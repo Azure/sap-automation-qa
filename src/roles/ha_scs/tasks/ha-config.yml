@@ -26,6 +26,7 @@
         ers_instance_number:            "{{ ers_instance_number }}"
         ansible_os_family:              "{{ ansible_os_family | upper }}"
         virtual_machine_name:           "{{ azure_instance_metadata.json.compute.name }}"
+        pcmk_constants:                 "{{ lookup('file', 'constants.yaml') | from_yaml }}"
       register:                         test_result
 
     - name:                             "Set the test case status to PASSED"
