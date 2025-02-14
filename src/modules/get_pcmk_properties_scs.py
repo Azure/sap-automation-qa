@@ -251,6 +251,15 @@ class HAClusterValidator(SapAutomationQA):
                         elements = root.findall(xpath)
                         for element in elements:
                             parameters.extend(self._parse_resource(element, sub_category))
+
+                    for group in root.findall(".//group"):
+                        if "ASCS" in group.get("id"):
+                            for element in group.findall(".//primitive[@type='SAPInstance']"):
+                                parameters.extend(self._parse_resource(element, "ascs"))
+                        elif "ERS" in group.get("id"):
+                            for element in group.findall(".//primitive[@type='SAPInstance']"):
+                                parameters.extend(self._parse_resource(element, "ers"))
+
                 except Exception as e:
                     self.result[
                         "message"
