@@ -30,7 +30,7 @@
       register:                         azure_instance_metadata
 
     - name:                             "HA Configuration check for the DB nodes"
-      get_pcmk_properties:
+      get_pcmk_properties_db:
         sid:                            "{{ db_sid | upper }}"
         instance_number:                "{{ db_instance_number }}"
         ansible_os_family:              "{{ ansible_os_family | upper }}"

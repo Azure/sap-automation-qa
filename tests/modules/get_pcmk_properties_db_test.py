@@ -2,12 +2,12 @@
 # Licensed under the MIT License.
 
 """
-Unit tests for the get_pcmk_properties module.
+Unit tests for the get_pcmk_properties_db module.
 """
 
 import io
 import pytest
-from src.modules.get_pcmk_properties import HAClusterValidator, main
+from src.modules.get_pcmk_properties_db import HAClusterValidator, main
 
 DUMMY_XML_RSC = """<rsc_defaults>
   <meta_attributes id="build-resource-defaults">
@@ -236,7 +236,7 @@ class TestHAClusterValidator:
                 mock_result = kwargs
 
         monkeypatch.setattr(
-            "src.modules.get_pcmk_properties.AnsibleModule",
+            "src.modules.get_pcmk_properties_db.AnsibleModule",
             MockAnsibleModule,
         )
 
