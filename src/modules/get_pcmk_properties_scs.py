@@ -55,8 +55,6 @@ class HAClusterValidator(SapAutomationQA):
         "ipaddr": ".//primitive[@type='IPaddr2']",
         "azurelb": ".//primitive[@type='azure-lb']",
         "azureevents": ".//primitive[@type='azure-events-az']",
-        "ascs": ".//primitive[@type='SAPInstance']",
-        "ers": ".//primitive[@type='SAPInstance']",
     }
 
     def __init__(
@@ -123,7 +121,7 @@ class HAClusterValidator(SapAutomationQA):
         Create a Parameters object for a given configuration parameter.
         """
         if expected_value is None:
-            if category in self.RESOURCE_CATEGORIES:
+            if category in self.RESOURCE_CATEGORIES or category in ["ascs", "ers"]:
                 expected_value = self._get_resource_expected_value(
                     resource_type=category,
                     section=subcategory,
@@ -255,10 +253,11 @@ class HAClusterValidator(SapAutomationQA):
                             parameters.extend(self._parse_resource(element, sub_category))
 
                     for group in root.findall(".//group"):
-                        if "ASCS" in group.get("id"):
+                        group_id = group.get("id", "")
+                        if "ASCS" in group_id:
                             for element in group.findall(".//primitive[@type='SAPInstance']"):
                                 parameters.extend(self._parse_resource(element, "ascs"))
-                        elif "ERS" in group.get("id"):
+                        elif "ERS" in group_id:
                             for element in group.findall(".//primitive[@type='SAPInstance']"):
                                 parameters.extend(self._parse_resource(element, "ers"))
 
