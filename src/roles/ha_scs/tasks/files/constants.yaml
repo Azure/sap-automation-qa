@@ -33,11 +33,19 @@ RSC_DEFAULTS:
 # cibadmin --query --scope constraints
 CONSTRAINTS:
   rsc_colocation:
-    score:                            "4000"
+    score:                            "-5000"
     rsc-role:                         "Started"
+    with-rsc-role:                    "Started"
 
   rsc_order:
-    kind:                             "Optional"
+    first-action:                     "start"
+    then-action:                      "stop"
+    symmetrical:                      "false"
+
+  rsc_location:
+    score-attribute:                  "#health-azure"
+    operation:                        "defined"
+    attribute:                        "#uname"
 
 # === Valid Configurations for different OS versions ===
 # Specify the properties that are different for different OS versions
@@ -175,7 +183,7 @@ OS_PARAMETERS:
   DEFAULTS:
     sysctl:
       net.ipv4.tcp_timestamps:          "net.ipv4.tcp_timestamps = 0"
-      vm.swappiness:                    "vm.swappiness = 10"
+      vm.swappiness:                    "vm.swappiness = 60"
     corosync-cmapctl:
       runtime.config.totem.token:       "runtime.config.totem.token (u32) = 30000"
       runtime.config.totem.consensus:   "runtime.config.totem.consensus (u32) = 36000"

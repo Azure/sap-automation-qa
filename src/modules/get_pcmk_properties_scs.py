@@ -216,6 +216,59 @@ class HAClusterValidator(SapAutomationQA):
             )
         return parameters
 
+    def _parse_os_parameters(self):
+        """
+        Parse OS-specific parameters
+        """
+        parameters = []
+
+        os_parameters = self.constants["OS_PARAMETERS"].get("DEFAULTS", {})
+
+        for section, params in os_parameters.items():
+            for param_name, expected_value in params.items():
+                value = (
+                    self.execute_command_subprocess(command=[section, param_name])
+                    .strip()
+                    .split("\n")[0]
+                )
+                parameters.append(
+                    self._create_parameter(
+                        category="os",
+                        id=section,
+                        name=param_name,
+                        value=value,
+                        expected_value=expected_value,
+                    )
+                )
+
+        return parameters
+
+    def _parse_constraints(self, root):
+        """
+        Parse constraints configuration parameters
+        """
+        parameters = []
+        for element in root:
+            tag = element.tag
+            if tag in self.constants["CONSTRAINTS"]:
+                for attr, expected in self.constants["CONSTRAINTS"][tag].items():
+                    if element.get(attr) is not None:
+                        parameters.append(
+                            self._create_parameter(
+                                category="constraints",
+                                subcategory=tag,
+                                id=element.get("id", ""),
+                                name=attr,
+                                value=element.get(attr),
+                                expected_value=expected,
+                            )
+                        )
+                    else:
+                        continue
+            else:
+                continue
+        return parameters
+
     def parse_ha_cluster_config(self):
         """
         Parse HA cluster configuration XML and return a list of properties.
@@ -266,6 +319,18 @@ class HAClusterValidator(SapAutomationQA):
                         "message"
                     ] += f"Failed to get resources configuration for {self.category}: {str(e)}"
                     continue
+
+            elif self.category == "constraints":
+                try:
+                    parameters.extend(self._parse_constraints(root))
+                except Exception as e:
+                    self.result["message"] += f"Failed to get constraints configuration: {str(e)}"
+                    continue
+
+        try:
+            parameters.extend(self._parse_os_parameters())
+        except Exception as e:
+            self.result["message"] += f"Failed to get OS parameters: {str(e)} \n"
 
         failed_parameters = [
             param
