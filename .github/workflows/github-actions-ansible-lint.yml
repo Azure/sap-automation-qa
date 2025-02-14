@@ -46,4 +46,4 @@ jobs:
 
       - name: Check code formatting with black
         run: |
-          black --check src/ --config pyproject.toml
+          black --check src/ tests/ --config pyproject.toml
