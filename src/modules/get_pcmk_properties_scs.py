@@ -55,6 +55,8 @@ class HAClusterValidator(SapAutomationQA):
         "ipaddr": ".//primitive[@type='IPaddr2']",
         "azurelb": ".//primitive[@type='azure-lb']",
         "azureevents": ".//primitive[@type='azure-events-az']",
+        "ascs": ".//primitive[@type='SAPInstance']",
+        "ers": ".//primitive[@type='SAPInstance']",
     }
 
     def __init__(
