@@ -174,8 +174,6 @@ RESOURCE_DEFAULTS:
           interval:                       "0s"
           timeout:                        "10s"
 
-
-
 # === OS Parameters ===
 # Run command as root. Format of command is: "parent_key child_key"
 # Example: sysctl net.ipv4.tcp_timestamps
