@@ -10,17 +10,22 @@
 
 - name:                                 "Post Validations: HA cluster status after test execution"
   block:
+    - name:                             "Set node variables based on cluster status"
+      ansible.builtin.set_fact:
+        first_node:                     "{{ cluster_status_pre.primary_node | default(cluster_status_pre.ascs_node) }}"
+        second_node:                    "{{ cluster_status_pre.secondary_node | default(cluster_status_pre.ers_node) }}"
+
     - name:                             "Combine logs from both Nodes"
       ansible.builtin.set_fact:
         combined_logs: >-
                                         {{
                                           (
-                                            hostvars[cluster_status_pre.primary_node]['var_log_messages_output'].filtered_logs
+                                            hostvars[first_node]['var_log_messages_output'].filtered_logs
                                             | default("")
                                           )
                                           +
                                           (
-                                            hostvars[cluster_status_pre.secondary_node]['var_log_messages_output'].filtered_logs
+                                            hostvars[second_node]['var_log_messages_output'].filtered_logs
                                             | default("")
                                           )
                                         }}

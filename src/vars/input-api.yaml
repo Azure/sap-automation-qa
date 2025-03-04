@@ -135,18 +135,30 @@ test_groups:
     test_cases:
       - name:                       "HA Parameters Validation"
         task_name:                  ha-config
-        description:                "Validates the HA configuration"
+        description: |
+          The HA parameter validation test validates HA configuration,
+          including Corosync settings, Pacemaker resources, SBD device configuration,
+          and HANA system replication setup.
         enabled:                    true
 
       - name:                       "Manual ASCS Migration"
         task_name:                  ascs-migration
-        description:                "Tests manual migration of ASCS instance"
-        enabled:                    true
+        description: |
+          The Resource Migration test validates planned failover scenarios by executing controlled
+          resource movement between ASCS and ERS nodes. It performs a graceful migration of the ASCS
+          resources to the ERS node, verifies proper role changes, ensures cluster maintains
+          stability throughout the transition, and validates complete data synchronization after
+          migration.
+        enabled:                    false
 
-      # - name:                       "Kill Message Server Process"
-      #   task_name:                  kill-message-server
-      #   description:                "Tests recovery after message server process kill"
-      #   enabled:                    false
+      - name:                       "ASCS Node Crash"
+        task_name:                  ascs-node-crash
+        description: |
+          The ASCS Node Crash test simulates cluster behavior when the ASCS node crashes. It
+          simulates an ASCS node failure by forcefully terminating the process, then verifies
+          automatic failover to the ERS node, monitors system replication status, and confirms
+          service recovery without data loss.
+        enabled:                    true
 
 # Commands for HANA DB HA Test Cases based on OS family
 commands:

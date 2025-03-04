@@ -3,7 +3,7 @@
 
 ---
 # /*---------------------------------------------------------------------------
-# |                          Manual ASCS Migration                             |
+# |                          ASCS Node Crash                                  |
 # +--------------------------------------------------------------------------*/
 - name:                                 "Test Setup Tasks"
   ansible.builtin.include_tasks:        "roles/misc/tasks/test-case-setup.yml"
@@ -18,25 +18,29 @@
 # /*---------------------------------------------------------------------------
 # |                          Test Execution                                   |
 # +--------------------------------------------------------------------------*/
-- name:                                 "Test Execution: Manual ASCS Migration"
+- name:                                 "Test Execution: ASCS Node Crash"
   become:                               true
   when:
                                         - node_tier == "scs" or node_tier == "ers"
                                         - pre_validations_status == "PASSED"
   block:
-    - name:                             "Test Execution: Start timer"
-      ansible.builtin.set_fact:
-        test_execution_start:           "{{ now(utc=true, fmt='%Y-%m-%d %H:%M:%S') }}"
-        test_execution_hostname:        "{{ hostvars[cluster_status_pre.ascs_node].ansible_hostname }}"
-
-    - name:                             "Test Execution: Move ASCS resource to other node"
+    - name:                             "Test Execution: Simulate ASCS Node Crash"
       when:                             ansible_hostname == cluster_status_pre.ascs_node
       become:                           true
       block:
-        - name:                         "Test Execution: Migrate ASCS resource"
-          ansible.builtin.command:      "crm resource move rsc_sap_{{ sap_sid }}_ASCS{{ scs_instance_number }} force"
-          register:                     migration_result
+        - name:                         "Test Execution: Start timer"
+          ansible.builtin.set_fact:
+            test_execution_start:       "{{ now(utc=true, fmt='%Y-%m-%d %H:%M:%S') }}"
+            test_execution_hostname:    "{{ hostvars[cluster_status_pre.ascs_node].ansible_hostname }}"
 
+        - name:                         "Test Execution: Echo B to /proc/sysrq-trigger"
+          ansible.builtin.command:      echo b > /proc/sysrq-trigger
+          register:                     ascs_crash_result
+
+    - name:                             "Test Execution: Simulate ASCS Node Crash"
+      when:                             ansible_hostname == cluster_status_pre.ers_node
+      become:                           true
+      block:
         - name:                         "Test Execution: Validate SCS cluster status"
           get_cluster_status_scs:
             sap_sid:                    "{{ sap_sid | lower }}"
@@ -49,10 +53,10 @@
                                         cluster_status_test_execution.ascs_node == cluster_status_pre.ers_node
                                         and cluster_status_test_execution.ers_node == cluster_status_pre.ascs_node
 
-        - name:                         "Test Execution: Remove location constraints"
-          ansible.builtin.command:      "crm resource clear rsc_sap_{{ sap_sid }}_ASCS{{ scs_instance_number }}"
-          register:                     unmigrate_result
-
+    - name:                             "Test Execution: Simulate ASCS Node Crash"
+      when:                             ansible_hostname == cluster_status_pre.ascs_node
+      become:                           true
+      block:
         - name:                         "Test Execution: Cleanup resources"
           ansible.builtin.command:      crm_resource --cleanup
           register:                     cleanup_failed_resource_test_execution
@@ -66,16 +70,15 @@
           ansible.builtin.set_fact:
             test_case_message_from_test_case: |
                                         Old ASCS: {{ cluster_status_pre.ascs_node }}
-                                        New ASCS: {{ cluster_status_test_execution.ascs_node }}
+                                        New ASCS: {{ hostvars[cluster_status_pre.ers_node].cluster_status_test_execution.ascs_node }}
                                         Old ERS: {{ cluster_status_pre.ers_node }}
-                                        New ERS: {{ cluster_status_test_execution.ers_node }}
+                                        New ERS: {{ hostvars[cluster_status_pre.ers_node].cluster_status_test_execution.ers_node }}
             test_case_details_from_test_case: {
                                         "Pre Validations: Validate HANA DB cluster status": "{{ cluster_status_pre }}",
                                         "Pre Validations: CleanUp any failed resource": "{{ cleanup_failed_resource_pre }}",
-                                        "Test Execution: Migrate ASCS resource": "{{ migration_result }}",
-                                        "Test Execution: Clear Constraints": "{{ unmigrate_result }}",
+                                        "Test Execution: Crash ASCS resource": "{{ ascs_crash_result }}",
                                         "Test Execution: Cleanup resources": "{{ cleanup_failed_resource_test_execution }}",
-                                        "Post Validations Result": "{{ cluster_status_test_execution }}",
+                                        "Post Validations Result": "{{ hostvars[cluster_status_pre.ers_node].cluster_status_test_execution }}",
                                         }
 # /*---------------------------------------------------------------------------
 # |                          Post Validations                                 |
