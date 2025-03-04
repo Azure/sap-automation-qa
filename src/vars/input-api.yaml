@@ -29,34 +29,34 @@ test_groups:
           configuration, backend pool settings, load balancing rules, and frontend IP configuration.
         enabled:                    true
 
-      # - name:                       HA Functional Test- Resource Migration
-      #   task_name:                  resource-migration
-      #   description: |
-      #     The Resource Migration test validates planned failover scenarios by executing controlled
-      #     resource movement between HANA nodes. It performs a graceful migration of the primary HANA
-      #     resources to the secondary node, verifies proper role changes, ensures cluster maintains
-      #     stability throughout the transition, and validates complete data synchronization after
-      #     migration.
-      #   enabled:                    true
-
-      # - name:                       HA Functional Test- Primary Node Crash
-      #   task_name:                  primary-node-crash
-      #   description: |
-      #     The Primary Index Server Crash test simulates cluster behavior when the HANA index server
-      #     crashes on the primary node. It simulates an index server failure by forcefully terminating
-      #     the process, then verifies automatic failover to the secondary node, monitors system
-      #     replication status, and confirms service recovery without data loss.
-      #   enabled:                    true
-
-      - name:                       HA Functional Test- Block Network Communication
-        task_name:                  block-network
+      - name:                       HA Functional Test- Resource Migration
+        task_name:                  resource-migration
         description: |
-          The Block Network test validates cluster behavior during network partition scenarios by
-          implementing iptables rules to block communication between primary and secondary HANA nodes.
-          It verifies split-brain prevention mechanisms, validates proper failover execution when nodes
-          become isolated, and ensures cluster stability and data consistency after network
-          sconnectivity is restored.
+          The Resource Migration test validates planned failover scenarios by executing controlled
+          resource movement between HANA nodes. It performs a graceful migration of the primary HANA
+          resources to the secondary node, verifies proper role changes, ensures cluster maintains
+          stability throughout the transition, and validates complete data synchronization after
+          migration.
         enabled:                    true
+
+      - name:                       HA Functional Test- Primary Node Crash
+        task_name:                  primary-node-crash
+        description: |
+          The Primary Index Server Crash test simulates cluster behavior when the HANA index server
+          crashes on the primary node. It simulates an index server failure by forcefully terminating
+          the process, then verifies automatic failover to the secondary node, monitors system
+          replication status, and confirms service recovery without data loss.
+        enabled:                    true
+
+      # - name:                       HA Functional Test- Block Network Communication
+      #   task_name:                  block-network
+      #   description: |
+      #     The Block Network test validates cluster behavior during network partition scenarios by
+      #     implementing iptables rules to block communication between primary and secondary HANA nodes.
+      #     It verifies split-brain prevention mechanisms, validates proper failover execution when nodes
+      #     become isolated, and ensures cluster stability and data consistency after network
+      #     sconnectivity is restored.
+      #   enabled:                    true
 
       # - name:                       HA Functional Test- Crash index server on primary node
       #   task_name:                  primary-crash-index
