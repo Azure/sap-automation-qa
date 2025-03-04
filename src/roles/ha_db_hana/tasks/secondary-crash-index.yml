@@ -42,6 +42,10 @@
     - name:                             "Test Execution: Validate HANA DB cluster status"
       when:                             ansible_hostname == cluster_status_pre.secondary_node
       block:
+        - name:                         "Test Execution: Set facts"
+          ansible.builtin.set_fact:
+            test_execution_hostname:    "{{ ansible_hostname }}"
+
         - name:                         "Test Execution: Crash the index server on secondary node"
           ansible.builtin.command:      "killall -9 hdbindexserver"
           register:                     index_server_result
