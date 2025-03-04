@@ -79,7 +79,7 @@ class ClusterStatusChecker(SapAutomationQA):
         :return: A dictionary containing the primary and secondary node information, plus cluster status.
         :rtype: Dict[str, Any]
         """
-        attribute_name = f"runs_ers_{self.sap_sid}"
+        attribute_name = f"runs_ers_{self.sap_sid.upper()}"
         for node in node_attributes:
             for attribute in node:
                 if attribute.attrib["name"] == attribute_name:
@@ -137,9 +137,7 @@ class ClusterStatusChecker(SapAutomationQA):
                         self.result["message"] = f"Node {node.attrib['name']} is not online"
                         self.log(logging.WARNING, self.result["message"])
 
-                self.result.update(
-                    self._process_node_attributes(cluster_status_xml.find("node_attributes"))
-                )
+                self._process_node_attributes(cluster_status_xml.find("node_attributes"))
 
             if self.result["ascs_node"] == "" or self.result["ers_node"] == "":
                 self.result["message"] = (
