@@ -71,6 +71,7 @@ RESOURCE_DEFAULTS:
             interval:                     "3600"
       ISCSI:
         instance_attributes:
+          pcmk_delay_max:                 "30s"
           pcmk_monitor_retries:           "4"
           pcmk_action_limit:              "3"
           pcmk_reboot_timeout:            "900"

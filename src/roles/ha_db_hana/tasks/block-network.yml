@@ -30,7 +30,7 @@
         - name:                             "Test Execution: Start timer"
           ansible.builtin.set_fact:
             test_execution_start:           "{{ now(utc=true, fmt='%Y-%m-%d %H:%M:%S') }}"
-            test_execution_hostname:        "{{ hostvars[cluster_status_pre.primary_node].virtual_host }}"
+            test_execution_hostname:        "{{ hostvars[cluster_status_pre.primary_node].ansible_hostname }}"
 
         - name:                             "Test Execution: Get the IP address of the secondary node"
           ansible.builtin.set_fact:
@@ -204,13 +204,11 @@
 
 - name:                                     "Test Execution: Block Network Communication"
   become:                                   true
-  when:
-                                            - pre_validations_status == "FAILED"
-                                            - ansible_hostname == cluster_status_pre.primary_node
+  when:                                     pre_validations_status == "FAILED"
   block:
     - name:                                 "Set test case message and details"
       ansible.builtin.set_fact:
-        test_case_message_from_test_case:   "Pre Validations: HANA DB cluster status failed"
+        test_case_message_from_test_case:   "Pre Validations for HANA DB cluster status checks failed. Please check the details."
         test_case_details_from_test_case:   {
                                             "Pre Validations: Remove any location_constraints": "{{ location_constraints_results }}",
                                             "Pre Validations: Validate HANA DB cluster status": "{{ cluster_status_pre }}",
