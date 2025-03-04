@@ -138,10 +138,10 @@ test_groups:
         description:                "Validates the HA configuration"
         enabled:                    true
 
-      # - name:                       "Manual ASCS Migration"
-      #   task_name:                  ascs-migration
-      #   description:                "Tests manual migration of ASCS instance"
-      #   enabled:                    true
+      - name:                       "Manual ASCS Migration"
+        task_name:                  ascs-migration
+        description:                "Tests manual migration of ASCS instance"
+        enabled:                    true
 
       # - name:                       "Kill Message Server Process"
       #   task_name:                  kill-message-server

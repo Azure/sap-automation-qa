@@ -12,78 +12,92 @@
 # /*---------------------------------------------------------------------------
 # |                          Pre Validations                                  |
 # +--------------------------------------------------------------------------*/
-- name:                                 "Pre Validations: Get initial cluster status"
-  become:                               true
-  ansible.builtin.command:              crm_mon -1 -o
-  register:                             cluster_status_pre
-  changed_when:                         false
+- name:                                 "Pre Validations: SCS Nodes"
+  ansible.builtin.include_tasks:        "roles/misc/tasks/pre-validations-scs.yml"
 
 # /*---------------------------------------------------------------------------
 # |                          Test Execution                                   |
 # +--------------------------------------------------------------------------*/
 - name:                                 "Test Execution: Manual ASCS Migration"
   become:                               true
-  when:                                 node_tier == "scs"
+  when:
+                                        - node_tier == "scs" or node_tier == "ers"
+                                        - pre_validations_status == "PASSED"
   block:
     - name:                             "Test Execution: Start timer"
       ansible.builtin.set_fact:
         test_execution_start:           "{{ now(utc=true, fmt='%Y-%m-%d %H:%M:%S') }}"
-
-    - name:                             "Test Execution: Get current ASCS node"
-      ansible.builtin.shell: |
-                                        set -o pipefail
-                                        crm resource status rsc_sap_{{ sap_sid }}_ASCS{{ scs_instance_number }} | \
-                                        grep Started | awk '{print $4}'
-      register:                         current_ascs_node
-      changed_when:                     false
+        test_execution_hostname:        "{{ hostvars[cluster_status_pre.ascs_node].ansible_hostname }}"
 
     - name:                             "Test Execution: Move ASCS resource to other node"
-      when:                             ansible_hostname == current_ascs_node.stdout
+      when:                             ansible_hostname == cluster_status_pre.ascs_node
+      become:                           true
       block:
-        - name:                         "Test Execution: Get target node for migration"
-          ansible.builtin.set_fact:
-            target_node:                "{{ groups[sap_sid ~ '_SCS'] | difference([current_ascs_node.stdout]) | first }}"
-
         - name:                         "Test Execution: Migrate ASCS resource"
-          ansible.builtin.command:      "crm resource move rsc_sap_{{ sap_sid }}_ASCS{{ scs_instance_number }} {{ target_node }}"
+          ansible.builtin.command:      "crm resource move rsc_sap_{{ sap_sid }}_ASCS{{ scs_instance_number }} force"
           register:                     migration_result
 
-        - name:                         "Test Execution: Wait for migration"
-          ansible.builtin.command:      "crm_mon -1"
-          register:                     migration_status
-          until:                        "'Started {{ target_node }}' in migration_status.stdout"
-          retries:                      30
+        - name:                         "Test Execution: Validate SCS cluster status"
+          get_cluster_status_scs:
+            sap_sid:                    "{{ sap_sid | lower }}"
+            ansible_os_family:          "{{ ansible_os_family | upper }}"
+          register:                     cluster_status_test_execution
+          retries:                      50
           delay:                        10
+          failed_when:                  false
+          until: |
+                                        cluster_status_test_execution.ascs_node == cluster_status_pre.ers_node
+                                        and cluster_status_test_execution.ers_node == cluster_status_pre.ascs_node
 
-        - name:                         "Test Execution: Clear resource constraints"
+        - name:                         "Test Execution: Remove location constraints"
           ansible.builtin.command:      "crm resource clear rsc_sap_{{ sap_sid }}_ASCS{{ scs_instance_number }}"
-          register:                     clear_result
+          register:                     unmigrate_result
 
-    - name:                             "Test Execution: Stop timer"
-      ansible.builtin.set_fact:
-        test_execution_end:             "{{ now(utc=true, fmt='%Y-%m-%d %H:%M:%S') }}"
+        - name:                         "Test Execution: Cleanup resources"
+          ansible.builtin.command:      crm_resource --cleanup
+          register:                     cleanup_failed_resource_test_execution
+          changed_when:                 cleanup_result.rc == 0
 
-    - name:                             "Test Execution: Verify final cluster status"
-      ansible.builtin.command:          crm_mon -1 -o
-      register:                         cluster_status_post
-      changed_when:                     false
+        - name:                         "Test Execution: Stop timer"
+          ansible.builtin.set_fact:
+            test_execution_end:         "{{ now(utc=true, fmt='%Y-%m-%d %H:%M:%S') }}"
 
-    - name:                             "Set test case message and details"
-      ansible.builtin.set_fact:
-        test_case_message_from_test_case: "ASCS resource successfully migrated from {{ current_ascs_node.stdout }} to {{ target_node }}"
-        test_case_details_from_test_case: {
-                                        "Pre Validations Status": "{{ cluster_status_pre.stdout }}",
-                                        "Migration Result": "{{ migration_result }}",
-                                        "Clear Constraints Result": "{{ clear_result }}",
-                                        "Post Migration Status": "{{ cluster_status_post.stdout }}"
+        - name:                         "Set test case message and details"
+          ansible.builtin.set_fact:
+            test_case_message_from_test_case: |
+                                        "Old ASCS: {{ cluster_status_pre.ascs_node }}
+                                        New ASCS: {{ cluster_status_test_execution.ascs_node }}
+                                        Old ERS: {{ cluster_status_pre.ers_node }}
+                                        New ERS: {{ cluster_status_test_execution.ers_node }}"
+            test_case_details_from_test_case: {
+                                        "Pre Validations: Remove any location_constraints": "{{ location_constraints_results }}",
+                                        "Pre Validations: Validate HANA DB cluster status": "{{ cluster_status_pre }}",
+                                        "Pre Validations: CleanUp any failed resource": "{{ cleanup_failed_resource_pre }}",
+                                        "Test Execution: Migrate ASCS resource": "{{ migration_result }}",
+                                        "Test Execution: Clear Constraints": "{{ unmigrate_result }}",
+                                        "Test Execution: Cleanup resources": "{{ cleanup_failed_resource_test_execution }}",
+                                        "Post Validations Result": "{{ cluster_status_test_execution }}",
                                         }
-
 # /*---------------------------------------------------------------------------
 # |                          Post Validations                                 |
 # +--------------------------------------------------------------------------*/
     - name:                             "Post Validations Tasks"
-      ansible.builtin.include_tasks:    "roles/misc/tasks/post-validations.yml"
+      ansible.builtin.include_tasks:    "roles/misc/tasks/post-validations-scs.yml"
 
   rescue:
     - name:                             "Rescue operation"
       ansible.builtin.include_tasks:    "roles/misc/tasks/rescue.yml"
+
+- name:                                 "Pre Validations: Test Case Skipped"
+  become:                               true
+  when:                                 pre_validations_status == "FAILED"
+  block:
+    - name:                             "Set test case message and details"
+      ansible.builtin.set_fact:
+        test_case_message_from_test_case: "Pre Validations for SCS cluster status checks failed. Please check the details."
+        test_case_details_from_test_case: {
+                                          "Pre Validations: Validate SCS luster status": "{{ cluster_status_pre }}",
+                                        }
+
+    - name:                             "Post Validations Tasks"
+      ansible.builtin.include_tasks:    "roles/misc/tasks/post-validations-scs.yml"
