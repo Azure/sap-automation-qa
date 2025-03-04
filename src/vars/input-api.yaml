@@ -29,24 +29,24 @@ test_groups:
           configuration, backend pool settings, load balancing rules, and frontend IP configuration.
         enabled:                    true
 
-      - name:                       HA Functional Test- Resource Migration
-        task_name:                  resource-migration
-        description: |
-          The Resource Migration test validates planned failover scenarios by executing controlled
-          resource movement between HANA nodes. It performs a graceful migration of the primary HANA
-          resources to the secondary node, verifies proper role changes, ensures cluster maintains
-          stability throughout the transition, and validates complete data synchronization after
-          migration.
-        enabled:                    true
+      # - name:                       HA Functional Test- Resource Migration
+      #   task_name:                  resource-migration
+      #   description: |
+      #     The Resource Migration test validates planned failover scenarios by executing controlled
+      #     resource movement between HANA nodes. It performs a graceful migration of the primary HANA
+      #     resources to the secondary node, verifies proper role changes, ensures cluster maintains
+      #     stability throughout the transition, and validates complete data synchronization after
+      #     migration.
+      #   enabled:                    true
 
-      - name:                       HA Functional Test- Primary Node Crash
-        task_name:                  primary-node-crash
-        description: |
-          The Primary Index Server Crash test simulates cluster behavior when the HANA index server
-          crashes on the primary node. It simulates an index server failure by forcefully terminating
-          the process, then verifies automatic failover to the secondary node, monitors system
-          replication status, and confirms service recovery without data loss.
-        enabled:                    true
+      # - name:                       HA Functional Test- Primary Node Crash
+      #   task_name:                  primary-node-crash
+      #   description: |
+      #     The Primary Index Server Crash test simulates cluster behavior when the HANA index server
+      #     crashes on the primary node. It simulates an index server failure by forcefully terminating
+      #     the process, then verifies automatic failover to the secondary node, monitors system
+      #     replication status, and confirms service recovery without data loss.
+      #   enabled:                    true
 
       # - name:                       HA Functional Test- Block Network Communication
       #   task_name:                  block-network
@@ -58,33 +58,33 @@ test_groups:
       #     sconnectivity is restored.
       #   enabled:                    true
 
-      # - name:                       HA Functional Test- Crash index server on primary node
-      #   task_name:                  primary-crash-index
-      #   description: |
-      #     The Primary Index Server Crash test validates high availability behavior by forcefully
-      #     terminating the HANA index server process on the primary node. This simulates a critical
-      #     service failure, triggering automatic failover to the secondary node. The test verifies
-      #     proper failover execution, ensures data consistency, and validates service restoration after
-      #     recovery.
-      #   enabled:                    true
+      - name:                       HA Functional Test- Crash index server on primary node
+        task_name:                  primary-crash-index
+        description: |
+          The Primary Index Server Crash test validates high availability behavior by forcefully
+          terminating the HANA index server process on the primary node. This simulates a critical
+          service failure, triggering automatic failover to the secondary node. The test verifies
+          proper failover execution, ensures data consistency, and validates service restoration after
+          recovery.
+        enabled:                    true
 
-      # - name:                       HA Functional Test- Primary Node Kill
-      #   task_name:                  primary-node-kill
-      #   description: |
-      #     The Primary Node Kill test validates cluster behavior by forcefully terminating all HANA
-      #     processes on the primary node using SIGKILL signal. This simulates an abrupt service failure,
-      #     triggering automatic failover to the secondary node. The test verifies proper promotion of
-      #     secondary to primary, ensures data consistency, and validates complete cluster recovery.
-      #   enabled:                    true
+      - name:                       HA Functional Test- Primary Node Kill
+        task_name:                  primary-node-kill
+        description: |
+          The Primary Node Kill test validates cluster behavior by forcefully terminating all HANA
+          processes on the primary node using SIGKILL signal. This simulates an abrupt service failure,
+          triggering automatic failover to the secondary node. The test verifies proper promotion of
+          secondary to primary, ensures data consistency, and validates complete cluster recovery.
+        enabled:                    true
 
-      # - name:                       HA Functional Test- Echo B on Primary Node
-      #   task_name:                  primary-echo-b
-      #   description: |
-      #     The Primary Echo B test simulates an immediate system crash on the primary HANA node by
-      #     executing the 'echo b' command to trigger an abrupt reboot without proper shutdown. This
-      #     tests the cluster's ability to handle unexpected primary node failures, validates proper
-      #     failover execution, and verifies data consistency after recovery.
-      #   enabled:                    true
+      - name:                       HA Functional Test- Echo B on Primary Node
+        task_name:                  primary-echo-b
+        description: |
+          The Primary Echo B test simulates an immediate system crash on the primary HANA node by
+          executing the 'echo b' command to trigger an abrupt reboot without proper shutdown. This
+          tests the cluster's ability to handle unexpected primary node failures, validates proper
+          failover execution, and verifies data consistency after recovery.
+        enabled:                    true
 
       # - name:                       HA Functional Test- Secondary Node Kill
       #   task_name:                  secondary-node-kill
