@@ -58,51 +58,51 @@ test_groups:
       #     sconnectivity is restored.
       #   enabled:                    true
 
-      - name:                       HA Functional Test- Crash index server on primary node
-        task_name:                  primary-crash-index
-        description: |
-          The Primary Index Server Crash test validates high availability behavior by forcefully
-          terminating the HANA index server process on the primary node. This simulates a critical
-          service failure, triggering automatic failover to the secondary node. The test verifies
-          proper failover execution, ensures data consistency, and validates service restoration after
-          recovery.
-        enabled:                    true
-
-      - name:                       HA Functional Test- Primary Node Kill
-        task_name:                  primary-node-kill
-        description: |
-          The Primary Node Kill test validates cluster behavior by forcefully terminating all HANA
-          processes on the primary node using SIGKILL signal. This simulates an abrupt service failure,
-          triggering automatic failover to the secondary node. The test verifies proper promotion of
-          secondary to primary, ensures data consistency, and validates complete cluster recovery.
-        enabled:                    true
-
-      - name:                       HA Functional Test- Echo B on Primary Node
-        task_name:                  primary-echo-b
-        description: |
-          The Primary Echo B test simulates an immediate system crash on the primary HANA node by
-          executing the 'echo b' command to trigger an abrupt reboot without proper shutdown. This
-          tests the cluster's ability to handle unexpected primary node failures, validates proper
-          failover execution, and verifies data consistency after recovery.
-        enabled:                    true
-
-      # - name:                       HA Functional Test- Secondary Node Kill
-      #   task_name:                  secondary-node-kill
+      # - name:                       HA Functional Test- Crash index server on primary node
+      #   task_name:                  primary-crash-index
       #   description: |
-      #     The Secondary Node Kill test examines cluster resilience by forcefully terminating HANA
-      #     processes on the secondary node using the kill -9 signal. The test validates that the primary
-      #     node maintains normal operation while the secondary node undergoes recovery, ensuring cluster
-      #     stability and proper data synchronization after the recovery process completes.
+      #     The Primary Index Server Crash test validates high availability behavior by forcefully
+      #     terminating the HANA index server process on the primary node. This simulates a critical
+      #     service failure, triggering automatic failover to the secondary node. The test verifies
+      #     proper failover execution, ensures data consistency, and validates service restoration after
+      #     recovery.
       #   enabled:                    true
 
-      # - name:                       HA Functional Test- Echo B on Secondary Node
-      #   task_name:                  secondary-echo-b
+      # - name:                       HA Functional Test- Primary Node Kill
+      #   task_name:                  primary-node-kill
       #   description: |
-      #     The Secondary Echo B test simulates an uncontrolled system crash on the secondary HANA node
-      #     by executing the 'echo b' command, triggering an immediate reboot without proper shutdown
-      #     procedures. The test validates that the primary node maintains operation, verifies cluster
-      #     stability, and ensures system replication resumes correctly after the secondary node recovers.
+      #     The Primary Node Kill test validates cluster behavior by forcefully terminating all HANA
+      #     processes on the primary node using SIGKILL signal. This simulates an abrupt service failure,
+      #     triggering automatic failover to the secondary node. The test verifies proper promotion of
+      #     secondary to primary, ensures data consistency, and validates complete cluster recovery.
       #   enabled:                    true
+
+      # - name:                       HA Functional Test- Echo B on Primary Node
+      #   task_name:                  primary-echo-b
+      #   description: |
+      #     The Primary Echo B test simulates an immediate system crash on the primary HANA node by
+      #     executing the 'echo b' command to trigger an abrupt reboot without proper shutdown. This
+      #     tests the cluster's ability to handle unexpected primary node failures, validates proper
+      #     failover execution, and verifies data consistency after recovery.
+      #   enabled:                    true
+
+      - name:                       HA Functional Test- Secondary Node Kill
+        task_name:                  secondary-node-kill
+        description: |
+          The Secondary Node Kill test examines cluster resilience by forcefully terminating HANA
+          processes on the secondary node using the kill -9 signal. The test validates that the primary
+          node maintains normal operation while the secondary node undergoes recovery, ensuring cluster
+          stability and proper data synchronization after the recovery process completes.
+        enabled:                    true
+
+      - name:                       HA Functional Test- Echo B on Secondary Node
+        task_name:                  secondary-echo-b
+        description: |
+          The Secondary Echo B test simulates an uncontrolled system crash on the secondary HANA node
+          by executing the 'echo b' command, triggering an immediate reboot without proper shutdown
+          procedures. The test validates that the primary node maintains operation, verifies cluster
+          stability, and ensures system replication resumes correctly after the secondary node recovers.
+        enabled:                    true
 
       # - name:                       HA Functional Test- Freeze File System on Primary Node
       #   task_name:                  fs-freeze
