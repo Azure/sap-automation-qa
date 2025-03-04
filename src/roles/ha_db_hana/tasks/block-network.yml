@@ -30,7 +30,7 @@
         - name:                             "Test Execution: Start timer"
           ansible.builtin.set_fact:
             test_execution_start:           "{{ now(utc=true, fmt='%Y-%m-%d %H:%M:%S') }}"
-            test_execution_hostname:        "{{ hostvars[cluster_status_pre.primary_node].ansible_hostname }}"
+            test_execution_hostname:        "{{ hostvars[cluster_status_pre.primary_node].virtual_host }}"
 
         - name:                             "Test Execution: Get the IP address of the secondary node"
           ansible.builtin.set_fact:
