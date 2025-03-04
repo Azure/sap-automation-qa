@@ -30,6 +30,7 @@
         - name:                             "Test Execution: Start timer"
           ansible.builtin.set_fact:
             test_execution_start:           "{{ now(utc=true, fmt='%Y-%m-%d %H:%M:%S') }}"
+            test_execution_hostname:        "{{ ansible_hostname }}"
 
         - name:                             "Test Execution: Get the IP address of the secondary node"
           ansible.builtin.set_fact:
@@ -174,29 +175,46 @@
                                             if (cluster_status_test_execution_primary.skipped | default(false))
                                             else cluster_status_test_execution_primary }}"
 
-        - name:                               "Set test case message and details"
+        - name:                             "Set test case message and details"
           ansible.builtin.set_fact:
             test_case_message_from_test_case: |
-                                              "Old primary: {{ cluster_status_pre.primary_node }} \
-                                              New primary: {{ cluster_status_post.primary_node }} \
-                                              Old secondary: {{ cluster_status_pre.secondary_node }} \
-                                              New secondary: {{ cluster_status_post.secondary_node }}"
+                                            "Old primary: {{ cluster_status_pre.primary_node }} \
+                                            New primary: {{ cluster_status_post.primary_node }} \
+                                            Old secondary: {{ cluster_status_pre.secondary_node }} \
+                                            New secondary: {{ cluster_status_post.secondary_node }}"
             test_case_details_from_test_case: {
-                                              "Pre Validations: Remove any location_constraints": "{{ location_constraints_results }}",
-                                              "Pre Validations: Validate HANA DB cluster status": "{{ cluster_status_pre }}",
-                                              "Pre Validations: CleanUp any failed resource": "{{ cleanup_failed_resource_pre }}",
-                                              "Test Execution: Firewall Rule Created": "{{ firewall_rule_created }}",
-                                              "Test Execution: Cluster Status after the network blocked": "{{ cluster_status_test_execution }}",
-                                              "Test Execution: Firewall Rule Removed": "{{ firewall_rule_deleted | default('Primary Node rebooted') }}",
-                                              "Post Validations: Validate HANA DB cluster status": "{{ cluster_status_post }}",
-                                              }
+                                            "Pre Validations: Remove any location_constraints": "{{ location_constraints_results }}",
+                                            "Pre Validations: Validate HANA DB cluster status": "{{ cluster_status_pre }}",
+                                            "Pre Validations: CleanUp any failed resource": "{{ cleanup_failed_resource_pre }}",
+                                            "Test Execution: Firewall Rule Created": "{{ firewall_rule_created }}",
+                                            "Test Execution: Cluster Status after the network blocked": "{{ cluster_status_test_execution }}",
+                                            "Test Execution: Firewall Rule Removed": "{{ firewall_rule_deleted | default('Primary Node rebooted') }}",
+                                            "Post Validations: Validate HANA DB cluster status": "{{ cluster_status_post }}",
+                                            }
 
       # /*---------------------------------------------------------------------------
       # |                          Post Validations                                 |
       # +--------------------------------------------------------------------------*/
-    - name:                               "Post Validations Tasks"
-      ansible.builtin.include_tasks:      "roles/misc/tasks/post-validations.yml"
+    - name:                                 "Post Validations Tasks"
+      ansible.builtin.include_tasks:        "roles/misc/tasks/post-validations.yml"
 
   rescue:
     - name:                                 "Rescue operation"
       ansible.builtin.include_tasks:        "roles/misc/tasks/rescue.yml"
+
+- name:                                     "Test Execution: Block Network Communication"
+  become:                                   true
+  when:                                     pre_validations_status == "FAILED"
+  block:
+    - name:                                 "Set test case message and details"
+      ansible.builtin.set_fact:
+        test_case_message_from_test_case:   "Pre Validations: HANA DB cluster status failed"
+        test_case_details_from_test_case:   {
+                                            "Pre Validations: Remove any location_constraints": "{{ location_constraints_results }}",
+                                            "Pre Validations: Validate HANA DB cluster status": "{{ cluster_status_pre }}",
+                                            "Pre Validations: CleanUp any failed resource": "{{ cleanup_failed_resource_pre }}",
+                                            "Cluster Status": "{{ cluster_status_pre }}",
+                                            }
+
+    - name:                                 "Post Validations Tasks"
+      ansible.builtin.include_tasks:        "roles/misc/tasks/post-validations.yml"

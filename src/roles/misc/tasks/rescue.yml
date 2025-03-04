@@ -28,7 +28,7 @@
     - name:                             "Post Validations: Rescure operation set test case status"
       delegate_to:                      localhost
       ansible.builtin.set_fact:
-        test_case_name:                 "{{ item.name }}: {{ virtual_host }}"
+        test_case_name:                 "{{ item.name }}: {{ test_execution_hostname }}"
         test_case_hostname:             "{{ virtual_host }}"
         test_case_description:          "{{ item.description }}"
         test_case_status:               "FAILED"

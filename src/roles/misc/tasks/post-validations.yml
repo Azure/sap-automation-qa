@@ -31,9 +31,9 @@
     - name:                             "Post Validations: Set test case status"
       delegate_to:                      localhost
       ansible.builtin.set_fact:
-        test_case_name:                 "{{ item.name }}: {{ virtual_host }}"
+        test_case_name:                 "{{ item.name }}: {{ test_execution_hostname }}"
         test_case_description:          "{{ item.description }}"
-        test_case_status:               "PASSED"
+        test_case_status:               "{{ 'SKIPPED' if pre_validations_status == 'FAILED' else 'PASSED' }}"
         test_execution_start_time:      "{{ test_execution_start }}"
         test_case_hostname:             "{{ virtual_host }}"
         test_execution_end_time:        "{{ test_execution_end }}"
