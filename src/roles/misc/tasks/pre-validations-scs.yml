@@ -15,6 +15,17 @@
         sap_sid:                    "{{ sap_sid | lower }}"
       register:                     cluster_status_pre
 
+    - name:                         "Pre Validation: CleanUp any failed resource"
+      become:                       true
+      ansible.builtin.command:      crm_resource --cleanup
+      ignore_errors:                true
+      register:                     cleanup_failed_resource_pre
+      timeout:                      60
+      retries:                      3
+      until:                        cleanup_failed_resource_pre.rc == 0
+      changed_when:                 cleanup_failed_resource_pre.rc == 0
+      failed_when:                  cleanup_failed_resource_pre.rc != 0
+
     - name:                         "Pre Validation: Set default pre Validation status as false"
       ansible.builtin.set_fact:
         pre_validations_status:     "FAILED"
