@@ -70,7 +70,6 @@
                                         Old ERS: {{ cluster_status_pre.ers_node }}
                                         New ERS: {{ cluster_status_test_execution.ers_node }}"
             test_case_details_from_test_case: {
-                                        "Pre Validations: Remove any location_constraints": "{{ location_constraints_results }}",
                                         "Pre Validations: Validate HANA DB cluster status": "{{ cluster_status_pre }}",
                                         "Pre Validations: CleanUp any failed resource": "{{ cleanup_failed_resource_pre }}",
                                         "Test Execution: Migrate ASCS resource": "{{ migration_result }}",
