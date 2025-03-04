@@ -98,9 +98,12 @@ class HAClusterValidator(SapAutomationQA):
         """
         Get expected value for resource-specific configuration parameters.
         """
-        resource_defaults = (
-            self.constants["RESOURCE_DEFAULTS"].get(self.os_type, {}).get(resource_type, {})
-        )
+        resource_defaults = self.constants["RESOURCE_DEFAULTS"].get(self.os_type, {})
+
+        if resource_type == "stonith":
+            resource_defaults = resource_defaults.get("stonith", {}).get(self.fencing_mechanism, {})
+        else:
+            resource_defaults = resource_defaults.get(resource_type, {})
 
         if section == "meta_attributes":
             return resource_defaults.get("meta_attributes", {}).get(param_name)
