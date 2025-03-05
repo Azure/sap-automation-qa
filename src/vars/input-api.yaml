@@ -170,5 +170,13 @@ commands:
     SUSE:                           "crm_report -f '{{ test_group_start_time }}' /tmp/{{ test_group_invocation_id }}"
     REDHAT:                         "crm_report -f '{{ test_group_start_time }}' --dest /tmp/{{ test_group_invocation_id }} -yes"
 
+  - name:                           ascs_resource_migration_cmd
+    SUSE:                           "crm resource move rsc_sap_{{ sap_sid }}_ASCS{{ scs_instance_number }} force"
+    REDHAT:                         "pcs resource move rsc_sap_{{ sap_sid }}_ASCS{{ scs_instance_number }}"
+
+  - name:                           ascs_resource_unmigrate_cmd
+    SUSE:                           "crm resource clear rsc_sap_{{ sap_sid }}_ASCS{{ scs_instance_number }}"
+    REDHAT:                         "pcs resource clear rsc_sap_{{ sap_sid }}_ASCS{{ scs_instance_number }}"
+
 sap_sid:                            "HDB"
 db_sid:                             "HDB"

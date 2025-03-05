@@ -34,7 +34,9 @@
       become:                           true
       block:
         - name:                         "Test Execution: Migrate ASCS resource"
-          ansible.builtin.command:      "crm resource move rsc_sap_{{ sap_sid }}_ASCS{{ scs_instance_number }} force"
+          ansible.builtin.command:      "{{ commands | selectattr(
+                                        'name', 'equalto', 'ascs_resource_migration_cmd') | map(
+                                        attribute=(ansible_os_family | upper)) | first }}"
           register:                     migration_result
 
         - name:                         "Test Execution: Validate SCS cluster status"
@@ -50,7 +52,9 @@
                                         and cluster_status_test_execution.ers_node == cluster_status_pre.ascs_node
 
         - name:                         "Test Execution: Remove location constraints"
-          ansible.builtin.command:      "crm resource clear rsc_sap_{{ sap_sid }}_ASCS{{ scs_instance_number }}"
+          ansible.builtin.command:      "{{ commands | selectattr(
+                                        'name', 'equalto', 'ascs_resource_unmigrate_cmd') | map(
+                                        attribute=(ansible_os_family | upper)) | first }}"
           register:                     unmigrate_result
 
         - name:                         "Test Execution: Cleanup resources"
