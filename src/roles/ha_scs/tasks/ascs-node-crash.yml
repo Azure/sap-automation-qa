@@ -34,7 +34,7 @@
             test_execution_hostname:    "{{ hostvars[cluster_status_pre.ascs_node].ansible_hostname }}"
 
         - name:                         "Test Execution: Echo B to /proc/sysrq-trigger"
-          ansible.builtin.command:      echo b > /proc/sysrq-trigger
+          ansible.builtin.shell:        echo b > /proc/sysrq-trigger
           async:                        1
           poll:                         0
           register:                     ascs_crash_result
@@ -100,7 +100,7 @@
       ansible.builtin.set_fact:
         test_case_message_from_test_case: "Pre Validations for SCS cluster status checks failed. Please check the details."
         test_case_details_from_test_case: {
-                                          "Pre Validations: Validate SCS luster status": "{{ cluster_status_pre }}",
+                                          "Pre Validations: Validate SCS cluster status": "{{ cluster_status_pre }}",
                                         }
 
     - name:                             "Post Validations Tasks"
