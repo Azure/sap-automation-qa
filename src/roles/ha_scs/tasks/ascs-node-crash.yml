@@ -35,6 +35,8 @@
 
         - name:                         "Test Execution: Echo B to /proc/sysrq-trigger"
           ansible.builtin.command:      echo b > /proc/sysrq-trigger
+          async:                        1
+          poll:                         0
           register:                     ascs_crash_result
 
     - name:                             "Test Execution: Simulate ASCS Node Crash"
