@@ -149,7 +149,7 @@ test_groups:
           resources to the ERS node, verifies proper role changes, ensures cluster maintains
           stability throughout the transition, and validates complete data synchronization after
           migration.
-        enabled:                    false
+        enabled:                    true
 
       - name:                       "ASCS Node Crash"
         task_name:                  ascs-node-crash
