@@ -68,20 +68,17 @@ class BaseClusterStatusChecker(SapAutomationQA):
         :return: True if the cluster is stable, False otherwise.
         :rtype: bool
         """
-        # Check pacemaker status
         if self.execute_command_subprocess(PACEMAKER_STATUS).strip() == "active":
             self.result["pacemaker_status"] = "running"
         else:
             self.result["pacemaker_status"] = "stopped"
         self.log(logging.INFO, f"Pacemaker status: {self.result['pacemaker_status']}")
 
-        # Check node count
         if int(cluster_status_xml.find("summary").find("nodes_configured").attrib["number"]) < 2:
             self.result["message"] = "Pacemaker cluster isn't stable (insufficient nodes)"
             self.log(logging.WARNING, self.result["message"])
             return False
 
-        # Check if all nodes are online
         nodes = cluster_status_xml.find("nodes")
         for node in nodes:
             if node.attrib["online"] != "true":
@@ -114,7 +111,6 @@ class BaseClusterStatusChecker(SapAutomationQA):
         self._get_stonith_action()
 
         try:
-            # Implementing a common loop structure
             while not self._is_cluster_ready():
                 self.result["cluster_status"] = self.execute_command_subprocess(CLUSTER_STATUS)
                 cluster_status_xml = ET.fromstring(self.result["cluster_status"])
