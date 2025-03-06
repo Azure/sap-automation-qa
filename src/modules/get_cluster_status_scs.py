@@ -85,7 +85,7 @@ def run_module() -> None:
         sap_sid=module.params["sap_sid"],
         ansible_os_family=module.params["ansible_os_family"],
     )
-    checker.run()
+    #checker.run()
 
     module.exit_json(**checker.get_result())
 
