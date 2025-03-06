@@ -59,14 +59,12 @@ class BaseClusterStatusChecker(SapAutomationQA):
         except Exception:
             self.result["stonith_action"] = "reboot"
 
-    def _validate_cluster_basic_status(self, cluster_status_xml: ET.Element) -> bool:
+    def _validate_cluster_basic_status(self, cluster_status_xml: ET.Element):
         """
         Validate the basic status of the cluster.
 
         :param cluster_status_xml: XML element containing cluster status.
         :type cluster_status_xml: ET.Element
-        :return: True if the cluster is stable, False otherwise.
-        :rtype: bool
         """
         if self.execute_command_subprocess(PACEMAKER_STATUS).strip() == "active":
             self.result["pacemaker_status"] = "running"
@@ -77,16 +75,12 @@ class BaseClusterStatusChecker(SapAutomationQA):
         if int(cluster_status_xml.find("summary").find("nodes_configured").attrib["number"]) < 2:
             self.result["message"] = "Pacemaker cluster isn't stable (insufficient nodes)"
             self.log(logging.WARNING, self.result["message"])
-            return False
 
         nodes = cluster_status_xml.find("nodes")
         for node in nodes:
             if node.attrib["online"] != "true":
                 self.result["message"] = f"Node {node.attrib['name']} is not online"
                 self.log(logging.WARNING, self.result["message"])
-                return False
-
-        return True
 
     def _process_node_attributes(self, node_attributes: ET.Element) -> Dict[str, Any]:
         """
@@ -116,8 +110,8 @@ class BaseClusterStatusChecker(SapAutomationQA):
                 cluster_status_xml = ET.fromstring(self.result["cluster_status"])
                 self.log(logging.INFO, "Cluster status retrieved")
 
-                if self._validate_cluster_basic_status(cluster_status_xml):
-                    self._process_node_attributes(cluster_status_xml.find("node_attributes"))
+                self._validate_cluster_basic_status(cluster_status_xml)
+                self._process_node_attributes(cluster_status_xml.find("node_attributes"))
 
             if not self._is_cluster_stable():
                 self.result["message"] = "Pacemaker cluster isn't stable"
