@@ -8,12 +8,6 @@
 - name:                             "Pre Validation: ASCS Nodes"
   when:                             node_tier == "scs" or node_tier == "ers"
   block:
-    # debug task to show the ansible_os_family [TEMPORARY]
-
-    - name:                         "Pre Validation: Show ansible_os_family"
-      debug:
-        msg:                        "ansible_os_family: {{ ansible_os_family }}"
-
     - name:                         "Pre Validation: Validate SCS cluster status on ASCS node"
       become:                       true
       get_cluster_status_scs:
