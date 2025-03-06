@@ -9,10 +9,10 @@
   when:                             node_tier == "scs" or node_tier == "ers"
   block:
     - name:                         "Pre Validation: Validate SCS cluster status on ASCS node"
-      become:                       true
       get_cluster_status_scs:
-        ansible_os_family:          "{{ ansible_os_family | upper }}"
         sap_sid:                    "{{ sap_sid | lower }}"
+        ansible_os_family:          "{{ ansible_os_family | upper }}"
+      become:                       true
       register:                     cluster_status_pre
 
     - name:                         "Pre Validation: CleanUp any failed resource"
