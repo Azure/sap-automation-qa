@@ -5,6 +5,7 @@
 Python script to get and validate the status of an SCS cluster.
 """
 
+import logging
 import xml.etree.ElementTree as ET
 from typing import Dict, Any
 from ansible.module_utils.basic import AnsibleModule
@@ -57,6 +58,9 @@ class SCSClusterStatusChecker(BaseClusterStatusChecker):
         :return: True if the cluster is ready, False otherwise.
         :rtype: bool
         """
+        self.log(
+            logging.INFO, f"Checking if the cluster is ready, ASCS NODE {self.result['ascs_node']}"
+        )
         return self.result["ascs_node"] != ""
 
     def _is_cluster_stable(self) -> bool:
