@@ -53,7 +53,7 @@
       when:                             ansible_hostname == cluster_status_pre.primary_node
       block:
         - name:                         "Test Execution: Validate HANA DB cluster status"
-          get_cluster_status:
+          get_cluster_status_db:
             operation_step:             "test_execution"
             ansible_os_family:          "{{ ansible_os_family | upper }}"
             database_sid:               "{{ db_sid | lower }}"
@@ -65,7 +65,7 @@
                                         cluster_status_test_execution.secondary_node == ""
 
         - name:                         "Test Execution: Validate HANA DB cluster status"
-          get_cluster_status:
+          get_cluster_status_db:
             operation_step:             "post_failover"
             database_sid:               "{{ db_sid | lower }}"
             ansible_os_family:          "{{ ansible_os_family | upper }}"

@@ -41,7 +41,7 @@
 
         - name:                         "Test Execution: Validate HANA DB cluster status"
           when:                         cluster_status_pre.AUTOMATED_REGISTER == "true"
-          get_cluster_status:
+          get_cluster_status_db:
             operation_step:             "test_execution"
             database_sid:               "{{ db_sid | lower }}"
             ansible_os_family:          "{{ ansible_os_family | upper }}"
@@ -56,7 +56,7 @@
           when:                         cluster_status_pre.AUTOMATED_REGISTER == "false"
           block:
             - name:                     "Test Execution: Validate HANA DB cluster status"
-              get_cluster_status:
+              get_cluster_status_db:
                 operation_step:         "test_execution"
                 database_sid:           "{{ db_sid | lower }}"
                 ansible_os_family:          "{{ ansible_os_family | upper }}"
@@ -99,7 +99,7 @@
           ignore_errors:                true
 
         - name:                         "Test execution: Validate HANA DB cluster status"
-          get_cluster_status:
+          get_cluster_status_db:
             operation_step:             "post_failover"
             database_sid:               "{{ db_sid | lower }}"
             ansible_os_family:          "{{ ansible_os_family | upper }}"

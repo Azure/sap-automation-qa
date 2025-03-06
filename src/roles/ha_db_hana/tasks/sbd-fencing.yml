@@ -55,7 +55,7 @@
       block:
         - name:                         "Test Execution: Validate HANA DB cluster status during stop operation."
           when:                         cluster_status_pre.AUTOMATED_REGISTER == "true"
-          get_cluster_status:
+          get_cluster_status_db:
             operation_step:             "test_execution"
             database_sid:               "{{ db_sid | lower }}"
             ansible_os_family:          "{{ ansible_os_family | upper }}"
@@ -70,7 +70,7 @@
       when:                             ansible_hostname == cluster_status_pre.primary_node
       block:
         - name:                         "Test Execution: Validate HANA DB cluster status"
-          get_cluster_status:
+          get_cluster_status_db:
             operation_step:             "test_execution"
             database_sid:               "{{ db_sid | lower }}"
             ansible_os_family:          "{{ ansible_os_family | upper }}"
