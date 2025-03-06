@@ -40,22 +40,16 @@ class SCSClusterStatusChecker(BaseClusterStatusChecker):
         :return: Dictionary with ASCS and ERS node information.
         :rtype: Dict[str, Any]
         """
-        if node_attributes is None:
-            self.log(logging.WARNING, "Node attributes is None")
-            return {}
         attribute_name = f"runs_ers_{self.sap_sid.upper()}"
-
         for node in node_attributes:
-            node_name = node.attrib.get("name", "unknown")
             for attribute in node:
-                attr_name = attribute.attrib.get("name", "")
-                if attr_name == attribute_name:
-                    if attribute.attrib.get("value") == "1":
-                        self.result["ers_node"] = node_name
+                if attribute.attrib["name"] == attribute_name:
+                    if attribute.attrib["value"] == "1":
+                        self.result["ers_node"] = node.attrib["name"]
                     else:
-                        self.result["ascs_node"] = node_name
-
-        return self.result
+                        self.result["ascs_node"] = node.attrib["name"]
+                else:
+                    continue
 
     def _is_cluster_ready(self) -> bool:
         """
