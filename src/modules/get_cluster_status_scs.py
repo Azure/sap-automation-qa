@@ -54,6 +54,7 @@ class SCSClusterStatusChecker(BaseClusterStatusChecker):
             self.result["ascs_node"] = next(
                 (n for n in all_nodes if n != self.result["ers_node"]), ""
             )
+        return self.result
 
     def _is_cluster_ready(self) -> bool:
         """

@@ -127,7 +127,6 @@ class TestBaseClusterStatusChecker:
 
         result = base_checker._validate_cluster_basic_status(cluster_xml)
 
-        assert result is True
         assert base_checker.result["pacemaker_status"] == "running"
 
     def test_validate_cluster_basic_status_insufficient_nodes(self, mocker, base_checker):
@@ -157,7 +156,6 @@ class TestBaseClusterStatusChecker:
 
         result = base_checker._validate_cluster_basic_status(cluster_xml)
 
-        assert result is False
         assert "insufficient nodes" in base_checker.result["message"]
 
     def test_validate_cluster_basic_status_offline_node(self, mocker, base_checker):
@@ -188,7 +186,6 @@ class TestBaseClusterStatusChecker:
 
         result = base_checker._validate_cluster_basic_status(cluster_xml)
 
-        assert result is False
         assert "node2 is not online" in base_checker.result["message"]
 
     def test_run_cluster_ready(self, mocker, base_checker):

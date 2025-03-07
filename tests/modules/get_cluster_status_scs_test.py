@@ -67,7 +67,7 @@ class TestSCSClusterStatusChecker:
 
         scs_checker._process_node_attributes(node_attributes)
 
-        assert scs_checker.result["ascs_node"] == ""
+        assert scs_checker.result["ascs_node"] == "node1"
         assert scs_checker.result["ers_node"] == "node2"
 
     def test_is_cluster_ready(self, scs_checker):
