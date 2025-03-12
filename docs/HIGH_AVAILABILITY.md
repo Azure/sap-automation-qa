@@ -45,7 +45,6 @@ To set up your environment, follow these steps:
 A. **Login to the Ubuntu Jump Host**:
 Ensure you are logged into the Ubuntu Jump Host that is connected to the SAP system's virtual network.
 
-
 B. **Clone the repository**:
 
   ```bash
