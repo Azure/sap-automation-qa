@@ -27,18 +27,18 @@ The framework incorporates advanced monitoring capabilities, detailed analytical
 
 ### 🏆 Purpose
 
-Testing is crucial for maintaining business continuity in SAP environments. This framework addresses several critical needs:
+Testing is essential for ensuring business continuity in mission-critical SAP environments. This framework systematically addresses the following critical business needs:
 
-**Risk Mitigation**:
+- **Risk Mitigation**:
 The framework provides systematic testing of failure scenarios, helping organizations identify and address potential issues before they impact production systems. It simulates various failure modes, including node failures, network interruptions, and storage issues, ensuring that recovery mechanisms function as designed.
 
-**Compliance**:
+- **Compliance**:
 Organizations must often demonstrate that their SAP systems meet specific availability requirements. This framework provides documented evidence of HA testing, including detailed logs and reports that can be used for audit purposes. It helps ensure that HA implementations align with organizational standards and regulatory requirements.
 
-**Quality Assurance**:
+- **Quality Assurance**:
 Through automated and consistent testing procedures, the framework helps maintain high quality standards across SAP infrastructure components. It validates that all HA mechanisms, including clustering software, storage replication, and application-level failover, work together seamlessly.
 
-**Automation**:
+- **Automation**:
 Manual testing of HA configurations is time-consuming and prone to human error. This framework automates the entire testing process, from setup to execution and reporting, significantly reducing the operational overhead of HA testing while improving accuracy and consistency.
 
 ## 🚦 Get Started
@@ -61,10 +61,10 @@ Curious about how it all works? Check out our detailed architecture documentatio
 
 For support and questions, please:
 
-1. Check existing issues
+1. Check [existing issues](https://github.com/Azure/sap-automation-qa/issues/)
 2. Create new issue if needed and provide detailed information about the problem
 
-## Additional Resources
+## 📚 Additional Resources
 
 - [Azure SAP Documentation](https://docs.microsoft.com/azure/sap)
 - [SAP on Azure: High Availability Guide](https://docs.microsoft.com/azure/sap/workloads/sap-high-availability-guide-start)
