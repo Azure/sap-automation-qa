@@ -1,0 +1,9 @@
+# Specific formats to always use LF
+*.py    text eol=lf
+*.yml   text eol=lf
+*.yaml  text eol=lf
+*.sh    text eol=lf
+*.cfg   text eol=lf
+
+# Retain execution permissions for scripts
+*.sh    text eol=lf diff=sh

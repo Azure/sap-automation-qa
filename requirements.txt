@@ -27,7 +27,7 @@ ijson==3.3.0
 importlib_metadata==8.6.1
 iniconfig==2.0.0
 isodate==0.7.2
-Jinja2==3.1.5
+Jinja2==3.1.6
 jsonschema==4.23.0
 jsonschema-specifications==2024.10.1
 lockfile==0.12.2

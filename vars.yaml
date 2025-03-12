@@ -15,11 +15,11 @@ sap_functional_test_type:   DatabaseHighAvailability
 # String: Name of the SAP system configuration to be tested (Location: WORKSPACES/SYSTEM/DEV-WEEU-SAP01-X00 directory)
 SYSTEM_CONFIG_NAME:         DEV-WEEU-SAP01-X00
 # Choose the type of authentication you configured for a local account on the SAP VMs.
-# String: VMPASSWORD SSHKEY 
+# String: VMPASSWORD SSHKEY
 AUTHENTICATION_TYPE:        SSHKEY
 
 # Test Results Destination
-# Options: Azure Log Analytics Workspace: loganalytics, Azure Data Explorer: dataexplorer
+# Options: Azure Log Analytics Workspace: azureloganalytics, Azure Data Explorer: azuredataexplorer
 telemetry_data_destination: null
 
 # table name for telemetry data
