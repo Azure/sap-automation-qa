@@ -57,8 +57,8 @@ class PackageListFormatter(SapAutomationQA):
                 for package in PACKAGE_LIST
                 if package["key"] in self.package_facts_list
             ]
-        except Exception as e:
-            self.handle_error(e)
+        except Exception as ex:
+            self.handle_error(ex)
         self.result["status"] = TestStatus.SUCCESS.value
         return self.result
 

@@ -10,8 +10,8 @@ import logging
 import os
 from datetime import datetime
 from typing import Dict, Any, List
-from ansible.module_utils.basic import AnsibleModule
 import jinja2
+from ansible.module_utils.basic import AnsibleModule
 
 try:
     from ansible.module_utils.sap_automation_qa import SapAutomationQA, TestStatus
@@ -55,12 +55,12 @@ class HTMLReportRenderer(SapAutomationQA):
         try:
             with open(log_file_path, "r", encoding="utf-8") as log_file:
                 return [json.loads(line) for line in log_file.readlines()]
-        except FileNotFoundError as e:
+        except FileNotFoundError as ex:
             self.log(
                 logging.ERROR,
                 f"Log file {log_file_path} not found.",
             )
-            self.handle_error(e)
+            self.handle_error(ex)
             return []
 
     def render_report(self, test_case_results: List[Dict[str, Any]]) -> None:
@@ -91,8 +91,8 @@ class HTMLReportRenderer(SapAutomationQA):
                 )
             self.result["report_path"] = report_path
             self.result["status"] = TestStatus.SUCCESS.value
-        except Exception as e:
-            self.handle_error(e)
+        except Exception as ex:
+            self.handle_error(ex)
 
 
 def run_module() -> None:

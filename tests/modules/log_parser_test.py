@@ -10,39 +10,41 @@ import pytest
 from src.modules.log_parser import LogParser, PCMK_KEYWORDS, SYS_KEYWORDS, main
 
 
-@pytest.fixture
-def log_parser_redhat():
-    """
-    Fixture for creating a LogParser instance.
-
-    :return: LogParser instance
-    :rtype: LogParser
-    """
-    return LogParser(
-        start_time="2025-01-01 00:00:00",
-        end_time="2025-01-01 23:59:59",
-        log_file="test_log_file.log",
-        ansible_os_family="REDHAT",
-    )
-
-
-@pytest.fixture
-def log_parser_suse():
-    """
-    Fixture for creating a LogParser instance.
-
-    :return: LogParser instance
-    :rtype: LogParser
-    """
-    return LogParser(
-        start_time="2023-01-01 00:00:00",
-        end_time="2023-01-01 23:59:59",
-        log_file="test_log_file.log",
-        ansible_os_family="SUSE",
-    )
-
-
 class TestLogParser:
+    """
+    Test cases for the LogParser class.
+    """
+
+    @pytest.fixture
+    def log_parser_redhat(self):
+        """
+        Fixture for creating a LogParser instance.
+
+        :return: LogParser instance
+        :rtype: LogParser
+        """
+        return LogParser(
+            start_time="2025-01-01 00:00:00",
+            end_time="2025-01-01 23:59:59",
+            log_file="test_log_file.log",
+            ansible_os_family="REDHAT",
+        )
+
+    @pytest.fixture
+    def log_parser_suse(self):
+        """
+        Fixture for creating a LogParser instance.
+
+        :return: LogParser instance
+        :rtype: LogParser
+        """
+        return LogParser(
+            start_time="2023-01-01 00:00:00",
+            end_time="2023-01-01 23:59:59",
+            log_file="test_log_file.log",
+            ansible_os_family="SUSE",
+        )
+
     def test_parse_logs_success(self, mocker, log_parser_redhat):
         """
         Test the parse_logs method for successful log parsing.
@@ -133,6 +135,10 @@ class TestLogParser:
         mock_result = {}
 
         class MockAnsibleModule:
+            """
+            Mock AnsibleModule for testing.
+            """
+
             def __init__(self, argument_spec, supports_check_mode):
                 self.params = {
                     "start_time": "2023-01-01 00:00:00",
@@ -145,7 +151,7 @@ class TestLogParser:
             def exit_json(self, **kwargs):
                 mock_result.update(kwargs)
 
-        with monkeypatch.context() as m:
-            m.setattr("src.modules.log_parser.AnsibleModule", MockAnsibleModule)
+        with monkeypatch.context() as monkey_patch:
+            monkey_patch.setattr("src.modules.log_parser.AnsibleModule", MockAnsibleModule)
             main()
             assert mock_result["status"] == "FAILED"

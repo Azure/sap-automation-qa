@@ -5,9 +5,9 @@
 Unit tests for the get_cluster_status module.
 """
 
-import pytest
-from typing import Dict, Any
 import xml.etree.ElementTree as ET
+from typing import Dict, Any
+import pytest
 from src.module_utils.get_cluster_status import BaseClusterStatusChecker
 
 
@@ -60,6 +60,9 @@ class TestBaseClusterStatusChecker:
     def base_checker(self):
         """
         Fixture for creating a testable BaseClusterStatusChecker instance.
+
+        :return: Instance of TestableBaseClusterChecker.
+        :rtype: TestableBaseClusterChecker
         """
         return TestableBaseClusterChecker(ansible_os_family="REDHAT")
 
@@ -108,9 +111,7 @@ class TestBaseClusterStatusChecker:
         :param base_checker: Instance of TestableBaseClusterChecker.
         :type base_checker: TestableBaseClusterChecker
         """
-        mock_execute = mocker.patch.object(
-            base_checker, "execute_command_subprocess", return_value="active"
-        )
+        mocker.patch.object(base_checker, "execute_command_subprocess", return_value="active")
 
         xml_str = """
         <cluster_status>
@@ -125,7 +126,7 @@ class TestBaseClusterStatusChecker:
         """
         cluster_xml = ET.fromstring(xml_str)
 
-        result = base_checker._validate_cluster_basic_status(cluster_xml)
+        base_checker._validate_cluster_basic_status(cluster_xml)
 
         assert base_checker.result["pacemaker_status"] == "running"
 
@@ -138,9 +139,7 @@ class TestBaseClusterStatusChecker:
         :param base_checker: Instance of TestableBaseClusterChecker.
         :type base_checker: TestableBaseClusterChecker
         """
-        mock_execute = mocker.patch.object(
-            base_checker, "execute_command_subprocess", return_value="active"
-        )
+        mocker.patch.object(base_checker, "execute_command_subprocess", return_value="active")
 
         xml_str = """
         <cluster_status>
@@ -154,22 +153,17 @@ class TestBaseClusterStatusChecker:
         """
         cluster_xml = ET.fromstring(xml_str)
 
-        result = base_checker._validate_cluster_basic_status(cluster_xml)
+        base_checker._validate_cluster_basic_status(cluster_xml)
 
         assert "insufficient nodes" in base_checker.result["message"]
 
-    def test_validate_cluster_basic_status_offline_node(self, mocker, base_checker):
+    def test_validate_cluster_basic_status_offline_node(self, base_checker):
         """
         Test _validate_cluster_basic_status method with an offline node.
 
-        :param mocker: Mocking library to patch methods.
-        :type mocker: mocker.MockerFixture
         :param base_checker: Instance of TestableBaseClusterChecker.
         :type base_checker: TestableBaseClusterChecker
         """
-        mock_execute = mocker.patch.object(
-            base_checker, "execute_command_subprocess", return_value="active"
-        )
 
         xml_str = """
         <cluster_status>
@@ -184,7 +178,7 @@ class TestBaseClusterStatusChecker:
         """
         cluster_xml = ET.fromstring(xml_str)
 
-        result = base_checker._validate_cluster_basic_status(cluster_xml)
+        base_checker._validate_cluster_basic_status(cluster_xml)
 
         assert "node2 is not online" in base_checker.result["message"]
 

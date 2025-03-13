@@ -9,44 +9,42 @@ import pytest
 from src.modules.render_html_report import HTMLReportRenderer, main
 
 
-@pytest.fixture
-def module_params():
-    """
-    Fixture for providing sample module parameters.
-
-    :return: Sample module parameters.
-    :rtype: dict
-    """
-    return {
-        "test_group_invocation_id": "12345",
-        "test_group_name": "test_group",
-        "report_template": "report_template.html",
-        "workspace_directory": "/tmp",
-    }
-
-
-@pytest.fixture
-def html_report_renderer(module_params):
-    """
-    Fixture for creating an HTMLReportRenderer instance.
-
-    :param module_params: Sample module parameters.
-    :type module_params: dict
-    :return: HTMLReportRenderer instance.
-    :rtype: HTMLReportRenderer
-    """
-    return HTMLReportRenderer(
-        module_params["test_group_invocation_id"],
-        module_params["test_group_name"],
-        module_params["report_template"],
-        module_params["workspace_directory"],
-    )
-
-
 class TestHTMLReportRenderer:
     """
     Test cases for the HTMLReportRenderer class.
     """
+
+    @pytest.fixture
+    def module_params(self):
+        """
+        Fixture for providing sample module parameters.
+
+        :return: Sample module parameters.
+        :rtype: dict
+        """
+        return {
+            "test_group_invocation_id": "12345",
+            "test_group_name": "test_group",
+            "report_template": "report_template.html",
+            "workspace_directory": "/tmp",
+        }
+
+    @pytest.fixture
+    def html_report_renderer(self, module_params):
+        """
+        Fixture for creating an HTMLReportRenderer instance.
+
+        :param module_params: Sample module parameters.
+        :type module_params: dict
+        :return: HTMLReportRenderer instance.
+        :rtype: HTMLReportRenderer
+        """
+        return HTMLReportRenderer(
+            module_params["test_group_invocation_id"],
+            module_params["test_group_name"],
+            module_params["report_template"],
+            module_params["workspace_directory"],
+        )
 
     def test_render_report(self, mocker, html_report_renderer):
         """

@@ -117,8 +117,8 @@ class BaseClusterStatusChecker(SapAutomationQA):
                 self.result["message"] = "Pacemaker cluster isn't stable"
                 self.log(logging.WARNING, self.result["message"])
 
-        except Exception as e:
-            self.handle_error(e)
+        except Exception as ex:
+            self.handle_error(ex)
 
         self.result["end"] = datetime.now()
         self.result["status"] = TestStatus.SUCCESS.value

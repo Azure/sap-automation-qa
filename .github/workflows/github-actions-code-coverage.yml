@@ -30,6 +30,10 @@ jobs:
         run: |
           pytest --cov=src/ --cov-fail-under=85 --cov-report=xml tests/
 
+      - name: Run pylint
+        run: |
+          pylint --load-plugins=pylint.extensions.docparams --fail-under=9 --disable=R $(git ls-files '*.py') --rcfile=./pyproject.toml
+
       - name: Check code formatting with black
         run: |
           black --check src/ tests/ --config pyproject.toml
