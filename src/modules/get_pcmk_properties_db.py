@@ -85,7 +85,14 @@ class HAClusterValidator(SapAutomationQA):
 
     def _get_expected_value(self, category, name):
         """
-        Get expected value for basic configuration parameters.
+        Get expected value for a given configuration parameter.
+
+        :param category: The category of the configuration parameter.
+        :type category: str
+        :param name: The name of the configuration parameter.
+        :type name: str
+        :return: The expected value for the configuration parameter.
+        :rtype: str
         """
         _, defaults_key = self.BASIC_CATEGORIES[category]
 
@@ -96,7 +103,18 @@ class HAClusterValidator(SapAutomationQA):
 
     def _get_resource_expected_value(self, resource_type, section, param_name, op_name=None):
         """
-        Get expected value for resource-specific configuration parameters.
+        Get expected value for a given resource configuration parameter.
+
+        :param resource_type: The type of the resource.
+        :type resource_type: str
+        :param section: The section of the resource configuration.
+        :type section: str
+        :param param_name: The name of the configuration parameter.
+        :type param_name: str
+        :param op_name: The name of the operation (if applicable), defaults to None
+        :type op_name: str, optional
+        :return: The expected value for the resource configuration parameter.
+        :rtype: str
         """
         resource_defaults = self.constants["RESOURCE_DEFAULTS"].get(self.os_type, {})
 
@@ -125,7 +143,24 @@ class HAClusterValidator(SapAutomationQA):
         op_name=None,
     ):
         """
-        Create a Parameters object for a given configuration parameter.
+        Create a parameter dictionary for the given configuration.
+
+        :param category: The category of the configuration parameter.
+        :type category: str
+        :param name: The name of the configuration parameter.
+        :type name: str
+        :param value: The value of the configuration parameter.
+        :type value: str
+        :param expected_value: The expected value for the configuration parameter, defaults to None
+        :type expected_value: str, optional
+        :param id: The ID of the configuration parameter, defaults to None
+        :type id: str, optional
+        :param subcategory: The subcategory of the configuration parameter, defaults to None
+        :type subcategory: str, optional
+        :param op_name: The name of the operation (if applicable), defaults to None
+        :type op_name: str, optional
+        :return: A dictionary representing the parameter.
+        :rtype: dict
         """
         if expected_value is None:
             if category in self.RESOURCE_CATEGORIES:
@@ -157,7 +192,18 @@ class HAClusterValidator(SapAutomationQA):
 
     def _parse_nvpair_elements(self, elements, category, subcategory=None, op_name=None):
         """
-        Parse nvpair elements and return a list of Parameters objects.
+        Parse nvpair elements and create parameter dictionaries.
+
+        :param elements: List of nvpair elements to parse.
+        :type elements: list
+        :param category: The category of the configuration parameter.
+        :type category: str
+        :param subcategory: The subcategory of the configuration parameter, defaults to None
+        :type subcategory: str, optional
+        :param op_name: The name of the operation (if applicable), defaults to None
+        :type op_name: str, optional
+        :return: A list of parameter dictionaries.
+        :rtype: list
         """
         parameters = []
         for nvpair in elements:
@@ -175,7 +221,10 @@ class HAClusterValidator(SapAutomationQA):
 
     def _parse_os_parameters(self):
         """
-        Parse OS-specific parameters
+        Parse and validate OS-specific configuration parameters.
+
+        :return: A list of parameter dictionaries containing validation results.
+        :rtype: list
         """
         parameters = []
 
@@ -203,6 +252,9 @@ class HAClusterValidator(SapAutomationQA):
     def _parse_global_ini_parameters(self):
         """
         Parse global.ini parameters
+
+        :return: A list of parameter dictionaries containing validation results.
+        :rtype: list
         """
         parameters = []
         global_ini_defaults = self.constants["GLOBAL_INI"].get(self.os_type, {})
@@ -240,6 +292,15 @@ class HAClusterValidator(SapAutomationQA):
     def _parse_basic_config(self, element, category, subcategory=None):
         """
         Parse basic configuration parameters
+
+        :param element: The XML element to parse.
+        :type element: xml.etree.ElementTree.Element
+        :param category: The category of the configuration parameter.
+        :type category: str
+        :param subcategory: The subcategory of the configuration parameter, defaults to None
+        :type subcategory: str, optional
+        :return: A list of parameter dictionaries.
+        :rtype: list
         """
         parameters = []
         for nvpair in element.findall(".//nvpair"):
@@ -257,6 +318,13 @@ class HAClusterValidator(SapAutomationQA):
     def _parse_resource(self, element, category):
         """
         Parse resource-specific configuration parameters
+
+        :param element: The XML element to parse.
+        :type element: xml.etree.ElementTree.Element
+        :param category: The category of the resource.
+        :type category: str
+        :return: A list of parameter dictionaries.
+        :rtype: list
         """
         parameters = []
 
@@ -279,18 +347,18 @@ class HAClusterValidator(SapAutomationQA):
                     )
                 )
 
-        ops = element.find(".//operations")
-        if ops is not None:
-            for op in ops.findall(".//op"):
+        operations = element.find(".//operations")
+        if operations is not None:
+            for operation in operations.findall(".//op"):
                 for op_type in ["timeout", "interval"]:
                     parameters.append(
                         self._create_parameter(
                             category=category,
                             subcategory="operations",
-                            id=op.get("id", ""),
+                            id=operation.get("id", ""),
                             name=op_type,
-                            op_name=op.get("name", ""),
-                            value=op.get(op_type, ""),
+                            op_name=operation.get("name", ""),
+                            value=operation.get(op_type, ""),
                         )
                     )
         return parameters
@@ -298,6 +366,11 @@ class HAClusterValidator(SapAutomationQA):
     def _parse_constraints(self, root):
         """
         Parse constraints configuration parameters
+
+        :param root: The XML root element to parse.
+        :type root: xml.etree.ElementTree.Element
+        :return: A list of parameter dictionaries.
+        :rtype: list
         """
         parameters = []
         for element in root:
@@ -346,10 +419,10 @@ class HAClusterValidator(SapAutomationQA):
                     xpath = self.BASIC_CATEGORIES[self.category][0]
                     for element in root.findall(xpath):
                         parameters.extend(self._parse_basic_config(element, self.category))
-                except Exception as e:
+                except Exception as ex:
                     self.result[
                         "message"
-                    ] += f"Failed to get {self.category} configuration: {str(e)}"
+                    ] += f"Failed to get {self.category} configuration: {str(ex)}"
                     continue
 
             elif self.category == "resources":
@@ -358,28 +431,28 @@ class HAClusterValidator(SapAutomationQA):
                         elements = root.findall(xpath)
                         for element in elements:
                             parameters.extend(self._parse_resource(element, sub_category))
-                except Exception as e:
+                except Exception as ex:
                     self.result[
                         "message"
-                    ] += f"Failed to get resources configuration for {self.category}: {str(e)}"
+                    ] += f"Failed to get resources configuration for {self.category}: {str(ex)}"
                     continue
 
             elif self.category == "constraints":
                 try:
                     parameters.extend(self._parse_constraints(root))
-                except Exception as e:
-                    self.result["message"] += f"Failed to get constraints configuration: {str(e)}"
+                except Exception as ex:
+                    self.result["message"] += f"Failed to get constraints configuration: {str(ex)}"
                     continue
 
         try:
             parameters.extend(self._parse_os_parameters())
-        except Exception as e:
-            self.result["message"] += f"Failed to get OS parameters: {str(e)} \n"
+        except Exception as ex:
+            self.result["message"] += f"Failed to get OS parameters: {str(ex)} \n"
 
         try:
             parameters.extend(self._parse_global_ini_parameters())
-        except Exception as e:
-            self.result["message"] += f"Failed to get global.ini parameters: {str(e)} \n"
+        except Exception as ex:
+            self.result["message"] += f"Failed to get global.ini parameters: {str(ex)} \n"
 
         failed_parameters = [
             param

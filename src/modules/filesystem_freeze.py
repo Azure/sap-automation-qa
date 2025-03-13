@@ -21,11 +21,6 @@ class FileSystemFreeze(SapAutomationQA):
     Class to run the test case when the filesystem is frozen.
     """
 
-    def __init__(
-        self,
-    ):
-        super().__init__()
-
     def _find_filesystem(self) -> str:
         """
         Find the filesystem mounted on /hana/shared.
@@ -39,8 +34,8 @@ class FileSystemFreeze(SapAutomationQA):
                     parts = line.split()
                     if len(parts) > 1 and parts[1] == "/hana/shared":
                         return parts[0]
-        except FileNotFoundError as e:
-            self.handle_error(e)
+        except FileNotFoundError as ex:
+            self.handle_error(ex)
         return None
 
     def run(self) -> Dict[str, Any]:

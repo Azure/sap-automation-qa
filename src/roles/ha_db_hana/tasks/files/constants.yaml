@@ -244,14 +244,14 @@ RESOURCE_DEFAULTS:
         interleave:                       "true"
       operations:
         monitor:
-          interval:                       "120"
-          timeout:                        "120"
+          interval:                       "20s"
+          timeout:                        "120s"
         start:
-          interval:                       "0"
-          timeout:                        "120"
+          interval:                       "0s"
+          timeout:                        "60s"
         stop:
-          interval:                       "0"
-          timeout:                        "120"
+          interval:                       "0s"
+          timeout:                        "60s"
 
     azurelb:
       meta_attributes:

@@ -21,6 +21,14 @@ def fake_open_factory(file_content):
     """
 
     def fake_open(*args, **kwargs):
+        """
+        Fake open function that returns a StringIO object.
+
+        :param *args: Positional arguments.
+        :param **kwargs: Keyword arguments.
+        :return: Instance of StringIO with file content.
+        :rtype: io.StringIO
+        """
         return io.StringIO("\n".join(file_content))
 
     return fake_open
@@ -44,8 +52,8 @@ class TestIndexServerCheck:
             "path=/usr/share/SAPHanaSR/srHook",
             "dummy=dummy",
         ]
-        with monkeypatch.context() as m:
-            m.setattr("builtins.open", fake_open_factory(file_lines))
+        with monkeypatch.context() as monkey_patch:
+            monkey_patch.setattr("builtins.open", fake_open_factory(file_lines))
             checker = IndexServerCheck(database_sid="TEST", os_distribution="redhat")
             checker.check_indexserver()
             result = checker.get_result()
@@ -69,8 +77,8 @@ class TestIndexServerCheck:
             "path=/usr/share/SAPHanaSR",
             "dummy=dummy",
         ]
-        with monkeypatch.context() as m:
-            m.setattr("builtins.open", fake_open_factory(file_lines))
+        with monkeypatch.context() as monkey_patch:
+            monkey_patch.setattr("builtins.open", fake_open_factory(file_lines))
             checker = IndexServerCheck(database_sid="TEST", os_distribution="suse")
             checker.check_indexserver()
             result = checker.get_result()
@@ -107,8 +115,8 @@ class TestIndexServerCheck:
             "path=WrongPath",
             "dummy=dummy",
         ]
-        with monkeypatch.context() as m:
-            m.setattr("builtins.open", fake_open_factory(file_lines))
+        with monkeypatch.context() as monkey_patch:
+            monkey_patch.setattr("builtins.open", fake_open_factory(file_lines))
             index_server_check = IndexServerCheck(database_sid="HDB", os_distribution="redhat")
             index_server_check.check_indexserver()
             result = index_server_check.get_result()
@@ -133,8 +141,8 @@ class TestIndexServerCheck:
             """
             raise FileNotFoundError("File not found")
 
-        with monkeypatch.context() as m:
-            m.setattr("builtins.open", fake_open)
+        with monkeypatch.context() as monkey_patch:
+            monkey_patch.setattr("builtins.open", fake_open)
             index_server_check = IndexServerCheck(database_sid="HDB", os_distribution="redhat")
             index_server_check.check_indexserver()
             result = index_server_check.get_result()
@@ -176,8 +184,8 @@ class TestIndexServerCheck:
                 nonlocal mock_result
                 mock_result = kwargs
 
-        with monkeypatch.context() as m:
-            m.setattr("src.modules.check_indexserver.AnsibleModule", MockAnsibleModule)
-            m.setattr("builtins.open", fake_open_factory(file_lines))
+        with monkeypatch.context() as monkey_patch:
+            monkey_patch.setattr("src.modules.check_indexserver.AnsibleModule", MockAnsibleModule)
+            monkey_patch.setattr("builtins.open", fake_open_factory(file_lines))
             main()
             assert mock_result["status"] == TestStatus.ERROR.value

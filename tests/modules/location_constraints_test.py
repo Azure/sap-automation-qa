@@ -16,43 +16,40 @@ LC_STR = """<constraints>
 """
 
 
-@pytest.fixture
-def location_constraints_string():
-    """
-    Fixture for providing a sample location constraints XML.
-
-    :return: A sample location constraints XML.
-    :rtype: str
-    """
-    return LC_STR
-
-
-@pytest.fixture
-def location_constraints_xml():
-    """
-    Fixture for providing a sample location constraints XML.
-
-    :return: A sample location constraints XML.
-    :rtype: list[xml.etree.ElementTree.Element]
-    """
-    return ET.fromstring(LC_STR).findall(".//rsc_location")
-
-
-@pytest.fixture
-def location_constraints_manager():
-    """
-    Fixture for creating a LocationConstraintsManager instance.
-
-    :return: LocationConstraintsManager instance
-    :rtype: LocationConstraintsManager
-    """
-    return LocationConstraintsManager(ansible_os_family="SUSE")
-
-
 class TestLocationConstraints:
     """
     Test cases for the LocationConstraintsManager class.
     """
+
+    @pytest.fixture
+    def location_constraints_string(self):
+        """
+        Fixture for providing a sample location constraints XML.
+
+        :return: A sample location constraints XML.
+        :rtype: str
+        """
+        return LC_STR
+
+    @pytest.fixture
+    def location_constraints_xml(self):
+        """
+        Fixture for providing a sample location constraints XML.
+
+        :return: A sample location constraints XML.
+        :rtype: list[xml.etree.ElementTree.Element]
+        """
+        return ET.fromstring(LC_STR).findall(".//rsc_location")
+
+    @pytest.fixture
+    def location_constraints_manager(self):
+        """
+        Fixture for creating a LocationConstraintsManager instance.
+
+        :return: LocationConstraintsManager instance
+        :rtype: LocationConstraintsManager
+        """
+        return LocationConstraintsManager(ansible_os_family="SUSE")
 
     def test_location_constraints_exists_success(
         self,
@@ -143,7 +140,9 @@ class TestLocationConstraints:
                 """
                 mock_result.update(kwargs)
 
-        with monkeypatch.context() as m:
-            m.setattr("src.modules.location_constraints.AnsibleModule", MockAnsibleModule)
+        with monkeypatch.context() as monkey_patch:
+            monkey_patch.setattr(
+                "src.modules.location_constraints.AnsibleModule", MockAnsibleModule
+            )
             main()
             assert mock_result["status"] == "INFO"

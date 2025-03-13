@@ -117,11 +117,11 @@ class IndexServerCheck(SapAutomationQA):
                     "indexserver_enabled": "no",
                 }
             )
-        except Exception as e:
+        except Exception as ex:
             self.result.update(
                 {
                     "status": TestStatus.ERROR.value,
-                    "message": f"Exception occurred while checking indexserver configuration: {e}",
+                    "message": f"Exception occurred while checking indexserver configuration: {ex}",
                     "details": {},
                     "indexserver_enabled": "no",
                 }

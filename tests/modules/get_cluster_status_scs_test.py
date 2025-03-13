@@ -5,8 +5,8 @@
 Unit tests for the get_cluster_status_scs module.
 """
 
-import pytest
 import xml.etree.ElementTree as ET
+import pytest
 from src.modules.get_cluster_status_scs import SCSClusterStatusChecker, run_module
 
 
@@ -19,6 +19,9 @@ class TestSCSClusterStatusChecker:
     def scs_checker(self):
         """
         Fixture for creating a SCSClusterStatusChecker instance.
+
+        :return: Instance of SCSClusterStatusChecker.
+        :rtype: SCSClusterStatusChecker
         """
         return SCSClusterStatusChecker(sap_sid="TST", ansible_os_family="REDHAT")
 

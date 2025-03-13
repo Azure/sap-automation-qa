@@ -2,6 +2,7 @@ ansible-compat==24.6.1
 ansible-core==2.17.7
 ansible-lint==24.6.1
 ansible-runner==2.4.0
+astroid==2.9.0
 attrs==25.1.0
 azure-common==1.1.28
 azure-core==1.32.0
@@ -27,13 +28,17 @@ ijson==3.3.0
 importlib_metadata==8.6.1
 iniconfig==2.0.0
 isodate==0.7.2
+isort==5.13.2
 Jinja2==3.1.6
 jsonschema==4.23.0
 jsonschema-specifications==2024.10.1
+lazy-object-proxy==1.10.0
 lockfile==0.12.2
 markdown-it-py==3.0.0
 MarkupSafe==3.0.2
+mccabe==0.6.1
 mdurl==0.1.2
+mock==5.1.0
 msal==1.31.1
 msal-extensions==1.2.0
 mypy-extensions==1.0.0
@@ -49,6 +54,7 @@ ptyprocess==0.7.0
 pycparser==2.22
 Pygments==2.19.1
 PyJWT==2.10.1
+pylint==2.12.2
 pytest==8.3.4
 pytest-cov==6.0.0
 pytest-mock==3.14.0
@@ -66,10 +72,12 @@ ruamel.yaml.clib==0.2.12
 six==1.17.0
 subprocess-tee==0.4.2
 tenacity==9.0.0
+toml==0.10.2
 tomli==2.2.1
 typing_extensions==4.12.2
 tzdata==2025.1
 urllib3==2.2.2
 wcmatch==10.0
+wrapt==1.13.3
 yamllint==1.35.1
 zipp==3.21.0

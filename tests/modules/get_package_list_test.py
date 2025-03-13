@@ -9,24 +9,32 @@ import pytest
 from src.modules.get_package_list import PackageListFormatter, main
 
 
-@pytest.fixture
-def package_facts_list():
-    """
-    Fixture for creating a package_facts_list.
-
-    :return: package_facts_list
-    :rtype: dict
-    """
-    return {
-        "corosynclib": [{"version": "2.4.5", "release": "1.el7", "arch": "x86_64"}],
-        "corosync": [{"version": "2.4.5", "release": "1.el7", "arch": "x86_64"}],
-    }
-
-
 class TestPackageListFormatter:
+    """
+    Test cases for the PackageListFormatter class.
+    """
+
+    @pytest.fixture
+    def package_facts_list(self):
+        """
+        Fixture for creating a package_facts_list.
+
+        :return: package_facts_list
+        :rtype: dict
+        """
+        return {
+            "corosynclib": [{"version": "2.4.5", "release": "1.el7", "arch": "x86_64"}],
+            "corosync": [{"version": "2.4.5", "release": "1.el7", "arch": "x86_64"}],
+        }
+
     def test_format_packages(self, mocker, package_facts_list):
         """
         Test the format_packages method of the PackageListFormatter class.
+
+        :param mocker: Mocking library for Python.
+        :type mocker: _mocker.MagicMock
+        :param package_facts_list: Fixture for creating a package_facts_list.
+        :type package_facts_list: dict
         """
         mock_ansible_module = mocker.patch("src.modules.get_package_list.AnsibleModule")
         mock_ansible_module.return_value.params = {"package_facts_list": package_facts_list}
@@ -52,12 +60,9 @@ class TestPackageListFormatter:
         assert result["details"] == expected_details
         assert result["status"] == "PASSED"
 
-    def test_format_packages_no_packages(self, monkeypatch):
+    def test_format_packages_no_packages(self):
         """
         Test the format_packages method of the PackageListFormatter class with no packages.
-
-        :param monkeypatch: Monkeypatch fixture for modifying built-in functions.
-        :type monkeypatch: pytest.MonkeyPatch
         """
         empty_facts = {}
         formatter = PackageListFormatter(empty_facts)
@@ -77,6 +82,10 @@ class TestPackageListFormatter:
         mock_result = {}
 
         class MockAnsibleModule:
+            """
+            Mock class to simulate AnsibleModule behavior.
+            """
+
             def __init__(self, *args, **kwargs):
                 self.params = {
                     "package_facts_list": {
@@ -89,8 +98,8 @@ class TestPackageListFormatter:
                 nonlocal mock_result
                 mock_result = kwargs
 
-        with monkeypatch.context() as m:
-            m.setattr("src.modules.get_package_list.AnsibleModule", MockAnsibleModule)
+        with monkeypatch.context() as monkey_patch:
+            monkey_patch.setattr("src.modules.get_package_list.AnsibleModule", MockAnsibleModule)
             main()
             assert mock_result["status"] == "PASSED"
             assert len(mock_result["details"]) == 2
