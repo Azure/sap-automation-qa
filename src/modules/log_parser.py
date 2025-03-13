@@ -119,8 +119,8 @@ class LogParser(SapAutomationQA):
             )
         except FileNotFoundError as ex:
             self.handle_error(ex)
-        except Exception as e:
-            self.handle_error(e)
+        except Exception as ex:
+            self.handle_error(ex)
 
 
 def run_module() -> None:

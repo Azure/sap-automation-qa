@@ -5,8 +5,8 @@
 Unit tests for the get_cluster_status_db module.
 """
 
-import pytest
 import xml.etree.ElementTree as ET
+import pytest
 from src.modules.get_cluster_status_db import HanaClusterStatusChecker, run_module
 
 
@@ -19,6 +19,9 @@ class TestHanaClusterStatusChecker:
     def hana_checker(self):
         """
         Fixture for creating a HanaClusterStatusChecker instance.
+
+        :return: Instance of HanaClusterStatusChecker.
+        :rtype: HanaClusterStatusChecker
         """
         return HanaClusterStatusChecker(database_sid="TEST", ansible_os_family="REDHAT")
 
@@ -31,10 +34,11 @@ class TestHanaClusterStatusChecker:
         :param hana_checker: Instance of HanaClusterStatusChecker.
         :type hana_checker: HanaClusterStatusChecker
         """
-        mock_execute = mocker.patch.object(
+        mocker.patch.object(
             hana_checker,
             "execute_command_subprocess",
-            return_value='<nvpair id="cib-bootstrap-options-AUTOMATED_REGISTER" name="AUTOMATED_REGISTER" value="true"/>',
+            return_value='<nvpair id="cib-bootstrap-options-AUTOMATED_REGISTER" '
+            + 'name="AUTOMATED_REGISTER" value="true"/>',
         )
 
         hana_checker._get_automation_register()
@@ -50,7 +54,7 @@ class TestHanaClusterStatusChecker:
         :param hana_checker: Instance of HanaClusterStatusChecker.
         :type hana_checker: HanaClusterStatusChecker
         """
-        mock_execute = mocker.patch.object(
+        mocker.patch.object(
             hana_checker, "execute_command_subprocess", side_effect=Exception("Test error")
         )
 

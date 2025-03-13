@@ -136,6 +136,14 @@ def fake_open_factory(file_content):
     """
 
     def fake_open(*args, **kwargs):
+        """
+        Fake open function that returns a StringIO object.
+
+        :param *args: Positional arguments.
+        :param **kwargs: Keyword arguments.
+        :return: _description_
+        :rtype: _type_
+        """
         return io.StringIO("\n".join(file_content))
 
     return fake_open
@@ -171,12 +179,16 @@ class TestHAClusterValidator:
         :type monkeypatch: pytest.MonkeyPatch
         :param mock_xml_outputs: Mock XML outputs.
         :type mock_xml_outputs: dict
+        :return: HAClusterValidator instance.
+        :rtype: HAClusterValidator
         """
 
         def mock_execute_command(*args, **kwargs):
             """
             Mock function to replace execute_command_subprocess.
 
+            :param *args: Positional arguments.
+            :param **kwargs: Keyword arguments.
             :return: Mocked command output.
             :rtype: str
             """
@@ -220,6 +232,10 @@ class TestHAClusterValidator:
         mock_result = {}
 
         class MockAnsibleModule:
+            """
+            Mock class to simulate AnsibleModule behavior.
+            """
+
             def __init__(self, *args, **kwargs):
                 self.params = {
                     "sid": "PRD",

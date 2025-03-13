@@ -210,8 +210,8 @@ class TelemetryDataSender(SapAutomationQA):
                     "data_sent": True,
                 }
             )
-        except Exception as e:
-            self.handle_error(e)
+        except Exception as ex:
+            self.handle_error(ex)
 
     def send_telemetry_data(self) -> None:
         """
@@ -249,8 +249,8 @@ class TelemetryDataSender(SapAutomationQA):
                         "data_sent": True,
                     }
                 )
-            except Exception as e:
-                self.handle_error(e)
+            except Exception as ex:
+                self.handle_error(ex)
         else:
             self.log(
                 logging.ERROR,

@@ -68,13 +68,16 @@ class TestSapAutomationQA:
         sap_qa = SapAutomationQA()
         assert sap_qa.result["status"] == TestStatus.NOT_STARTED.value
         assert sap_qa.result["message"] == ""
-        assert sap_qa.result["details"] == []
-        assert sap_qa.result["logs"] == []
+        assert not sap_qa.result["details"]
+        assert not sap_qa.result["logs"]
         assert sap_qa.result["changed"] is False
 
     def test_setup_logger(self, monkeypatch):
         """
         Test the setup_logger method.
+
+        :param monkeypatch: Monkeypatch fixture for mocking.
+        :type monkeypatch: pytest.MonkeyPatch
         """
 
         def mock_get_logger(name):
@@ -88,14 +91,19 @@ class TestSapAutomationQA:
             """
             return MockLogger(name)
 
-        with monkeypatch.context() as m:
-            m.setattr("src.module_utils.sap_automation_qa.logging.getLogger", mock_get_logger)
+        with monkeypatch.context() as monkey_patch:
+            monkey_patch.setattr(
+                "src.module_utils.sap_automation_qa.logging.getLogger", mock_get_logger
+            )
             sap_qa = SapAutomationQA()
             assert sap_qa.logger.name == "sap-automation-qa"
 
     def test_add_log(self, monkeypatch):
         """
         Test the add_log method.
+
+        :param monkeypatch: Monkeypatch fixture for mocking.
+        :type monkeypatch: pytest.MonkeyPatch
         """
 
         def mock_get_logger(name):
@@ -109,8 +117,10 @@ class TestSapAutomationQA:
             """
             return MockLogger(name)
 
-        with monkeypatch.context() as m:
-            m.setattr("src.module_utils.sap_automation_qa.logging.getLogger", mock_get_logger)
+        with monkeypatch.context() as monkey_patch:
+            monkey_patch.setattr(
+                "src.module_utils.sap_automation_qa.logging.getLogger", mock_get_logger
+            )
             sap_qa = SapAutomationQA()
             sap_qa.log(1, "Test log")
             assert sap_qa.result["logs"] == ["Test log"]
@@ -118,6 +128,9 @@ class TestSapAutomationQA:
     def test_handle_error(self, monkeypatch):
         """
         Test the handle_error method.
+
+        :param monkeypatch: Monkeypatch fixture for mocking.
+        :type monkeypatch: pytest.MonkeyPatch
         """
 
         def mock_get_logger(name):
@@ -131,8 +144,10 @@ class TestSapAutomationQA:
             """
             return MockLogger(name)
 
-        with monkeypatch.context() as m:
-            m.setattr("src.module_utils.sap_automation_qa.logging.getLogger", mock_get_logger)
+        with monkeypatch.context() as monkey_patch:
+            monkey_patch.setattr(
+                "src.module_utils.sap_automation_qa.logging.getLogger", mock_get_logger
+            )
             sap_qa = SapAutomationQA()
             sap_qa.handle_error(FileNotFoundError("Test error"))
             assert sap_qa.result["status"] == TestStatus.ERROR.value
@@ -142,6 +157,9 @@ class TestSapAutomationQA:
     def test_execute_command_subprocess(self, monkeypatch):
         """
         Test the execute_command_subprocess method.
+
+        :param monkeypatch: Monkeypatch fixture for mocking.
+        :type monkeypatch: pytest.MonkeyPatch
         """
 
         def mock_get_logger(name):
@@ -155,8 +173,10 @@ class TestSapAutomationQA:
             """
             return MockLogger(name)
 
-        with monkeypatch.context() as m:
-            m.setattr("src.module_utils.sap_automation_qa.logging.getLogger", mock_get_logger)
+        with monkeypatch.context() as monkey_patch:
+            monkey_patch.setattr(
+                "src.module_utils.sap_automation_qa.logging.getLogger", mock_get_logger
+            )
             sap_qa = SapAutomationQA()
             command = "echo 'Hello World'"
             result = sap_qa.execute_command_subprocess(command)
@@ -165,6 +185,9 @@ class TestSapAutomationQA:
     def test_parse_xml_output(self, monkeypatch):
         """
         Test the parse_xml_output method.
+
+        :param monkeypatch: Monkeypatch fixture for mocking.
+        :type monkeypatch: pytest.MonkeyPatch
         """
 
         def mock_get_logger(name):
@@ -178,8 +201,10 @@ class TestSapAutomationQA:
             """
             return MockLogger(name)
 
-        with monkeypatch.context() as m:
-            m.setattr("src.module_utils.sap_automation_qa.logging.getLogger", mock_get_logger)
+        with monkeypatch.context() as monkey_patch:
+            monkey_patch.setattr(
+                "src.module_utils.sap_automation_qa.logging.getLogger", mock_get_logger
+            )
             sap_qa = SapAutomationQA()
             xml_output = "<root></root>"
             result = sap_qa.parse_xml_output(xml_output=xml_output)
@@ -188,6 +213,9 @@ class TestSapAutomationQA:
     def test_get_test_status(self, monkeypatch):
         """
         Test the get_test_status method.
+
+        :param monkeypatch: Monkeypatch fixture for mocking.
+        :type monkeypatch: pytest.MonkeyPatch
         """
 
         def mock_get_logger(name):
@@ -201,8 +229,10 @@ class TestSapAutomationQA:
             """
             return MockLogger(name)
 
-        with monkeypatch.context() as m:
-            m.setattr("src.module_utils.sap_automation_qa.logging.getLogger", mock_get_logger)
+        with monkeypatch.context() as monkey_patch:
+            monkey_patch.setattr(
+                "src.module_utils.sap_automation_qa.logging.getLogger", mock_get_logger
+            )
             sap_qa = SapAutomationQA()
             result = sap_qa.get_result()
             assert isinstance(result, dict)

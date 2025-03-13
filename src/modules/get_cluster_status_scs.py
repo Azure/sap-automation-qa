@@ -5,7 +5,6 @@
 Python script to get and validate the status of an SCS cluster.
 """
 
-import logging
 import xml.etree.ElementTree as ET
 from typing import Dict, Any
 from ansible.module_utils.basic import AnsibleModule

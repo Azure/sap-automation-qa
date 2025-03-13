@@ -6,7 +6,7 @@ Custom ansible module for location constraints
 """
 
 import xml.etree.ElementTree as ET
-from typing import List, Dict, Any
+from typing import List
 from ansible.module_utils.basic import AnsibleModule
 
 try:
@@ -64,8 +64,8 @@ class LocationConstraintsManager(SapAutomationQA):
             xml_output = self.execute_command_subprocess(CONSTRAINTS)
             self.result["details"] = xml_output
             return ET.fromstring(xml_output).findall(".//rsc_location") if xml_output else []
-        except Exception as e:
-            self.handle_exception(e)
+        except Exception as ex:
+            self.handle_exception(ex)
 
 
 def run_module() -> None:

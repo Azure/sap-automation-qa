@@ -47,9 +47,9 @@ class AzureLoadBalancer(SapAutomationQA):
             self.network_client = NetworkManagementClient(
                 self.credential, self.module_params["subscription_id"]
             )
-        except Exception as e:
-            self.handle_error(e)
-            self.result["message"] += f"Failed to create network client object. {e} \n"
+        except Exception as ex:
+            self.handle_error(ex)
+            self.result["message"] += f"Failed to create network client object. {ex} \n"
 
     def get_load_balancers(self) -> list:
         """
@@ -66,9 +66,9 @@ class AzureLoadBalancer(SapAutomationQA):
                 if lb.location.lower() == self.module_params["region"].lower()
             ]
 
-        except Exception as e:
-            self.handle_error(e)
-            self.result["message"] += f"Failed to create network client object. {e} \n"
+        except Exception as ex:
+            self.handle_error(ex)
+            self.result["message"] += f"Failed to create network client object. {ex} \n"
 
     def get_load_balancers_details(self) -> dict:
         """
@@ -139,11 +139,11 @@ class AzureLoadBalancer(SapAutomationQA):
                             self.constants["RULES"],
                             "load_balancing_rule",
                         )
-                    except Exception as e:
-                        self.handle_error(e)
+                    except Exception as ex:
+                        self.handle_error(ex)
                         self.result[
                             "message"
-                        ] += f"Failed to validate load balancer rule parameters. {e} \n"
+                        ] += f"Failed to validate load balancer rule parameters. {ex} \n"
                         continue
 
                 for probe in found_load_balancer["probes"]:
@@ -153,11 +153,11 @@ class AzureLoadBalancer(SapAutomationQA):
                             self.constants["PROBES"],
                             "probes",
                         )
-                    except Exception as e:
-                        self.handle_error(e)
+                    except Exception as ex:
+                        self.handle_error(ex)
                         self.result[
                             "message"
-                        ] += f"Failed to validate load balancer probe parameters. {e} \n"
+                        ] += f"Failed to validate load balancer probe parameters. {ex} \n"
                         continue
 
                 failed_parameters = [
@@ -179,8 +179,8 @@ class AzureLoadBalancer(SapAutomationQA):
             else:
                 self.result["message"] += "No load balancer found"
 
-        except Exception as e:
-            self.handle_error(e)
+        except Exception as ex:
+            self.handle_error(ex)
 
 
 def run_module():

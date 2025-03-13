@@ -16,29 +16,36 @@ def fake_open_factory(file_content):
 
     :param file_content: Content to be returned by the fake open function.
     :type file_content: list
+    :return: Fake open function.
+    :rtype: function
     """
 
     def fake_open(*args, **kwargs):
+        """
+        Fake open function that returns a StringIO object.
+
+        :return: StringIO object with the content.
+        :rtype: io.StringIO
+        """
         return io.StringIO("\n".join(file_content))
 
     return fake_open
-
-
-@pytest.fixture
-def filesystem_freeze():
-    """
-    Fixture for creating a FileSystemFreeze instance.
-
-    :return: FileSystemFreeze instance
-    :rtype: FileSystemFreeze
-    """
-    return FileSystemFreeze()
 
 
 class TestFileSystemFreeze:
     """
     Class to test the FileSystemFreeze class.
     """
+
+    @pytest.fixture
+    def filesystem_freeze(self):
+        """
+        Fixture for creating a FileSystemFreeze instance.
+
+        :return: FileSystemFreeze instance
+        :rtype: FileSystemFreeze
+        """
+        return FileSystemFreeze()
 
     def test_file_system_exists(self, monkeypatch, filesystem_freeze):
         """
@@ -49,11 +56,13 @@ class TestFileSystemFreeze:
         :param filesystem_freeze: FileSystemFreeze instance.
         :type filesystem_freeze: FileSystemFreeze
         """
-        with monkeypatch.context() as m:
-            m.setattr(
+        with monkeypatch.context() as monkey_patch:
+            monkey_patch.setattr(
                 "builtins.open", fake_open_factory(["/dev/sda1 /hana/shared ext4 rw,relatime 0 0"])
             )
-            m.setattr(filesystem_freeze, "execute_command_subprocess", lambda x: "output")
+            monkey_patch.setattr(
+                filesystem_freeze, "execute_command_subprocess", lambda x: "output"
+            )
             filesystem_freeze.run()
             result = filesystem_freeze.get_result()
 
@@ -74,8 +83,8 @@ class TestFileSystemFreeze:
         :type filesystem_freeze: FileSystemFreeze
         """
 
-        with monkeypatch.context() as m:
-            m.setattr(
+        with monkeypatch.context() as monkey_patch:
+            monkey_patch.setattr(
                 "builtins.open", fake_open_factory(["/dev/sda1 /hana/log ext4 rw,relatime 0 0"])
             )
             filesystem_freeze.run()
@@ -109,12 +118,12 @@ class TestFileSystemFreeze:
                 nonlocal mock_result
                 mock_result = kwargs
 
-        with monkeypatch.context() as m:
-            m.setattr("src.modules.filesystem_freeze.AnsibleModule", MockAnsibleModule)
-            m.setattr(
+        with monkeypatch.context() as monkey_patch:
+            monkey_patch.setattr("src.modules.filesystem_freeze.AnsibleModule", MockAnsibleModule)
+            monkey_patch.setattr(
                 "builtins.open", fake_open_factory(["/dev/sda1 /hana/shared ext4 rw,relatime 0 0"])
             )
-            m.setattr(
+            monkey_patch.setattr(
                 "src.modules.filesystem_freeze.FileSystemFreeze.execute_command_subprocess",
                 lambda self, cmd: "command output",
             )
@@ -145,8 +154,8 @@ class TestFileSystemFreeze:
                 nonlocal mock_result
                 mock_result = kwargs
 
-        with monkeypatch.context() as m:
-            m.setattr("src.modules.filesystem_freeze.AnsibleModule", MockAnsibleModule)
+        with monkeypatch.context() as monkey_patch:
+            monkey_patch.setattr("src.modules.filesystem_freeze.AnsibleModule", MockAnsibleModule)
 
             main()
 

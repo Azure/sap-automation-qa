@@ -11,75 +11,74 @@ import pytest
 from src.modules.send_telemetry_data import TelemetryDataSender, main
 
 
-@pytest.fixture
-def module_params():
-    """
-    Fixture for providing sample module parameters.
-
-    :return: Sample module parameters.
-    :rtype: dict
-    """
-    return {
-        "test_group_json_data": {"TestGroupInvocationId": "12345"},
-        "telemetry_data_destination": "azureloganalytics",
-        "laws_workspace_id": "workspace_id",
-        "laws_shared_key": base64.b64encode(b"shared_key").decode("utf-8"),
-        "telemetry_table_name": "telemetry_table",
-        "adx_database_name": "adx_database",
-        "adx_cluster_fqdn": "adx_cluster",
-        "adx_client_id": "adx_client",
-        "workspace_directory": "/tmp",
-    }
-
-
-@pytest.fixture
-def module_params_adx():
-    """
-    Fixture for providing sample module parameters.
-
-    :return: Sample module parameters.
-    :rtype: dict
-    """
-    return {
-        "test_group_json_data": {"TestGroupInvocationId": "12345"},
-        "telemetry_data_destination": "azuredataexplorer",
-        "laws_workspace_id": "workspace_id",
-        "laws_shared_key": base64.b64encode(b"shared_key").decode("utf-8"),
-        "telemetry_table_name": "telemetry_table",
-        "adx_database_name": "adx_database",
-        "adx_cluster_fqdn": "adx_cluster",
-        "adx_client_id": "adx_client",
-        "workspace_directory": "/tmp",
-    }
-
-
-@pytest.fixture
-def telemetry_data_sender(module_params):
-    """
-    Fixture for creating a TelemetryDataSender instance.
-
-    :param module_params: Sample module parameters.
-    :type module_params: dict
-    :return: TelemetryDataSender instance.
-    :rtype: TelemetryDataSender
-    """
-    return TelemetryDataSender(module_params)
-
-
-@pytest.fixture
-def telemetry_data_sender_adx(module_params_adx):
-    """
-    Fixture for creating a TelemetryDataSender instance.
-
-    :param module_params_adx: Sample module parameters.
-    :type module_params_adx: dict
-    :return: TelemetryDataSender instance.
-    :rtype: TelemetryDataSender
-    """
-    return TelemetryDataSender(module_params_adx)
-
-
 class TestTelemetryDataSender:
+    """
+    Test cases for the TelemetryDataSender class.
+    """
+
+    @pytest.fixture
+    def module_params(self):
+        """
+        Fixture for providing sample module parameters.
+
+        :return: Sample module parameters.
+        :rtype: dict
+        """
+        return {
+            "test_group_json_data": {"TestGroupInvocationId": "12345"},
+            "telemetry_data_destination": "azureloganalytics",
+            "laws_workspace_id": "workspace_id",
+            "laws_shared_key": base64.b64encode(b"shared_key").decode("utf-8"),
+            "telemetry_table_name": "telemetry_table",
+            "adx_database_name": "adx_database",
+            "adx_cluster_fqdn": "adx_cluster",
+            "adx_client_id": "adx_client",
+            "workspace_directory": "/tmp",
+        }
+
+    @pytest.fixture
+    def module_params_adx(self):
+        """
+        Fixture for providing sample module parameters.
+
+        :return: Sample module parameters.
+        :rtype: dict
+        """
+        return {
+            "test_group_json_data": {"TestGroupInvocationId": "12345"},
+            "telemetry_data_destination": "azuredataexplorer",
+            "laws_workspace_id": "workspace_id",
+            "laws_shared_key": base64.b64encode(b"shared_key").decode("utf-8"),
+            "telemetry_table_name": "telemetry_table",
+            "adx_database_name": "adx_database",
+            "adx_cluster_fqdn": "adx_cluster",
+            "adx_client_id": "adx_client",
+            "workspace_directory": "/tmp",
+        }
+
+    @pytest.fixture
+    def telemetry_data_sender(self, module_params):
+        """
+        Fixture for creating a TelemetryDataSender instance.
+
+        :param module_params: Sample module parameters.
+        :type module_params: dict
+        :return: TelemetryDataSender instance.
+        :rtype: TelemetryDataSender
+        """
+        return TelemetryDataSender(module_params)
+
+    @pytest.fixture
+    def telemetry_data_sender_adx(self, module_params_adx):
+        """
+        Fixture for creating a TelemetryDataSender instance.
+
+        :param module_params_adx: Sample module parameters.
+        :type module_params_adx: dict
+        :return: TelemetryDataSender instance.
+        :rtype: TelemetryDataSender
+        """
+        return TelemetryDataSender(module_params_adx)
 
     def test_send_telemetry_data_to_azuredataexplorer(self, mocker, telemetry_data_sender):
         """
@@ -90,7 +89,6 @@ class TestTelemetryDataSender:
         :param telemetry_data_sender: TelemetryDataSender instance.
         :type telemetry_data_sender: TelemetryDataSender
         """
-        mock_pandas = mocker.patch("pandas.DataFrame")
         mock_kusto = mocker.patch("azure.kusto.ingest.QueuedIngestClient.ingest_from_dataframe")
         mock_kusto.return_value = "response"
 
@@ -187,7 +185,11 @@ class TestTelemetryDataSender:
         mock_result = {}
 
         class MockAnsibleModule:
-            def __init__(self, argument_spec, supports_check_mode):
+            """
+            Mock class to simulate AnsibleModule behavior.
+            """
+
+            def __init__(self, *args, **kwargs):
                 self.params = {
                     "test_group_json_data": {"TestGroupInvocationId": "12345"},
                     "telemetry_data_destination": "azureloganalyticss",
