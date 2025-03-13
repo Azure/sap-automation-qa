@@ -2,6 +2,7 @@ ansible-compat==24.6.1
 ansible-core==2.17.7
 ansible-lint==24.6.1
 ansible-runner==2.4.0
+astroid==2.9.3
 attrs==25.1.0
 azure-common==1.1.28
 azure-core==1.32.0
