@@ -6,40 +6,34 @@
 [![Ansible Lint](https://github.com/Azure/sap-automation-qa/actions/workflows/github-actions-ansible-lint.yml/badge.svg)](https://github.com/Azure/sap-automation-qa/actions/workflows/github-actions-ansible-lint.yml)
 [![OpenSSF Scorecard](https://img.shields.io/ossf-scorecard/github.com/Azure/sap-automation-qa)](https://scorecard.dev/viewer/?uri=github.com/Azure/sap-automation-qa)
 
-
 ## 🔍 Overview
 
-The SAP Testing Automation Framework is an open-source orchestration tool for validating SAP deployments on Microsoft Azure. This framework systematically evaluates system configuration, performance, and resilience across diverse operational scenarios, providing organizations with actionable insights and quantifiable results. Through thorough testing, the framework helps SAP admins ensure their environments meet performance benchmarks and availability requirements. By simulating real conditions in controlled environments, admins can identify potential issues before they affect production systems.
+The SAP Testing Automation Framework is an open-source orchestration tool designed to validate SAP deployments on Microsoft Azure. It enables you to assess system configurations against SAP on Azure best practices and guidelines. Additionally, the framework facilitates automation for various testing scenarios, including High Availability (HA) functional testing.
 
-The framework incorporates advanced monitoring capabilities, detailed analytical reporting, and fully automated evaluation processes, delivering significant operational efficiencies while enhancing the overall reliability of SAP landscapes on Azure.
+## Supported Configuration Matrix
 
-### 📊 Key Features
+The following SAP components are supported in a two-node Pacemaker cluster running on SUSE Linux Enterprise Server (SLES) or Red Hat Enterprise Linux (RHEL):
 
-- **High Availability Testing** - Comprehensive validation of failover mechanisms for both SAP HANA database clusters and Central Services components, ensuring business continuity under adverse conditions. Currently, the framework offers test scenarios focusing on high availability functional testing and configuration checks. Under the high availability category, we address critical components including:
+- **SAP HANA Scale-Up**
+- **SAP Central Services**
 
-  - **SAP HANA Database HA Configurations:** Validate SAP HANA database configurations, ensuring resilience, rapid failover, and optimal performance even in adverse conditions.
-  
-  - **SAP Central Services (SCS/ERS) HA Setups:** Test and verify the configuration integrity and robustness of SAP Central Services, including load balancing, failover mechanisms, and component interoperability.
+For additional information on supported configuration patterns, such as cluster types (Azure Fence Agent or SBD) and storage options (Azure Files or Azure NetApp Files) in this automated testing framework, refer to [supported high availability configuration](./docs/HIGH_AVAILABILITY.md).
 
-- **Configuration Validation** - Systematic assessment of SAP system configurations against established best practices and Microsoft-recommended architecture standards to ensure optimal deployment.
+## 📊 Key Features
 
-- **Detailed Reporting** - Generation of comprehensive test result documentation with analytical summaries and specific remediation guidance for identified issues.
+- **High Availability Testing** - Thorough validation of the SAP HANA scale-up and SAP Central Services failover mechanism in a two node pacemaker cluster, ensuring the system operates correctly across various test cases.
+  - **Configuration Validation** - Ensures that SAP HANA scale-up and SAP Central Services configurations comply with SAP on Azure best practices and guidelines.
+  - **Functional Testing** - Executes test scenarios on the high availability setup to identify potential issues, whether during a new system deployment or before implementing cluster changes in a production environment.
+- **Detailed Reporting** - Generates comprehensive reports, highlighting configuration mismatch or deviations from recommended best practices. Includes failover test outcomes, any failures encountered, and logs with insights to aid in troubleshooting identified issues.
 
-### 🏆 Purpose
+## 🏆 Purpose
 
-Testing is essential for ensuring business continuity in mission-critical SAP environments. This framework systematically addresses the following critical business needs:
+Testing is crucial for keeping SAP systems running smoothly, especially for critical business operations. This framework helps by addressing key challenges:
 
-- **Risk Mitigation**:
-The framework provides systematic testing of failure scenarios, helping organizations identify and address potential issues before they impact production systems. It simulates various failure modes, including node failures, network interruptions, and storage issues, ensuring that recovery mechanisms function as designed.
-
-- **Compliance**:
-Organizations must often demonstrate that their SAP systems meet specific availability requirements. This framework provides documented evidence of HA testing, including detailed logs and reports that can be used for audit purposes. It helps ensure that HA implementations align with organizational standards and regulatory requirements.
-
-- **Quality Assurance**:
-Through automated and consistent testing procedures, the framework helps maintain high quality standards across SAP infrastructure components. It validates that all HA mechanisms, including clustering software, storage replication, and application-level failover, work together seamlessly.
-
-- **Automation**:
-Manual testing of HA configurations is time-consuming and prone to human error. This framework automates the entire testing process, from setup to execution and reporting, significantly reducing the operational overhead of HA testing while improving accuracy and consistency.
+- **Preventing Risks** - It simulates system failures like node crashes, network issues, and storage failures to check if recovery mechanisms work properly, helping to catch problems before they affect real operations.
+- **Meeting Compliance Requirements** - Many businesses need to prove their SAP systems are reliable. This framework provides detailed reports and logs that help with audits and ensure compliance with internal and regulatory standards.
+- **Ensuring Quality** -  The framework runs automated tests to verify whether the failover behavior of SAP components functions as expected on Azure across various test scenarios. It also ensures that the cluster and resource configurations are set up correctly, helping to maintain system reliability.
+- **Automating Testing**: Manually testing high availability (HA) setups is slow and error-prone. This framework automates the process—from setup to reporting—saving time and ensuring more accurate and consistent results.
 
 ## 🚦 Get Started
 
@@ -53,9 +47,9 @@ If you already have [SDAF](https://github.com/Azure/sap-automation) environment 
 
 For users focused solely on validating SAP functionality and configurations, the standalone approach offers a streamlined process to test critical SAP components without the complexity of full deployment integration.
 
-### 🏗️ [Architecture and Components](./docs/ARCHITECTURE.md)
+## 🏗️ Architecture and Components
 
-Curious about how it all works? Check out our detailed architecture documentation.
+To learn how the framework works, refer to the [architecture and components](./docs/ARCHITECTURE.md) documentation.
 
 ## 🆘Support
 
@@ -71,29 +65,18 @@ For support and questions, please:
 
 ## 🤝 Contributing
 
-This project welcomes contributions and suggestions.  Most contributions require you to agree to a
-Contributor License Agreement (CLA) declaring that you have the right to, and actually do, grant us
-the rights to use your contribution. For details, visit https://cla.opensource.microsoft.com.
+This project welcomes contributions and suggestions.  Most contributions require you to agree to a Contributor License Agreement (CLA) declaring that you have the right to, and actually do, grant us the rights to use your contribution. For details, visit <https://cla.opensource.microsoft.com>.
 
-When you submit a pull request, a CLA bot will automatically determine whether you need to provide
-a CLA and decorate the PR appropriately (e.g., status check, comment). Simply follow the instructions
-provided by the bot. You will only need to do this once across all repos using our CLA.
+When you submit a pull request, a CLA bot will automatically determine whether you need to provide a CLA and decorate the PR appropriately (e.g., status check, comment). Simply follow the instructions provided by the bot. You will only need to do this once across all repos using our CLA.
 
-This project has adopted the [Microsoft Open Source Code of Conduct](https://opensource.microsoft.com/codeofconduct/).
-For more information see the [Code of Conduct FAQ](https://opensource.microsoft.com/codeofconduct/faq/) or
-contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any additional questions or comments.
+This project has adopted the [Microsoft Open Source Code of Conduct](https://opensource.microsoft.com/codeofconduct/). For more information see the [Code of Conduct FAQ](https://opensource.microsoft.com/codeofconduct/faq/) or contact [opencode@microsoft.com](mailto:opencode@microsoft.com) with any additional questions or comments.
 
 ## ⚖️ Legal
 
 ### License
 
-> Copyright (c) Microsoft Corporation.
-> Licensed under the MIT License.
+> Copyright (c) Microsoft Corporation. Licensed under the MIT License.
 
 ### Trademarks
 
-This project may contain trademarks or logos for projects, products, or services. Authorized use of Microsoft 
-trademarks or logos is subject to and must follow 
-[Microsoft's Trademark & Brand Guidelines](https://www.microsoft.com/en-us/legal/intellectualproperty/trademarks/usage/general).
-Use of Microsoft trademarks or logos in modified versions of this project must not cause confusion or imply Microsoft sponsorship.
-Any use of third-party trademarks or logos are subject to those third-party's policies.
+This project may contain trademarks or logos for projects, products, or services. Authorized use of Microsoft trademarks or logos is subject to and must follow [Microsoft's Trademark & Brand Guidelines](https://www.microsoft.com/en-us/legal/intellectualproperty/trademarks/usage/general). Use of Microsoft trademarks or logos in modified versions of this project must not cause confusion or imply Microsoft sponsorship. Any use of third-party trademarks or logos are subject to those third-party's policies.
