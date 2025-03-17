@@ -32,7 +32,7 @@ In summary, SAP High Availability testing is an integral part of the overall SAP
 
 #### Optional Components
 
-- **Analytics Integration** [Telemetry Setup Information](./docs/TELEMETRY_SETUP.md)
+- **Analytics Integration** [Telemetry Setup Information](./TELEMETRY_SETUP.md)
   - Azure Log Analytics
   - Azure Data Explorer
 

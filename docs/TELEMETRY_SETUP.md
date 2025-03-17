@@ -7,7 +7,7 @@ This guide outlines the steps to create an Azure Data Explorer (Kusto) cluster a
 ## Azure Data Explorer (Kusto) Cluster Setup
 
 1. **Log in to the Azure Portal:**  
-   Navigate to https://portal.azure.com and sign in with your Azure credentials.
+   Navigate to [Azure Portal](https://portal.azure.com) and sign in with your Azure credentials.
 
 2. **Create a Resource Group:**  
    - Click on "Resource groups" in the left navigation pane.  
@@ -43,12 +43,12 @@ This guide outlines the steps to create an Azure Data Explorer (Kusto) cluster a
     - **adx_cluster_fqdn:** Azure Data Explorer Cluster FQDN [Data Ingestion URI].
     - **adx_database_name:** Azure Data Explorer Database Name [Database Name]
     - **adx_client_id:** Azure Data Explorer Client ID [MSI Client ID]
-    - **telemetry_table_name:** Name of the table in the ADX database [SAP_AUTOMATION_QA]
+    - **telemetry_table_name:** Name of the table in the ADX database SAP_AUTOMATION_QA
 
 ## Azure Log Analytics Workspace Setup
 
 1. **Log in to the Azure Portal:**  
-   Use https://portal.azure.com with your credentials.
+   Login to [Azure Portal](https://portal.azure.com) with your credentials.
 
 2. **Create a Resource Group (if needed):**  
    If you haven't already created a resource group for Log Analytics, follow the same step as above.
@@ -65,7 +65,7 @@ This guide outlines the steps to create an Azure Data Explorer (Kusto) cluster a
 4. **Assign Azure Roles for Data Ingestion:**  
    To ingest or work with data in a Log Analytics Workspace, assign the following roles:
    - **Log Analytics Contributor:** Grants permissions to submit and manage data in the workspace.
-   
+
    To assign a role:
    - Navigate to the Log Analytics Workspace resource.
    - Click on "Access control (IAM)."  
@@ -75,4 +75,4 @@ This guide outlines the steps to create an Azure Data Explorer (Kusto) cluster a
 5. **Parameters**
     - **laws_workspace_id:** Log Analytics Workspace ID [Workspace ID]
     - **laws_shared_key:** Log Analytics Shared Key [Primary Key]
-    - **telemetry_table_name:** Name of the table in Log Analytics [SAP_AUTOMATION_QA]
+    - **telemetry_table_name:** Name of the table in Log Analytics SAP_AUTOMATION_QA

@@ -9,8 +9,6 @@
 - **WORKSPACES**: System-specific configuration and credentials management
 - **Reporting Engine**: Generates detailed HTML test reports
 
-
-
 ## Architecture
 
 ### High-Level Framework Structure
@@ -81,7 +79,8 @@ graph TB
 ```
 
 ## Directory Structure
-```
+
+```plain
 src/
 ├── module_utils/          # Shared utilities and constants
 ├── modules/              # Custom Ansible modules
