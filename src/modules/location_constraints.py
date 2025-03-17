@@ -5,6 +5,18 @@
 Custom ansible module for location constraints
 """
 
+import xml.etree.ElementTree as ET
+from typing import List
+from ansible.module_utils.basic import AnsibleModule
+
+try:
+    from ansible.module_utils.sap_automation_qa import SapAutomationQA, TestStatus
+    from ansible.module_utils.commands import RSC_CLEAR, CONSTRAINTS
+except ImportError:
+    from src.module_utils.sap_automation_qa import SapAutomationQA, TestStatus
+    from src.module_utils.commands import RSC_CLEAR, CONSTRAINTS
+
+
 DOCUMENTATION = r"""
 ---
 module: location_constraints
@@ -77,17 +89,6 @@ changed:
     type: bool
     sample: true
 """
-
-import xml.etree.ElementTree as ET
-from typing import List
-from ansible.module_utils.basic import AnsibleModule
-
-try:
-    from ansible.module_utils.sap_automation_qa import SapAutomationQA, TestStatus
-    from ansible.module_utils.commands import RSC_CLEAR, CONSTRAINTS
-except ImportError:
-    from src.module_utils.sap_automation_qa import SapAutomationQA, TestStatus
-    from src.module_utils.commands import RSC_CLEAR, CONSTRAINTS
 
 
 class LocationConstraintsManager(SapAutomationQA):

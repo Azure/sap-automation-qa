@@ -5,6 +5,19 @@
 Module to render the HTML report for the test group invocation.
 """
 
+import json
+import logging
+import os
+from datetime import datetime
+from typing import Dict, Any, List
+import jinja2
+from ansible.module_utils.basic import AnsibleModule
+
+try:
+    from ansible.module_utils.sap_automation_qa import SapAutomationQA, TestStatus
+except ImportError:
+    from src.module_utils.sap_automation_qa import SapAutomationQA, TestStatus
+
 DOCUMENTATION = r"""
 ---
 module: render_html_report
@@ -85,19 +98,6 @@ message:
     type: str
     sample: "Log file not found"
 """
-
-import json
-import logging
-import os
-from datetime import datetime
-from typing import Dict, Any, List
-import jinja2
-from ansible.module_utils.basic import AnsibleModule
-
-try:
-    from ansible.module_utils.sap_automation_qa import SapAutomationQA, TestStatus
-except ImportError:
-    from src.module_utils.sap_automation_qa import SapAutomationQA, TestStatus
 
 
 class HTMLReportRenderer(SapAutomationQA):

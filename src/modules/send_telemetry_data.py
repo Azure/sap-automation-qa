@@ -5,6 +5,33 @@
 Module to send telemetry data to Kusto Cluster/Log Analytics Workspace and create an HTML report.
 """
 
+import logging
+import os
+from datetime import datetime
+from typing import Dict, Any
+import base64
+import hashlib
+import hmac
+import json
+import requests
+from azure.kusto.data import KustoConnectionStringBuilder
+from azure.kusto.data.data_format import DataFormat
+from azure.kusto.ingest import QueuedIngestClient, IngestionProperties, ReportLevel
+from ansible.module_utils.basic import AnsibleModule
+
+try:
+    from ansible.module_utils.sap_automation_qa import (
+        SapAutomationQA,
+        TestStatus,
+        TelemetryDataDestination,
+    )
+except ImportError:
+    from src.module_utils.sap_automation_qa import (
+        SapAutomationQA,
+        TestStatus,
+        TelemetryDataDestination,
+    )
+
 DOCUMENTATION = r"""
 ---
 module: send_telemetry_data
@@ -151,33 +178,6 @@ data_sent:
     type: bool
     sample: true
 """
-
-import logging
-import os
-from datetime import datetime
-from typing import Dict, Any
-import base64
-import hashlib
-import hmac
-import json
-import requests
-from azure.kusto.data import KustoConnectionStringBuilder
-from azure.kusto.data.data_format import DataFormat
-from azure.kusto.ingest import QueuedIngestClient, IngestionProperties, ReportLevel
-from ansible.module_utils.basic import AnsibleModule
-
-try:
-    from ansible.module_utils.sap_automation_qa import (
-        SapAutomationQA,
-        TestStatus,
-        TelemetryDataDestination,
-    )
-except ImportError:
-    from src.module_utils.sap_automation_qa import (
-        SapAutomationQA,
-        TestStatus,
-        TelemetryDataDestination,
-    )
 
 LAWS_RESOURCE = "/api/logs"
 LAWS_METHOD = "POST"

@@ -11,6 +11,23 @@ Classes:
     HAClusterValidator: Main validator class for cluster configurations.
 """
 
+from ansible.module_utils.basic import AnsibleModule
+
+try:
+    from ansible.module_utils.sap_automation_qa import (
+        SapAutomationQA,
+        TestStatus,
+        Parameters,
+    )
+    from ansible.module_utils.commands import CIB_ADMIN
+except ImportError:
+    from src.module_utils.sap_automation_qa import (
+        SapAutomationQA,
+        TestStatus,
+        Parameters,
+    )
+    from src.module_utils.commands import CIB_ADMIN
+
 DOCUMENTATION = r"""
 ---
 module: get_pcmk_properties_db
@@ -136,23 +153,6 @@ details:
                     type: str
                     sample: "SUCCESS"
 """
-
-from ansible.module_utils.basic import AnsibleModule
-
-try:
-    from ansible.module_utils.sap_automation_qa import (
-        SapAutomationQA,
-        TestStatus,
-        Parameters,
-    )
-    from ansible.module_utils.commands import CIB_ADMIN
-except ImportError:
-    from src.module_utils.sap_automation_qa import (
-        SapAutomationQA,
-        TestStatus,
-        Parameters,
-    )
-    from src.module_utils.commands import CIB_ADMIN
 
 
 class HAClusterValidator(SapAutomationQA):

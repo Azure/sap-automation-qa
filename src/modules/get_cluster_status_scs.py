@@ -5,6 +5,16 @@
 Python script to get and validate the status of an SCS cluster.
 """
 
+import xml.etree.ElementTree as ET
+from typing import Dict, Any
+from ansible.module_utils.basic import AnsibleModule
+
+try:
+    from ansible.module_utils.get_cluster_status import BaseClusterStatusChecker
+except ImportError:
+    from src.module_utils.get_cluster_status import BaseClusterStatusChecker
+
+
 DOCUMENTATION = r"""
 ---
 module: get_cluster_status_scs
@@ -74,15 +84,6 @@ ers_node:
     type: str
     sample: "sapapp2"
 """
-
-import xml.etree.ElementTree as ET
-from typing import Dict, Any
-from ansible.module_utils.basic import AnsibleModule
-
-try:
-    from ansible.module_utils.get_cluster_status import BaseClusterStatusChecker
-except ImportError:
-    from src.module_utils.get_cluster_status import BaseClusterStatusChecker
 
 
 class SCSClusterStatusChecker(BaseClusterStatusChecker):

@@ -4,6 +4,15 @@
 """
 Custom ansible module for formatting the packages list
 """
+
+from typing import Dict, Any
+from ansible.module_utils.basic import AnsibleModule
+
+try:
+    from ansible.module_utils.sap_automation_qa import SapAutomationQA, TestStatus
+except ImportError:
+    from src.module_utils.sap_automation_qa import SapAutomationQA, TestStatus
+
 DOCUMENTATION = r"""
 ---
 module: get_package_list
@@ -74,13 +83,6 @@ details:
                     sample: "x86_64"
 """
 
-from typing import Dict, Any
-from ansible.module_utils.basic import AnsibleModule
-
-try:
-    from ansible.module_utils.sap_automation_qa import SapAutomationQA, TestStatus
-except ImportError:
-    from src.module_utils.sap_automation_qa import SapAutomationQA, TestStatus
 
 PACKAGE_LIST = [
     {"name": "Corosync Lib", "key": "corosynclib"},

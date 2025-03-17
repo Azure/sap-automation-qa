@@ -5,6 +5,15 @@
 Custom ansible module for log parsing
 """
 
+import json
+from datetime import datetime
+from ansible.module_utils.basic import AnsibleModule
+
+try:
+    from ansible.module_utils.sap_automation_qa import SapAutomationQA, TestStatus
+except ImportError:
+    from src.module_utils.sap_automation_qa import SapAutomationQA, TestStatus
+
 DOCUMENTATION = r"""
 ---
 module: log_parser
@@ -119,14 +128,6 @@ filtered_logs:
     sample: "[\"Jan 01 12:34:56 server1 pacemaker-controld: Notice: Resource SAPHana_HDB_00 started\"]"
 """
 
-import json
-from datetime import datetime
-from ansible.module_utils.basic import AnsibleModule
-
-try:
-    from ansible.module_utils.sap_automation_qa import SapAutomationQA, TestStatus
-except ImportError:
-    from src.module_utils.sap_automation_qa import SapAutomationQA, TestStatus
 
 PCMK_KEYWORDS = {
     "LogAction",

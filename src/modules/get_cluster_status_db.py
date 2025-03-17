@@ -5,6 +5,18 @@
 Python script to get and validate the status of a HANA cluster.
 """
 
+import xml.etree.ElementTree as ET
+from typing import Dict, Any
+from ansible.module_utils.basic import AnsibleModule
+
+try:
+    from ansible.module_utils.get_cluster_status import BaseClusterStatusChecker
+    from ansible.module_utils.commands import AUTOMATED_REGISTER
+except ImportError:
+    from src.module_utils.get_cluster_status import BaseClusterStatusChecker
+    from src.module_utils.commands import AUTOMATED_REGISTER
+
+
 DOCUMENTATION = r"""
 ---
 module: get_cluster_status_db
@@ -112,17 +124,6 @@ cluster_status:
             description: Attributes of the secondary node
             type: dict
 """
-
-import xml.etree.ElementTree as ET
-from typing import Dict, Any
-from ansible.module_utils.basic import AnsibleModule
-
-try:
-    from ansible.module_utils.get_cluster_status import BaseClusterStatusChecker
-    from ansible.module_utils.commands import AUTOMATED_REGISTER
-except ImportError:
-    from src.module_utils.get_cluster_status import BaseClusterStatusChecker
-    from src.module_utils.commands import AUTOMATED_REGISTER
 
 
 class HanaClusterStatusChecker(BaseClusterStatusChecker):

@@ -4,6 +4,15 @@
 """
 This module is used to check if SAP HANA indexserver is configured.
 """
+
+import logging
+from ansible.module_utils.basic import AnsibleModule
+
+try:
+    from ansible.module_utils.sap_automation_qa import SapAutomationQA, TestStatus
+except ImportError:
+    from src.module_utils.sap_automation_qa import SapAutomationQA, TestStatus
+
 DOCUMENTATION = r"""
 ---
 module: check_indexserver
@@ -71,14 +80,6 @@ indexserver_enabled:
     type: str
     sample: "yes"
 """
-
-import logging
-from ansible.module_utils.basic import AnsibleModule
-
-try:
-    from ansible.module_utils.sap_automation_qa import SapAutomationQA, TestStatus
-except ImportError:
-    from src.module_utils.sap_automation_qa import SapAutomationQA, TestStatus
 
 
 class IndexServerCheck(SapAutomationQA):

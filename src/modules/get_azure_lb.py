@@ -5,6 +5,26 @@
 Custom ansible module for getting Azure Load Balancer details
 """
 
+import logging
+import ast
+from typing import Dict
+from azure.identity import ManagedIdentityCredential
+from azure.mgmt.network import NetworkManagementClient
+from ansible.module_utils.basic import AnsibleModule
+
+try:
+    from ansible.module_utils.sap_automation_qa import (
+        SapAutomationQA,
+        TestStatus,
+        Parameters,
+    )
+except ImportError:
+    from src.module_utils.sap_automation_qa import (
+        SapAutomationQA,
+        TestStatus,
+        Parameters,
+    )
+
 DOCUMENTATION = r"""
 ---
 module: get_azure_lb
@@ -117,26 +137,6 @@ details:
                     type: str
                     sample: "SUCCESS"
 """
-
-import logging
-import ast
-from typing import Dict
-from azure.identity import ManagedIdentityCredential
-from azure.mgmt.network import NetworkManagementClient
-from ansible.module_utils.basic import AnsibleModule
-
-try:
-    from ansible.module_utils.sap_automation_qa import (
-        SapAutomationQA,
-        TestStatus,
-        Parameters,
-    )
-except ImportError:
-    from src.module_utils.sap_automation_qa import (
-        SapAutomationQA,
-        TestStatus,
-        Parameters,
-    )
 
 
 class AzureLoadBalancer(SapAutomationQA):
