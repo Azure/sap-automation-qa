@@ -5,6 +5,119 @@
 Custom ansible module for getting Azure Load Balancer details
 """
 
+DOCUMENTATION = r"""
+---
+module: get_azure_lb
+short_description: Gets and validates Azure Load Balancer details
+description:
+    - This module retrieves Azure Load Balancer details for DB/SCS/ERS in a specific resource group
+    - Validates load balancer rules and health probe configurations against expected values
+    - Uses Azure SDK to interact with Azure Network resources
+options:
+    subscription_id:
+        description:
+            - The Azure subscription ID
+        type: str
+        required: true
+    region:
+        description:
+            - Azure region where the resources are deployed
+        type: str
+        required: true
+    inbound_rules:
+        description:
+            - JSON string containing inbound rule configurations to check for
+            - Must include privateIpAddress fields to match load balancers
+        type: str
+        required: true
+    constants:
+        description:
+            - Dictionary containing expected configuration values for validation
+            - Must include AZURE_LOADBALANCER.RULES and AZURE_LOADBALANCER.PROBES
+        type: dict
+        required: true
+author:
+    - Microsoft Corporation
+notes:
+    - Requires Azure SDK for Python
+    - Uses Managed Identity for authentication
+    - Must be run on a machine with Managed Identity credentials configured
+requirements:
+    - python >= 3.6
+    - azure-identity
+    - azure-mgmt-network
+"""
+
+EXAMPLES = r"""
+- name: Get and validate Azure Load Balancer configuration
+  get_azure_lb:
+    subscription_id: "{{ azure_subscription_id }}"
+    region: "{{ azure_region }}"
+    inbound_rules: "{{ inbound_rules | to_json }}"
+    constants:
+      AZURE_LOADBALANCER:
+        RULES:
+          idle_timeout_in_minutes: 30
+          load_distribution: "Default"
+          enable_floating_ip: True
+        PROBES:
+          interval_in_seconds: 15
+          number_of_probes: 3
+  register: lb_result
+
+- name: Display load balancer validation results
+  debug:
+    var: lb_result
+"""
+
+RETURN = r"""
+status:
+    description: Status of the validation
+    returned: always
+    type: str
+    sample: "SUCCESS"
+message:
+    description: Descriptive message about the operation and validation results
+    returned: always
+    type: str
+    sample: "Successfully validated load balancer parameters"
+details:
+    description: Detailed validation results for each parameter
+    returned: always
+    type: dict
+    contains:
+        parameters:
+            description: List of parameters validated
+            returned: always
+            type: list
+            elements: dict
+            contains:
+                category:
+                    description: Parameter category (load_balancing_rule or probe)
+                    type: str
+                    sample: "load_balancing_rule"
+                id:
+                    description: Name/identifier of the entity
+                    type: str
+                    sample: "lbRuleSAPILP"
+                name:
+                    description: Name of the parameter
+                    type: str
+                    sample: "idle_timeout_in_minutes"
+                value:
+                    description: Actual value found
+                    type: str
+                    sample: "30"
+                expected_value:
+                    description: Expected value for comparison
+                    type: str
+                    sample: "30"
+                status:
+                    description: Result of the comparison
+                    type: str
+                    sample: "SUCCESS"
+"""
+
 import logging
 import ast
 from typing import Dict

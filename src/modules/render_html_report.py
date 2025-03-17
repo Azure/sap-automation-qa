@@ -5,6 +5,87 @@
 Module to render the HTML report for the test group invocation.
 """
 
+DOCUMENTATION = r"""
+---
+module: render_html_report
+short_description: Renders HTML reports for SAP automation test results
+description:
+    - This module generates HTML reports from test results log files
+    - Uses Jinja2 templates to format test results into readable HTML
+    - Creates report files in the specified workspace directory
+options:
+    test_group_invocation_id:
+        description:
+            - Unique identifier for the test group invocation
+            - Used to locate the corresponding log file
+        type: str
+        required: true
+    test_group_name:
+        description:
+            - Name of the test group
+            - Used as part of the generated report filename
+        type: str
+        required: true
+    report_template:
+        description:
+            - Jinja2 HTML template content for rendering the report
+            - Should support test_case_results and report_generation_time variables
+        type: str
+        required: true
+    workspace_directory:
+        description:
+            - Base directory where logs are stored and reports will be generated
+            - Reports will be created in {workspace_directory}/quality_assurance/
+        type: str
+        required: true
+author:
+    - Microsoft Corporation
+notes:
+    - Log files should be in JSON format, one JSON object per line
+    - Requires jinja2 module for template rendering
+    - Creates directory structure if it doesn't exist
+requirements:
+    - python >= 3.6
+    - jinja2
+"""
+
+EXAMPLES = r"""
+- name: Generate HTML report for SAP HANA test group
+  render_html_report:
+    test_group_invocation_id: "20230101-120000"
+    test_group_name: "hana_cluster_validation"
+    report_template: "{{ lookup('file', 'templates/report_template.html') }}"
+    workspace_directory: "/var/log/sap-automation-qa"
+  register: report_result
+
+- name: Show path to generated report
+  debug:
+    msg: "HTML report generated at {{ report_result.report_path }}"
+
+- name: Fail if report generation failed
+  fail:
+    msg: "Failed to generate test report"
+  when: report_result.status != 'SUCCESS'
+"""
+
+RETURN = r"""
+status:
+    description: Status of the report generation
+    returned: always
+    type: str
+    sample: "SUCCESS"
+report_path:
+    description: Path to the generated HTML report
+    returned: on success
+    type: str
+    sample: "/var/log/sap-automation-qa/quality_assurance/hana_cluster_validation_20230101-120000.html"
+message:
+    description: Error message if report generation failed
+    returned: on failure
+    type: str
+    sample: "Log file not found"
+"""
+
 import json
 import logging
 import os

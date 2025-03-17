@@ -5,6 +5,76 @@
 Python script to get and validate the status of an SCS cluster.
 """
 
+DOCUMENTATION = r"""
+---
+module: get_cluster_status_scs
+short_description: Checks the status of a SAP SCS cluster
+description:
+    - This module checks the status of a pacemaker cluster in a SAP SCS environment
+    - Identifies ASCS and ERS nodes in the cluster
+    - Validates if the cluster is ready and stable
+options:
+    sap_sid:
+        description:
+            - SAP System ID (SID)
+        type: str
+        required: true
+    ansible_os_family:
+        description:
+            - Operating system family (redhat, suse, etc.)
+        type: str
+        required: false
+author:
+    - Microsoft Corporation
+notes:
+    - This module requires root privileges to access pacemaker cluster information
+    - Depends on crm_mon command being available
+    - Validates the cluster status by checking node attributes for ASCS and ERS
+requirements:
+    - python >= 3.6
+    - pacemaker cluster environment
+"""
+
+EXAMPLES = r"""
+- name: Check SAP SCS cluster status
+  get_cluster_status_scs:
+    sap_sid: "S4D"
+    ansible_os_family: "{{ ansible_os_family|lower }}"
+  register: cluster_result
+
+- name: Display SCS cluster status
+  debug:
+    msg: "ASCS node: {{ cluster_result.ascs_node }}, ERS node: {{ cluster_result.ers_node }}"
+
+- name: Fail if SCS cluster is not stable
+  fail:
+    msg: "SAP SCS cluster is not properly configured"
+  when: cluster_result.ascs_node == '' or cluster_result.ers_node == ''
+"""
+
+RETURN = r"""
+status:
+    description: Status of the cluster check
+    returned: always
+    type: str
+    sample: "SUCCESS"
+message:
+    description: Descriptive message about the cluster status
+    returned: always
+    type: str
+    sample: "Cluster is stable and ready"
+ascs_node:
+    description: Name of the node running the ASCS instance
+    returned: always
+    type: str
+    sample: "sapapp1"
+ers_node:
+    description: Name of the node running the ERS instance
+    returned: always
+    type: str
+    sample: "sapapp2"
+"""
+
 import xml.etree.ElementTree as ET
 from typing import Dict, Any
 from ansible.module_utils.basic import AnsibleModule

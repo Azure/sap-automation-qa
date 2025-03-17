@@ -5,6 +5,114 @@
 Python script to get and validate the status of a HANA cluster.
 """
 
+DOCUMENTATION = r"""
+---
+module: get_cluster_status_db
+short_description: Checks the status of a SAP HANA database cluster
+description:
+    - This module checks the status of a pacemaker cluster in a SAP HANA environment
+    - Identifies primary and secondary nodes in the cluster
+    - Retrieves operation mode, replication mode, and other cluster attributes
+    - Validates if the cluster is ready and stable
+options:
+    operation_step:
+        description:
+            - The current operation step being executed
+        type: str
+        required: true
+    database_sid:
+        description:
+            - SAP HANA database SID
+        type: str
+        required: true
+    ansible_os_family:
+        description:
+            - Operating system family (redhat, suse, etc.)
+        type: str
+        required: false
+author:
+    - Microsoft Corporation
+notes:
+    - This module requires root privileges to access pacemaker cluster information
+    - Depends on crm_mon and crm_attribute commands being available
+    - Validates the cluster status by checking node attributes
+requirements:
+    - python >= 3.6
+    - pacemaker cluster environment
+"""
+
+EXAMPLES = r"""
+- name: Check SAP HANA cluster status
+  get_cluster_status_db:
+    operation_step: "check_cluster"
+    database_sid: "HDB"
+    ansible_os_family: "{{ ansible_os_family|lower }}"
+  register: cluster_result
+
+- name: Display cluster status
+  debug:
+    msg: "Primary node: {{ cluster_result.primary_node }}, Secondary node: {{ cluster_result.secondary_node }}"
+
+- name: Fail if cluster is not stable
+  fail:
+    msg: "HANA cluster is not properly configured"
+  when: cluster_result.primary_node == '' or cluster_result.secondary_node == ''
+"""
+
+RETURN = r"""
+status:
+    description: Status of the cluster check
+    returned: always
+    type: str
+    sample: "SUCCESS"
+message:
+    description: Descriptive message about the cluster status
+    returned: always
+    type: str
+    sample: "Cluster is stable and ready"
+primary_node:
+    description: Name of the primary node in the HANA cluster
+    returned: always
+    type: str
+    sample: "hanadb1"
+secondary_node:
+    description: Name of the secondary node in the HANA cluster
+    returned: always
+    type: str
+    sample: "hanadb2"
+operation_mode:
+    description: HANA system replication operation mode
+    returned: always
+    type: str
+    sample: "logreplay"
+replication_mode:
+    description: HANA system replication mode
+    returned: always
+    type: str
+    sample: "sync"
+primary_site_name:
+    description: Name of the primary site in HANA system replication
+    returned: always
+    type: str
+    sample: "Site1"
+AUTOMATED_REGISTER:
+    description: Status of automated registration
+    returned: always
+    type: str
+    sample: "true"
+cluster_status:
+    description: Detailed cluster attributes for each node
+    returned: always
+    type: dict
+    contains:
+        primary:
+            description: Attributes of the primary node
+            type: dict
+        secondary:
+            description: Attributes of the secondary node
+            type: dict
+"""
+
 import xml.etree.ElementTree as ET
 from typing import Dict, Any
 from ansible.module_utils.basic import AnsibleModule

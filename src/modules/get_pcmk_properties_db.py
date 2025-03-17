@@ -11,6 +11,132 @@ Classes:
     HAClusterValidator: Main validator class for cluster configurations.
 """
 
+DOCUMENTATION = r"""
+---
+module: get_pcmk_properties_db
+short_description: Validates Pacemaker cluster configurations for SAP HANA
+description:
+    - Validates Pacemaker cluster configurations against predefined standards for SAP HANA deployments
+    - Checks basic cluster properties, resource configurations, and constraints
+    - Verifies OS parameters and global.ini settings
+    - Provides detailed validation results for each parameter
+options:
+    sid:
+        description:
+            - SAP HANA database SID
+        type: str
+        required: true
+    instance_number:
+        description:
+            - SAP HANA instance number
+        type: str
+        required: true
+    ansible_os_family:
+        description:
+            - Operating system family (redhat, suse, etc.)
+        type: str
+        required: true
+    virtual_machine_name:
+        description:
+            - Name of the virtual machine
+        type: str
+        required: true
+    fencing_mechanism:
+        description:
+            - Type of fencing mechanism used
+        type: str
+        required: true
+    os_version:
+        description:
+            - Operating system version
+        type: str
+        required: true
+    pcmk_constants:
+        description:
+            - Dictionary of constants for validation
+        type: dict
+        required: true
+author:
+    - Microsoft Corporation
+notes:
+    - Module requires root privileges to execute cluster management commands
+    - Relies on cibadmin to query Pacemaker configuration
+    - Validates configurations against predefined standards in pcmk_constants
+requirements:
+    - python >= 3.6
+    - Pacemaker cluster environment
+"""
+
+EXAMPLES = r"""
+- name: Validate Pacemaker cluster configuration for SAP HANA
+  get_pcmk_properties_db:
+    sid: "HDB"
+    instance_number: "00"
+    ansible_os_family: "{{ ansible_os_family|lower }}"
+    virtual_machine_name: "{{ ansible_hostname }}"
+    fencing_mechanism: "sbd"
+    os_version: "{{ ansible_distribution_version }}"
+    pcmk_constants: "{{ pcmk_validation_constants }}"
+  register: pcmk_validation_result
+
+- name: Display cluster validation results
+  debug:
+    var: pcmk_validation_result
+
+- name: Fail if cluster configuration is invalid
+  fail:
+    msg: "Pacemaker cluster configuration does not meet requirements"
+  when: pcmk_validation_result.status == 'ERROR'
+"""
+
+RETURN = r"""
+status:
+    description: Status of the validation
+    returned: always
+    type: str
+    sample: "SUCCESS"
+message:
+    description: Descriptive message about the validation results
+    returned: always
+    type: str
+    sample: "HA Parameter Validation completed successfully."
+details:
+    description: Detailed validation results
+    returned: always
+    type: dict
+    contains:
+        parameters:
+            description: List of validated parameters
+            returned: always
+            type: list
+            elements: dict
+            contains:
+                category:
+                    description: Category of the parameter
+                    type: str
+                    sample: "crm_config"
+                id:
+                    description: ID of the parameter
+                    type: str
+                    sample: "cib-bootstrap-options-stonith-enabled"
+                name:
+                    description: Name of the parameter
+                    type: str
+                    sample: "stonith-enabled"
+                value:
+                    description: Actual value found
+                    type: str
+                    sample: "true"
+                expected_value:
+                    description: Expected value for comparison
+                    type: str
+                    sample: "true"
+                status:
+                    description: Result of the comparison
+                    type: str
+                    sample: "SUCCESS"
+"""
+
 from ansible.module_utils.basic import AnsibleModule
 
 try:

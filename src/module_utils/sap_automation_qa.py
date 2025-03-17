@@ -116,10 +116,11 @@ class SapAutomationQA(ABC):
         :param stderr: Standard error output from the command
         :type stderr: str
         """
-        error_message = f"Error executing command: {exception}. More errors: {stderr}"
+        error_message = f"Error executing command: {exception}."
+        if stderr:
+            error_message += f" More errors: {stderr}"
         error_message.replace("'", "")
         self.log(logging.ERROR, error_message)
-        self.logger.error(error_message)
         self.result["status"] = TestStatus.ERROR.value
         self.result["message"] = error_message
         self.result["logs"].append(error_message)

@@ -5,6 +5,153 @@
 Module to send telemetry data to Kusto Cluster/Log Analytics Workspace and create an HTML report.
 """
 
+DOCUMENTATION = r"""
+---
+module: send_telemetry_data
+short_description: Sends SAP automation test results as telemetry data
+description:
+    - This module sends test result data to Azure telemetry systems
+    - Supports sending to Azure Data Explorer (Kusto) or Log Analytics Workspace
+    - Also writes a local log file for backup and debugging
+    - Handles authentication and formatting for different Azure services
+options:
+    test_group_json_data:
+        description:
+            - Dictionary containing the telemetry data to be sent
+            - Should include TestGroupInvocationId and other test metadata
+        type: dict
+        required: true
+    telemetry_data_destination:
+        description:
+            - Where to send the telemetry data
+            - Use "azuredataexplorer" for Azure Data Explorer
+            - Use "azureloganalytics" for Log Analytics Workspace
+        type: str
+        required: true
+    laws_workspace_id:
+        description:
+            - Log Analytics workspace ID
+            - Required when telemetry_data_destination is "azureloganalytics"
+        type: str
+        required: false
+    laws_shared_key:
+        description:
+            - Log Analytics workspace shared key
+            - Required when telemetry_data_destination is "azureloganalytics"
+        type: str
+        required: false
+    telemetry_table_name:
+        description:
+            - Table name for storing the telemetry data
+            - In Log Analytics, this becomes the Log-Type header
+        type: str
+        required: false
+    adx_database_name:
+        description:
+            - Azure Data Explorer database name
+            - Required when telemetry_data_destination is "azuredataexplorer"
+        type: str
+        required: false
+    adx_cluster_fqdn:
+        description:
+            - Azure Data Explorer cluster FQDN
+            - Required when telemetry_data_destination is "azuredataexplorer"
+        type: str
+        required: false
+    adx_client_id:
+        description:
+            - Client ID for Azure Data Explorer authentication
+            - Required when telemetry_data_destination is "azuredataexplorer"
+        type: str
+        required: false
+    workspace_directory:
+        description:
+            - Directory for storing local log files
+            - Logs will be created in {workspace_directory}/logs/
+        type: str
+        required: true
+author:
+    - Microsoft Corporation
+notes:
+    - Uses managed identity authentication for Azure Data Explorer
+    - Uses shared key authentication for Log Analytics Workspace
+    - Always writes a local log file regardless of telemetry destination
+requirements:
+    - python >= 3.6
+    - azure-kusto-data
+    - azure-kusto-ingest
+    - requests
+    - pandas
+"""
+
+EXAMPLES = r"""
+- name: Send telemetry data to Azure Log Analytics
+  send_telemetry_data:
+    test_group_json_data: "{{ test_results }}"
+    telemetry_data_destination: "azureloganalytics"
+    laws_workspace_id: "{{ laws_workspace_id }}"
+    laws_shared_key: "{{ laws_shared_key }}"
+    telemetry_table_name: "SAPAutomationQAResults"
+    workspace_directory: "/var/log/sap-automation-qa"
+  register: telemetry_result
+
+- name: Send telemetry data to Azure Data Explorer (Kusto)
+  send_telemetry_data:
+    test_group_json_data: "{{ test_results }}"
+    telemetry_data_destination: "azuredataexplorer"
+    adx_database_name: "SAPAutomationQA"
+    adx_cluster_fqdn: "https://cluster.region.kusto.windows.net"
+    adx_client_id: "{{ adx_client_id }}"
+    telemetry_table_name: "TestResults"
+    workspace_directory: "/var/log/sap-automation-qa"
+  register: telemetry_result
+
+- name: Only log data locally without sending to Azure
+  send_telemetry_data:
+    test_group_json_data: "{{ test_results }}"
+    telemetry_data_destination: "local"
+    workspace_directory: "/var/log/sap-automation-qa"
+  register: telemetry_result
+"""
+
+RETURN = r"""
+status:
+    description: Status of the telemetry sending operation
+    returned: always
+    type: str
+    sample: "SUCCESS"
+message:
+    description: Detailed message about the operation
+    returned: always
+    type: str
+    sample: "Telemetry data sent to azureloganalytics. Telemetry data written to /var/log/sap-automation-qa/logs/123456.log."
+telemetry_data:
+    description: Copy of the data that was sent
+    returned: always
+    type: dict
+    sample: {"TestGroupInvocationId": "123456", "TestResult": "PASS"}
+telemetry_data_destination:
+    description: Where the data was sent
+    returned: always
+    type: str
+    sample: "azureloganalytics"
+start:
+    description: Start time of the operation
+    returned: always
+    type: str
+    sample: "2023-01-01T12:00:00"
+end:
+    description: End time of the operation
+    returned: always
+    type: str
+    sample: "2023-01-01T12:00:05"
+data_sent:
+    description: Whether the data was successfully sent to the destination
+    returned: always
+    type: bool
+    sample: true
+"""
+
 import logging
 import os
 from datetime import datetime
