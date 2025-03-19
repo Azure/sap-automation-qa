@@ -1,0 +1,9 @@
+---
+- name: %s
+  hosts: scs01, scs02
+  gather_facts: yes
+  environment:
+    PATH: "%s/bin:$PATH"
+  tasks:
+    - name: Include ASCS migration tasks
+      include_tasks: roles/ha_scs/tasks/%s.yml

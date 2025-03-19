@@ -1,0 +1,25 @@
+#!/usr/bin/python3
+# -*- coding: utf-8 -*-
+
+from ansible.module_utils.basic import AnsibleModule
+
+def main():
+    module = AnsibleModule(
+        argument_spec=dict(
+            sap_sid=dict(type='str', required=True),
+            ansible_os_family=dict(type='str', required=True)
+        )
+    )
+
+    # Return a mock cluster status
+    module.exit_json(
+        changed=False,
+        ascs_node="scs02",
+        ers_node="scs01",
+        status="PASSED",
+        pacemaker_status="running"
+    )
+
+if __name__ == '__main__':
+    main()
+

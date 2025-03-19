@@ -1,0 +1,31 @@
+#!/usr/bin/python3
+# -*- coding: utf-8 -*-
+
+from ansible.module_utils.basic import AnsibleModule
+
+def main():
+    module = AnsibleModule(
+        argument_spec=dict(
+            test_group_json_data=dict(type="dict", required=True),
+            telemetry_data_destination=dict(type="str", required=True),
+            laws_workspace_id=dict(type="str", required=False),
+            laws_shared_key=dict(type="str", required=False),
+            telemetry_table_name=dict(type="str", required=False),
+            adx_database_name=dict(type="str", required=False),
+            adx_cluster_fqdn=dict(type="str", required=False),
+            adx_client_id=dict(type="str", required=False),
+            workspace_directory=dict(type="str", required=True),
+        )
+    )
+
+    # Return a mock cluster status
+    module.exit_json(
+        changed=False,
+        data_sent= False,
+        data_logged= False,
+        status="PASSED"
+    )
+
+if __name__ == '__main__':
+    main()
+

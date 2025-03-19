@@ -1,0 +1,11 @@
+#!/bin/bash
+if [[ "$1" == "resource" && "$2" == "migrate" ]]; then
+    echo "Mock: Successfully migrated resource $3 to $4"
+    exit 0
+elif [[ "$1" == "resource" && "$2" == "clear" ]]; then
+    echo "Mock: Successfully removed location constraints for $3"
+    exit 0
+fi
+
+echo "Unknown command: $@"
+exit 1
