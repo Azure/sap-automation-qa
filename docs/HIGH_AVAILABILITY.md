@@ -92,7 +92,7 @@ Ensure you are logged into the Ubuntu management server that is connected to the
 sudo su -
 
 # Clone the repository
-git clone https://github.com/devanshjainms/sap-automation-qa.git
+git clone https://github.com/Azure/sap-automation-qa.git
 cd sap-automation-qa
 ```
 
