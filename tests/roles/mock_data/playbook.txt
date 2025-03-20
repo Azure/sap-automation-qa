@@ -1,6 +1,14 @@
 ---
+- name: Force ansible_hostname for testing
+  hosts: all
+  gather_facts: no
+  tasks:
+    - name: Set ansible_hostname based on inventory_hostname
+      set_fact:
+        ansible_hostname: "{{ inventory_hostname }}"
+
 - name: %s
-  hosts: scs01, scs02
+  hosts: all
   gather_facts: yes
   environment:
     PATH: "%s/bin:$PATH"

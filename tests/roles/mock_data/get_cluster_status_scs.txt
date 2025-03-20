@@ -2,6 +2,7 @@
 # -*- coding: utf-8 -*-
 
 from ansible.module_utils.basic import AnsibleModule
+import os
 
 def main():
     module = AnsibleModule(
@@ -11,15 +12,36 @@ def main():
         )
     )
 
-    # Return a mock cluster status
-    module.exit_json(
-        changed=False,
-        ascs_node="scs02",
-        ers_node="scs01",
-        status="PASSED",
-        pacemaker_status="running"
-    )
+    counter_file = "/tmp/get_cluster_status_counter"
+
+    if os.path.exists(counter_file):
+        with open(counter_file, "r") as f:
+            counter = int(f.read().strip() or "0")
+    else:
+        counter = 0
+
+    counter += 1
+    with open(counter_file, "w") as f:
+        f.write(str(counter))
+
+    if counter == 3:
+        result = {
+            "changed": False,
+            "ascs_node": "scs01",
+            "ers_node": "scs02",
+            "status": "PASSED",
+            "pacemaker_status": "running"
+        }
+    else:
+        result = {
+            "changed": False,
+            "ascs_node": "scs02",
+            "ers_node": "scs01",
+            "status": "PASSED",
+            "pacemaker_status": "running"
+        }
+
+    module.exit_json(**result)
 
 if __name__ == '__main__':
     main()
-

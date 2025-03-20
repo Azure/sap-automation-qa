@@ -1,0 +1,8 @@
+#!/bin/bash
+if [[ "$1" == "-b" && "$2" == "/proc/sysrq-trigger" ]]; then
+    echo "Mock: Successfully crashed the node"
+    exit 0
+fi
+
+echo "Unknown command: $@"
+exit 1
