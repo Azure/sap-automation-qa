@@ -48,35 +48,22 @@ class TestASCSMigration(RolesTestingBase):
         :ytype: str
         """
 
-        temp_dir = tempfile.mkdtemp()
-
-        os.makedirs(f"{temp_dir}/env", exist_ok=True)
-        os.makedirs(f"{temp_dir}/project", exist_ok=True)
-        os.makedirs(f"{temp_dir}/project/roles/ha_scs/tasks", exist_ok=True)
-        os.makedirs(f"{temp_dir}/project/roles/misc/tasks", exist_ok=True)
-        os.makedirs(f"{temp_dir}/bin", exist_ok=True)
-        os.makedirs(f"{temp_dir}/project/library", exist_ok=True)
-
-        if os.path.exists("/tmp/get_cluster_status_counter"):
-            os.remove("/tmp/get_cluster_status_counter")
-
-        file_list = [
-            "ha_scs/tasks/ascs-migration.yml",
-            "misc/tasks/test-case-setup.yml",
-            "misc/tasks/pre-validations-scs.yml",
-            "misc/tasks/post-validations-scs.yml",
-            "misc/tasks/rescue.yml",
-            "misc/tasks/var-log-messages.yml",
-            "misc/tasks/post-telemetry-data.yml",
+        commands = [
+            {
+                "name": "ascs_resource_migration_cmd",
+                "SUSE": "crm resource migrate SAP_ASCS00_ascs00 scs02",
+            },
+            {
+                "name": "ascs_resource_unmigrate_cmd",
+                "SUSE": "crm resource clear SAP_ASCS00_ascs00",
+            },
         ]
-        for file in file_list:
-            src_file = Path(__file__).parent.parent.parent / f"src/roles/{file}"
-            dest_file = f"{temp_dir}/project/roles/{file}"
-            os.makedirs(os.path.dirname(dest_file), exist_ok=True)
-            shutil.copy(src_file, dest_file)
 
-        self.mock_modules(
-            temp_dir=temp_dir,
+        # Set up with common method
+        temp_dir = self.setup_test_environment(
+            ansible_inventory=ansible_inventory,
+            task_name="ascs-migration",
+            task_description="The Resource Migration test validates planned failover scenarios",
             module_names=[
                 "project/library/get_cluster_status_scs",
                 "project/library/log_parser",
@@ -84,70 +71,7 @@ class TestASCSMigration(RolesTestingBase):
                 "bin/crm_resource",
                 "bin/crm",
             ],
-        )
-
-        extravars = {
-            "item": {
-                "name": "Manual ASCS Migration",
-                "task_name": "ascs-migration",
-                "description": "The Resource Migration test validates planned failover scenarios by "
-                + "executing controlled resource movement between ASCS and ERS nodes.",
-                "enabled": True,
-            },
-            "node_tier": "scs",
-            "commands": [
-                {
-                    "name": "ascs_resource_migration_cmd",
-                    "SUSE": "crm resource migrate SAP_ASCS00_ascs00 scs02",
-                },
-                {
-                    "name": "ascs_resource_unmigrate_cmd",
-                    "SUSE": "crm resource clear SAP_ASCS00_ascs00",
-                },
-            ],
-            "ansible_os_family": "SUSE",
-            "sap_sid": "TST",
-            "db_sid": "TST",
-            "database_high_availability": "true",
-            "scs_high_availability": "true",
-            "database_cluster_type": "AFA",
-            "NFS_provider": "AFS",
-            "scs_cluster_type": "AFA",
-            "platform": "HANA",
-            "scs_instance_number": "00",
-            "ers_instance_number": "01",
-            "group_name": "HA_SCS",
-            "group_invocation_id": "test-run-123",
-            "group_start_time": "2025-03-18 11:00:00",
-            "telemetry_data_destination": "mock_destination",
-            "_workspace_directory": temp_dir,
-            "ansible_distribution": "SUSE",
-            "ansible_distribution_version": "15",
-        }
-
-        # Write the extravars to a file
-        self.file_operations(
-            operation="write", file_path=f"{temp_dir}/env/extravars", content=json.dumps(extravars)
-        )
-
-        # Read the playbook content and replace placeholders with actual values
-        playbook_content = self.file_operations(
-            operation="read",
-            file_path=Path(__file__).parent.parent.parent / "tests/roles/mock_data/playbook.txt",
-        )
-
-        playbook_content = playbook_content.replace("ansible_hostname ==", "inventory_hostname ==")
-
-        # Write the playbook content to a temporary file
-        self.file_operations(
-            operation="write",
-            file_path=f"{temp_dir}/project/test_playbook.yml",
-            content=playbook_content
-            % (
-                extravars["item"]["name"],
-                temp_dir,
-                extravars["item"]["task_name"],
-            ),
+            extra_vars_override={"commands": commands},
         )
 
         yield temp_dir
