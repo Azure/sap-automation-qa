@@ -54,7 +54,7 @@ class RolesTestingBase:
         """
         inventory_content = self.file_operations(
             operation="read",
-            file_path=Path(__file__).parent.parent.parent / "tests/roles/mock_data/inventory.txt",
+            file_path=Path(__file__).parent / "mock_data/inventory.txt",
         )
 
         inventory_path = Path(__file__).parent / "test_inventory.ini"
@@ -81,8 +81,7 @@ class RolesTestingBase:
         for module in module_names:
             content = self.file_operations(
                 operation="read",
-                file_path=Path(__file__).parent.parent.parent
-                / f"tests/roles/mock_data/{module.split('/')[-1]}.txt",
+                file_path=Path(__file__).parent / f"mock_data/{module.split('/')[-1]}.txt",
             )
             self.file_operations(
                 operation="write",
@@ -160,7 +159,7 @@ class RolesTestingBase:
             file_list.extend(additional_files)
 
         for file in file_list:
-            src_file = Path(__file__).parent.parent.parent / f"src/roles/{file}"
+            src_file = Path(__file__).parent.parent.parent.parent / f"src/roles/{file}"
             dest_file = f"{temp_dir}/project/roles/{file}"
             os.makedirs(os.path.dirname(dest_file), exist_ok=True)
             shutil.copy(src_file, dest_file)
@@ -206,7 +205,7 @@ class RolesTestingBase:
 
         playbook_content = self.file_operations(
             operation="read",
-            file_path=Path(__file__).parent.parent.parent / "tests/roles/mock_data/playbook.txt",
+            file_path=Path(__file__).parent / "mock_data/playbook.txt",
         )
         playbook_content = playbook_content.replace("ansible_hostname ==", "inventory_hostname ==")
 
@@ -235,7 +234,7 @@ class RolesTestingBase:
 
         inventory_content = self.file_operations(
             operation="read",
-            file_path=Path(__file__).parent.parent.parent / "tests/roles/mock_data/inventory.txt",
+            file_path=Path(__file__).parent / "mock_data/inventory.txt",
         )
         inventory_file = f"{test_environment}/test_inventory.ini"
         self.file_operations(operation="write", file_path=inventory_file, content=inventory_content)

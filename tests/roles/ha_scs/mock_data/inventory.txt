@@ -1,0 +1,6 @@
+[scs]
+scs01 ansible_host=127.0.0.1 ansible_connection=local ansible_hostname=scs01 inventory_hostname=scs01 virtual_host=scs01
+scs02 ansible_host=127.0.0.1 ansible_connection=local ansible_hostname=scs02 inventory_hostname=scs02 virtual_host=scs02
+
+[all:vars]
+ansible_python_interpreter=/usr/bin/python3
