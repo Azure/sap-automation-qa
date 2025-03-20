@@ -9,9 +9,6 @@ defined in roles/ha_scs/tasks/ascs-migration.yml. It sets up a temporary test en
 mocks necessary Python modules and commands, and verifies the execution of the tasks.
 """
 
-import tempfile
-import os
-import json
 import shutil
 from pathlib import Path
 import pytest
@@ -59,7 +56,6 @@ class TestASCSMigration(RolesTestingBase):
             },
         ]
 
-        # Set up with common method
         temp_dir = self.setup_test_environment(
             ansible_inventory=ansible_inventory,
             task_name="ascs-migration",

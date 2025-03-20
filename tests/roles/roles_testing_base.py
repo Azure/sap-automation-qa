@@ -49,7 +49,7 @@ class RolesTestingBase:
         Create a temporary Ansible inventory file for testing.
         This inventory contains two hosts (scs01 and scs02) with local connections.
 
-        :yield: Path to the temporary inventory file.
+        :yield inventory_path: Path to the temporary inventory file.
         :ytype: Iterator[str]
         """
         inventory_content = self.file_operations(
@@ -117,12 +117,19 @@ class RolesTestingBase:
         Set up a standard test environment for Ansible role testing.
 
         :param ansible_inventory: Path to the Ansible inventory file
+        :type ansible_inventory: str
         :param task_name: Name of the task file to test (e.g., "ascs-migration")
+        :type task_name: str
         :param task_description: Human-readable description of the test
+        :type task_description: str
         :param module_names: List of modules to mock
+        :type module_names: list
         :param additional_files: Additional files to copy beyond standard ones
+        :type additional_files: list
         :param extra_vars_override: Dictionary of extra vars to override defaults
+        :type extra_vars_override: dict
         :return: Path to the temporary test environment
+        :rtype: str
         """
         temp_dir = tempfile.mkdtemp()
 
