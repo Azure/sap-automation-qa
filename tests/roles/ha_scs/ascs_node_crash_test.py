@@ -12,10 +12,10 @@ mocks necessary Python modules and commands, and verifies the execution of the t
 import shutil
 from pathlib import Path
 import pytest
-from tests.roles.ha_scs.roles_testing_base import RolesTestingBase
+from tests.roles.ha_scs.roles_testing_base_scs import RolesTestingBaseSCS
 
 
-class TestASCSNodeCrash(RolesTestingBase):
+class TestASCSNodeCrash(RolesTestingBaseSCS):
     """
     Test class for ASCS node crash tasks.
     """
@@ -45,6 +45,7 @@ class TestASCSNodeCrash(RolesTestingBase):
         :ytype: str
         """
         temp_dir = self.setup_test_environment(
+            role_type="ha_scs",
             ansible_inventory=ansible_inventory,
             task_name="ascs-node-crash",
             task_description="Simulate ASCS node crash",
@@ -55,6 +56,9 @@ class TestASCSNodeCrash(RolesTestingBase):
                 "bin/crm_resource",
                 "bin/echo",
             ],
+            extra_vars_override={
+                "node_tier": "scs",
+            },
         )
 
         yield temp_dir
@@ -70,7 +74,7 @@ class TestASCSNodeCrash(RolesTestingBase):
         :type ansible_inventory: str
         """
         result = self.run_ansible_playbook(
-            test_environment=test_environment,
+            test_environment=test_environment, inventory_file_name="inventory_scs.txt"
         )
 
         assert result.rc == 0, (

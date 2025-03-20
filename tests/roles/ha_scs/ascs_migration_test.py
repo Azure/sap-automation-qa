@@ -12,10 +12,10 @@ mocks necessary Python modules and commands, and verifies the execution of the t
 import shutil
 from pathlib import Path
 import pytest
-from tests.roles.ha_scs.roles_testing_base import RolesTestingBase
+from tests.roles.ha_scs.roles_testing_base_scs import RolesTestingBaseSCS
 
 
-class TestASCSMigration(RolesTestingBase):
+class TestASCSMigration(RolesTestingBaseSCS):
     """
     Test class for ASCS migration tasks.
     """
@@ -57,6 +57,7 @@ class TestASCSMigration(RolesTestingBase):
         ]
 
         temp_dir = self.setup_test_environment(
+            role_type="ha_scs",
             ansible_inventory=ansible_inventory,
             task_name="ascs-migration",
             task_description="The Resource Migration test validates planned failover scenarios",
@@ -67,7 +68,7 @@ class TestASCSMigration(RolesTestingBase):
                 "bin/crm_resource",
                 "bin/crm",
             ],
-            extra_vars_override={"commands": commands},
+            extra_vars_override={"commands": commands, "node_tier": "scs"},
         )
 
         yield temp_dir
@@ -83,7 +84,7 @@ class TestASCSMigration(RolesTestingBase):
         :type ansible_inventory: str
         """
         result = self.run_ansible_playbook(
-            test_environment=test_environment,
+            test_environment=test_environment, inventory_file_name="inventory_scs.txt"
         )
 
         assert result.rc == 0, (

@@ -1,0 +1,96 @@
+#!/usr/bin/python3
+# -*- coding: utf-8 -*-
+
+from ansible.module_utils.basic import AnsibleModule
+
+def main():
+    module = AnsibleModule(
+        argument_spec=dict(
+            package_facts_list=dict(type='dict', required=True),
+        ),
+        supports_check_mode=True
+    )
+
+    mock_package_details = [
+        {
+            "Corosync Lib": {
+                "version": "2.4.5",
+                "release": "150400.3.9.1",
+                "architecture": "x86_64"
+            }
+        },
+        {
+            "Corosync": {
+                "version": "2.4.5",
+                "release": "150400.3.9.1",
+                "architecture": "x86_64"
+            }
+        },
+        {
+            "Fence Agents Common": {
+                "version": "4.8.0",
+                "release": "150400.4.3.1",
+                "architecture": "x86_64"
+            }
+        },
+        {
+            "Fencing Agent": {
+                "version": "4.8.0",
+                "release": "150400.4.3.1",
+                "architecture": "x86_64"
+            }
+        },
+        {
+            "Pacemaker CLI": {
+                "version": "2.0.5",
+                "release": "150400.3.15.1",
+                "architecture": "x86_64"
+            }
+        },
+        {
+            "Pacemaker": {
+                "version": "2.0.5",
+                "release": "150400.3.15.1",
+                "architecture": "x86_64"
+            }
+        },
+        {
+            "Resource Agent": {
+                "version": "4.8.0",
+                "release": "150400.4.3.1",
+                "architecture": "x86_64"
+            }
+        },
+        {
+            "SAP Cluster Connector": {
+                "version": "3.1.2",
+                "release": "150400.1.4",
+                "architecture": "x86_64"
+            }
+        },
+        {
+            "SAPHanaSR": {
+                "version": "0.162.3",
+                "release": "150400.3.23.1",
+                "architecture": "noarch"
+            }
+        },
+        {
+            "Socat": {
+                "version": "1.7.3.4",
+                "release": "150400.4.9.1",
+                "architecture": "x86_64"
+            }
+        }
+    ]
+
+    result = {
+        "changed": False,
+        "status": "SUCCESS",
+        "details": mock_package_details
+    }
+
+    module.exit_json(**result)
+
+if __name__ == '__main__':
+    main()

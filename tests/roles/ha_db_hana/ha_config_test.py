@@ -2,10 +2,10 @@
 # Licensed under the MIT License.
 
 """
-Test class for ASCS HA config validation tasks
+Test class for HANA DB HA config validation tasks
 
-This test class uses pytest to run functional tests on the ASCS HA config validation tasks
-defined in roles/ha_scs/tasks/ha-config.yml. It sets up a temporary test environment,
+This test class uses pytest to run functional tests on the HANA DB HA config validation tasks
+defined in roles/ha_db/tasks/ha-config.yml. It sets up a temporary test environment,
 mocks necessary Python modules and commands, and verifies the execution of the tasks.
 """
 
@@ -13,31 +13,32 @@ import os
 import shutil
 from pathlib import Path
 import pytest
-from tests.roles.ha_scs.roles_testing_base_scs import RolesTestingBaseSCS
+from tests.roles.ha_db_hana.roles_testing_base_db import RolesTestingBaseDB
 
 
-class TestASCSHaConfigValidation(RolesTestingBaseSCS):
+class TestDbHaConfigValidation(RolesTestingBaseDB):
     """
-    Test class for ASCS HA config validation tasks.
+    Test class for HANA DB HA config validation tasks.
     """
 
     @pytest.fixture
-    def ascs_migration_tasks(self):
+    def hana_ha_config_tasks(self):
         """
-        Load the ASCS HA config validation tasks from the YAML file.
+        Load the HANA DB HA config validation tasks from the YAML file.
 
         :return: Parsed YAML content of the tasks file.
         :rtype: dict
         """
         return self.file_operations(
             operation="read",
-            file_path=Path(__file__).parent.parent.parent / "src/roles/ha_scs/tasks/ha-config.yml",
+            file_path=Path(__file__).parent.parent.parent
+            / "src/roles/ha_db_hana/tasks/ha-config.yml",
         )
 
     @pytest.fixture
     def test_environment(self, ansible_inventory):
         """
-        Set up a temporary test environment for the ASCS HA config validation tasks.
+        Set up a temporary test environment for the HANA DB HA config validation tasks.
 
         :param ansible_inventory: Path to the Ansible inventory file.
         :type ansible_inventory: str
@@ -46,27 +47,25 @@ class TestASCSHaConfigValidation(RolesTestingBaseSCS):
         """
 
         temp_dir = self.setup_test_environment(
-            role_type="ha_scs",
+            role_type="ha_db_hana",
             ansible_inventory=ansible_inventory,
             task_name="ha-config",
-            task_description="The ASCS HA config validation test validates the SCS/ERS cluster "
+            task_description="The HANA DB HA config validation test validates the DB cluster "
             + "configuration and other system configuration",
             module_names=[
-                "project/library/get_pcmk_properties_scs",
+                "project/library/get_pcmk_properties_db",
                 "project/library/log_parser",
                 "project/library/send_telemetry_data",
+                "project/library/get_package_list",
                 "bin/crm_resource",
                 "bin/crm",
             ],
-            extra_vars_override={
-                "node_tier": "scs",
-            },
         )
 
-        os.makedirs(f"{temp_dir}/project/roles/ha_scs/tasks/files", exist_ok=True)
+        os.makedirs(f"{temp_dir}/project/roles/ha_db_hana/tasks/files", exist_ok=True)
         self.file_operations(
             operation="write",
-            file_path=f"{temp_dir}/project/roles/ha_scs/tasks/files/constants.yaml",
+            file_path=f"{temp_dir}/project/roles/ha_db_hana/tasks/files/constants.yaml",
             content=self.file_operations(
                 operation="read",
                 file_path=Path(__file__).parent.parent / "mock_data/cluster_config.txt",
@@ -89,7 +88,7 @@ class TestASCSHaConfigValidation(RolesTestingBaseSCS):
 
     def test_ha_config_validation_success(self, test_environment, ansible_inventory):
         """
-        Test the ASCS migration tasks using Ansible Runner.
+        Test the HANA DB HA config validation tasks using Ansible Runner.
 
         :param test_environment: Path to the temporary test environment.
         :type test_environment: str
@@ -97,7 +96,7 @@ class TestASCSHaConfigValidation(RolesTestingBaseSCS):
         :type ansible_inventory: str
         """
         result = self.run_ansible_playbook(
-            test_environment=test_environment, inventory_file_name="inventory_scs.txt"
+            test_environment=test_environment, inventory_file_name="inventory_db.txt"
         )
 
         assert result.rc == 0, (
@@ -120,6 +119,9 @@ class TestASCSHaConfigValidation(RolesTestingBaseSCS):
         for event in ok_events:
             task = event.get("event_data", {}).get("task")
             task_result = event.get("event_data", {}).get("res")
+            if "Create package dictionary" in task:
+                assert task_result.get("changed") is False
+                assert task_result["details"][1].get("Corosync").get("version") == "2.4.5"
             if "Virtual Machine name" in task:
                 assert task_result.get("changed") is False
             if "HA Configuration check" in task:
