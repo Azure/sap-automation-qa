@@ -468,36 +468,37 @@
             // Function to recursively create formatted HTML
             function formatJSON(obj, indent = 0, isTopLevel = true) {
               const indentString = '    '.repeat(indent)
-              let html = ''
+              let result = ''
 
               if (Array.isArray(obj)) {
-                html += '[\n'
+                result += '[\n'
                 obj.forEach((item, index) => {
-                  html += indentString + '    '
-                  html += formatJSON(item, indent + 1, false)
-                  if (index < obj.length - 1) html += ','
-                  html += '\n'
+                  result += indentString + '    '
+                  result += formatJSON(item, indent + 1, false)
+                  if (index < obj.length - 1) result += ','
+                  result += '\n'
                 })
-                html += indentString + ']'
+                result += indentString + ']'
               } else if (typeof obj === 'object' && obj !== null) {
-                html += '{\n'
+                result += '{\n'
                 const keys = Object.keys(obj)
                 keys.forEach((key, index) => {
-                  html += indentString + '    '
-                  html += isTopLevel ? `<strong>"${key}"</strong>: ` : `"${key}": `
-                  html += formatJSON(obj[key], indent + 1, false)
-                  if (index < keys.length - 1) html += ','
-                  html += '\n'
+                  result += indentString + '    '
+                  result += isTopLevel ? `"${key}": ` : `"${key}": `
+                  result += formatJSON(obj[key], indent + 1, false)
+                  if (index < keys.length - 1) result += ','
+                  result += '\n'
                 })
-                html += indentString + '}'
+                result += indentString + '}'
               } else {
-                html += JSON.stringify(obj)
+                result += JSON.stringify(obj)
               }
 
-              return html
+              return result
             }
 
-            preElement.innerHTML = formatJSON(jsonObject)
+            const formattedJSON = formatJSON(jsonObject)
+            preElement.appendChild(document.createTextNode(formattedJSON))
             jsonObjectElement.appendChild(preElement)
           } catch (error) {
             console.error('Error parsing JSON:', error)
