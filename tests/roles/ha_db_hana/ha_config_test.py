@@ -60,9 +60,7 @@ class TestDbHaConfigValidation(RolesTestingBaseDB):
                 "bin/crm_resource",
                 "bin/crm",
             ],
-            extra_vars_override={
-                "node_tier": "hana"
-            }
+            extra_vars_override={"node_tier": "hana"},
         )
 
         os.makedirs(f"{temp_dir}/project/roles/ha_db_hana/tasks/files", exist_ok=True)
