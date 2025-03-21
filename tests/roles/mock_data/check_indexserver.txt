@@ -1,0 +1,25 @@
+#!/usr/bin/python3
+# -*- coding: utf-8 -*-
+
+from ansible.module_utils.basic import AnsibleModule
+
+def main():
+    module = AnsibleModule(
+        argument_spec=dict(
+            database_sid=dict(type="str", required=True),
+            ansible_os_family=dict(type="str", required=True),
+        )
+    )
+
+    # Always return that indexserver is enabled
+    result = {
+        "changed": False,
+        "indexserver_enabled": "yes",
+        "status": "PASSED",
+        "message": "The indexserver is enabled on this node",
+    }
+
+    module.exit_json(**result)
+
+if __name__ == '__main__':
+    main()

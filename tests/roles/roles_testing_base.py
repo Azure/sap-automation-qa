@@ -76,7 +76,7 @@ class RolesTestingBase:
             else:
                 dict1[key] = val
 
-    def run_ansible_playbook(self, test_environment, inventory_file_name):
+    def run_ansible_playbook(self, test_environment, inventory_file_name, task_type=None):
         """
         Run an Ansible playbook using the specified inventory.
 
@@ -84,23 +84,30 @@ class RolesTestingBase:
         :type test_environment: str
         :param inventory_file_name: Name of the inventory file.
         :type inventory_file_name: str
+        :param task_type: Type of task to run (optional).
+        :type task_type: str
         :return: Result of the Ansible playbook execution.
         :rtype: ansible_runner.Runner
         """
 
-        inventory_content = self.file_operations(
-            operation="read",
-            file_path=Path(__file__).parent / f"mock_data/{inventory_file_name}",
+        self.file_operations(
+            operation="write",
+            file_path=f"{test_environment}/test_inventory.ini",
+            content=self.file_operations(
+                operation="read",
+                file_path=Path(__file__).parent / f"mock_data/{inventory_file_name}",
+            ),
         )
-        inventory_file = f"{test_environment}/test_inventory.ini"
-        self.file_operations(operation="write", file_path=inventory_file, content=inventory_content)
         return ansible_runner.run(
             private_data_dir=test_environment,
             playbook="test_playbook.yml",
-            inventory=inventory_file,
+            inventory=f"{test_environment}/test_inventory.ini",
             quiet=False,
             verbosity=2,
-            envvars={"PATH": f"{test_environment}/bin:" + os.environ.get("PATH", "")},
+            envvars={
+                "PATH": f"{test_environment}/bin:" + os.environ.get("PATH", ""),
+                "TEST_TASK_TYPE": task_type,
+            },
             extravars={"ansible_become": False},
         )
 

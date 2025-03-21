@@ -1,0 +1,73 @@
+#!/usr/bin/python3
+# -*- coding: utf-8 -*-
+
+from ansible.module_utils.basic import AnsibleModule
+import os
+
+def main():
+    module = AnsibleModule(
+        argument_spec=dict(
+            operation_step=dict(type="str", required=True),
+            database_sid=dict(type="str", required=True),
+            ansible_os_family=dict(type="str", required=False),
+        )
+    )
+
+    task_type = os.environ.get("TEST_TASK_TYPE", "default")
+    counter_file = f"/tmp/get_cluster_status_counter_{task_type}"
+
+
+    if os.path.exists(counter_file):
+        with open(counter_file, "r") as f:
+            counter = int(f.read().strip() or "0")
+    else:
+        counter = 0
+
+    counter += 1
+    with open(counter_file, "w") as f:
+        f.write(str(counter))
+
+    if counter == 3:
+        result = {
+            "changed": False,
+            "primary_node": "db02",
+            "secondary_node": "",
+            "status": "PASSED",
+            "pacemaker_status": "running",
+            "AUTOMATED_REGISTER": "true",
+            "replication_mode": "sync",
+            "primary_site_name": "db01",
+            "operation_mode": "active",
+            "stonith_action": "reboot"
+        }
+    elif counter == 1 or counter == 2:
+        result = {
+            "changed": False,
+            "primary_node": "db01",
+            "secondary_node": "db02",
+            "status": "PASSED",
+            "pacemaker_status": "running",
+            "AUTOMATED_REGISTER": "true",
+            "replication_mode": "sync",
+            "primary_site_name": "db01",
+            "operation_mode": "active",
+            "stonith_action": "reboot"
+        }
+    else:
+        result = {
+            "changed": False,
+            "primary_node": "db02",
+            "secondary_node": "db01",
+            "status": "PASSED",
+            "pacemaker_status": "running",
+            "AUTOMATED_REGISTER": "true",
+            "replication_mode": "sync",
+            "primary_site_name": "db01",
+            "operation_mode": "active",
+            "stonith_action": "reboot"
+        }
+
+    module.exit_json(**result)
+
+if __name__ == '__main__':
+    main()

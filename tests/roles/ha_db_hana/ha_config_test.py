@@ -5,7 +5,7 @@
 Test class for HANA DB HA config validation tasks
 
 This test class uses pytest to run functional tests on the HANA DB HA config validation tasks
-defined in roles/ha_db/tasks/ha-config.yml. It sets up a temporary test environment,
+defined in roles/ha_db_hana/tasks/ha-config.yml. It sets up a temporary test environment,
 mocks necessary Python modules and commands, and verifies the execution of the tasks.
 """
 
@@ -60,6 +60,9 @@ class TestDbHaConfigValidation(RolesTestingBaseDB):
                 "bin/crm_resource",
                 "bin/crm",
             ],
+            extra_vars_override={
+                "node_tier": "hana"
+            }
         )
 
         os.makedirs(f"{temp_dir}/project/roles/ha_db_hana/tasks/files", exist_ok=True)

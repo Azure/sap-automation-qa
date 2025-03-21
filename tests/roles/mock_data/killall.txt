@@ -1,0 +1,11 @@
+#!/bin/bash
+
+echo "MOCK KILLALL CALLED: $@" >> /tmp/killall_calls.log
+
+if [[ "$2" == "hdbindexserver" ]]; then
+    echo "Mocking killing of hdbindexserver"
+    exit 0
+else
+    echo "Unsupported killall command: $@"
+    exit 1
+fi
