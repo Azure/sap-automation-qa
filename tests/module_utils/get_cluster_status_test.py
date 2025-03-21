@@ -66,6 +66,28 @@ class TestBaseClusterStatusChecker:
         """
         return TestableBaseClusterChecker(ansible_os_family="REDHAT")
 
+    def test_get_stonith_action_rhel94(self, mocker, base_checker):
+        """
+        Test the _get_stonith_action method when the command executes successfully.
+
+        :param mocker: Mocking library to patch methods.
+        :type mocker: mocker.MockerFixture
+        :param base_checker: Instance of TestableBaseClusterChecker.
+        :type base_checker: TestableBaseClusterChecker
+        """
+        return_values = ["reboot", "poweroff", "off"]
+        for return_value in return_values:
+            mock_execute = mocker.patch.object(
+                base_checker,
+                "execute_command_subprocess",
+                return_value="Cluster Properties: cib-bootstrap-options\n"
+                + f" stonith-action={return_value}",
+            )
+
+            base_checker._get_stonith_action()
+            mock_execute.assert_called_once()
+            assert base_checker.result["stonith_action"] == return_value
+
     def test_get_stonith_action(self, mocker, base_checker):
         """
         Test the _get_stonith_action method when the command executes successfully.
@@ -75,14 +97,18 @@ class TestBaseClusterStatusChecker:
         :param base_checker: Instance of TestableBaseClusterChecker.
         :type base_checker: TestableBaseClusterChecker
         """
-        mock_execute = mocker.patch.object(
-            base_checker, "execute_command_subprocess", return_value="stonith-action:reboot"
-        )
+        return_values = ["reboot", "poweroff", "off"]
+        for return_value in return_values:
+            mock_execute = mocker.patch.object(
+                base_checker,
+                "execute_command_subprocess",
+                return_value="Cluster Properties: cib-bootstrap-options\n"
+                + f" stonith-action: {return_value}",
+            )
 
-        base_checker._get_stonith_action()
-
-        mock_execute.assert_called_once()
-        assert base_checker.result["stonith_action"] == "reboot"
+            base_checker._get_stonith_action()
+            mock_execute.assert_called_once()
+            assert base_checker.result["stonith_action"] == return_value
 
     def test_get_stonith_action_exception(self, mocker, base_checker):
         """
@@ -100,7 +126,7 @@ class TestBaseClusterStatusChecker:
         base_checker._get_stonith_action()
 
         mock_execute.assert_called_once()
-        assert base_checker.result["stonith_action"] == "reboot"
+        assert base_checker.result["stonith_action"] == "unknown"
 
     def test_validate_cluster_basic_status_success(self, mocker, base_checker):
         """

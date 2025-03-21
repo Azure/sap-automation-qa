@@ -48,16 +48,20 @@ class BaseClusterStatusChecker(SapAutomationQA):
         """
         Retrieves the stonith action from the system.
         """
+        self.result["stonith_action"] = "unknown"
         try:
             stonith_action = self.execute_command_subprocess(STONITH_ACTION[self.ansible_os_family])
-            stonith_action = (
-                stonith_action.split("stonith-action:")[-1]
-                if self.ansible_os_family == "REDHAT"
-                else stonith_action
-            )
-            self.result["stonith_action"] = stonith_action.strip()
-        except Exception:
-            self.result["stonith_action"] = "reboot"
+            actions = [
+                "reboot",
+                "poweroff",
+                "off",
+            ]
+            for action in actions:
+                if action in stonith_action:
+                    self.result["stonith_action"] = action
+                    break
+        except Exception as ex:
+            self.log(logging.WARNING, f"Failed to get stonith action: {str(ex)}")
 
     def _validate_cluster_basic_status(self, cluster_status_xml: ET.Element):
         """
