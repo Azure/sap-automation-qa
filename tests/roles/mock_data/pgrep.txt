@@ -1,0 +1,13 @@
+#!/bin/bash
+
+echo "MOCK PGREP CALLED: $@" >> /tmp/pgrep_calls.log
+
+if [ "$*" = "-f sbd: inquisitor" ] || [ "$*" = "-f 'sbd: inquisitor'" ]; then
+    # Return a fake PID
+    echo "12345"
+    exit 0
+else
+    # For any other search, log and exit with error
+    echo "Unknown pgrep arguments: $@" >> /tmp/pgrep_calls.log
+    exit 1
+fi

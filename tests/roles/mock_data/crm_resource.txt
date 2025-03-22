@@ -1,0 +1,8 @@
+#!/bin/bash
+if [[ "$1" == "--cleanup" ]]; then
+    echo "Mock: Cleaned up resources successfully"
+    exit 0
+fi
+
+echo "Unknown command: $@"
+exit 1

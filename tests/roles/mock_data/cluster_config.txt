@@ -1,0 +1,15 @@
+CRM_CONFIG_DEFAULTS:
+  cluster-infrastructure:             corosync
+  priority-fencing-delay:             '30'
+  stonith-action:                     reboot
+  stonith-enabled:                    'false'
+  concurrent-fencing:                 'true'
+  maintenance-mode:                   'false'
+  node-health-strategy:               'custom'
+  azure-events-az_globalPullState:    'IDLE'
+
+RSC_DEFAULTS:
+  migration-threshold:                '3'
+  priority:                           '1'
+  resource-stickiness:                '1'
+

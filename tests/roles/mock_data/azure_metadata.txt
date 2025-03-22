@@ -1,0 +1,56 @@
+#!/usr/bin/python3
+from ansible.module_utils.basic import AnsibleModule
+import json
+
+
+def main():
+    module = AnsibleModule(
+        argument_spec=dict(
+            url=dict(type="str", required=True),
+            use_proxy=dict(type="bool", required=False),
+            headers=dict(type="dict", required=False),
+        )
+    )
+
+    if "169.254.169.254/metadata/instance" in module.params["url"]:
+        result = {
+            "changed": False,
+            "json": {
+                "compute": {
+                    "name": "scs01",
+                    "vmId": "12345678-1234-1234-1234-123456789012",
+                    "location": "eastus",
+                    "subscriptionId": "12345678-1234-1234-1234-123456789012",
+                }
+            },
+            "status": 200,
+        }
+    elif "http://169.254.169.254:80/metadata/loadbalancer" in module.params["url"]:
+        result = {
+            "changed": False,
+            "json": {
+                "loadbalancer": {
+                    "name": "lb01",
+                    "id": "id",
+                    "inboundRules": [
+                        {
+                            "name": "rule1",
+                            "protocol": "Tcp",
+                            "idleTimeoutInMinutes": 30,
+                            "enableFloatingIP": True,
+                            "enableTcpReset": False,
+                        }
+                    ]
+                }
+            },
+            "status": 200,
+        }
+
+    else:
+        result = {"changed": False, "status": 404, "msg": "URL not mocked"}
+
+    module.exit_json(**result)
+
+
+if __name__ == "__main__":
+    main()

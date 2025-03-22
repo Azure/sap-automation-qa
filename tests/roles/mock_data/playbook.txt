@@ -1,0 +1,17 @@
+---
+- name: Force ansible_hostname for testing
+  hosts: all
+  gather_facts: no
+  tasks:
+    - name: Set ansible_hostname based on inventory_hostname
+      set_fact:
+        ansible_hostname: "{{ inventory_hostname }}"
+
+- name: %s
+  hosts: all
+  gather_facts: yes
+  environment:
+    PATH: "%s/bin:$PATH"
+  tasks:
+    - name: Include tasks from the role
+      include_tasks: roles/%s/tasks/%s.yml

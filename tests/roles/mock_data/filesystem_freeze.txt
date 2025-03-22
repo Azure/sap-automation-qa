@@ -1,0 +1,26 @@
+#!/usr/bin/python3
+# -*- coding: utf-8 -*-
+
+from ansible.module_utils.basic import AnsibleModule
+
+
+def main():
+    module = AnsibleModule(
+        argument_spec=dict(
+            nfs_provider=dict(type="str", required=True),
+        )
+    )
+
+    result = {
+        "changed": True,
+        "message": "The file system (/hana/shared) was successfully mounted read-only.",
+        "status": "PASSED",
+        "details": {
+            "rc": 0,
+        },
+    }
+    module.exit_json(**result)
+
+
+if __name__ == "__main__":
+    main()

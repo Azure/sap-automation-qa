@@ -39,7 +39,7 @@
           changed_when:                 hana_db_kill_results == 0
           failed_when:                  hana_db_kill_results.rc != 0
 
-        - name:                         "Test Execution: Validate HANA DB cluster status"
+        - name:                         "Test Execution: Validate HANA DB cluster status 1"
           when:                         cluster_status_pre.AUTOMATED_REGISTER == "true"
           get_cluster_status_db:
             operation_step:             "test_execution"
@@ -98,7 +98,7 @@
           changed_when:                 cleanup_failed_resource_post.rc == 0
           ignore_errors:                true
 
-        - name:                         "Test execution: Validate HANA DB cluster status"
+        - name:                         "Test execution: Validate HANA DB cluster status 2"
           get_cluster_status_db:
             operation_step:             "post_failover"
             database_sid:               "{{ db_sid | lower }}"

@@ -21,12 +21,12 @@
                                         {{
                                           (
                                             hostvars[first_node]['var_log_messages_output'].filtered_logs
-                                            | default("")
+                                            | default([])
                                           )
                                           +
                                           (
                                             hostvars[second_node]['var_log_messages_output'].filtered_logs
-                                            | default("")
+                                            | default([])
                                           )
                                         }}
 

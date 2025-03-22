@@ -1,0 +1,40 @@
+#!/usr/bin/python3
+# -*- coding: utf-8 -*-
+
+from ansible.module_utils.basic import AnsibleModule
+
+def main():
+    module = AnsibleModule(
+        argument_spec=dict(
+            action=dict(type="str", required=True),
+            ansible_os_family=dict(type="str", required=True),
+        ),
+        supports_check_mode=True
+    )
+
+    action = module.params["action"]
+    ansible_os_family = module.params["ansible_os_family"]
+
+
+
+    if action == "remove":
+        result = {
+            "changed": True,
+            "status": "PASSED",
+            "message": "Location constraints removed",
+            "location_constraint_removed": True,
+            "details": {}
+        }
+    else:
+        result = {
+            "changed": False,
+            "status": "INFO",
+            "message": "Location constraints do not exist or were already removed.",
+            "location_constraint_removed": False,
+            "details": {}
+        }
+
+    module.exit_json(**result)
+
+if __name__ == '__main__':
+    main()

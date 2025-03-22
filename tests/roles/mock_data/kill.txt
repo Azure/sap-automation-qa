@@ -1,0 +1,5 @@
+#!/bin/bash
+# Mock for kill command
+
+echo "MOCK KILL CALLED: $@" >> /tmp/kill_calls.log
+exit 0
