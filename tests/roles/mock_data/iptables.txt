@@ -1,0 +1,15 @@
+#!/bin/bash
+# Mock for iptables command
+
+echo "MOCK IPTABLES CALLED: $@" >> /tmp/iptables_calls.log
+
+if [[ "$1" == "-A" ]]; then
+    echo "Mocking creating of firewall rule"
+    exit 0
+elif [[ "$1" == "-D" ]]; then
+    echo "Mocking deleting of firewall rule"
+    exit 0
+else
+    echo "Unsupported iptables command: $@"
+    exit 1
+fi

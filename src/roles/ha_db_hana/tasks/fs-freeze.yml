@@ -51,7 +51,7 @@
           changed_when:                 cleanup_failed_resource_post.rc == 0
           ignore_errors:                true
 
-        - name:                         "Test Execution: Validate HANA DB cluster status"
+        - name:                         "Test Execution: Validate HANA DB cluster status 1"
           when:                         cluster_status_pre.AUTOMATED_REGISTER | lower == "true"
           get_cluster_status_db:
             operation_step:             "test_execution"
@@ -67,7 +67,7 @@
     - name:                             "Test Execution: Freeze File System on Primary Node init"
       when:                             ansible_hostname == cluster_status_pre.primary_node
       block:
-        - name:                         "Test Execution: Validate HANA DB cluster status"
+        - name:                         "Test Execution: Validate HANA DB cluster status 2"
           get_cluster_status_db:
             operation_step:             "post_failover"
             database_sid:               "{{ db_sid | lower }}"

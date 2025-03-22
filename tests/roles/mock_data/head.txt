@@ -1,0 +1,14 @@
+#!/bin/bash
+
+echo "MOCK HEAD CALLED: $@" >> /tmp/head_calls.log
+
+if [ ! -t 0 ]; then
+    cat | sed -n '1p'
+    exit 0
+else
+    if [ -f "$2" ]; then
+        sed -n '1p' "$2"
+        exit 0
+    fi
+    exit 1
+fi

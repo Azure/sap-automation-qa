@@ -59,7 +59,7 @@
                                         cluster_status_test_execution.primary_node == cluster_status_pre.primary_node and
                                         cluster_status_test_execution.secondary_node == ""
 
-        - name:                         "Test Execution: Validate HANA DB cluster status"
+        - name:                         "Test Execution: Validate HANA DB cluster status 2"
           get_cluster_status_db:
             operation_step:             "post_failover"
             database_sid:               "{{ db_sid | lower }}"

@@ -1,0 +1,43 @@
+#!/usr/bin/python3
+from ansible.module_utils.basic import AnsibleModule
+
+def main():
+    module = AnsibleModule(
+        argument_spec=dict(
+            subscription_id=dict(type="str", required=True),
+            region=dict(type="str", required=True),
+            inbound_rules=dict(type="str", required=True),
+            constants=dict(type="dict", required=True),
+        )
+    )
+
+    result = {
+        "changed": False,
+        "status": "PASSED",
+        "message": "Azure Load Balancer configuration is valid",
+        "details": {
+            "parameters":[
+                {
+                  "category": "load_balancing_rule",
+                  "expected_value": "30",
+                  "id": "id",
+                  "name": "idle_timeout_in_minutes",
+                  "status": "PASSED",
+                  "value": '30'
+                },
+                {
+                  "category": "probes",
+                  "expected_value": "2",
+                  "id": "id",
+                  "name": "probe_threshold",
+                  "status": "PASSED",
+                  "value": '2'
+                }
+            ]
+        }
+    }
+
+    module.exit_json(**result)
+
+if __name__ == '__main__':
+    main()
