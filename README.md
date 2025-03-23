@@ -10,6 +10,8 @@
 
 The SAP Testing Automation Framework is an open-source orchestration tool designed to validate SAP deployments on Microsoft Azure. It enables you to assess system configurations against SAP on Azure best practices and guidelines. Additionally, the framework facilitates automation for various testing scenarios, including High Availability (HA) functional testing.
 
+> **NOTE**: This repository is currently in private preview and is intended for testing and feedback purposes. As this is an early release, it is not yet production-ready, and breaking changes can be introduced at any time.
+
 ## Supported Configuration Matrix
 
 The following SAP components are supported in a two-node Pacemaker cluster running on SUSE Linux Enterprise Server (SLES) or Red Hat Enterprise Linux (RHEL):
