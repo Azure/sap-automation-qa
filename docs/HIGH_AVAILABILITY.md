@@ -1,8 +1,8 @@
 # SAP High Availability Testing
 
-A key part of the SAP Testing Automation framework is the SAP High Availability (HA) Testing Framework, which helps to ensure that your SAP deployment comply with SAP on Azure best practices and guidelines.
+A key component of the SAP Testing Automation framework is the SAP High Availability (HA) Testing. This helps in ensuring that an SAP system deployment complies to SAP on Azure best practices and guidelines.
 
-The SAP High Availability Testing framework runs a set of tests that simulate real-world failures to check if the system recovers properly. Using Ansible automation, it orchestrates different test cases that could simulates system failures like node crashes, network issues, and storage failures to check if recovery mechanisms work correctly. The framework also captures detailed logs and generates reports on the test results.
+The SAP High Availability Testing scenario executes a series of tests designed to simulate real-world failures, ensuring the system's recovery capabilities. Leveraging Ansible, the framework orchestrates various test cases, including node crashes, network disruptions, and storage failures, to validate the effectiveness of recovery mechanisms. Additionally, the framework captures comprehensive logs and generates detailed reports on the test outcomes.
 
 ## Supported Configurations
 
