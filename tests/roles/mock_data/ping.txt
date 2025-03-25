@@ -1,0 +1,20 @@
+#!/bin/bash
+
+task_type="${TEST_TASK_TYPE:-default}"
+counter_file="/tmp/ping_counter_${task_type}"
+
+if [[ -f "$counter_file" ]]; then
+    counter=$(< "$counter_file")
+    counter=${counter:-0}
+else
+    counter=0
+fi
+
+counter=$((counter + 1))
+echo "$counter" > "$counter_file"
+
+if (( counter % 2 == 1 )); then
+    exit 1
+else
+    exit 0
+fi

@@ -116,7 +116,7 @@
           ansible.builtin.wait_for:
             timeout:                        60
 
-        - name:                             "Test Execution: Validate HANA DB cluster status"
+        - name:                             "Test Execution: Validate HANA DB cluster status 2"
           get_cluster_status_db:
             operation_step:                 "test_execution"
             database_sid:                   "{{ db_sid | lower }}"
@@ -150,7 +150,7 @@
           ansible.builtin.wait_for:
             timeout:                        60
 
-        - name:                             "Test Execution: Validate HANA DB cluster status"
+        - name:                             "Test Execution: Validate HANA DB cluster status 2"
           get_cluster_status_db:
             operation_step:                 "test_execution"
             database_sid:                   "{{ db_sid | lower }}"
