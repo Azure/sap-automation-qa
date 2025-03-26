@@ -32,7 +32,7 @@ class TestBlockNetworkTest(RolesTestingBaseDB):
         :param task_type: Dictionary with task configuration details.
         :type task_type: dict
         :yield temp_dir: Path to the temporary test environment.
-        :ytype: str
+        :type: str
         """
 
         task_counter_file = "/tmp/get_cluster_status_counter_block-network"
@@ -131,9 +131,7 @@ class TestBlockNetworkTest(RolesTestingBaseDB):
                 assert task_result.get("rc") == 0
             elif task and "Pre Validation: Validate HANA DB" in task:
                 pre_status = task_result
-            elif (
-                task and "Test Execution: Validate HANA DB cluster status 2" in task
-            ):
+            elif task and "Test Execution: Validate HANA DB cluster status 2" in task:
                 post_status = task_result
             elif task and "Remove any location_constraints" in task:
                 assert task_result.get("changed")
