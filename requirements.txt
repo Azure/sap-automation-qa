@@ -36,7 +36,7 @@ lazy-object-proxy==1.10.0
 lockfile==0.12.2
 markdown-it-py==3.0.0
 MarkupSafe==3.0.2
-mccabe==0.6.1
+mccabe==0.7.0
 mdurl==0.1.2
 mock==5.1.0
 msal==1.31.1
