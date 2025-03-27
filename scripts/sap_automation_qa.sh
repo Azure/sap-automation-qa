@@ -100,6 +100,31 @@ get_playbook_name() {
     esac
 }
 
+# Function to check if the MSI has the correct permissions on the Key Vault
+check_msi_permissions() {
+    local key_vault_name=$1
+    local required_permission="Get"
+
+#FOR TESTING
+    log "INFO" "Checking MSI permissions on Key Vault: $key_vault_name..."
+
+    # Get the MSI object ID
+    msi_object_id=$(az identity show --name "$MSI_NAME" --resource-group "$RESOURCE_GROUP" --query "principalId" -o tsv)
+    if [[ -z "$msi_object_id" ]]; then
+        log "ERROR" "Failed to retrieve MSI object ID for $MSI_NAME in resource group $RESOURCE_GROUP."
+        exit 1
+    fi
+
+    # Check Key Vault permissions
+    permissions=$(az keyvault show --name "$key_vault_name" --query "properties.accessPolicies[?objectId=='$msi_object_id'].permissions.secrets" -o tsv)
+    if [[ "$permissions" != *"$required_permission"* ]]; then
+        log "ERROR" "MSI $MSI_NAME does not have '$required_permission' permission on Key Vault $key_vault_name."
+        exit 1
+    fi
+
+    log "INFO" "MSI $MSI_NAME has the required permissions on Key Vault $key_vault_name."
+}
+
 # Function to run the ansible playbook
 run_ansible_playbook() {
     local playbook_name=$1
@@ -107,17 +132,39 @@ run_ansible_playbook() {
     local system_params=$3
     local auth_type=$4
     local system_config_folder=$5
+    local key_vault_name=$6
+    local secret_name=$7
+    local secret_value
 
     if [[ "$auth_type" == "SSHKEY" ]]; then
         local ssh_key="${cmd_dir}/../WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME/ssh_key.ppk"
         log "INFO" "Using SSH key: $ssh_key."
         command="ansible-playbook ${cmd_dir}/../src/$playbook_name.yml -i $system_hosts --private-key $ssh_key \
         -e @$VARS_FILE -e @$system_params -e '_workspace_directory=$system_config_folder'"
-    else
+    elif [[ "$auth_type" == "PASSWORD" ]]; then
         log "INFO" "Using password authentication."
         command="ansible-playbook ${cmd_dir}/../src/$playbook_name.yml -i $system_hosts \
         --extra-vars \"ansible_ssh_pass=$(cat ${cmd_dir}/../WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME/password)\" \
         --extra-vars @$VARS_FILE -e @$system_params -e '_workspace_directory=$system_config_folder'"
+    elif [[ "$auth_type" == "KEYVAULT" ]]; then
+        log "INFO" "Using Key Vault for authentication."
+        # Retrieve the secret from the Key Vault
+        log "INFO" "Retrieving secret '$secret_name' from Key Vault '$key_vault_name'..."
+
+        secret_value=$(az keyvault secret show --vault-name "$key_vault_name" --name "$secret_name" --query "value" -o tsv)
+
+        if [[ -z "$secret_value" ]]; then
+            log "ERROR" "Failed to retrieve secret '$secret_name' from Key Vault '$key_vault_name'."
+            exit 1
+        fi
+
+        log "INFO" "Successfully retrieved secret from Key Vault."
+        command="ansible-playbook ${cmd_dir}/../src/$playbook_name.yml -i $system_hosts \
+        --extra-vars \"ansible_ssh_pass=$secret_value\" --extra-vars @$VARS_FILE -e @$system_params \
+        -e '_workspace_directory=$system_config_folder'"
+    else
+        log "ERROR" "Unknown authentication type: $auth_type"
+        exit 1
     fi
 
     log "INFO" "Running ansible playbook..."
@@ -156,9 +203,11 @@ main() {
     if [[ "$AUTHENTICATION_TYPE" == "SSHKEY" ]]; then
         check_file_exists "${cmd_dir}/../WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME/ssh_key.ppk" \
             "ssh_key.ppk not found in WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME directory."
-    else
+    elif [[ "$AUTHENTICATION_TYPE" == "PASSWORD" ]]; then
         check_file_exists "${cmd_dir}/../WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME/password" \
             "password file not found in WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME directory."
+    elif [[ "$AUTHENTICATION_TYPE" == "KEYVAULT" ]]; then
+        log "INFO" "Key Vault authentication selected. Ensure Key Vault parameters are set."
     fi
 
     playbook_name=$(get_playbook_name "$sap_functional_test_type")
