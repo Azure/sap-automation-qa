@@ -6,6 +6,8 @@ on:
   merge_group:
   workflow_dispatch:
 
+permissions: read-all
+
 jobs:
   build:
     name: 'trivy scan'
