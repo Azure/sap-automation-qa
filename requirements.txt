@@ -66,7 +66,7 @@ referencing==0.36.2
 requests==2.32.3
 resolvelib==1.0.1
 rich==13.9.4
-rpds-py==0.22.3
+rpds-py==0.24.0
 ruamel.yaml==0.18.10
 ruamel.yaml.clib==0.2.12
 six==1.17.0
