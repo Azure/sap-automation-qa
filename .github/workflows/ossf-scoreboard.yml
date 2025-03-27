@@ -7,6 +7,10 @@ on:
   branch_protection_rule:
   schedule:
     - cron: '32 4 * * 5'
+  pull_request:
+    branches: [ "main" ]
+    paths-ignore:
+      - .github/workflows/ossf-scoreboard.yml
   push:
     branches: [ "main" ]
 
