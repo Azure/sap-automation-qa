@@ -102,11 +102,25 @@ get_playbook_name() {
 
 # Function to check if the MSI has the correct permissions on the Key Vault
 check_msi_permissions() {
-    local key_vault_name=$1
+    local key_vault_id=$1
     local required_permission="Get"
 
-#FOR TESTING
+    # Extract resource group name and key vault name from the key_vault_id
+    resource_group_name=$(echo "$key_vault_id" | awk -F'/' '{for(i=1;i<=NF;i++){if($i=="resourceGroups"){print $(i+1)}}}')
+    key_vault_name=$(echo "$key_vault_id" | awk -F'/' '{for(i=1;i<=NF;i++){if($i=="vaults"){print $(i+1)}}}')
+
+    if [[ -z "$resource_group_name" || -z "$key_vault_name" ]]; then
+        log "ERROR" "Failed to extract resource group name or key vault name from key_vault_id: $key_vault_id"
+        exit 1
+    fi
+
+    log "INFO" "Extracted resource group name: $resource_group_name"
+    log "INFO" "Extracted key vault name: $key_vault_name"
+
     log "INFO" "Checking MSI permissions on Key Vault: $key_vault_name..."
+
+    # Get the MSI name dynamically
+    MSI_NAME=$(az vm identity show --resource-group "$RESOURCE_GROUP" --name "$(az vm list --query "[?identity.type=='UserAssigned'].name" -o tsv)" --query "userAssignedIdentities | keys(@)[0]" -o tsv)
 
     # Get the MSI object ID
     msi_object_id=$(az identity show --name "$MSI_NAME" --resource-group "$RESOURCE_GROUP" --query "principalId" -o tsv)
@@ -117,8 +131,8 @@ check_msi_permissions() {
 
     # Check Key Vault permissions
     permissions=$(az keyvault show --name "$key_vault_name" --query "properties.accessPolicies[?objectId=='$msi_object_id'].permissions.secrets" -o tsv)
-    if [[ "$permissions" != *"$required_permission"* ]]; then
-        log "ERROR" "MSI $MSI_NAME does not have '$required_permission' permission on Key Vault $key_vault_name."
+    if [[ ! "$permissions" =~ (^|[[:space:]])"$required_permission"($|[[:space:]]) ]]; then
+        log "ERROR" "MSI $MSI_NAME does not have the required '$required_permission' permission on Key Vault $key_vault_name."
         exit 1
     fi
 
@@ -134,34 +148,48 @@ run_ansible_playbook() {
     local system_config_folder=$5
     local key_vault_name=$6
     local secret_name=$7
-    local secret_value
+    local temp_file
 
     if [[ "$auth_type" == "SSHKEY" ]]; then
-        local ssh_key="${cmd_dir}/../WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME/ssh_key.ppk"
-        log "INFO" "Using SSH key: $ssh_key."
-        command="ansible-playbook ${cmd_dir}/../src/$playbook_name.yml -i $system_hosts --private-key $ssh_key \
-        -e @$VARS_FILE -e @$system_params -e '_workspace_directory=$system_config_folder'"
-    elif [[ "$auth_type" == "PASSWORD" ]]; then
-        log "INFO" "Using password authentication."
-        command="ansible-playbook ${cmd_dir}/../src/$playbook_name.yml -i $system_hosts \
-        --extra-vars \"ansible_ssh_pass=$(cat ${cmd_dir}/../WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME/password)\" \
-        --extra-vars @$VARS_FILE -e @$system_params -e '_workspace_directory=$system_config_folder'"
-    elif [[ "$auth_type" == "KEYVAULT" ]]; then
-        log "INFO" "Using Key Vault for authentication."
-        # Retrieve the secret from the Key Vault
-        log "INFO" "Retrieving secret '$secret_name' from Key Vault '$key_vault_name'..."
-
-        secret_value=$(az keyvault secret show --vault-name "$key_vault_name" --name "$secret_name" --query "value" -o tsv)
-
-        if [[ -z "$secret_value" ]]; then
-            log "ERROR" "Failed to retrieve secret '$secret_name' from Key Vault '$key_vault_name'."
-            exit 1
+        if [[ -n "$key_vault_name" && -n "$secret_name" ]]; then
+            log "INFO" "Using Key Vault for SSH key retrieval."
+            secret_value=$(az keyvault secret show --vault-name "$key_vault_name" --name "$secret_name" --query "value" -o tsv)
+            if [[ -z "$secret_value" ]]; then
+                log "ERROR" "Failed to retrieve secret '$secret_name' from Key Vault '$key_vault_name'."
+                exit 1
+            fi
+            temp_file=$(mktemp --suffix=.ppk)
+            echo "$secret_value" > "$temp_file"
+            log "INFO" "Temporary SSH key file created: $temp_file"
+            command="ansible-playbook ${cmd_dir}/../src/$playbook_name.yml -i $system_hosts --private-key $temp_file \
+            -e @$VARS_FILE -e @$system_params -e '_workspace_directory=$system_config_folder'"
+        else
+            local ssh_key="${cmd_dir}/../WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME/ssh_key.ppk"
+            log "INFO" "Using local SSH key: $ssh_key."
+            command="ansible-playbook ${cmd_dir}/../src/$playbook_name.yml -i $system_hosts --private-key $ssh_key \
+            -e @$VARS_FILE -e @$system_params -e '_workspace_directory=$system_config_folder'"
         fi
-
-        log "INFO" "Successfully retrieved secret from Key Vault."
-        command="ansible-playbook ${cmd_dir}/../src/$playbook_name.yml -i $system_hosts \
-        --extra-vars \"ansible_ssh_pass=$secret_value\" --extra-vars @$VARS_FILE -e @$system_params \
-        -e '_workspace_directory=$system_config_folder'"
+    elif [[ "$auth_type" == "VMPASSWORD" ]]; then
+        if [[ -n "$key_vault_name" && -n "$secret_name" ]]; then
+            log "INFO" "Using Key Vault for password retrieval."
+            secret_value=$(az keyvault secret show --vault-name "$key_vault_name" --name "$secret_name" --query "value" -o tsv)
+            if [[ -z "$secret_value" ]]; then
+                log "ERROR" "Failed to retrieve secret '$secret_name' from Key Vault '$key_vault_name'."
+                exit 1
+            fi
+            temp_file=$(mktemp --suffix=.password)
+            echo "$secret_value" > "$temp_file"
+            log "INFO" "Temporary password file created: $temp_file"
+            command="ansible-playbook ${cmd_dir}/../src/$playbook_name.yml -i $system_hosts \
+            --extra-vars \"ansible_ssh_pass=$(cat $temp_file)\" --extra-vars @$VARS_FILE -e @$system_params \
+            -e '_workspace_directory=$system_config_folder'"
+        else
+            local password_file="${cmd_dir}/../WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME/password"
+            log "INFO" "Using local password file: $password_file."
+            command="ansible-playbook ${cmd_dir}/../src/$playbook_name.yml -i $system_hosts \
+            --extra-vars \"ansible_ssh_pass=$(cat $password_file)\" --extra-vars @$VARS_FILE -e @$system_params \
+            -e '_workspace_directory=$system_config_folder'"
+        fi
     else
         log "ERROR" "Unknown authentication type: $auth_type"
         exit 1
@@ -172,6 +200,12 @@ run_ansible_playbook() {
     eval $command
     return_code=$?
     log "INFO" "Ansible playbook execution completed with return code: $return_code"
+
+    # Clean up temporary file if it exists
+    if [[ -n "$temp_file" && -f "$temp_file" ]]; then
+        rm -f "$temp_file"
+        log "INFO" "Temporary file deleted: $temp_file"
+    fi
 
     exit $return_code
 }
@@ -203,7 +237,7 @@ main() {
     if [[ "$AUTHENTICATION_TYPE" == "SSHKEY" ]]; then
         check_file_exists "${cmd_dir}/../WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME/ssh_key.ppk" \
             "ssh_key.ppk not found in WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME directory."
-    elif [[ "$AUTHENTICATION_TYPE" == "PASSWORD" ]]; then
+    elif [[ "$AUTHENTICATION_TYPE" == "VMPASSWORD" ]]; then
         check_file_exists "${cmd_dir}/../WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME/password" \
             "password file not found in WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME directory."
     elif [[ "$AUTHENTICATION_TYPE" == "KEYVAULT" ]]; then
@@ -214,6 +248,12 @@ main() {
     log "INFO" "Using playbook: $playbook_name."
 
     run_ansible_playbook "$playbook_name" "$SYSTEM_HOSTS" "$SYSTEM_PARAMS" "$AUTHENTICATION_TYPE" "$SYSTEM_CONFIG_FOLDER"
+
+    # Clean up any remaining temporary files
+    if [[ -n "$temp_file" && -f "$temp_file" ]]; then
+        rm -f "$temp_file"
+        log "INFO" "Temporary file deleted: $temp_file"
+    fi
 }
 
 # Execute the main function

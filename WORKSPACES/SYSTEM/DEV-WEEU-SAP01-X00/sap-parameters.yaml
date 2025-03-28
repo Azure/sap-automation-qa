@@ -31,7 +31,6 @@ NFS_provider:                  AFS
 #############################################################################
 #                              Fetch Secret Connection                      # 
 #############################################################################
-key_vault_name:               key-vault-testing1
+key_vault_id:                 /subscriptions/e663cc2d-722b-4be1-b636-bbd9e4c60fd9/resourceGroups/DhruvAggarwal/providers/Microsoft.KeyVault/vaults/key-vault-testing1
 secret_name:                  test-secret
-msi_name:                     SDAF
 resource_group:               DHRUVAGGARWAL
