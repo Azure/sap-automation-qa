@@ -124,6 +124,7 @@ check_msi_permissions() {
     # Extract resource group name and key vault name from key_vault_id
     resource_group_name=$(echo "$key_vault_id" | awk -F'/' '{for(i=1;i<=NF;i++){if($i=="resourceGroups"){print $(i+1)}}}')
     key_vault_name=$(echo "$key_vault_id" | awk -F'/' '{for(i=1;i<=NF;i++){if($i=="vaults"){print $(i+1)}}}')
+    subscription_id=$(echo "$key_vault_id" | awk -F'/' '{for(i=1;i<=NF;i++){if($i=="subscriptions"){print $(i+1)}}}')
 
     if [[ -z "$resource_group_name" || -z "$key_vault_name" ]]; then
         log "ERROR" "Failed to extract resource group name or key vault name from key_vault_id: $key_vault_id"
@@ -146,7 +147,8 @@ check_msi_permissions() {
     
     # Log in using MSI object ID
     log "INFO" "Logging in using MSI object ID: $msi_object_id"
-    az login --identity --client-id "$msi_object_id" --allow-no-subscriptions
+    az login --identity
+    az account set --subscription "$subscription_id"
     if [[ $? -ne 0 ]]; then
         log "ERROR" "Failed to log in using MSI object ID: $msi_object_id"
         exit 1
