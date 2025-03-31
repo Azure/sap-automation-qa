@@ -146,7 +146,7 @@ check_msi_permissions() {
     
     # Log in using MSI object ID
     log "INFO" "Logging in using MSI object ID: $msi_object_id"
-    az login --identity --username "$msi_object_id" --allow-no-subscriptions
+    az login --identity --client-id "$msi_object_id" --allow-no-subscriptions
     if [[ $? -ne 0 ]]; then
         log "ERROR" "Failed to log in using MSI object ID: $msi_object_id"
         exit 1
