@@ -248,8 +248,8 @@ main() {
     # fi
 
     # Extract secret_name from sap-parameters.yaml
-    secret_name=$(yq eval '.secret_name' "$SYSTEM_PARAMS")  # Using yq
-    log "INFO" "Secret Name: $secret_name"
+    #secret_name=$(yq eval '.secret_name' "$SYSTEM_PARAMS")  # Using yq
+    #log "INFO" "Secret Name: $secret_name"
     # Alternatively, use grep and awk:
     secret_name=$(grep "^secret_name:" "$SYSTEM_PARAMS" | awk '{split($0,a,": "); print a[2]}' | xargs)
     log "INFO" "Secret Name: $secret_name"
