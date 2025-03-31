@@ -79,5 +79,5 @@ tzdata==2025.1
 urllib3==2.2.2
 wcmatch==10.0
 wrapt==1.13.3
-yamllint==1.35.1
+yamllint==1.37.0
 zipp==3.21.0
