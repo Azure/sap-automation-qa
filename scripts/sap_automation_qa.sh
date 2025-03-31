@@ -251,7 +251,7 @@ main() {
     log "INFO" "Using playbook: $playbook_name."
 
     
-    run_ansible_playbook "$playbook_name" "$SYSTEM_HOSTS" "$SYSTEM_PARAMS" "$AUTHENTICATION_TYPE" "$SYSTEM_CONFIG_FOLDER" "$SECRET_NAME"
+    run_ansible_playbook "$playbook_name" "$SYSTEM_HOSTS" "$SYSTEM_PARAMS" "$AUTHENTICATION_TYPE" "$SYSTEM_CONFIG_FOLDER" "$secret_name"
 
     # Clean up any remaining temporary files
     if [[ -n "$temp_file" && -f "$temp_file" ]]; then
