@@ -146,13 +146,13 @@ run_ansible_playbook() {
     local system_params=$3
     local auth_type=$4
     local system_config_folder=$5
-    local key_vault_name=$6
-    local secret_name=$7
+    local secret_name=$6
     local temp_file
 
     if [[ "$auth_type" == "SSHKEY" ]]; then
         if [[ -n "$key_vault_name" && -n "$secret_name" ]]; then
             log "INFO" "Using Key Vault for SSH key retrieval."
+            check_msi_permissions "$key_vault_name" # Call the function to check MSI permissions
             secret_value=$(az keyvault secret show --vault-name "$key_vault_name" --name "$secret_name" --query "value" -o tsv)
             if [[ -z "$secret_value" ]]; then
                 log "ERROR" "Failed to retrieve secret '$secret_name' from Key Vault '$key_vault_name'."
@@ -233,21 +233,22 @@ main() {
     check_file_exists "$SYSTEM_PARAMS" \
         "sap-parameters.yaml not found in WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME directory."
 
-    log "INFO" "Checking if the SSH key or password file exists..."
-    if [[ "$AUTHENTICATION_TYPE" == "SSHKEY" ]]; then
-        check_file_exists "${cmd_dir}/../WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME/ssh_key.ppk" \
-            "ssh_key.ppk not found in WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME directory."
-    elif [[ "$AUTHENTICATION_TYPE" == "VMPASSWORD" ]]; then
-        check_file_exists "${cmd_dir}/../WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME/password" \
-            "password file not found in WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME directory."
-    elif [[ "$AUTHENTICATION_TYPE" == "KEYVAULT" ]]; then
-        log "INFO" "Key Vault authentication selected. Ensure Key Vault parameters are set."
-    fi
+    # log "INFO" "Checking if the SSH key or password file exists..."
+    # if [[ "$AUTHENTICATION_TYPE" == "SSHKEY" ]]; then
+    #     check_file_exists "${cmd_dir}/../WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME/ssh_key.ppk" \
+    #         "ssh_key.ppk not found in WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME directory."
+    # elif [[ "$AUTHENTICATION_TYPE" == "VMPASSWORD" ]]; then
+    #     check_file_exists "${cmd_dir}/../WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME/password" \
+    #         "password file not found in WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME directory."
+    # elif [[ "$AUTHENTICATION_TYPE" == "KEYVAULT" ]]; then
+    #     log "INFO" "Key Vault authentication selected. Ensure Key Vault parameters are set."
+    # fi
 
     playbook_name=$(get_playbook_name "$sap_functional_test_type")
     log "INFO" "Using playbook: $playbook_name."
 
-    run_ansible_playbook "$playbook_name" "$SYSTEM_HOSTS" "$SYSTEM_PARAMS" "$AUTHENTICATION_TYPE" "$SYSTEM_CONFIG_FOLDER"
+    
+    run_ansible_playbook "$playbook_name" "$SYSTEM_HOSTS" "$SYSTEM_PARAMS" "$AUTHENTICATION_TYPE" "$SYSTEM_CONFIG_FOLDER" "$SECRET_NAME"
 
     # Clean up any remaining temporary files
     if [[ -n "$temp_file" && -f "$temp_file" ]]; then
