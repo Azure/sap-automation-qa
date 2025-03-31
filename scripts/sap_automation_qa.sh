@@ -249,8 +249,10 @@ main() {
 
     # Extract secret_name from sap-parameters.yaml
     secret_name=$(yq eval '.secret_name' "$SYSTEM_PARAMS")  # Using yq
+    log "INFO" "Secret Name: $secret_name"
     # Alternatively, use grep and awk:
-    # secret_name=$(grep "^secret_name:" "$SYSTEM_PARAMS" | awk '{split($0,a,": "); print a[2]}' | xargs)
+    secret_name=$(grep "^secret_name:" "$SYSTEM_PARAMS" | awk '{split($0,a,": "); print a[2]}' | xargs)
+    log "INFO" "Secret Name: $secret_name"
 
     if [[ -z "$secret_name" ]]; then
         log "ERROR" "Error: secret_name is not defined in $SYSTEM_PARAMS."
