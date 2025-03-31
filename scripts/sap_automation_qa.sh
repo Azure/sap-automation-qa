@@ -247,6 +247,17 @@ main() {
     #     log "INFO" "Key Vault authentication selected. Ensure Key Vault parameters are set."
     # fi
 
+    # Extract secret_name from sap-parameters.yaml
+    secret_name=$(yq eval '.secret_name' "$SYSTEM_PARAMS")  # Using yq
+    # Alternatively, use grep and awk:
+    # secret_name=$(grep "^secret_name:" "$SYSTEM_PARAMS" | awk '{split($0,a,": "); print a[2]}' | xargs)
+
+    if [[ -z "$secret_name" ]]; then
+        log "ERROR" "Error: secret_name is not defined in $SYSTEM_PARAMS."
+        exit 1
+    fi
+    log "INFO" "Extracted secret_name: $secret_name"
+
     playbook_name=$(get_playbook_name "$sap_functional_test_type")
     log "INFO" "Using playbook: $playbook_name."
 
