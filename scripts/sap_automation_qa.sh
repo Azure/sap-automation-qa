@@ -150,6 +150,9 @@ run_ansible_playbook() {
     local temp_file
 
     if [[ "$auth_type" == "SSHKEY" ]]; then
+        log "INFO" "Authentication type is SSHKEY."
+        log "INFO" "Key Vault Name: $key_vault_name"
+        log "INFO" "Secret Name: $secret_name"
         if [[ -n "$key_vault_name" && -n "$secret_name" ]]; then
             log "INFO" "Using Key Vault for SSH key retrieval."
             check_msi_permissions "$key_vault_name" # Call the function to check MSI permissions
