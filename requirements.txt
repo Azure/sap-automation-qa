@@ -7,7 +7,7 @@ attrs==25.1.0
 azure-common==1.1.28
 azure-core==1.32.0
 azure-identity==1.17.1
-azure-kusto-data==4.5.1
+azure-kusto-data==5.0.2
 azure-kusto-ingest==4.5.1
 azure-mgmt-core==1.5.0
 azure-mgmt-network==28.1.0
