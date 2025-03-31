@@ -100,7 +100,22 @@ get_playbook_name() {
     esac
 }
 
-# Function to check if the MSI has the correct permissions on the Key Vault
+# Function to get MSI object ID using Azure Instance Metadata Service (IMDS)
+get_msi_object_id() {
+    local resource_group_name=$1
+    local vm_name=$2
+
+    # Use IMDS to get the MSI object ID
+    msi_object_id=$(curl -s -H "Metadata:true" "http://169.254.169.254/metadata/identity/oauth2/token?api-version=2019-08-01&resource=https://management.azure.com" | jq -r '.client_id')
+    if [[ -z "$msi_object_id" ]]; then
+        log "ERROR" "Failed to retrieve MSI object ID using IMDS."
+        exit 1
+    fi
+
+    echo "$msi_object_id"
+}
+
+# Updated check_msi_permissions function to use MSI token
 check_msi_permissions() {
     local key_vault_id=$1
     local required_permission="Get"
@@ -119,24 +134,21 @@ check_msi_permissions() {
 
     log "INFO" "Checking MSI permissions on Key Vault: $key_vault_name..."
 
-    # Get the MSI name dynamically
-    MSI_NAME=$(az vm identity show --resource-group "$RESOURCE_GROUP" --name "$(az vm list --query "[?identity.type=='UserAssigned'].name" -o tsv)" --query "userAssignedIdentities | keys(@)[0]" -o tsv)
-
-    # Get the MSI object ID
-    msi_object_id=$(az identity show --name "$MSI_NAME" --resource-group "$RESOURCE_GROUP" --query "principalId" -o tsv)
+    # Get MSI object ID using IMDS
+    msi_object_id=$(get_msi_object_id "$resource_group_name" "$VM_NAME")
     if [[ -z "$msi_object_id" ]]; then
-        log "ERROR" "Failed to retrieve MSI object ID for $MSI_NAME in resource group $RESOURCE_GROUP."
+        log "ERROR" "Failed to retrieve MSI object ID."
         exit 1
     fi
 
     # Check Key Vault permissions
     permissions=$(az keyvault show --name "$key_vault_name" --query "properties.accessPolicies[?objectId=='$msi_object_id'].permissions.secrets" -o tsv)
     if [[ ! "$permissions" =~ (^|[[:space:]])"$required_permission"($|[[:space:]]) ]]; then
-        log "ERROR" "MSI $MSI_NAME does not have the required '$required_permission' permission on Key Vault $key_vault_name."
+        log "ERROR" "MSI does not have the required '$required_permission' permission on Key Vault $key_vault_name."
         exit 1
     fi
 
-    log "INFO" "MSI $MSI_NAME has the required permissions on Key Vault $key_vault_name."
+    log "INFO" "MSI has the required permissions on Key Vault $key_vault_name."
 }
 
 # Function to run the ansible playbook
@@ -162,9 +174,6 @@ run_ansible_playbook() {
 
         # Extract Key Vault details and check MSI permissions
         check_msi_permissions "$key_vault_id"
-        log "INFO" "Key_vault_id: $key_vault_id"
-        log "INFO" "Key Vault Name: $key_vault_name"
-        log "INFO" "Secret Name: $secret_name"
         if [[ -n "$key_vault_name" && -n "$secret_name" ]]; then
             log "INFO" "Using Key Vault for SSH key retrieval."
             secret_value=$(az keyvault secret show --vault-name "$key_vault_name" --name "$secret_name" --query "value" -o tsv)
