@@ -137,6 +137,7 @@ check_msi_permissions() {
     # Get MSI object ID using IMDS
     msi_object_id=$(get_msi_object_id "$resource_group_name" "$VM_NAME")
     log "INFO" "MSI OBJECT ID: $msi_object_id..."
+    log "INFO" "resource group NAME: $resource_group_name..."
     if [[ -z "$msi_object_id" ]]; then
         log "ERROR" "Failed to retrieve MSI object ID."
         exit 1
