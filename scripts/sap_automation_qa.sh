@@ -105,7 +105,7 @@ check_msi_permissions() {
     local key_vault_id=$1
     local required_permission="Get"
 
-    # Extract resource group name and key vault name from the key_vault_id
+    # Extract resource group name and key vault name from key_vault_id
     resource_group_name=$(echo "$key_vault_id" | awk -F'/' '{for(i=1;i<=NF;i++){if($i=="resourceGroups"){print $(i+1)}}}')
     key_vault_name=$(echo "$key_vault_id" | awk -F'/' '{for(i=1;i<=NF;i++){if($i=="vaults"){print $(i+1)}}}')
 
@@ -151,11 +151,22 @@ run_ansible_playbook() {
 
     if [[ "$auth_type" == "SSHKEY" ]]; then
         log "INFO" "Authentication type is SSHKEY."
+
+        # Extract key_vault_id from sap-parameters.yaml
+        key_vault_id=$(grep "^key_vault_id:" "$system_params" | awk '{split($0,a,": "); print a[2]}' | xargs)
+        if [[ -z "$key_vault_id" ]]; then
+            log "ERROR" "Error: key_vault_id is not defined in $system_params."
+            exit 1
+        fi
+        log "INFO" "Extracted key_vault_id: $key_vault_id"
+
+        # Extract Key Vault details and check MSI permissions
+        check_msi_permissions "$key_vault_id"
+        log "INFO" "Key_vault_id: $key_vault_id"
         log "INFO" "Key Vault Name: $key_vault_name"
         log "INFO" "Secret Name: $secret_name"
         if [[ -n "$key_vault_name" && -n "$secret_name" ]]; then
             log "INFO" "Using Key Vault for SSH key retrieval."
-            check_msi_permissions "$key_vault_name" # Call the function to check MSI permissions
             secret_value=$(az keyvault secret show --vault-name "$key_vault_name" --name "$secret_name" --query "value" -o tsv)
             if [[ -z "$secret_value" ]]; then
                 log "ERROR" "Failed to retrieve secret '$secret_name' from Key Vault '$key_vault_name'."
@@ -248,11 +259,7 @@ main() {
     # fi
 
     # Extract secret_name from sap-parameters.yaml
-    #secret_name=$(yq eval '.secret_name' "$SYSTEM_PARAMS")  # Using yq
-    #log "INFO" "Secret Name: $secret_name"
-    # Alternatively, use grep and awk:
     secret_name=$(grep "^secret_name:" "$SYSTEM_PARAMS" | awk '{split($0,a,": "); print a[2]}' | xargs)
-    log "INFO" "Secret Name: $secret_name"
 
     if [[ -z "$secret_name" ]]; then
         log "ERROR" "Error: secret_name is not defined in $SYSTEM_PARAMS."
