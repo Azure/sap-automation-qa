@@ -100,19 +100,7 @@ get_playbook_name() {
     esac
 }
 
-# Function to get MSI object ID using Azure Instance Metadata Service (IMDS)
-get_msi_object_id() {
-    # Use IMDS to get the system-assigned MSI client ID
-    msi_object_id=$(curl -s -H "Metadata:true" "http://169.254.169.254/metadata/identity/oauth2/token?api-version=2019-08-01&resource=https://management.azure.com" | jq -r '.client_id')
-    if [[ -z "$msi_object_id" || "$msi_object_id" == "null" ]]; then
-        log "ERROR" "Failed to retrieve system-assigned MSI object ID using IMDS."
-        exit 1
-    fi
-    log "INFO" "MSI OBJECT ID: $msi_object_id..."
-    echo "$msi_object_id"
-}
-
-# Updated check_msi_permissions function to use MSI token
+# Updated check_msi_permissions function to authenticate and error out if permissions are incorrect
 check_msi_permissions() {
     local key_vault_id=$1
     local required_permission="Get"
@@ -130,30 +118,20 @@ check_msi_permissions() {
     log "INFO" "Extracted resource group name: $resource_group_name"
     log "INFO" "Extracted key vault name: $key_vault_name"
 
-    log "INFO" "Checking MSI permissions on Key Vault: $key_vault_name..."
-
-    # Get MSI object ID using IMDS
-    msi_object_id=$(get_msi_object_id "$resource_group_name" "$VM_NAME")
-    log "INFO" "MSI OBJECT ID: $msi_object_id..."
-    log "INFO" "resource group NAME: $resource_group_name..."
-    if [[ -z "$msi_object_id" ]]; then
-        log "ERROR" "Failed to retrieve MSI object ID."
-        exit 1
-    fi
-    
-    # Log in using MSI object ID
-    log "INFO" "Logging in using MSI object ID: $msi_object_id"
+    # Authenticate using MSI
+    log "INFO" "Authenticating using MSI..."
     az login --identity
     az account set --subscription "$subscription_id"
     if [[ $? -ne 0 ]]; then
-        log "ERROR" "Failed to log in using MSI object ID: $msi_object_id"
+        log "ERROR" "Failed to authenticate using MSI."
         exit 1
     fi
 
-    # Check Key Vault permissions
-    permissions=$(az keyvault show --name "$key_vault_name" --query "properties.accessPolicies[?objectId=='$msi_object_id'].permissions.secrets" -o tsv)
-    if [[ ! "$permissions" =~ (^|[[:space:]])"$required_permission"($|[[:space:]]) ]]; then
-        log "ERROR" "MSI does not have the required '$required_permission' permission on Key Vault $key_vault_name."
+    # Attempt to access Key Vault to verify permissions
+    log "INFO" "Verifying permissions on Key Vault: $key_vault_name..."
+    secret_check=$(az keyvault secret list --vault-name "$key_vault_name" --maxresults 1 2>&1)
+    if [[ $? -ne 0 ]]; then
+        log "ERROR" "Permission check failed: $secret_check"
         exit 1
     fi
 
