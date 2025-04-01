@@ -108,7 +108,7 @@ get_msi_object_id() {
         log "ERROR" "Failed to retrieve system-assigned MSI object ID using IMDS."
         exit 1
     fi
-
+    log "INFO" "MSI OBJECT ID: $msi_object_id..."
     echo "$msi_object_id"
 }
 
