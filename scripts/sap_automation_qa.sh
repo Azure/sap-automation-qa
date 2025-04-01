@@ -102,16 +102,12 @@ get_playbook_name() {
 
 # Function to get MSI object ID using Azure Instance Metadata Service (IMDS)
 get_msi_object_id() {
-    local resource_group_name=$1
-    local vm_name=$2
-
-    # Use IMDS to get the MSI object ID
-    msi_object_id=$(curl -s -H "Metadata:true" "http://169.254.169.254/metadata/identity/oauth2/token?api-version=2019-08-01&resource=https://management.azure.com" | jq -r '.client_id')
-    if [[ -z "$msi_object_id" ]]; then
-        log "ERROR" "Failed to retrieve MSI object ID using IMDS."
+    # Use IMDS to get the system-assigned MSI object ID
+    msi_object_id=$(curl -s -H "Metadata:true" "http://169.254.169.254/metadata/identity/info?api-version=2019-08-01" | jq -r '.compute.identity.systemAssignedIdentity')
+    if [[ -z "$msi_object_id" || "$msi_object_id" == "null" ]]; then
+        log "ERROR" "Failed to retrieve system-assigned MSI object ID using IMDS."
         exit 1
     fi
-
 
     echo "$msi_object_id"
 }
