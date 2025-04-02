@@ -1,4 +1,4 @@
-ansible-compat==24.6.1
+ansible-compat==24.10.0
 ansible-core==2.17.7
 ansible-lint==24.6.1
 ansible-runner==2.4.0
