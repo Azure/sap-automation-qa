@@ -211,7 +211,7 @@ run_ansible_playbook() {
         check_msi_permissions "$key_vault_id"
         if [[ -n "$key_vault_name" && -n "$secret_name" ]]; then
             log "INFO" "Using Key Vault for SSH key retrieval."
-            secret_value=$(az keyvault secret show --vault-name "$key_vault_name" --name "$secret_name" --query "value" -o tsv)
+            secret_value=$(az keyvault secret show --vault-name "$key_vault_name" --name "$secret_name" --query "value" -o tsv --output none)
             if [[ -z "$secret_value" ]]; then
                 log "ERROR" "Failed to retrieve secret '$secret_name' from Key Vault '$key_vault_name'."
                 exit 1
