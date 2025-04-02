@@ -130,7 +130,7 @@ check_msi_permissions() {
     # Attempt to access Key Vault to verify permissions
     log "INFO" "Verifying permissions on Key Vault: $key_vault_name..."
     set +e  # Temporarily disable exit on error
-    error_message=$(az keyvault secret list --vault-name "$key_vault_name" --maxresults 1 2>&1)
+    error_message=$(az keyvault secret list --vault-name "$key_vault_name" 2>&1)
     az_exit_code=$?  # Capture the exit code of the az command
     set -e  # Re-enable exit on error
 
