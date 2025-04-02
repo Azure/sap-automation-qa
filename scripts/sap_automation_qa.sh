@@ -18,7 +18,12 @@ RED='\033[0;31m'
 GREEN='\033[0;32m'
 NC='\033[0m'
 
-# Function to print logs with color based on severity
+"""
+Print logs with color based on severity.
+
+:param severity: The severity level of the log (e.g., "INFO", "ERROR").
+:param message: The message to log.
+"""
 log() {
     local severity=$1
     local message=$2
@@ -37,12 +42,21 @@ log "INFO" "ANSIBLE_MODULE_UTILS: $ANSIBLE_MODULE_UTILS"
 # Define the path to the vars.yaml file
 VARS_FILE="${cmd_dir}/../vars.yaml"
 
-# Function to check if a command exists
+"""
+Check if a command exists.
+
+:param command: The command to check.
+:return: None. Exits with a non-zero status if the command does not exist.
+"""
 command_exists() {
     command -v "$1" &> /dev/null
 }
 
-# Function to validate input parameters from vars.yaml
+"""
+Validate input parameters from vars.yaml.
+
+:return: None. Exits with a non-zero status if validation fails.
+"""
 validate_params() {
     local missing_params=()
     local params=("TEST_TYPE" "SYSTEM_CONFIG_NAME" "sap_functional_test_type" "AUTHENTICATION_TYPE")
@@ -71,7 +85,13 @@ validate_params() {
     fi
 }
 
-# Function to check if a file exists
+"""
+Check if a file exists.
+
+:param file_path: The path to the file to check.
+:param error_message: The error message to display if the file does not exist.
+:return: None. Exits with a non-zero status if the file does not exist.
+"""
 check_file_exists() {
     local file_path=$1
     local error_message=$2
@@ -82,7 +102,12 @@ check_file_exists() {
     fi
 }
 
-# Function to determine the playbook name based on the sap_functional_test_type
+"""
+Determine the playbook name based on the sap_functional_test_type.
+
+:param test_type: The type of SAP functional test.
+:return: The name of the playbook.
+"""
 get_playbook_name() {
     local test_type=$1
 
@@ -100,7 +125,12 @@ get_playbook_name() {
     esac
 }
 
-# Updated check_msi_permissions function to authenticate and error out if permissions are incorrect
+"""
+Check MSI permissions for accessing a Key Vault.
+
+:param key_vault_id: The ID of the Key Vault.
+:return: None. Exits with a non-zero status if permissions are insufficient.
+"""
 check_msi_permissions() {
     local key_vault_id=$1
     local required_permission="Get"
@@ -146,7 +176,17 @@ check_msi_permissions() {
     log "INFO" "MSI has the required permissions on Key Vault $key_vault_name."
 }
 
-# Function to run the ansible playbook
+"""
+Run the ansible playbook.
+
+:param playbook_name: The name of the playbook to run.
+:param system_hosts: The path to the inventory file.
+:param system_params: The path to the SAP parameters file.
+:param auth_type: The authentication type (e.g., "SSHKEY", "VMPASSWORD").
+:param system_config_folder: The path to the system configuration folder.
+:param secret_name: The name of the secret in the Key Vault.
+:return: None. Exits with the return code of the ansible-playbook command.
+"""
 run_ansible_playbook() {
     local playbook_name=$1
     local system_hosts=$2
@@ -228,7 +268,11 @@ run_ansible_playbook() {
     exit $return_code
 }
 
-# Main script execution
+"""
+Main script execution.
+
+:return: None. Exits with a non-zero status if any step fails.
+"""
 main() {
     log "INFO" "Activate the virtual environment..."
     set -e
@@ -251,7 +295,7 @@ main() {
     check_file_exists "$SYSTEM_PARAMS" \
         "sap-parameters.yaml not found in WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME directory."
 
-    # log "INFO" "Checking if the SSH key or password file exists..."
+# log "INFO" "Checking if the SSH key or password file exists..."
     # if [[ "$AUTHENTICATION_TYPE" == "SSHKEY" ]]; then
     #     check_file_exists "${cmd_dir}/../WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME/ssh_key.ppk" \
     #         "ssh_key.ppk not found in WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME directory."
@@ -274,7 +318,6 @@ main() {
     playbook_name=$(get_playbook_name "$sap_functional_test_type")
     log "INFO" "Using playbook: $playbook_name."
 
-    
     run_ansible_playbook "$playbook_name" "$SYSTEM_HOSTS" "$SYSTEM_PARAMS" "$AUTHENTICATION_TYPE" "$SYSTEM_CONFIG_FOLDER" "$secret_name"
 
     # Clean up any remaining temporary files
