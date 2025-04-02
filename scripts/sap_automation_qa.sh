@@ -129,8 +129,12 @@ check_msi_permissions() {
 
     # Attempt to access Key Vault to verify permissions
     log "INFO" "Verifying permissions on Key Vault: $key_vault_name..."
+    set +e  # Temporarily disable exit on error
     error_message=$(az keyvault secret list --vault-name "$key_vault_name" --maxresults 1 2>&1)
-    if [[ $? -ne 0 ]]; then
+    az_exit_code=$?  # Capture the exit code of the az command
+    set -e  # Re-enable exit on error
+
+    if [[ $az_exit_code -ne 0 ]]; then
         extracted_message=$(echo "$error_message" | grep -oP '(?<=Message: ).*' | head -n 1)
         if [[ -z "$extracted_message" ]]; then
             extracted_message="An unknown error occurred. See full error details above."
