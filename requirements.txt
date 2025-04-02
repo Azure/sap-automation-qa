@@ -65,7 +65,7 @@ PyYAML==6.0.2
 referencing==0.36.2
 requests==2.32.3
 resolvelib==1.0.1
-rich==13.9.4
+rich==14.0.0
 rpds-py==0.22.3
 ruamel.yaml==0.18.10
 ruamel.yaml.clib==0.2.12
