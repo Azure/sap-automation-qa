@@ -129,13 +129,16 @@ check_msi_permissions() {
 
     # Attempt to access Key Vault to verify permissions
     log "INFO" "Verifying permissions on Key Vault: $key_vault_name..."
-    if ! az keyvault secret list --vault-name "$key_vault_name" --maxresults 1 2>/tmp/az_error.log; then
-        log "ERROR" "Azure CLI error: $(cat /tmp/az_error.log)"
-        rm -f /tmp/az_error.log
+    error_message=$(az keyvault secret list --vault-name "$key_vault_name" --maxresults 1 2>&1)
+    if [[ $? -ne 0 ]]; then
+        extracted_message=$(echo "$error_message" | grep -oP '(?<=Message: ).*' | head -n 1)
+        if [[ -z "$extracted_message" ]]; then
+            extracted_message="An unknown error occurred. See full error details above."
+        fi
+        log "ERROR" "Azure CLI error: $extracted_message"
         exit 1
     fi
 
-    rm -f /tmp/az_error.log
     log "INFO" "MSI has the required permissions on Key Vault $key_vault_name."
 }
 
