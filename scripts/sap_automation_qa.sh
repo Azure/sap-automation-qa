@@ -19,6 +19,11 @@ GREEN='\033[0;32m'
 NC='\033[0m'
 
 """
+Global variable to store the path of the temporary file.
+"""
+temp_file=""
+
+"""
 Print logs with color based on severity.
 
 :param severity: The severity level of the log (e.g., "INFO", "ERROR").
@@ -103,6 +108,23 @@ check_file_exists() {
 }
 
 """
+Extract the error message from a command's output.
+
+:param error_output: The output containing the error message.
+:return: The extracted error message or a default message if none is found.
+"""
+extract_error_message() {
+    local error_output=$1
+    local extracted_message
+
+    extracted_message=$(echo "$error_output" | grep -oP '(?<=Message: ).*' | head -n 1)
+    if [[ -z "$extracted_message" ]]; then
+        extracted_message="An unknown error occurred. See full error details above."
+    fi
+    echo "$extracted_message"
+}
+
+"""
 Determine the playbook name based on the sap_functional_test_type.
 
 :param test_type: The type of SAP functional test.
@@ -165,15 +187,28 @@ check_msi_permissions() {
     set -e  # Re-enable exit on error
 
     if [[ $az_exit_code -ne 0 ]]; then
-        extracted_message=$(echo "$error_message" | grep -oP '(?<=Message: ).*' | head -n 1)
-        if [[ -z "$extracted_message" ]]; then
-            extracted_message="An unknown error occurred. See full error details above."
-        fi
+        extracted_message=$(extract_error_message "$error_message")
         log "ERROR" "Azure CLI error: $extracted_message"
         exit 1
     fi
+    
+    # Attempt to retrieve the secret value and handle errors
+    log "INFO" "Retrieving secret '$secret_name' from Key Vault '$key_vault_name'..."
+    set +e  # Temporarily disable exit on error
+    secret_value=$(az keyvault secret show --vault-name "$key_vault_name" --name "$secret_name" --query "value" -o tsv 2>&1)
+    az_exit_code=$?  # Capture the exit code of the az command
+    set -e  # Re-enable exit on error
 
-    log "INFO" "MSI has the required permissions on Key Vault $key_vault_name."
+    if [[ $az_exit_code -ne 0 ]]; then
+        extracted_message=$(extract_error_message "$secret_value")
+        log "ERROR" "Failed to retrieve secret '$secret_name' from Key Vault '$key_vault_name': $extracted_message"
+        exit 1
+    fi
+
+    log "INFO" "Successfully retrieved secret from Key Vault."
+    temp_file=$(mktemp --suffix=.ppk)
+    echo "$secret_value" > "$temp_file"
+    log "INFO" "Temporary SSH key file created: $temp_file"
 }
 
 """
@@ -194,7 +229,6 @@ run_ansible_playbook() {
     local auth_type=$4
     local system_config_folder=$5
     local secret_name=$6
-    local temp_file
 
     if [[ "$auth_type" == "SSHKEY" ]]; then
         log "INFO" "Authentication type is SSHKEY."
@@ -211,14 +245,7 @@ run_ansible_playbook() {
         check_msi_permissions "$key_vault_id"
         if [[ -n "$key_vault_name" && -n "$secret_name" ]]; then
             log "INFO" "Using Key Vault for SSH key retrieval."
-            secret_value=$(az keyvault secret show --vault-name "$key_vault_name" --name "$secret_name" --query "value" --output none)
-            if [[ -z "$secret_value" ]]; then
-                log "ERROR" "Failed to retrieve secret '$secret_name' from Key Vault '$key_vault_name'."
-                exit 1
-            fi
-            temp_file=$(mktemp --suffix=.ppk)
-            echo "$secret_value" > "$temp_file"
-            log "INFO" "Temporary SSH key file created: $temp_file"
+            log "INFO" "Temporary SSH key file: $temp_file"
             command="ansible-playbook ${cmd_dir}/../src/$playbook_name.yml -i $system_hosts --private-key $temp_file \
             -e @$VARS_FILE -e @$system_params -e '_workspace_directory=$system_config_folder'"
         else
