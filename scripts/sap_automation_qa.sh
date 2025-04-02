@@ -110,17 +110,12 @@ check_file_exists() {
 """
 Extract the error message from a command's output.
 
-:param command: The command to execute.
+:param error_output: The output containing the error message.
 :return: The extracted error message or a default message if none is found.
 """
 extract_error_message() {
-    local command=$1
-    local error_output
+    local error_output=$1
     local extracted_message
-
-    set +e  # Temporarily disable exit on error
-    error_output=$($command 2>&1)
-    set -e  # Re-enable exit on error
 
     extracted_message=$(echo "$error_output" | grep -oP '(?<=Message: ).*' | head -n 1)
     if [[ -z "$extracted_message" ]]; then
@@ -186,17 +181,27 @@ check_msi_permissions() {
 
     # Attempt to access Key Vault to verify permissions
     log "INFO" "Verifying permissions on Key Vault: $key_vault_name..."
-    error_message=$(extract_error_message "az keyvault secret list --vault-name \"$key_vault_name\"")
-    if [[ $? -ne 0 ]]; then
-        log "ERROR" "Azure CLI error: $error_message"
+    set +e  # Temporarily disable exit on error
+    error_message=$(az keyvault secret list --vault-name "$key_vault_name" 2>&1)
+    az_exit_code=$?  # Capture the exit code of the az command
+    set -e  # Re-enable exit on error
+
+    if [[ $az_exit_code -ne 0 ]]; then
+        extracted_message=$(extract_error_message "$error_message")
+        log "ERROR" "Azure CLI error: $extracted_message"
         exit 1
     fi
     
     # Attempt to retrieve the secret value and handle errors
     log "INFO" "Retrieving secret '$secret_name' from Key Vault '$key_vault_name'..."
-    secret_value=$(extract_error_message "az keyvault secret show --vault-name \"$key_vault_name\" --name \"$secret_name\" --query \"value\" -o tsv")
-    if [[ $? -ne 0 ]]; then
-        log "ERROR" "Failed to retrieve secret '$secret_name' from Key Vault '$key_vault_name': $secret_value"
+    set +e  # Temporarily disable exit on error
+    secret_value=$(az keyvault secret show --vault-name "$key_vault_name" --name "$secret_name" --query "value" -o tsv 2>&1)
+    az_exit_code=$?  # Capture the exit code of the az command
+    set -e  # Re-enable exit on error
+
+    if [[ $az_exit_code -ne 0 ]]; then
+        extracted_message=$(extract_error_message "$secret_value")
+        log "ERROR" "Failed to retrieve secret '$secret_name' from Key Vault '$key_vault_name': $extracted_message"
         exit 1
     fi
 
@@ -316,6 +321,17 @@ main() {
         "hosts.yaml not found in WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME directory."
     check_file_exists "$SYSTEM_PARAMS" \
         "sap-parameters.yaml not found in WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME directory."
+
+# log "INFO" "Checking if the SSH key or password file exists..."
+    # if [[ "$AUTHENTICATION_TYPE" == "SSHKEY" ]]; then
+    #     check_file_exists "${cmd_dir}/../WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME/ssh_key.ppk" \
+    #         "ssh_key.ppk not found in WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME directory."
+    # elif [[ "$AUTHENTICATION_TYPE" == "VMPASSWORD" ]]; then
+    #     check_file_exists "${cmd_dir}/../WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME/password" \
+    #         "password file not found in WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME directory."
+    # elif [[ "$AUTHENTICATION_TYPE" == "KEYVAULT" ]]; then
+    #     log "INFO" "Key Vault authentication selected. Ensure Key Vault parameters are set."
+    # fi
 
     # Extract secret_name from sap-parameters.yaml
     secret_name=$(grep "^secret_name:" "$SYSTEM_PARAMS" | awk '{split($0,a,": "); print a[2]}' | xargs)
