@@ -148,12 +148,12 @@ get_playbook_name() {
 }
 
 """
-Check MSI permissions for accessing a Key Vault.
+Retrieve a secret from Azure Key Vault.
 
 :param key_vault_id: The ID of the Key Vault.
-:return: None. Exits with a non-zero status if permissions are insufficient.
+:return: None. Exits with a non-zero status if retrieval fails.
 """
-check_msi_permissions() {
+retrieve_secret_from_key_vault() {
     local key_vault_id=$1
     local required_permission="Get"
 
@@ -207,6 +207,10 @@ check_msi_permissions() {
 
     log "INFO" "Successfully retrieved secret from Key Vault."
     temp_file=$(mktemp --suffix=.ppk)
+
+    # Check if the temporary file already exists
+    check_file_exists "$temp_file" "Temporary file already exists: $temp_file"
+
     echo "$secret_value" > "$temp_file"
     log "INFO" "Temporary SSH key file created: $temp_file"
 }
@@ -235,44 +239,58 @@ run_ansible_playbook() {
 
         # Extract key_vault_id from sap-parameters.yaml
         key_vault_id=$(grep "^key_vault_id:" "$system_params" | awk '{split($0,a,": "); print a[2]}' | xargs)
-        if [[ -z "$key_vault_id" ]]; then
-            log "ERROR" "Error: key_vault_id is not defined in $system_params."
-            exit 1
-        fi
-        log "INFO" "Extracted key_vault_id: $key_vault_id"
 
-        # Extract Key Vault details and check MSI permissions
-        check_msi_permissions "$key_vault_id"
-        if [[ -n "$key_vault_name" && -n "$secret_name" ]]; then
-            log "INFO" "Using Key Vault for SSH key retrieval."
-            log "INFO" "Temporary SSH key file: $temp_file"
-            command="ansible-playbook ${cmd_dir}/../src/$playbook_name.yml -i $system_hosts --private-key $temp_file \
-            -e @$VARS_FILE -e @$system_params -e '_workspace_directory=$system_config_folder'"
-        else
+        if [[ -z "$key_vault_id" ]]; then
             local ssh_key="${cmd_dir}/../WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME/ssh_key.ppk"
-            log "INFO" "Using local SSH key: $ssh_key."
-            command="ansible-playbook ${cmd_dir}/../src/$playbook_name.yml -i $system_hosts --private-key $ssh_key \
-            -e @$VARS_FILE -e @$system_params -e '_workspace_directory=$system_config_folder'"
-        fi
-    elif [[ "$auth_type" == "VMPASSWORD" ]]; then
-        if [[ -n "$key_vault_name" && -n "$secret_name" ]]; then
-            log "INFO" "Using Key Vault for password retrieval."
-            secret_value=$(az keyvault secret show --vault-name "$key_vault_name" --name "$secret_name" --query "value" -o tsv)
-            if [[ -z "$secret_value" ]]; then
-                log "ERROR" "Failed to retrieve secret '$secret_name' from Key Vault '$key_vault_name'."
+            if [[ -f "$ssh_key" ]]; then
+                log "INFO" "key_vault_id is not provided, but local SSH key is present: $ssh_key."
+                command="ansible-playbook ${cmd_dir}/../src/$playbook_name.yml -i $system_hosts --private-key $ssh_key \
+                -e @$VARS_FILE -e @$system_params -e '_workspace_directory=$system_config_folder'"
+            else
+                log "ERROR" "Error: key_vault_id is not defined in $system_params, and no local SSH key is present."
                 exit 1
             fi
+        else
+            log "INFO" "Extracted key_vault_id: $key_vault_id"
+
+            # Extract Key Vault details and retrieve secret
+            retrieve_secret_from_key_vault "$key_vault_id"
+            if [[ -z "$secret_value" ]]; then
+                local ssh_key="${cmd_dir}/../WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME/ssh_key.ppk"
+                if [[ -f "$ssh_key" ]]; then
+                    log "INFO" "Secret value is not retrieved, but local SSH key is present: $ssh_key."
+                    command="ansible-playbook ${cmd_dir}/../src/$playbook_name.yml -i $system_hosts --private-key $ssh_key \
+                    -e @$VARS_FILE -e @$system_params -e '_workspace_directory=$system_config_folder'"
+                else
+                    log "ERROR" "Error: Secret value is not retrieved, and no local SSH key is present."
+                    exit 1
+                fi
+            else
+                log "INFO" "Using Key Vault for SSH key retrieval."
+                log "INFO" "Temporary SSH key file: $temp_file"
+                command="ansible-playbook ${cmd_dir}/../src/$playbook_name.yml -i $system_hosts --private-key $temp_file \
+                -e @$VARS_FILE -e @$system_params -e '_workspace_directory=$system_config_folder'"
+            fi
+        fi
+    elif [[ "$auth_type" == "VMPASSWORD" ]]; then
+        if [[ -z "$secret_value" ]]; then
+            local password_file="${cmd_dir}/../WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME/password"
+            if [[ -f "$password_file" ]]; then
+                log "INFO" "Secret value is not retrieved, but local password file is present: $password_file."
+                command="ansible-playbook ${cmd_dir}/../src/$playbook_name.yml -i $system_hosts \
+                --extra-vars \"ansible_ssh_pass=$(cat $password_file)\" --extra-vars @$VARS_FILE -e @$system_params \
+                -e '_workspace_directory=$system_config_folder'"
+            else
+                log "ERROR" "Error: Secret value is not retrieved, and no local password file is present."
+                exit 1
+            fi
+        else
+            log "INFO" "Using Key Vault for password retrieval."
             temp_file=$(mktemp --suffix=.password)
             echo "$secret_value" > "$temp_file"
             log "INFO" "Temporary password file created: $temp_file"
             command="ansible-playbook ${cmd_dir}/../src/$playbook_name.yml -i $system_hosts \
             --extra-vars \"ansible_ssh_pass=$(cat $temp_file)\" --extra-vars @$VARS_FILE -e @$system_params \
-            -e '_workspace_directory=$system_config_folder'"
-        else
-            local password_file="${cmd_dir}/../WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME/password"
-            log "INFO" "Using local password file: $password_file."
-            command="ansible-playbook ${cmd_dir}/../src/$playbook_name.yml -i $system_hosts \
-            --extra-vars \"ansible_ssh_pass=$(cat $password_file)\" --extra-vars @$VARS_FILE -e @$system_params \
             -e '_workspace_directory=$system_config_folder'"
         fi
     else

@@ -30,5 +30,5 @@ NFS_provider:                  AFS
 #############################################################################
 #                              Key Vault                                    #
 #############################################################################
-key_vault_id:                  test
-secret_name:                   test
+key_vault_id:                  /subscriptions/<subscription-id>/resourceGroups/<resource-group>/providers/Microsoft.KeyVault/vaults/<key-vault-name>
+secret_name:                   <secure-secret-name>
