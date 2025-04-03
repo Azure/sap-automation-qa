@@ -264,20 +264,16 @@ run_ansible_playbook() {
             exit 1
         fi
     elif [[ "$auth_type" == "VMPASSWORD" ]]; then
-        if [[ -z "$secret_value" ]]; then
-            local password_file="${cmd_dir}/../WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME/password"
-            if [[ -f "$password_file" ]]; then
-                log "INFO" "Secret value is not retrieved, but local password file is present: $password_file."
-                command="ansible-playbook ${cmd_dir}/../src/$playbook_name.yml -i $system_hosts \
-                --extra-vars \"ansible_ssh_pass=$(cat $password_file)\" --extra-vars @$VARS_FILE -e @$system_params \
-                -e '_workspace_directory=$system_config_folder'"
-            else
-                log "ERROR" "Error: Secret value is not retrieved, and no local password file is present."
-                exit 1
-            fi
+        local password_file="${cmd_dir}/../WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME/password"
+        if [[ -f "$password_file" ]]; then
+            log "INFO" "Local password file is present: $password_file."
+            command="ansible-playbook ${cmd_dir}/../src/$playbook_name.yml -i $system_hosts \
+            --extra-vars \"ansible_ssh_pass=$(cat $password_file)\" --extra-vars @$VARS_FILE -e @$system_params \
+            -e '_workspace_directory=$system_config_folder'"
         else
-            log "INFO" "Using Key Vault for password retrieval."
+            log "INFO" "Local password file not found. Retrieving password from Key Vault."
             temp_file=$(mktemp --suffix=.password)
+            retrieve_secret_from_key_vault "$key_vault_id"
             echo "$secret_value" > "$temp_file"
             log "INFO" "Temporary password file created: $temp_file"
             command="ansible-playbook ${cmd_dir}/../src/$playbook_name.yml -i $system_hosts \
