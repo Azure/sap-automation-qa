@@ -179,7 +179,7 @@ retrieve_secret_from_key_vault() {
     # Attempt to retrieve the secret value and handle errors
     log "INFO" "Retrieving secret '$secret_name' from Key Vault using resource ID..."
     set +e  # Temporarily disable exit on error
-    secret_value=$(az keyvault secret show --id "$key_vault_id --query "value" -o tsv 2>&1)
+    secret_value=$(az keyvault secret show --id "$key_vault_id" --query "value" -o tsv 2>&1)  # Fixed missing quote
     az_exit_code=$?  # Capture the exit code of the az command
     set -e  # Re-enable exit on error
 
