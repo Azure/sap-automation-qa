@@ -1,6 +1,7 @@
 #!/usr/bin/python3
 # -*- coding: utf-8 -*-
 
+import json
 from ansible.module_utils.basic import AnsibleModule
 
 def main():
@@ -17,7 +18,7 @@ def main():
     # Return a mock cluster status
     module.exit_json(
         changed=False,
-        filtered_logs=["Mock log entry 1", "Mock log entry 2"],
+        filtered_logs=json.dumps(["Mock log entry 1", "Mock log entry 2"]),
         status="PASSED",
         keywords=module.params['keywords'],
         start_time=module.params['start_time'],

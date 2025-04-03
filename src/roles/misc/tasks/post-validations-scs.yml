@@ -19,12 +19,14 @@
                                         {{
                                           (
                                             hostvars[cluster_status_pre.ascs_node]['var_log_messages_output'].filtered_logs
-                                            | default([])
+                                            | default('[]')
+                                            | from_json
                                           )
                                           +
                                           (
                                             hostvars[cluster_status_pre.ers_node]['var_log_messages_output'].filtered_logs
-                                            | default([])
+                                            | default('[]')
+                                            | from_json
                                           )
                                         }}
 
