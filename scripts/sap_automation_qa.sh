@@ -151,10 +151,12 @@ get_playbook_name() {
 Retrieve a secret from Azure Key Vault.
 
 :param key_vault_id: The ID of the Key Vault.
+:param secret_name: The name of the secret in the Key Vault.
 :return: None. Exits with a non-zero status if retrieval fails.
 """
 retrieve_secret_from_key_vault() {
     local key_vault_id=$1
+    local secret_name=$2
     local required_permission="Get"
 
     # Extract resource group name and key vault name from key_vault_id
@@ -162,13 +164,14 @@ retrieve_secret_from_key_vault() {
     key_vault_name=$(echo "$key_vault_id" | awk -F'/' '{for(i=1;i<=NF;i++){if($i=="vaults"){print $(i+1)}}}')
     subscription_id=$(echo "$key_vault_id" | awk -F'/' '{for(i=1;i<=NF;i++){if($i=="subscriptions"){print $(i+1)}}}')
 
-    if [[ -z "$resource_group_name" || -z "$key_vault_name" ]]; then
-        log "ERROR" "Failed to extract resource group name or key vault name from key_vault_id: $key_vault_id"
+    if [[ -z "$resource_group_name" || -z "$key_vault_name" || -z "$secret_name" ]]; then
+        log "ERROR" "Failed to extract required details from key_vault_id or secret_name is missing."
         exit 1
     fi
 
     log "INFO" "Extracted resource group name: $resource_group_name"
     log "INFO" "Extracted key vault name: $key_vault_name"
+    log "INFO" "Using secret name: $secret_name"
 
     # Authenticate using MSI
     log "INFO" "Authenticating using MSI..."
@@ -179,19 +182,6 @@ retrieve_secret_from_key_vault() {
         exit 1
     fi
 
-    # Attempt to access Key Vault to verify permissions
-    log "INFO" "Verifying permissions on Key Vault: $key_vault_name..."
-    set +e  # Temporarily disable exit on error
-    error_message=$(az keyvault secret list --vault-name "$key_vault_name" 2>&1)
-    az_exit_code=$?  # Capture the exit code of the az command
-    set -e  # Re-enable exit on error
-
-    if [[ $az_exit_code -ne 0 ]]; then
-        extracted_message=$(extract_error_message "$error_message")
-        log "ERROR" "Azure CLI error: $extracted_message"
-        exit 1
-    fi
-    
     # Attempt to retrieve the secret value and handle errors
     log "INFO" "Retrieving secret '$secret_name' from Key Vault '$key_vault_name'..."
     set +e  # Temporarily disable exit on error
@@ -199,7 +189,7 @@ retrieve_secret_from_key_vault() {
     az_exit_code=$?  # Capture the exit code of the az command
     set -e  # Re-enable exit on error
 
-    if [[ $az_exit_code -ne 0 ]]; then
+    if [[ $az_exit_code -ne 0 || -z "$secret_value" ]]; then
         extracted_message=$(extract_error_message "$secret_value")
         log "ERROR" "Failed to retrieve secret '$secret_name' from Key Vault '$key_vault_name': $extracted_message"
         exit 1
@@ -209,9 +199,16 @@ retrieve_secret_from_key_vault() {
     temp_file=$(mktemp --suffix=.ppk)
 
     # Check if the temporary file already exists
-    check_file_exists "$temp_file" "Temporary file already exists: $temp_file"
+    if [[ -f "$temp_file" ]]; then
+        log "ERROR" "Temporary file already exists: $temp_file"
+        exit 1
+    fi
 
     echo "$secret_value" > "$temp_file"
+    if [[ ! -s "$temp_file" ]]; then
+        log "ERROR" "Failed to store the retrieved secret in the temporary file."
+        exit 1
+    fi
     log "INFO" "Temporary SSH key file created: $temp_file"
 }
 
@@ -249,18 +246,26 @@ run_ansible_playbook() {
             key_vault_id=$(grep "^key_vault_id:" "$system_params" | awk '{split($0,a,": "); print a[2]}' | xargs)
             log "INFO" "Extracted key_vault_id: $key_vault_id"
 
-            if [[ -z "$key_vault_id" ]]; then
-                log "ERROR" "Error: key_vault_id is not defined in $system_params, and no local SSH key is present."
+            if [[ -z "$key_vault_id" || -z "$secret_name" ]]; then
+                log "ERROR" "Error: key_vault_id or secret_name is not defined in $system_params, and no local SSH key is present."
                 exit 1
             fi
 
-            retrieve_secret_from_key_vault "$key_vault_id"
+            retrieve_secret_from_key_vault "$key_vault_id" "$secret_name"
             if [[ -z "$secret_value" ]]; then
                 log "ERROR" "Error: Secret value is not retrieved, and no local SSH key is present."
                 exit 1
             fi
             temp_file=$(mktemp --suffix=.ppk)
+            if [[ -f "$temp_file" ]]; then
+                log "ERROR" "Temporary file already exists: $temp_file"
+                exit 1
+            fi
             echo "$secret_value" > "$temp_file"
+            if [[ ! -s "$temp_file" ]]; then
+                log "ERROR" "Failed to store the retrieved secret in the temporary file."
+                exit 1
+            fi
             log "INFO" "Temporary SSH key file created: $temp_file"
             command="ansible-playbook ${cmd_dir}/../src/$playbook_name.yml -i $system_hosts --private-key $temp_file \
             -e @$VARS_FILE -e @$system_params -e '_workspace_directory=$system_config_folder'"
@@ -279,14 +284,22 @@ run_ansible_playbook() {
             key_vault_id=$(grep "^key_vault_id:" "$system_params" | awk '{split($0,a,": "); print a[2]}' | xargs)
             log "INFO" "Extracted key_vault_id: $key_vault_id"
 
-            if [[ -z "$key_vault_id" ]]; then
-                log "ERROR" "Error: key_vault_id is not defined in $system_params, and no local password file is present."
+            if [[ -z "$key_vault_id" || -z "$secret_name" ]]; then
+                log "ERROR" "Error: key_vault_id or secret_name is not defined in $system_params, and no local password file is present."
                 exit 1
             fi
 
+            retrieve_secret_from_key_vault "$key_vault_id" "$secret_name"
             temp_file=$(mktemp --suffix=.password)
-            retrieve_secret_from_key_vault "$key_vault_id"
+            if [[ -f "$temp_file" ]]; then
+                log "ERROR" "Temporary file already exists: $temp_file"
+                exit 1
+            fi
             echo "$secret_value" > "$temp_file"
+            if [[ ! -s "$temp_file" ]]; then
+                log "ERROR" "Failed to store the retrieved secret in the temporary file."
+                exit 1
+            fi
             log "INFO" "Temporary password file created."
             command="ansible-playbook ${cmd_dir}/../src/$playbook_name.yml -i $system_hosts \
             --extra-vars \"ansible_ssh_pass=$(cat $temp_file)\" --extra-vars @$VARS_FILE -e @$system_params \
@@ -347,6 +360,12 @@ main() {
         exit 1
     fi
     log "INFO" "Extracted secret_name: $secret_name"
+
+    key_vault_id=$(grep "^key_vault_id:" "$SYSTEM_PARAMS" | awk '{split($0,a,": "); print a[2]}' | xargs)
+    if [[ -z "$key_vault_id" ]]; then
+        log "ERROR" "Error: key_vault_id is not defined in $SYSTEM_PARAMS."
+        exit 1
+    fi
 
     playbook_name=$(get_playbook_name "$sap_functional_test_type")
     log "INFO" "Using playbook: $playbook_name."
