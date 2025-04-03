@@ -148,8 +148,8 @@ retrieve_secret_from_key_vault() {
 
     # Authenticate using MSI
     log "INFO" "Authenticating using MSI..."
-    az login --identity
-    az account set --subscription "$subscription_id"
+    az login --identity > /dev/null 2>&1
+    az account set --subscription "$subscription_id" > /dev/null 2>&1
     if [[ $? -ne 0 ]]; then
         log "ERROR" "Failed to authenticate using MSI."
         exit 1
@@ -158,7 +158,7 @@ retrieve_secret_from_key_vault() {
     # Attempt to retrieve the secret value and handle errors
     log "INFO" "Retrieving secret from Key Vault using resource ID..."
     set +e  # Temporarily disable exit on error
-    secret_value=$(az keyvault secret show --id "$secret_id" --query "value" -o tsv 2>&1)
+    secret_value=$(az keyvault secret show --id "$secret_id" --query "value" -o tsv > /dev/null 2>&1)
     az_exit_code=$?  # Capture the exit code of the az command
     set -e  # Re-enable exit on error
 
@@ -267,7 +267,7 @@ run_ansible_playbook() {
 
     log "INFO" "Running ansible playbook..."
     log "INFO" "Executing: $command"
-    #eval $command
+    eval $command
     return_code=$?
     log "INFO" "Ansible playbook execution completed with return code: $return_code"
 
