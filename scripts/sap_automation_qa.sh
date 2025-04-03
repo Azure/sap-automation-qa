@@ -240,37 +240,28 @@ run_ansible_playbook() {
         # Extract key_vault_id from sap-parameters.yaml
         key_vault_id=$(grep "^key_vault_id:" "$system_params" | awk '{split($0,a,": "); print a[2]}' | xargs)
 
-        if [[ -z "$key_vault_id" ]]; then
-            local ssh_key="${cmd_dir}/../WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME/ssh_key.ppk"
-            if [[ -f "$ssh_key" ]]; then
-                log "INFO" "key_vault_id is not provided, but local SSH key is present: $ssh_key."
-                command="ansible-playbook ${cmd_dir}/../src/$playbook_name.yml -i $system_hosts --private-key $ssh_key \
-                -e @$VARS_FILE -e @$system_params -e '_workspace_directory=$system_config_folder'"
-            else
-                log "ERROR" "Error: key_vault_id is not defined in $system_params, and no local SSH key is present."
-                exit 1
-            fi
-        else
+        local ssh_key="${cmd_dir}/../WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME/ssh_key.ppk"
+        if [[ -f "$ssh_key" ]]; then
+            log "INFO" "Local SSH key is present: $ssh_key. Skipping secret_name requirement."
+            command="ansible-playbook ${cmd_dir}/../src/$playbook_name.yml -i $system_hosts --private-key $ssh_key \
+            -e @$VARS_FILE -e @$system_params -e '_workspace_directory=$system_config_folder'"
+        elif [[ -n "$key_vault_id" ]]; then
             log "INFO" "Extracted key_vault_id: $key_vault_id"
 
             # Extract Key Vault details and retrieve secret
             retrieve_secret_from_key_vault "$key_vault_id"
             if [[ -z "$secret_value" ]]; then
-                local ssh_key="${cmd_dir}/../WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME/ssh_key.ppk"
-                if [[ -f "$ssh_key" ]]; then
-                    log "INFO" "Secret value is not retrieved, but local SSH key is present: $ssh_key."
-                    command="ansible-playbook ${cmd_dir}/../src/$playbook_name.yml -i $system_hosts --private-key $ssh_key \
-                    -e @$VARS_FILE -e @$system_params -e '_workspace_directory=$system_config_folder'"
-                else
-                    log "ERROR" "Error: Secret value is not retrieved, and no local SSH key is present."
-                    exit 1
-                fi
+                log "ERROR" "Error: Secret value is not retrieved, and no local SSH key is present."
+                exit 1
             else
                 log "INFO" "Using Key Vault for SSH key retrieval."
                 log "INFO" "Temporary SSH key file: $temp_file"
                 command="ansible-playbook ${cmd_dir}/../src/$playbook_name.yml -i $system_hosts --private-key $temp_file \
                 -e @$VARS_FILE -e @$system_params -e '_workspace_directory=$system_config_folder'"
             fi
+        else
+            log "ERROR" "Error: key_vault_id is not defined in $system_params, and no local SSH key is present."
+            exit 1
         fi
     elif [[ "$auth_type" == "VMPASSWORD" ]]; then
         if [[ -z "$secret_value" ]]; then
@@ -340,21 +331,10 @@ main() {
     check_file_exists "$SYSTEM_PARAMS" \
         "sap-parameters.yaml not found in WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME directory."
 
-# log "INFO" "Checking if the SSH key or password file exists..."
-    # if [[ "$AUTHENTICATION_TYPE" == "SSHKEY" ]]; then
-    #     check_file_exists "${cmd_dir}/../WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME/ssh_key.ppk" \
-    #         "ssh_key.ppk not found in WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME directory."
-    # elif [[ "$AUTHENTICATION_TYPE" == "VMPASSWORD" ]]; then
-    #     check_file_exists "${cmd_dir}/../WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME/password" \
-    #         "password file not found in WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME directory."
-    # elif [[ "$AUTHENTICATION_TYPE" == "KEYVAULT" ]]; then
-    #     log "INFO" "Key Vault authentication selected. Ensure Key Vault parameters are set."
-    # fi
-
     # Extract secret_name from sap-parameters.yaml
     secret_name=$(grep "^secret_name:" "$SYSTEM_PARAMS" | awk '{split($0,a,": "); print a[2]}' | xargs)
 
-    if [[ -z "$secret_name" ]]; then
+    if [[ -z "$secret_name" && "$AUTHENTICATION_TYPE" != "SSHKEY" ]]; then
         log "ERROR" "Error: secret_name is not defined in $SYSTEM_PARAMS."
         exit 1
     fi
