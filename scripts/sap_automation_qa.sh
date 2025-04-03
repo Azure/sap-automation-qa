@@ -169,7 +169,9 @@ retrieve_secret_from_key_vault() {
     fi
 
     log "INFO" "Successfully retrieved secret from Key Vault."
-    temp_file=$(mktemp --suffix=.ppk)
+
+    # Define a unique temporary file path
+    temp_file=$(mktemp --dry-run --suffix=.ppk)
 
     # Check if the temporary file already exists
     if [[ -f "$temp_file" ]]; then
@@ -177,6 +179,7 @@ retrieve_secret_from_key_vault() {
         exit 1
     fi
 
+    # Create the temporary file and write the secret value to it
     echo "$secret_value" > "$temp_file"
     if [[ ! -s "$temp_file" ]]; then
         log "ERROR" "Failed to store the retrieved secret in the temporary file."
