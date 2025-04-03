@@ -130,10 +130,12 @@ get_playbook_name() {
 # Retrieve a secret from Azure Key Vault.
 # :param key_vault_id: The ID of the Key Vault.
 # :param secret_id: The ID of the secret in the Key Vault.
+# :param auth_type: The authentication type (e.g., "SSHKEY", "VMPASSWORD").
 # :return: None. Exits with a non-zero status if retrieval fails.
 retrieve_secret_from_key_vault() {
     local key_vault_id=$1
     local secret_id=$2
+    local auth_type=$3  # Add auth_type as a parameter
 
     subscription_id=$(echo "$key_vault_id" | awk -F'/' '{for(i=1;i<=NF;i++){if($i=="subscriptions"){print $(i+1)}}}')
 
@@ -169,21 +171,29 @@ retrieve_secret_from_key_vault() {
 
     log "INFO" "Successfully retrieved secret from Key Vault."
 
-    # Define a unique temporary file path
-    temp_file=$(mktemp --dry-run --suffix=.ppk)
+    # Define a unique temporary file path based on auth_type
+    if [[ "$auth_type" == "SSHKEY" ]]; then
+        temp_file=$(mktemp --dry-run --suffix=.ppk)
+    elif [[ "$auth_type" == "VMPASSWORD" ]]; then
+        temp_file=$(mktemp --dry-run)
+    else
+        log "ERROR" "Unknown authentication type: $auth_type"
+        exit 1
+    fi
+
     if [[ -f "$temp_file" ]]; then
         log "ERROR" "Temporary file already exists: $temp_file"
         exit 1
     fi    
 
     # Create the temporary file and write the secret value to it
-    echo "$secret_value" > "$temp_file"
-    chmod 600 "$temp_file"  # Set the correct permissions for the private key file
+    echo "$secret_value" > "$temp_file" > /dev/null
+    chmod 600 "$temp_file"  # Set the correct permissions for the file
     if [[ ! -s "$temp_file" ]]; then
         log "ERROR" "Failed to store the retrieved secret in the temporary file."
         exit 1
     fi
-    log "INFO" "Temporary SSH key file created with secure permissions: $temp_file"
+    log "INFO" "Temporary file created with secure permissions: $temp_file"
 }
 
 # Run the ansible playbook.
@@ -217,7 +227,7 @@ run_ansible_playbook() {
 
         if [[ -n "$key_vault_id" && -n "$secret_id" ]]; then
             log "INFO" "Key Vault ID and Secret ID are set. Retrieving SSH key from Key Vault."
-            retrieve_secret_from_key_vault "$key_vault_id" "$secret_id"
+            retrieve_secret_from_key_vault "$key_vault_id" "$secret_id" "SSHKEY"
 
             check_file_exists "$temp_file" \
                 "Temporary SSH key file not found. Please check the Key Vault secret ID."
@@ -236,7 +246,7 @@ run_ansible_playbook() {
 
         if [[ -n "$key_vault_id" && -n "$secret_id" ]]; then
             log "INFO" "Key Vault ID and Secret ID are set. Retrieving VM password from Key Vault."
-            retrieve_secret_from_key_vault "$key_vault_id" "$secret_id"
+            retrieve_secret_from_key_vault "$key_vault_id" "$secret_id" "VMPASSWORD"
 
             check_file_exists "$temp_file" \
                 "Temporary SSH key file not found. Please check the Key Vault secret ID."
