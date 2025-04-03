@@ -267,7 +267,7 @@ run_ansible_playbook() {
 
     log "INFO" "Running ansible playbook..."
     log "INFO" "Executing: $command"
-    eval $command
+    #eval $command
     return_code=$?
     log "INFO" "Ansible playbook execution completed with return code: $return_code"
 
