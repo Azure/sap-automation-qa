@@ -86,7 +86,7 @@ validate_params() {
 check_file_exists() {
     local file_path=$1
     local error_message=$2
-
+    log "INFO" "Checking if file exists: $file_path"
     if [[ ! -f "$file_path" ]]; then
         log "ERROR" "Error: $error_message"
         exit 1
@@ -171,10 +171,10 @@ retrieve_secret_from_key_vault() {
 
     # Define a unique temporary file path
     temp_file=$(mktemp --dry-run --suffix=.ppk)
-
-    # Check if the temporary file already exists
-    check_file_exists "$temp_file" \
-        "Temporary file already exists. Please check the Key Vault secret ID."
+    if [[ -f "$temp_file" ]]; then
+        log "ERROR" "Temporary file already exists: $temp_file"
+        exit 1
+    fi    
 
     # Create the temporary file and write the secret value to it
     echo "$secret_value" > "$temp_file"
