@@ -129,22 +129,22 @@ get_playbook_name() {
 
 # Retrieve a secret from Azure Key Vault.
 # :param key_vault_id: The ID of the Key Vault.
-# :param secret_name: The name of the secret in the Key Vault.
+# :param secret_id: The ID of the secret in the Key Vault.
 # :return: None. Exits with a non-zero status if retrieval fails.
 retrieve_secret_from_key_vault() {
     local key_vault_id=$1
-    local secret_name=$2
+    local secret_id=$2
     local required_permission="Get"
 
     subscription_id=$(echo "$key_vault_id" | awk -F'/' '{for(i=1;i<=NF;i++){if($i=="subscriptions"){print $(i+1)}}}')
 
-    if [[ -z "$key_vault_id" || -z "$secret_name" ]]; then
-        log "ERROR" "Key Vault ID or secret name is missing."
+    if [[ -z "$key_vault_id" || -z "$secret_id" ]]; then
+        log "ERROR" "Key Vault ID or secret ID is missing."
         exit 1
     fi
 
     log "INFO" "Using Key Vault ID: $key_vault_id"
-    log "INFO" "Using secret name: $secret_name"
+    log "INFO" "Using secret ID: $secret_id"
 
     # Authenticate using MSI
     log "INFO" "Authenticating using MSI..."
@@ -156,15 +156,15 @@ retrieve_secret_from_key_vault() {
     fi
 
     # Attempt to retrieve the secret value and handle errors
-    log "INFO" "Retrieving secret '$secret_name' from Key Vault using resource ID..."
+    log "INFO" "Retrieving secret from Key Vault using resource ID..."
     set +e  # Temporarily disable exit on error
-    secret_value=$(az keyvault secret show --id "$key_vault_id" --query "value" -o tsv 2>&1)  # Fixed missing quote
+    secret_value=$(az keyvault secret show --id "$secret_id" --query "value" -o tsv 2>&1)
     az_exit_code=$?  # Capture the exit code of the az command
     set -e  # Re-enable exit on error
 
     if [[ $az_exit_code -ne 0 || -z "$secret_value" ]]; then
         extracted_message=$(extract_error_message "$secret_value")
-        log "ERROR" "Failed to retrieve secret '$secret_name' from Key Vault: $extracted_message"
+        log "ERROR" "Failed to retrieve secret from Key Vault: $extracted_message"
         exit 1
     fi
 
@@ -191,7 +191,7 @@ retrieve_secret_from_key_vault() {
 # :param system_params: The path to the SAP parameters file.
 # :param auth_type: The authentication type (e.g., "SSHKEY", "VMPASSWORD").
 # :param system_config_folder: The path to the system configuration folder.
-# :param secret_name: The name of the secret in the Key Vault.
+# :param secret_id: The ID of the secret in the Key Vault.
 # :return: None. Exits with the return code of the ansible-playbook command.
 run_ansible_playbook() {
     local playbook_name=$1
@@ -199,14 +199,14 @@ run_ansible_playbook() {
     local system_params=$3
     local auth_type=$4
     local system_config_folder=$5
-    local secret_name=$6
+    local secret_id=$6
 
     if [[ "$auth_type" == "SSHKEY" ]]; then
         log "INFO" "Authentication type is SSHKEY."
 
-        if [[ -n "$key_vault_id" && -n "$secret_name" ]]; then
-            log "INFO" "Key Vault ID and Secret Name are set. Retrieving SSH key from Key Vault."
-            retrieve_secret_from_key_vault "$key_vault_id" "$secret_name"
+        if [[ -n "$key_vault_id" && -n "$secret_id" ]]; then
+            log "INFO" "Key Vault ID and Secret ID are set. Retrieving SSH key from Key Vault."
+            retrieve_secret_from_key_vault "$key_vault_id" "$secret_id"
 
             if [[ -f "$temp_file" ]]; then
                 log "INFO" "Temporary SSH key file exists. Running Ansible playbook."
@@ -231,9 +231,9 @@ run_ansible_playbook() {
     elif [[ "$auth_type" == "VMPASSWORD" ]]; then
         log "INFO" "Authentication type is VMPASSWORD."
 
-        if [[ -n "$key_vault_id" && -n "$secret_name" ]]; then
-            log "INFO" "Key Vault ID and Secret Name are set. Retrieving VM password from Key Vault."
-            retrieve_secret_from_key_vault "$key_vault_id" "$secret_name"
+        if [[ -n "$key_vault_id" && -n "$secret_id" ]]; then
+            log "INFO" "Key Vault ID and Secret ID are set. Retrieving VM password from Key Vault."
+            retrieve_secret_from_key_vault "$key_vault_id" "$secret_id"
 
             if [[ -f "$temp_file" ]]; then
                 log "INFO" "Temporary VM password file exists. Running Ansible playbook."
@@ -301,14 +301,14 @@ main() {
     check_file_exists "$SYSTEM_PARAMS" \
         "sap-parameters.yaml not found in WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME directory."
 
-    # Extract secret_name from sap-parameters.yaml
-    secret_name=$(grep "^secret_name:" "$SYSTEM_PARAMS" | awk '{split($0,a,": "); print a[2]}' | xargs)
+    # Extract secret_id from sap-parameters.yaml
+    secret_id=$(grep "^secret_id:" "$SYSTEM_PARAMS" | awk '{split($0,a,": "); print a[2]}' | xargs)
 
-    if [[ -z "$secret_name" && "$AUTHENTICATION_TYPE" != "SSHKEY" ]]; then
-        log "ERROR" "Error: secret_name is not defined in $SYSTEM_PARAMS."
+    if [[ -z "$secret_id" && "$AUTHENTICATION_TYPE" != "SSHKEY" ]]; then
+        log "ERROR" "Error: secret_id is not defined in $SYSTEM_PARAMS."
         exit 1
     fi
-    log "INFO" "Extracted secret_name: $secret_name"
+    log "INFO" "Extracted secret_id: $secret_id"
 
     key_vault_id=$(grep "^key_vault_id:" "$SYSTEM_PARAMS" | awk '{split($0,a,": "); print a[2]}' | xargs)
     if [[ -z "$key_vault_id" ]]; then
@@ -319,7 +319,7 @@ main() {
     playbook_name=$(get_playbook_name "$sap_functional_test_type")
     log "INFO" "Using playbook: $playbook_name."
 
-    run_ansible_playbook "$playbook_name" "$SYSTEM_HOSTS" "$SYSTEM_PARAMS" "$AUTHENTICATION_TYPE" "$SYSTEM_CONFIG_FOLDER" "$secret_name"
+    run_ansible_playbook "$playbook_name" "$SYSTEM_HOSTS" "$SYSTEM_PARAMS" "$AUTHENTICATION_TYPE" "$SYSTEM_CONFIG_FOLDER" "$secret_id"
 
     # Clean up any remaining temporary files
     if [[ -n "$temp_file" && -f "$temp_file" ]]; then

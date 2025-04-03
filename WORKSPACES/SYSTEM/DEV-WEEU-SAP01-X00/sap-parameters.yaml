@@ -31,4 +31,4 @@ NFS_provider:                  AFS
 #                              Key Vault                                    #
 #############################################################################
 key_vault_id:                  /subscriptions/<subscription-id>/resourceGroups/<resource-group>/providers/Microsoft.KeyVault/vaults/<key-vault-name>
-secret_name:                   <secure-secret-name>
+secret_id:                   https://<key-vault-name>.vault.azure.net/secrets/<secret-name>/<id>
