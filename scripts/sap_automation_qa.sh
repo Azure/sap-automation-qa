@@ -18,7 +18,12 @@ RED='\033[0;31m'
 GREEN='\033[0;32m'
 NC='\033[0m'
 
-# Function to print logs with color based on severity
+# Global variable to store the path of the temporary file.
+temp_file=""
+
+# Print logs with color based on severity.
+# :param severity: The severity level of the log (e.g., "INFO", "ERROR").
+# :param message: The message to log.
 log() {
     local severity=$1
     local message=$2
@@ -37,12 +42,15 @@ log "INFO" "ANSIBLE_MODULE_UTILS: $ANSIBLE_MODULE_UTILS"
 # Define the path to the vars.yaml file
 VARS_FILE="${cmd_dir}/../vars.yaml"
 
-# Function to check if a command exists
+# Check if a command exists.
+# :param command: The command to check.
+# :return: None. Exits with a non-zero status if the command does not exist.
 command_exists() {
     command -v "$1" &> /dev/null
 }
 
-# Function to validate input parameters from vars.yaml
+# Validate input parameters from vars.yaml.
+# :return: None. Exits with a non-zero status if validation fails.
 validate_params() {
     local missing_params=()
     local params=("TEST_TYPE" "SYSTEM_CONFIG_NAME" "sap_functional_test_type" "AUTHENTICATION_TYPE")
@@ -71,18 +79,37 @@ validate_params() {
     fi
 }
 
-# Function to check if a file exists
+# Check if a file exists.
+# :param file_path: The path to the file to check.
+# :param error_message: The error message to display if the file does not exist.
+# :return: None. Exits with a non-zero status if the file does not exist.
 check_file_exists() {
     local file_path=$1
     local error_message=$2
-
+    log "INFO" "Checking if file exists: $file_path"
     if [[ ! -f "$file_path" ]]; then
         log "ERROR" "Error: $error_message"
         exit 1
     fi
 }
 
-# Function to determine the playbook name based on the sap_functional_test_type
+# Extract the error message from a command's output.
+# :param error_output: The output containing the error message.
+# :return: The extracted error message or a default message if none is found.
+extract_error_message() {
+    local error_output=$1
+    local extracted_message
+
+    extracted_message=$(echo "$error_output" | grep -oP '(?<=Message: ).*' | head -n 1)
+    if [[ -z "$extracted_message" ]]; then
+        extracted_message="An unknown error occurred. See full error details above."
+    fi
+    echo "$extracted_message"
+}
+
+# Determine the playbook name based on the sap_functional_test_type.
+# :param test_type: The type of SAP functional test.
+# :return: The name of the playbook.
 get_playbook_name() {
     local test_type=$1
 
@@ -100,7 +127,82 @@ get_playbook_name() {
     esac
 }
 
-# Function to run the ansible playbook
+# Retrieve a secret from Azure Key Vault.
+# :param key_vault_id: The ID of the Key Vault.
+# :param secret_id: The ID of the secret in the Key Vault.
+# :param auth_type: The authentication type (e.g., "SSHKEY", "VMPASSWORD").
+# :return: None. Exits with a non-zero status if retrieval fails.
+retrieve_secret_from_key_vault() {
+    local key_vault_id=$1
+    local secret_id=$2
+    local auth_type=$3  # Add auth_type as a parameter
+
+    subscription_id=$(echo "$key_vault_id" | awk -F'/' '{for(i=1;i<=NF;i++){if($i=="subscriptions"){print $(i+1)}}}')
+
+    if [[ -z "$key_vault_id" || -z "$secret_id" ]]; then
+        log "ERROR" "Key Vault ID or secret ID is missing."
+        exit 1
+    fi
+
+    log "INFO" "Using Key Vault ID: $key_vault_id"
+    log "INFO" "Using secret ID: $secret_id"
+
+    # Authenticate using MSI
+    log "INFO" "Authenticating using MSI..."
+    az login --identity
+    az account set --subscription "$subscription_id"
+    if [[ $? -ne 0 ]]; then
+        log "ERROR" "Failed to authenticate using MSI."
+        exit 1
+    fi
+
+    # Attempt to retrieve the secret value and handle errors
+    log "INFO" "Retrieving secret from Key Vault using resource ID..."
+    set +e  # Temporarily disable exit on error
+    secret_value=$(az keyvault secret show --id "$secret_id" --query "value" -o tsv 2>&1)
+    az_exit_code=$?  # Capture the exit code of the az command
+    set -e  # Re-enable exit on error
+
+    if [[ $az_exit_code -ne 0 || -z "$secret_value" ]]; then
+        extracted_message=$(extract_error_message "$secret_value")
+        log "ERROR" "Failed to retrieve secret from Key Vault: $extracted_message"
+        exit 1
+    fi
+
+    log "INFO" "Successfully retrieved secret from Key Vault."
+
+    # Define a unique temporary file path based on auth_type
+    if [[ "$auth_type" == "SSHKEY" ]]; then
+        temp_file=$(mktemp --dry-run --suffix=.ppk)
+    elif [[ "$auth_type" == "VMPASSWORD" ]]; then
+        temp_file=$(mktemp --dry-run)
+    else
+        log "ERROR" "Unknown authentication type: $auth_type"
+        exit 1
+    fi
+
+    if [[ -f "$temp_file" ]]; then
+        log "ERROR" "Temporary file already exists: $temp_file"
+        exit 1
+    fi    
+
+    # Create the temporary file and write the secret value to it
+    echo "$secret_value" > "$temp_file"
+    chmod 600 "$temp_file"  # Set the correct permissions for the file
+    if [[ ! -s "$temp_file" ]]; then
+        log "ERROR" "Failed to store the retrieved secret in the temporary file."
+        exit 1
+    fi
+    log "INFO" "Temporary file created with secure permissions: $temp_file"
+}
+
+# Run the ansible playbook.
+# :param playbook_name: The name of the playbook to run.
+# :param system_hosts: The path to the inventory file.
+# :param system_params: The path to the SAP parameters file.
+# :param auth_type: The authentication type (e.g., "SSHKEY", "VMPASSWORD").
+# :param system_config_folder: The path to the system configuration folder.
+# :return: None. Exits with the return code of the ansible-playbook command.
 run_ansible_playbook() {
     local playbook_name=$1
     local system_hosts=$2
@@ -108,16 +210,61 @@ run_ansible_playbook() {
     local auth_type=$4
     local system_config_folder=$5
 
+    # Set local secret_id and key_vault_id if defined
+    local secret_id=$(grep "^secret_id:" "$system_params" | awk '{split($0,a,": "); print a[2]}' | xargs || true)
+    local key_vault_id=$(grep "^key_vault_id:" "$system_params" | awk '{split($0,a,": "); print a[2]}' | xargs || true)
+
+    if [[ -n "$secret_id" ]]; then
+        log "INFO" "Extracted secret_id: $secret_id"
+    fi
+
+    if [[ -n "$key_vault_id" ]]; then
+        log "INFO" "Extracted key_vault_id: $key_vault_id"
+    fi
+
     if [[ "$auth_type" == "SSHKEY" ]]; then
-        local ssh_key="${cmd_dir}/../WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME/ssh_key.ppk"
-        log "INFO" "Using SSH key: $ssh_key."
-        command="ansible-playbook ${cmd_dir}/../src/$playbook_name.yml -i $system_hosts --private-key $ssh_key \
-        -e @$VARS_FILE -e @$system_params -e '_workspace_directory=$system_config_folder'"
+        log "INFO" "Authentication type is SSHKEY."
+
+        if [[ -n "$key_vault_id" && -n "$secret_id" ]]; then
+            log "INFO" "Key Vault ID and Secret ID are set. Retrieving SSH key from Key Vault."
+            retrieve_secret_from_key_vault "$key_vault_id" "$secret_id" "SSHKEY"
+
+            check_file_exists "$temp_file" \
+                "Temporary SSH key file not found. Please check the Key Vault secret ID."
+            command="ansible-playbook ${cmd_dir}/../src/$playbook_name.yml -i $system_hosts --private-key $temp_file \
+                -e @$VARS_FILE -e @$system_params -e '_workspace_directory=$system_config_folder'"
+        else
+            check_file_exists "${cmd_dir}/../WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME/ssh_key.ppk" \
+                "ssh_key.ppk not found in WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME directory."
+            ssh_key="${cmd_dir}/../WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME/ssh_key.ppk"
+            command="ansible-playbook ${cmd_dir}/../src/$playbook_name.yml -i $system_hosts --private-key $ssh_key \
+                -e @$VARS_FILE -e @$system_params -e '_workspace_directory=$system_config_folder'"
+        fi
+
+    elif [[ "$auth_type" == "VMPASSWORD" ]]; then
+        log "INFO" "Authentication type is VMPASSWORD."
+
+        if [[ -n "$key_vault_id" && -n "$secret_id" ]]; then
+            log "INFO" "Key Vault ID and Secret ID are set. Retrieving VM password from Key Vault."
+            retrieve_secret_from_key_vault "$key_vault_id" "$secret_id" "VMPASSWORD"
+
+            check_file_exists "$temp_file" \
+                "Temporary SSH key file not found. Please check the Key Vault secret ID."
+            command="ansible-playbook ${cmd_dir}/../src/$playbook_name.yml -i $system_hosts \
+                --extra-vars \"ansible_ssh_pass=$(cat $temp_file)\" --extra-vars @$VARS_FILE -e @$system_params \
+                -e '_workspace_directory=$system_config_folder'"
+        else
+            local password_file="${cmd_dir}/../WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME/password"
+            check_file_exists "$password_file" \
+                "password file not found in WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME directory."
+            command="ansible-playbook ${cmd_dir}/../src/$playbook_name.yml -i $system_hosts \
+                --extra-vars \"ansible_ssh_pass=$(cat $password_file)\" --extra-vars @$VARS_FILE -e @$system_params \
+                -e '_workspace_directory=$system_config_folder'"
+        fi
+
     else
-        log "INFO" "Using password authentication."
-        command="ansible-playbook ${cmd_dir}/../src/$playbook_name.yml -i $system_hosts \
-        --extra-vars \"ansible_ssh_pass=$(cat ${cmd_dir}/../WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME/password)\" \
-        --extra-vars @$VARS_FILE -e @$system_params -e '_workspace_directory=$system_config_folder'"
+        log "ERROR" "Unknown authentication type: $auth_type"
+        exit 1
     fi
 
     log "INFO" "Running ansible playbook..."
@@ -126,10 +273,17 @@ run_ansible_playbook() {
     return_code=$?
     log "INFO" "Ansible playbook execution completed with return code: $return_code"
 
+    # Clean up temporary file if it exists
+    if [[ -n "$temp_file" && -f "$temp_file" ]]; then
+        rm -f "$temp_file"
+        log "INFO" "Temporary file deleted: $temp_file"
+    fi
+
     exit $return_code
 }
 
-# Main script execution
+# Main script execution.
+# :return: None. Exits with a non-zero status if any step fails.
 main() {
     log "INFO" "Activate the virtual environment..."
     set -e
@@ -152,19 +306,11 @@ main() {
     check_file_exists "$SYSTEM_PARAMS" \
         "sap-parameters.yaml not found in WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME directory."
 
-    log "INFO" "Checking if the SSH key or password file exists..."
-    if [[ "$AUTHENTICATION_TYPE" == "SSHKEY" ]]; then
-        check_file_exists "${cmd_dir}/../WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME/ssh_key.ppk" \
-            "ssh_key.ppk not found in WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME directory."
-    else
-        check_file_exists "${cmd_dir}/../WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME/password" \
-            "password file not found in WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME directory."
-    fi
-
     playbook_name=$(get_playbook_name "$sap_functional_test_type")
     log "INFO" "Using playbook: $playbook_name."
 
     run_ansible_playbook "$playbook_name" "$SYSTEM_HOSTS" "$SYSTEM_PARAMS" "$AUTHENTICATION_TYPE" "$SYSTEM_CONFIG_FOLDER"
+
 }
 
 # Execute the main function
