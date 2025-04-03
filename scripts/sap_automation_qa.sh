@@ -237,31 +237,33 @@ run_ansible_playbook() {
     if [[ "$auth_type" == "SSHKEY" ]]; then
         log "INFO" "Authentication type is SSHKEY."
 
-        # Extract key_vault_id from sap-parameters.yaml
-        key_vault_id=$(grep "^key_vault_id:" "$system_params" | awk '{split($0,a,": "); print a[2]}' | xargs)
-
         local ssh_key="${cmd_dir}/../WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME/ssh_key.ppk"
         if [[ -f "$ssh_key" ]]; then
             log "INFO" "Local SSH key is present: $ssh_key. Skipping secret_name requirement."
             command="ansible-playbook ${cmd_dir}/../src/$playbook_name.yml -i $system_hosts --private-key $ssh_key \
             -e @$VARS_FILE -e @$system_params -e '_workspace_directory=$system_config_folder'"
-        elif [[ -n "$key_vault_id" ]]; then
+        else
+            log "INFO" "Local SSH key not found. Retrieving SSH key from Key Vault."
+
+            # Extract key_vault_id only if needed
+            key_vault_id=$(grep "^key_vault_id:" "$system_params" | awk '{split($0,a,": "); print a[2]}' | xargs)
             log "INFO" "Extracted key_vault_id: $key_vault_id"
 
-            # Extract Key Vault details and retrieve secret
+            if [[ -z "$key_vault_id" ]]; then
+                log "ERROR" "Error: key_vault_id is not defined in $system_params, and no local SSH key is present."
+                exit 1
+            fi
+
             retrieve_secret_from_key_vault "$key_vault_id"
             if [[ -z "$secret_value" ]]; then
                 log "ERROR" "Error: Secret value is not retrieved, and no local SSH key is present."
                 exit 1
-            else
-                log "INFO" "Using Key Vault for SSH key retrieval."
-                log "INFO" "Temporary SSH key file: $temp_file"
-                command="ansible-playbook ${cmd_dir}/../src/$playbook_name.yml -i $system_hosts --private-key $temp_file \
-                -e @$VARS_FILE -e @$system_params -e '_workspace_directory=$system_config_folder'"
             fi
-        else
-            log "ERROR" "Error: key_vault_id is not defined in $system_params, and no local SSH key is present."
-            exit 1
+            temp_file=$(mktemp --suffix=.ppk)
+            echo "$secret_value" > "$temp_file"
+            log "INFO" "Temporary SSH key file created: $temp_file"
+            command="ansible-playbook ${cmd_dir}/../src/$playbook_name.yml -i $system_hosts --private-key $temp_file \
+            -e @$VARS_FILE -e @$system_params -e '_workspace_directory=$system_config_folder'"
         fi
     elif [[ "$auth_type" == "VMPASSWORD" ]]; then
         local password_file="${cmd_dir}/../WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME/password"
@@ -272,6 +274,16 @@ run_ansible_playbook() {
             -e '_workspace_directory=$system_config_folder'"
         else
             log "INFO" "Local password file not found. Retrieving password from Key Vault."
+
+            # Extract key_vault_id only if needed
+            key_vault_id=$(grep "^key_vault_id:" "$system_params" | awk '{split($0,a,": "); print a[2]}' | xargs)
+            log "INFO" "Extracted key_vault_id: $key_vault_id"
+
+            if [[ -z "$key_vault_id" ]]; then
+                log "ERROR" "Error: key_vault_id is not defined in $system_params, and no local password file is present."
+                exit 1
+            fi
+
             temp_file=$(mktemp --suffix=.password)
             retrieve_secret_from_key_vault "$key_vault_id"
             echo "$secret_value" > "$temp_file"
