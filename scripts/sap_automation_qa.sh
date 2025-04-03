@@ -147,7 +147,6 @@ retrieve_secret_from_key_vault() {
     # Authenticate using MSI
     log "INFO" "Authenticating using MSI..."
     az login --identity
-    az account set --subscription "$subscription_id"
     if [[ $? -ne 0 ]]; then
         log "ERROR" "Failed to authenticate using MSI."
         exit 1
