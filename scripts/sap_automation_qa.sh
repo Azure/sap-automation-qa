@@ -134,7 +134,6 @@ get_playbook_name() {
 retrieve_secret_from_key_vault() {
     local key_vault_id=$1
     local secret_id=$2
-    local required_permission="Get"
 
     subscription_id=$(echo "$key_vault_id" | awk -F'/' '{for(i=1;i<=NF;i++){if($i=="subscriptions"){print $(i+1)}}}')
 
