@@ -193,7 +193,6 @@ retrieve_secret_from_key_vault() {
 # :param system_params: The path to the SAP parameters file.
 # :param auth_type: The authentication type (e.g., "SSHKEY", "VMPASSWORD").
 # :param system_config_folder: The path to the system configuration folder.
-# :param secret_id: The ID of the secret in the Key Vault.
 # :return: None. Exits with the return code of the ansible-playbook command.
 run_ansible_playbook() {
     local playbook_name=$1
@@ -201,7 +200,18 @@ run_ansible_playbook() {
     local system_params=$3
     local auth_type=$4
     local system_config_folder=$5
-    local secret_id=$6
+
+    # Set local secret_id and key_vault_id if defined
+    local secret_id=$(grep "^secret_id:" "$system_params" | awk '{split($0,a,": "); print a[2]}' | xargs || true)
+    local key_vault_id=$(grep "^key_vault_id:" "$system_params" | awk '{split($0,a,": "); print a[2]}' | xargs || true)
+
+    if [[ -n "$secret_id" ]]; then
+        log "INFO" "Extracted secret_id: $secret_id"
+    fi
+
+    if [[ -n "$key_vault_id" ]]; then
+        log "INFO" "Extracted key_vault_id: $key_vault_id"
+    fi
 
     if [[ "$auth_type" == "SSHKEY" ]]; then
         log "INFO" "Authentication type is SSHKEY."
@@ -303,25 +313,10 @@ main() {
     check_file_exists "$SYSTEM_PARAMS" \
         "sap-parameters.yaml not found in WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME directory."
 
-    # Extract secret_id from sap-parameters.yaml
-    secret_id=$(grep "^secret_id:" "$SYSTEM_PARAMS" | awk '{split($0,a,": "); print a[2]}' | xargs)
-
-    if [[ -z "$secret_id" && "$AUTHENTICATION_TYPE" != "SSHKEY" ]]; then
-        log "ERROR" "Error: secret_id is not defined in $SYSTEM_PARAMS."
-        exit 1
-    fi
-    log "INFO" "Extracted secret_id: $secret_id"
-
-    key_vault_id=$(grep "^key_vault_id:" "$SYSTEM_PARAMS" | awk '{split($0,a,": "); print a[2]}' | xargs)
-    if [[ -z "$key_vault_id" ]]; then
-        log "ERROR" "Error: key_vault_id is not defined in $SYSTEM_PARAMS."
-        exit 1
-    fi
-
     playbook_name=$(get_playbook_name "$sap_functional_test_type")
     log "INFO" "Using playbook: $playbook_name."
 
-    run_ansible_playbook "$playbook_name" "$SYSTEM_HOSTS" "$SYSTEM_PARAMS" "$AUTHENTICATION_TYPE" "$SYSTEM_CONFIG_FOLDER" "$secret_id"
+    run_ansible_playbook "$playbook_name" "$SYSTEM_HOSTS" "$SYSTEM_PARAMS" "$AUTHENTICATION_TYPE" "$SYSTEM_CONFIG_FOLDER"
 
     # Clean up any remaining temporary files
     if [[ -n "$temp_file" && -f "$temp_file" ]]; then
