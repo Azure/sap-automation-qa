@@ -136,6 +136,8 @@ retrieve_secret_from_key_vault() {
     local secret_name=$2
     local required_permission="Get"
 
+    subscription_id=$(echo "$key_vault_id" | awk -F'/' '{for(i=1;i<=NF;i++){if($i=="subscriptions"){print $(i+1)}}}')
+
     if [[ -z "$key_vault_id" || -z "$secret_name" ]]; then
         log "ERROR" "Key Vault ID or secret name is missing."
         exit 1
@@ -147,6 +149,7 @@ retrieve_secret_from_key_vault() {
     # Authenticate using MSI
     log "INFO" "Authenticating using MSI..."
     az login --identity
+    az account set --subscription "$subscription_id"
     if [[ $? -ne 0 ]]; then
         log "ERROR" "Failed to authenticate using MSI."
         exit 1
