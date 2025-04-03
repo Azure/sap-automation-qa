@@ -223,19 +223,11 @@ run_ansible_playbook() {
                 "Temporary SSH key file not found. Please check the Key Vault secret ID."
             command="ansible-playbook ${cmd_dir}/../src/$playbook_name.yml -i $system_hosts --private-key $temp_file \
                 -e @$VARS_FILE -e @$system_params -e '_workspace_directory=$system_config_folder'"
-            else
-                log "ERROR" "Temporary SSH key file missing."
-                exit 1
-            fi
         else
             check_file_exists "${cmd_dir}/../WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME/ssh_key.ppk" \
                 "ssh_key.ppk not found in WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME directory."
             command="ansible-playbook ${cmd_dir}/../src/$playbook_name.yml -i $system_hosts --private-key $ssh_key \
                 -e @$VARS_FILE -e @$system_params -e '_workspace_directory=$system_config_folder'"
-            else
-                log "ERROR" "No valid SSH key found."
-                exit 1
-            fi
         fi
 
     elif [[ "$auth_type" == "VMPASSWORD" ]]; then
@@ -250,10 +242,6 @@ run_ansible_playbook() {
             command="ansible-playbook ${cmd_dir}/../src/$playbook_name.yml -i $system_hosts \
                 --extra-vars \"ansible_ssh_pass=$(cat $temp_file)\" --extra-vars @$VARS_FILE -e @$system_params \
                 -e '_workspace_directory=$system_config_folder'"
-            else
-                log "ERROR" "Temporary VM password file missing."
-                exit 1
-            fi
         else
             local password_file="${cmd_dir}/../WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME/password"
             check_file_exists "$password_file" \
@@ -261,10 +249,6 @@ run_ansible_playbook() {
             command="ansible-playbook ${cmd_dir}/../src/$playbook_name.yml -i $system_hosts \
                 --extra-vars \"ansible_ssh_pass=$(cat $password_file)\" --extra-vars @$VARS_FILE -e @$system_params \
                 -e '_workspace_directory=$system_config_folder'"
-            else
-                log "ERROR" "No valid VM password found."
-                exit 1
-            fi
         fi
 
     else
