@@ -287,7 +287,7 @@ run_ansible_playbook() {
             temp_file=$(mktemp --suffix=.password)
             retrieve_secret_from_key_vault "$key_vault_id"
             echo "$secret_value" > "$temp_file"
-            log "INFO" "Temporary password file created: $temp_file"
+            log "INFO" "Temporary password file created."
             command="ansible-playbook ${cmd_dir}/../src/$playbook_name.yml -i $system_hosts \
             --extra-vars \"ansible_ssh_pass=$(cat $temp_file)\" --extra-vars @$VARS_FILE -e @$system_params \
             -e '_workspace_directory=$system_config_folder'"
