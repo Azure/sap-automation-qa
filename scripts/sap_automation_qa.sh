@@ -187,7 +187,7 @@ retrieve_secret_from_key_vault() {
     fi    
 
     # Create the temporary file and write the secret value to it
-    echo "$secret_value" > "$temp_file" > /dev/null
+    echo "$secret_value" > "$temp_file"
     chmod 600 "$temp_file"  # Set the correct permissions for the file
     if [[ ! -s "$temp_file" ]]; then
         log "ERROR" "Failed to store the retrieved secret in the temporary file."
