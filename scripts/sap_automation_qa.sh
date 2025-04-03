@@ -157,10 +157,14 @@ retrieve_secret_from_key_vault() {
 
     # Attempt to retrieve the secret value and handle errors
     log "INFO" "Retrieving secret from Key Vault using resource ID..."
-    secret_value=$(az keyvault secret show --id "$secret_id" --query "value" > /dev/null 2>&1)
+    set +e  # Temporarily disable exit on error
+    secret_value=$(az keyvault secret show --id "$secret_id" --query "value" >/dev/null 2>&1)
+    az_exit_code=$?  # Capture the exit code of the az command
+    set -e  # Re-enable exit on error
 
-    if [[ -z "$secret_value" ]]; then
-        log "ERROR" "Failed to retrieve secret from Key Vault: secret_value is empty."
+    if [[ $az_exit_code -ne 0 || -z "$secret_value" ]]; then
+        extracted_message=$(extract_error_message "$secret_value")
+        log "ERROR" "Failed to retrieve secret from Key Vault: $extracted_message"
         exit 1
     fi
 
