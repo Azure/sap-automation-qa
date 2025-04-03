@@ -173,10 +173,8 @@ retrieve_secret_from_key_vault() {
     temp_file=$(mktemp --dry-run --suffix=.ppk)
 
     # Check if the temporary file already exists
-    if [[ -f "$temp_file" ]]; then
-        log "ERROR" "Temporary file already exists: $temp_file"
-        exit 1
-    fi
+    check_file_exists "$temp_file" \
+        "Temporary file already exists. Please check the Key Vault secret ID."
 
     # Create the temporary file and write the secret value to it
     echo "$secret_value" > "$temp_file"
@@ -221,19 +219,18 @@ run_ansible_playbook() {
             log "INFO" "Key Vault ID and Secret ID are set. Retrieving SSH key from Key Vault."
             retrieve_secret_from_key_vault "$key_vault_id" "$secret_id"
 
-            if [[ -f "$temp_file" ]]; then
-                log "INFO" "Temporary SSH key file exists. Running Ansible playbook."
-                command="ansible-playbook ${cmd_dir}/../src/$playbook_name.yml -i $system_hosts --private-key $temp_file \
+            check_file_exists "$temp_file" \
+                "Temporary SSH key file not found. Please check the Key Vault secret ID."
+            command="ansible-playbook ${cmd_dir}/../src/$playbook_name.yml -i $system_hosts --private-key $temp_file \
                 -e @$VARS_FILE -e @$system_params -e '_workspace_directory=$system_config_folder'"
             else
                 log "ERROR" "Temporary SSH key file missing."
                 exit 1
             fi
         else
-            local ssh_key="${cmd_dir}/../WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME/ssh_key.ppk"
-            if [[ -f "$ssh_key" ]]; then
-                log "INFO" "Local SSH key is present. Running Ansible playbook."
-                command="ansible-playbook ${cmd_dir}/../src/$playbook_name.yml -i $system_hosts --private-key $ssh_key \
+            check_file_exists "${cmd_dir}/../WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME/ssh_key.ppk" \
+                "ssh_key.ppk not found in WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME directory."
+            command="ansible-playbook ${cmd_dir}/../src/$playbook_name.yml -i $system_hosts --private-key $ssh_key \
                 -e @$VARS_FILE -e @$system_params -e '_workspace_directory=$system_config_folder'"
             else
                 log "ERROR" "No valid SSH key found."
@@ -248,9 +245,9 @@ run_ansible_playbook() {
             log "INFO" "Key Vault ID and Secret ID are set. Retrieving VM password from Key Vault."
             retrieve_secret_from_key_vault "$key_vault_id" "$secret_id"
 
-            if [[ -f "$temp_file" ]]; then
-                log "INFO" "Temporary VM password file exists. Running Ansible playbook."
-                command="ansible-playbook ${cmd_dir}/../src/$playbook_name.yml -i $system_hosts \
+            check_file_exists "$temp_file" \
+                "Temporary SSH key file not found. Please check the Key Vault secret ID."
+            command="ansible-playbook ${cmd_dir}/../src/$playbook_name.yml -i $system_hosts \
                 --extra-vars \"ansible_ssh_pass=$(cat $temp_file)\" --extra-vars @$VARS_FILE -e @$system_params \
                 -e '_workspace_directory=$system_config_folder'"
             else
@@ -259,9 +256,9 @@ run_ansible_playbook() {
             fi
         else
             local password_file="${cmd_dir}/../WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME/password"
-            if [[ -f "$password_file" ]]; then
-                log "INFO" "Local VM password file is present. Running Ansible playbook."
-                command="ansible-playbook ${cmd_dir}/../src/$playbook_name.yml -i $system_hosts \
+            check_file_exists "$password_file" \
+                "password file not found in WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME directory."
+            command="ansible-playbook ${cmd_dir}/../src/$playbook_name.yml -i $system_hosts \
                 --extra-vars \"ansible_ssh_pass=$(cat $password_file)\" --extra-vars @$VARS_FILE -e @$system_params \
                 -e '_workspace_directory=$system_config_folder'"
             else
