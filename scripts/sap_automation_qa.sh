@@ -284,12 +284,6 @@ run_ansible_playbook() {
         log "INFO" "Temporary file deleted: $temp_file"
     fi
 
-    # Clean up any remaining temporary files
-    if [[ -n "$temp_file" && -f "$temp_file" ]]; then
-        rm -f "$temp_file"
-        log "INFO" "Temporary file deleted: $temp_file"
-    fi
-    
     exit $return_code
 }
 
