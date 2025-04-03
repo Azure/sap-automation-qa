@@ -18,17 +18,12 @@ RED='\033[0;31m'
 GREEN='\033[0;32m'
 NC='\033[0m'
 
-"""
-Global variable to store the path of the temporary file.
-"""
+# Global variable to store the path of the temporary file.
 temp_file=""
 
-"""
-Print logs with color based on severity.
-
-:param severity: The severity level of the log (e.g., "INFO", "ERROR").
-:param message: The message to log.
-"""
+# Print logs with color based on severity.
+# :param severity: The severity level of the log (e.g., "INFO", "ERROR").
+# :param message: The message to log.
 log() {
     local severity=$1
     local message=$2
@@ -47,21 +42,15 @@ log "INFO" "ANSIBLE_MODULE_UTILS: $ANSIBLE_MODULE_UTILS"
 # Define the path to the vars.yaml file
 VARS_FILE="${cmd_dir}/../vars.yaml"
 
-"""
-Check if a command exists.
-
-:param command: The command to check.
-:return: None. Exits with a non-zero status if the command does not exist.
-"""
+# Check if a command exists.
+# :param command: The command to check.
+# :return: None. Exits with a non-zero status if the command does not exist.
 command_exists() {
     command -v "$1" &> /dev/null
 }
 
-"""
-Validate input parameters from vars.yaml.
-
-:return: None. Exits with a non-zero status if validation fails.
-"""
+# Validate input parameters from vars.yaml.
+# :return: None. Exits with a non-zero status if validation fails.
 validate_params() {
     local missing_params=()
     local params=("TEST_TYPE" "SYSTEM_CONFIG_NAME" "sap_functional_test_type" "AUTHENTICATION_TYPE")
@@ -90,13 +79,10 @@ validate_params() {
     fi
 }
 
-"""
-Check if a file exists.
-
-:param file_path: The path to the file to check.
-:param error_message: The error message to display if the file does not exist.
-:return: None. Exits with a non-zero status if the file does not exist.
-"""
+# Check if a file exists.
+# :param file_path: The path to the file to check.
+# :param error_message: The error message to display if the file does not exist.
+# :return: None. Exits with a non-zero status if the file does not exist.
 check_file_exists() {
     local file_path=$1
     local error_message=$2
@@ -107,12 +93,9 @@ check_file_exists() {
     fi
 }
 
-"""
-Extract the error message from a command's output.
-
-:param error_output: The output containing the error message.
-:return: The extracted error message or a default message if none is found.
-"""
+# Extract the error message from a command's output.
+# :param error_output: The output containing the error message.
+# :return: The extracted error message or a default message if none is found.
 extract_error_message() {
     local error_output=$1
     local extracted_message
@@ -124,12 +107,9 @@ extract_error_message() {
     echo "$extracted_message"
 }
 
-"""
-Determine the playbook name based on the sap_functional_test_type.
-
-:param test_type: The type of SAP functional test.
-:return: The name of the playbook.
-"""
+# Determine the playbook name based on the sap_functional_test_type.
+# :param test_type: The type of SAP functional test.
+# :return: The name of the playbook.
 get_playbook_name() {
     local test_type=$1
 
@@ -147,13 +127,10 @@ get_playbook_name() {
     esac
 }
 
-"""
-Retrieve a secret from Azure Key Vault.
-
-:param key_vault_id: The ID of the Key Vault.
-:param secret_name: The name of the secret in the Key Vault.
-:return: None. Exits with a non-zero status if retrieval fails.
-"""
+# Retrieve a secret from Azure Key Vault.
+# :param key_vault_id: The ID of the Key Vault.
+# :param secret_name: The name of the secret in the Key Vault.
+# :return: None. Exits with a non-zero status if retrieval fails.
 retrieve_secret_from_key_vault() {
     local key_vault_id=$1
     local secret_name=$2
@@ -206,17 +183,14 @@ retrieve_secret_from_key_vault() {
     log "INFO" "Temporary SSH key file created: $temp_file"
 }
 
-"""
-Run the ansible playbook.
-
-:param playbook_name: The name of the playbook to run.
-:param system_hosts: The path to the inventory file.
-:param system_params: The path to the SAP parameters file.
-:param auth_type: The authentication type (e.g., "SSHKEY", "VMPASSWORD").
-:param system_config_folder: The path to the system configuration folder.
-:param secret_name: The name of the secret in the Key Vault.
-:return: None. Exits with the return code of the ansible-playbook command.
-"""
+# Run the ansible playbook.
+# :param playbook_name: The name of the playbook to run.
+# :param system_hosts: The path to the inventory file.
+# :param system_params: The path to the SAP parameters file.
+# :param auth_type: The authentication type (e.g., "SSHKEY", "VMPASSWORD").
+# :param system_config_folder: The path to the system configuration folder.
+# :param secret_name: The name of the secret in the Key Vault.
+# :return: None. Exits with the return code of the ansible-playbook command.
 run_ansible_playbook() {
     local playbook_name=$1
     local system_hosts=$2
@@ -301,11 +275,8 @@ run_ansible_playbook() {
     exit $return_code
 }
 
-"""
-Main script execution.
-
-:return: None. Exits with a non-zero status if any step fails.
-"""
+# Main script execution.
+# :return: None. Exits with a non-zero status if any step fails.
 main() {
     log "INFO" "Activate the virtual environment..."
     set -e
