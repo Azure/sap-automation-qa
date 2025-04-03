@@ -180,11 +180,12 @@ retrieve_secret_from_key_vault() {
 
     # Create the temporary file and write the secret value to it
     echo "$secret_value" > "$temp_file"
+    chmod 600 "$temp_file"  # Set the correct permissions for the private key file
     if [[ ! -s "$temp_file" ]]; then
         log "ERROR" "Failed to store the retrieved secret in the temporary file."
         exit 1
     fi
-    log "INFO" "Temporary SSH key file created: $temp_file"
+    log "INFO" "Temporary SSH key file created with secure permissions: $temp_file"
 }
 
 # Run the ansible playbook.
