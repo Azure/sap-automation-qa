@@ -71,7 +71,7 @@ ruamel.yaml==0.18.10
 ruamel.yaml.clib==0.2.12
 six==1.17.0
 subprocess-tee==0.4.2
-tenacity==9.0.0
+tenacity==9.1.2
 toml==0.10.2
 tomli==2.2.1
 typing_extensions==4.12.2
