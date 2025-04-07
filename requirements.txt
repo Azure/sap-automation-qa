@@ -49,7 +49,7 @@ pathspec==0.12.1
 pexpect==4.9.0
 platformdirs==4.3.6
 pluggy==1.5.0
-portalocker==2.10.1
+portalocker==3.1.1
 ptyprocess==0.7.0
 pycparser==2.22
 Pygments==2.19.1
