@@ -70,6 +70,14 @@
             primary_node_down:              "{{ hostvars[cluster_status_pre.primary_node].node_status is failed }}"
             secondary_node_down:            "{{ hostvars[cluster_status_pre.secondary_node].node_status is failed }}"
 
+        - name:                             "Fail if both nodes are unavailable"
+          ansible.builtin.fail:
+            msg: |
+                                            "Critical error: Both primary and secondary nodes are fenced.
+                                            Please check the cluster status. This typically happens when priority-fencing-delay
+                                            parameter is not set in the cluster configuration."
+          when:                             primary_node_down and secondary_node_down
+
     - name:                                 "Test Execution: Check node status on primary and secondary"
       when:
                                             - not primary_node_down
