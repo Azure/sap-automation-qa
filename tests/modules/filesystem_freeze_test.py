@@ -45,7 +45,7 @@ class TestFileSystemFreeze:
         :return: FileSystemFreeze instance
         :rtype: FileSystemFreeze
         """
-        return FileSystemFreeze()
+        return FileSystemFreeze(database_sid="SID")
 
     def test_file_system_exists(self, monkeypatch, filesystem_freeze):
         """
@@ -56,22 +56,25 @@ class TestFileSystemFreeze:
         :param filesystem_freeze: FileSystemFreeze instance.
         :type filesystem_freeze: FileSystemFreeze
         """
-        with monkeypatch.context() as monkey_patch:
-            monkey_patch.setattr(
-                "builtins.open", fake_open_factory(["/dev/sda1 /hana/shared ext4 rw,relatime 0 0"])
-            )
-            monkey_patch.setattr(
-                filesystem_freeze, "execute_command_subprocess", lambda x: "output"
-            )
-            filesystem_freeze.run()
-            result = filesystem_freeze.get_result()
+        mount_points = ["/hana/shared/SID", "/hana/shared"]
+        for mount_point in mount_points:
+            with monkeypatch.context() as monkey_patch:
+                monkey_patch.setattr(
+                    "builtins.open",
+                    fake_open_factory([f"/dev/sda1 {mount_point} ext4 rw,relatime 0 0"]),
+                )
+                monkey_patch.setattr(
+                    filesystem_freeze, "execute_command_subprocess", lambda x: "output"
+                )
+                filesystem_freeze.run()
+                result = filesystem_freeze.get_result()
 
-            assert result["status"] == "PASSED"
-            assert (
-                result["message"]
-                == "The file system (/hana/shared) was successfully mounted read-only."
-            )
-            assert result["changed"] is True
+                assert result["status"] == "PASSED"
+                assert (
+                    result["message"]
+                    == "The file system (/hana/shared) was successfully mounted read-only."
+                )
+                assert result["changed"] is True
 
     def test_file_system_not_exists(self, monkeypatch, filesystem_freeze):
         """
@@ -109,7 +112,7 @@ class TestFileSystemFreeze:
             """
 
             def __init__(self, *args, **kwargs):
-                self.params = {"nfs_provider": "ANF"}
+                self.params = {"nfs_provider": "ANF", "database_sid": "SID"}
 
             def exit_json(self, **kwargs):
                 """
@@ -148,7 +151,7 @@ class TestFileSystemFreeze:
 
         class MockAnsibleModule:
             def __init__(self, *args, **kwargs):
-                self.params = {"nfs_provider": "non-anf"}
+                self.params = {"nfs_provider": "non-anf", "database_sid": "SID"}
 
             def exit_json(self, **kwargs):
                 nonlocal mock_result

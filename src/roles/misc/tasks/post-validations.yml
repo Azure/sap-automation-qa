@@ -8,9 +8,27 @@
 - name:                                 "Read var log messages by importing role"
   ansible.builtin.include_tasks:        "roles/misc/tasks/var-log-messages.yml"
 
+- name:                                 "Determine cluster node roles"
+  ansible.builtin.set_fact:
+    primary_node:                       "{{ cluster_status_pre.primary_node
+                                            | default(cluster_status_pre.ascs_node)
+                                            | default('')
+                                            }}"
+    secondary_node:                     "{{ cluster_status_pre.secondary_node
+                                            | default(cluster_status_pre.ers_node)
+                                            | default('')
+                                            }}"
+    is_primary_node: >-
+                                        {{
+                                          (cluster_status_pre.primary_node is defined and
+                                            ansible_hostname == cluster_status_pre.primary_node) or
+                                          (cluster_status_pre.ascs_node is defined and
+                                            ansible_hostname == cluster_status_pre.ascs_node)
+                                        }}
+
 - name:                                 "Post Validations: HA cluster status after test execution"
   when:
-                                        - ansible_hostname == cluster_status_pre.primary_node
+                                        - is_primary_node | bool
                                         - cluster_status_pre is defined
   block:
     - name:                             "Combine logs from both Nodes"
@@ -18,13 +36,13 @@
         combined_logs: >-
                                         {{
                                           (
-                                            hostvars[cluster_status_pre.primary_node]['var_log_messages_output'].filtered_logs
+                                            hostvars[primary_node]['var_log_messages_output'].filtered_logs
                                             | default('[]')
                                             | from_json
                                           )
                                           +
                                           (
-                                            hostvars[cluster_status_pre.secondary_node]['var_log_messages_output'].filtered_logs
+                                            hostvars[secondary_node]['var_log_messages_output'].filtered_logs
                                             | default('[]')
                                             | from_json
                                           )
@@ -40,8 +58,8 @@
         test_case_hostname:             "{{ virtual_host }}"
         test_execution_end_time:        "{{ test_execution_end | default(now(utc=true, fmt='%Y-%m-%d %H:%M:%S')) }}"
         test_case_var_log_messages:     "{{ combined_logs }}"
-        test_case_message:              "{{ test_case_message_from_test_case }}"
-        test_case_details:              "{{ test_case_details_from_test_case }}"
+        test_case_message:              "{{ test_case_message_from_test_case | default('') }}"
+        test_case_details:              "{{ test_case_details_from_test_case | default('')}}"
 
     - name:                             "Post Telemetry Data"
       ansible.builtin.include_tasks:    "roles/misc/tasks/post-telemetry-data.yml"

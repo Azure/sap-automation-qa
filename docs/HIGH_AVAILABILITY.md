@@ -85,14 +85,17 @@ To set up your enviroment in management server, follow these steps:
 
 Ensure you are logged into the Ubuntu management server that is connected to the SAP system's virtual network.
 
-1.2. **Clone the repository**:
+1.2. **Fork and clone the repository**:
 
 ```bash
 # sudo to root
 sudo su -
 
-# Clone the repository
-git clone https://github.com/Azure/sap-automation-qa.git
+# First, visit https://github.com/Azure/sap-automation-qa in your browser
+# Click the "Fork" button in the top-right corner to create a fork in your GitHub account
+
+# Clone your fork of the repository (replace GITHUB-USERNAME with your GitHub username)
+git clone https://github.com/GITHUB-USERNAME/sap-automation-qa.git
 cd sap-automation-qa
 ```
 
@@ -270,6 +273,51 @@ Test results and logs can be found in:
 ```bash
 cd WORKSPACES/SYSTEM/<SYSTEM_CONFIG_NAME>/quality_assurance/
 ```
+
+## Update the framework
+
+To ensure you have the latest features and fixes, it's important to keep your fork of the SAP Testing Automation Framework up to date. You can do this by pulling the latest changes from the original repository into your fork.
+
+### Steps to update your fork
+
+1. **Ensure you have the upstream repository configured**:
+
+    ```bash
+    # Check if you already have the upstream remote
+    git remote -v
+
+    # If you don't see an 'upstream' entry, add it
+    git remote add upstream https://github.com/Azure/sap-automation-qa.git
+    ```
+
+2. **Fetch the latest changes from the upstream repository**:
+
+    ```bash
+    git fetch upstream
+    ```
+
+3. **Ensure you're on your main branch**:
+
+    ```bash
+    git checkout main
+    ```
+
+4. **Merge the changes from upstream into your local fork**:
+
+    ```bash
+    git merge upstream/main
+    ```
+
+5. **Push the updated code to your GitHub fork**:
+
+    ```bash
+    git push origin main
+    ```
+
+This process will update your fork with all the latest features, bug fixes, and improvements from the original SAP Testing Automation Framework repository.
+
+> [!NOTE]
+> If you've made local changes to your fork, you might encounter merge conflicts during step 4. In that case, you'll need to resolve these conflicts before proceeding with the push in step 5.
 
 ## Additional Resources
 

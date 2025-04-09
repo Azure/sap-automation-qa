@@ -1,16 +1,21 @@
 # SAP Testing Automation Framework
 
+![SAP Testing Automation Framework](./docs/images/sap-automation-qa.svg)
+
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](LICENSE)
 [![Azure](https://img.shields.io/badge/Microsoft-SAP%20on%20Azure-0078D4?logo=microsoft)](https://docs.microsoft.com/azure/sap)
 [![Python Coverage](https://img.shields.io/badge/Code%20Coverage-85%25-success?logo=python&logoColor=white)](https://github.com/Azure/sap-automation-qa/actions/workflows/github-actions-code-coverage.yml)
 [![Ansible Lint](https://github.com/Azure/sap-automation-qa/actions/workflows/github-actions-ansible-lint.yml/badge.svg)](https://github.com/Azure/sap-automation-qa/actions/workflows/github-actions-ansible-lint.yml)
 [![OpenSSF Scorecard](https://img.shields.io/ossf-scorecard/github.com/Azure/sap-automation-qa)](https://scorecard.dev/viewer/?uri=github.com/Azure/sap-automation-qa)
+[![GitHub Issues](https://img.shields.io/github/issues/Azure/sap-automation-qa)](https://github.com/Azure/sap-automation-qa/issues)
 
 ## 🔍 Overview
 
 The SAP Testing Automation Framework is an open-source orchestration tool designed to validate SAP deployments on Microsoft Azure. It enables you to assess system configurations against SAP on Azure best practices and guidelines. Additionally, the framework facilitates automation for various testing scenarios, including High Availability (HA) functional testing.
 
 > **NOTE**: This repository is currently in private preview and is intended for testing and feedback purposes. As this is an early release, it is not yet production-ready, and breaking changes can be introduced at any time.
+
+![SAP Testing Automation Framework](./docs/images/sap-testing-automation-framework.png)
 
 ## Supported Configuration Matrix
 

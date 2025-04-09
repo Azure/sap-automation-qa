@@ -1,0 +1,35 @@
+# Ansible packages
+ansible-core
+ansible-lint
+ansible-runner
+
+# Azure packages
+azure-identity
+azure-kusto-data
+azure-kusto-ingest
+azure-mgmt-network
+azure-storage-blob
+azure-storage-queue
+
+# Development tools
+black
+pylint
+coverage
+
+# Testing packages
+pytest
+pytest-cov
+pytest-mock
+
+# Data processing
+numpy
+pandas
+
+# Core utilities
+Jinja2
+PyYAML
+requests
+
+# CLI tools
+click
+rich

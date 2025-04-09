@@ -76,11 +76,11 @@ RESOURCE_DEFAULTS:
           interval:                         "3600"
           timeout:                          "120"
         start:
-          interval:                         "0s"
-          timeout:                          "20s"
+          interval:                         "0"
+          timeout:                          "20"
         stop:
-          interval:                         "0s"
-          timeout:                          "20s"
+          interval:                         "0"
+          timeout:                          "20"
 
     ascs:
       instance_attributes:
@@ -94,17 +94,17 @@ RESOURCE_DEFAULTS:
           interval:                       "11"
           timeout:                        "60"
         start:
-          interval:                       "0s"
-          timeout:                        "180s"
+          interval:                       "0"
+          timeout:                        "180"
         stop:
-          interval:                       "0s"
-          timeout:                        "240s"
+          interval:                       "0"
+          timeout:                        "240"
         promote:
-          interval:                       "0s"
-          timeout:                        "320s"
+          interval:                       "0"
+          timeout:                        "320"
         demote:
-          interval:                       "0s"
-          timeout:                        "320s"
+          interval:                       "0"
+          timeout:                        "320"
 
     ers:
       instance_attributes:
@@ -119,45 +119,45 @@ RESOURCE_DEFAULTS:
           interval:                       "11"
           timeout:                        "60"
         start:
-          interval:                       "0s"
-          timeout:                        "180s"
+          interval:                       "0"
+          timeout:                        "180"
         stop:
-          interval:                       "0s"
-          timeout:                        "240s"
+          interval:                       "0"
+          timeout:                        "240"
         promote:
-          interval:                       "0s"
-          timeout:                        "320s"
+          interval:                       "0"
+          timeout:                        "320"
         demote:
-          interval:                       "0s"
-          timeout:                        "320s"
+          interval:                       "0"
+          timeout:                        "320"
 
     ipaddr:
       meta_attributes:
         target-role:                      "Started"
       operations:
         monitor:
-          interval:                       "10s"
-          timeout:                        "20s"
+          interval:                       "10"
+          timeout:                        "20"
         start:
-          interval:                       "0s"
-          timeout:                        "20s"
+          interval:                       "0"
+          timeout:                        "20"
         stop:
-          interval:                       "0s"
-          timeout:                        "20s"
+          interval:                       "0"
+          timeout:                        "20"
 
     azurelb:
       meta_attributes:
         resource-stickiness:              "0"
       operations:
         monitor:
-          interval:                       "10s"
-          timeout:                        "20s"
+          interval:                       "10"
+          timeout:                        "20"
         start:
-          interval:                       "0s"
-          timeout:                        "20s"
+          interval:                       "0"
+          timeout:                        "20"
         stop:
-          interval:                       "0s"
-          timeout:                        "20s"
+          interval:                       "0"
+          timeout:                        "20"
 
     azureevents:
       meta_attributes:
@@ -165,14 +165,14 @@ RESOURCE_DEFAULTS:
         failure-timeout:                  "120s"
       operations:
         monitor:
-          interval:                       "10s"
-          timeout:                        "240s"
+          interval:                       "10"
+          timeout:                        "240"
         start:
-          interval:                       "0s"
-          timeout:                        "10s"
+          interval:                       "0"
+          timeout:                        "10"
         stop:
-          interval:                       "0s"
-          timeout:                        "10s"
+          interval:                       "0"
+          timeout:                        "10"
 
 # === OS Parameters ===
 # Run command as root. Format of command is: "parent_key child_key"

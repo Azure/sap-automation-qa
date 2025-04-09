@@ -84,6 +84,16 @@ class FileSystemFreeze(SapAutomationQA):
     Class to run the test case when the filesystem is frozen.
     """
 
+    def __init__(self, database_sid: str) -> None:
+        """
+        Initialize the FileSystemFreeze class.
+
+        :param database_sid: The database SID.
+        :type database_sid: str
+        """
+        super().__init__()
+        self.database_sid = database_sid
+
     def _find_filesystem(self) -> str:
         """
         Find the filesystem mounted on /hana/shared.
@@ -95,7 +105,10 @@ class FileSystemFreeze(SapAutomationQA):
             with open("/proc/mounts", "r", encoding="utf-8") as mounts_file:
                 for line in mounts_file:
                     parts = line.split()
-                    if len(parts) > 1 and parts[1] == "/hana/shared":
+                    if len(parts) > 1 and parts[1] in [
+                        "/hana/shared",
+                        f"/hana/shared/{self.database_sid}",
+                    ]:
                         return parts[0]
         except FileNotFoundError as ex:
             self.handle_error(ex)
@@ -143,12 +156,13 @@ def run_module() -> None:
     """
     module_args = dict(
         nfs_provider=dict(type="str", required=True),
+        database_sid=dict(type="str", required=True),
     )
 
     module = AnsibleModule(argument_spec=module_args, supports_check_mode=True)
     if module.params["nfs_provider"] != "ANF":
         module.exit_json(changed=False, message="The NFS provider is not ANF. Skipping")
-    formatter = FileSystemFreeze()
+    formatter = FileSystemFreeze(database_sid=module.params["database_sid"])
     result = formatter.run()
 
     module.exit_json(**result)

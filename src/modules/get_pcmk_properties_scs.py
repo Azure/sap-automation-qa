@@ -367,6 +367,9 @@ class HAClusterValidator(SapAutomationQA):
         if operations is not None:
             for operation in operations.findall(".//op"):
                 for op_type in ["timeout", "interval"]:
+                    value = operation.get(op_type, "")
+                    if value.endswith("s"):
+                        value = value[:-1]
                     parameters.append(
                         self._create_parameter(
                             category=category,
@@ -374,7 +377,7 @@ class HAClusterValidator(SapAutomationQA):
                             id=operation.get("id", ""),
                             name=op_type,
                             op_name=operation.get("name", ""),
-                            value=operation.get(op_type, ""),
+                            value=value,
                         )
                     )
         return parameters

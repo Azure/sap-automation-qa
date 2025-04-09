@@ -178,5 +178,10 @@ commands:
     SUSE:                           "crm resource clear rsc_sap_{{ sap_sid }}_ASCS{{ scs_instance_number }}"
     REDHAT:                         "pcs resource clear rsc_sap_{{ sap_sid }}_ASCS{{ scs_instance_number }}"
 
+# Default values for HANA DB HA Test Cases
 sap_sid:                            "HDB"
 db_sid:                             "HDB"
+db_instance_number:                 "00"
+scs_instance_number:                "00"
+ers_instance_number:                "01"
+NFS_provider:                       "AFS"

@@ -52,38 +52,23 @@
 
     - name:                                 "Test Execution: Check node status on primary and secondary"
       block:
-        - name:                             "Test Execution: Check primary node connectivity from controller"
-          when:                             ansible_hostname == cluster_status_pre.primary_node
+        - name:                             "Test Execution: Check node connectivity from controller"
           delegate_to:                      localhost
           ansible.builtin.shell: |
-                                            for i in $(seq 1 20); do
+                                            for i in $(seq 1 30); do
                                               if ! ping -c 1 -w 1 {{ ansible_host }}; then
                                                 echo "Connection failed on attempt $i"
                                                 exit 1
                                               fi
                                               sleep 1
                                             done
-          register:                         primary_status
-          ignore_errors:                    true
-
-        - name:                             "Test Execution: Check secondary node connectivity from controller"
-          when:                             ansible_hostname == cluster_status_pre.secondary_node
-          delegate_to:                      localhost
-          ansible.builtin.shell: |
-                                            for i in $(seq 1 20); do
-                                              if ! ping -c 1 -w 1 {{ ansible_host }}; then
-                                                echo "Connection failed on attempt $i"
-                                                exit 1
-                                              fi
-                                              sleep 1
-                                            done
-          register:                         secondary_status
+          register:                         node_status
           ignore_errors:                    true
 
         - name:                             "Set Node Status Facts"
           ansible.builtin.set_fact:
-            primary_node_down:              "{{ hostvars[cluster_status_pre.primary_node].primary_status is failed }}"
-            secondary_node_down:            "{{ hostvars[cluster_status_pre.secondary_node].secondary_status is failed }}"
+            primary_node_down:              "{{ hostvars[cluster_status_pre.primary_node].node_status is failed }}"
+            secondary_node_down:            "{{ hostvars[cluster_status_pre.secondary_node].node_status is failed }}"
 
     - name:                                 "Test Execution: Check node status on primary and secondary"
       when:
@@ -196,7 +181,7 @@
       # |                          Post Validations                                 |
       # +--------------------------------------------------------------------------*/
     - name:                                 "Post Validations Tasks"
-      ansible.builtin.include_tasks:        "roles/misc/tasks/post-validations-db.yml"
+      ansible.builtin.include_tasks:        "roles/misc/tasks/post-validations.yml"
 
   rescue:
     - name:                                 "Rescue operation"
@@ -217,4 +202,4 @@
                                             }
 
     - name:                                 "Post Validations Tasks"
-      ansible.builtin.include_tasks:        "roles/misc/tasks/post-validations-db.yml"
+      ansible.builtin.include_tasks:        "roles/misc/tasks/post-validations.yml"

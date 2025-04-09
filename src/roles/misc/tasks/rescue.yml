@@ -10,11 +10,28 @@
 
 - name:                                 "Post Validations: HA cluster status after test execution"
   block:
-    - name:                             "Set node variables based on cluster status"
+    - name:                             "Validate cluster_status_pre exists"
       ansible.builtin.set_fact:
-        first_node:                     "{{ cluster_status_pre.primary_node | default(cluster_status_pre.ascs_node) }}"
-        second_node:                    "{{ cluster_status_pre.secondary_node | default(cluster_status_pre.ers_node) }}"
+        cluster_status_pre:             "{{ cluster_status_pre | default({}) }}"
 
+    - name:                             "Set node variables based on cluster status with safe fallbacks"
+      ansible.builtin.set_fact:
+        first_node: >-
+          {{
+            cluster_status_pre.primary_node | default(
+              cluster_status_pre.ascs_node | default(
+                ansible_play_hosts | first
+              )
+            )
+          }}
+        second_node: >-
+          {{
+            cluster_status_pre.secondary_node | default(
+              cluster_status_pre.ers_node | default(
+                (ansible_play_hosts | difference([first_node]))[0] | default(first_node)
+              )
+            )
+          }}
     - name:                             "Combine logs from both Nodes"
       ansible.builtin.set_fact:
         combined_logs: >-
@@ -35,13 +52,13 @@
     - name:                             "Post Validations: Rescure operation set test case status"
       delegate_to:                      localhost
       ansible.builtin.set_fact:
-        test_case_name:                 "{{ item.name }}: {{ test_execution_hostname }}"
-        test_case_hostname:             "{{ virtual_host }}"
+        test_case_name:                 "{{ item.name }}: {{ test_execution_hostname | default(inventory_hostname) }}"
+        test_case_hostname:             "{{ virtual_host | default(inventory_hostname) }}"
         test_case_description:          "{{ item.description }}"
         test_case_status:               "FAILED"
-        test_case_message:              "{{ ansible_failed_result }}"
-        test_case_details:              "{{ ansible_failed_result }}"
-        test_case_var_log_messages:     "{{ combined_logs }}"
+        test_case_message:              "{{ ansible_failed_result | default('Unknown error occurred') }}"
+        test_case_details:              "{{ ansible_failed_result | default('No error details available')}}"
+        test_case_var_log_messages:     "{{ combined_logs | default([]) }}"
 
 - name:                                 "Post Telemetry Data"
   ansible.builtin.include_tasks:        "roles/misc/tasks/post-telemetry-data.yml"

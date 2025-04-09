@@ -157,7 +157,7 @@ class RolesTestingBase:
         standard_files = [
             "misc/tasks/test-case-setup.yml",
             f"misc/tasks/pre-validations-{role_type.split('_')[1]}.yml",
-            f"misc/tasks/post-validations-{role_type.split('_')[1]}.yml",
+            "misc/tasks/post-validations.yml",
             "misc/tasks/rescue.yml",
             "misc/tasks/var-log-messages.yml",
             "misc/tasks/post-telemetry-data.yml",

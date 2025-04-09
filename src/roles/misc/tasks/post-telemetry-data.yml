@@ -8,7 +8,7 @@
   failed_when:                          false
   delegate_to:                          localhost
   send_telemetry_data:
-    telemetry_data_destination:         "{{ telemetry_data_destination | lower }}"
+    telemetry_data_destination:         "{{ telemetry_data_destination | default('none') | lower }}"
     laws_workspace_id:                  "{{ laws_workspace_id | default('') }}"
     laws_shared_key:                    "{{ laws_shared_key | default('') }}"
     adx_database_name:                  "{{ adx_database_name | default('') }}"
@@ -17,32 +17,32 @@
     telemetry_table_name:               "{{ telemetry_table_name | default('') }}"
     workspace_directory:                "{{ _workspace_directory }}"
     test_group_json_data:               {
-                                          "TestCaseInvocationId": "{{ test_case_invocation_id }}",
-                                          "TestCaseStartTime": "{{ test_case_start_time_epoch }}",
+                                          "TestCaseInvocationId": "{{ test_case_invocation_id | default('') }}",
+                                          "TestCaseStartTime": "{{ test_case_start_time_epoch | default('') }}",
                                           "TestCaseEndTime": "{{ now(utc=true, fmt='%Y-%m-%d %H:%M:%S') }}",
-                                          "TestCaseStatus": "{{ test_case_status }}",
-                                          "TestCaseName": "{{ test_case_name }}",
-                                          "TestCaseDescription": "{{ test_case_description }}",
-                                          "TestGroupInvocationId": "{{ group_invocation_id }}",
-                                          "TestGroupStartTime": "{{ group_start_time }}",
-                                          "TestGroupName": "{{ group_name }}",
+                                          "TestCaseStatus": "{{ test_case_status | default('FAILED') }}",
+                                          "TestCaseName": "{{ test_case_name | default('') }}",
+                                          "TestCaseDescription": "{{ test_case_description | default('') }}",
+                                          "TestGroupInvocationId": "{{ group_invocation_id | default('') }}",
+                                          "TestGroupStartTime": "{{ group_start_time | default('') }}",
+                                          "TestGroupName": "{{ group_name | default('') }}",
                                           "OsVersion": "{{ ansible_distribution }} {{ ansible_distribution_version }}",
-                                          "TestCaseMessage": "{{ test_case_message }}",
-                                          "TestCaseDetails": "{{ test_case_details }}",
+                                          "TestCaseMessage": "{{ test_case_message | default('') }}",
+                                          "TestCaseDetails": "{{ test_case_details | default('') }}",
                                           "DurationSeconds": "{{
                                               ((test_execution_end_time | default(now(utc=true, fmt='%Y-%m-%d %H:%M:%S')) | to_datetime)
                                               - (test_execution_start_time | default(test_case_start_time_epoch) | to_datetime))
                                           }}",
-                                          "DbFencingType": "{{ database_cluster_type if database_high_availability else 'DB not HA' }}",
-                                          "ScsFencingType": "{{ scs_cluster_type if scs_high_availability else 'SCS not HA' }}",
-                                          "StorageType": "{{ NFS_provider }}",
-                                          "DBType": "{{ platform }}",
-                                          "DbSid": "{{ db_sid | upper }}",
-                                          "SapSid": "{{ sap_sid | upper }}",
+                                          "DbFencingType": "{{ database_cluster_type if (database_high_availability | default(false)) else 'DB not HA' }}",
+                                          "ScsFencingType": "{{ scs_cluster_type if (scs_high_availability | default(false)) else 'SCS not HA' }}",
+                                          "StorageType": "{{ NFS_provider | default('unknown') }}",
+                                          "DBType": "{{ platform | default('') }}",
+                                          "DbSid": "{{ db_sid | default('') | upper }}",
+                                          "SapSid": "{{ sap_sid | default('') | upper }}",
                                           "PackageVersions": "{{ package_versions | default('') }}",
                                           "Tags": "{{ execution_tags | default('') }}",
                                           "TestExecutionStartTime": "{{ test_execution_start_time | default('') }}",
                                           "TestExecutionEndTime": "{{ test_execution_end_time | default('') }}",
-                                          "TestCaseHostname": "{{ test_case_hostname }}",
+                                          "TestCaseHostname": "{{ test_case_hostname | default('') }}",
                                           "TestCaseLogMessagesFromSap": "{{ test_case_var_log_messages | default('') }}"
                                         }

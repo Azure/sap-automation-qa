@@ -8,6 +8,7 @@ def main():
     module = AnsibleModule(
         argument_spec=dict(
             nfs_provider=dict(type="str", required=True),
+            database_sid=dict(type="str", required=True)
         )
     )
 
