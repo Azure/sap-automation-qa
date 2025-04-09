@@ -73,9 +73,12 @@
         - name:                             "Fail if both nodes are unavailable"
           ansible.builtin.fail:
             msg: |
-                                            "Critical error: Both primary and secondary nodes are fenced.
-                                            Please check the cluster status. This typically happens when priority-fencing-delay
-                                            parameter is not set in the cluster configuration."
+                                            "Error: Both primary and secondary nodes are unreachable.
+                                            This may be caused by a fence race condition triggered during the block network
+                                            test case execution, where both nodes potentially fenced each other.
+                                            Please verify if the priority-fencing-delay cluster property is configured.
+                                            If not, refer to the SAP on Azure high availability documentation for
+                                            instructions on how to configure it."
           when:                             primary_node_down and secondary_node_down
 
     - name:                                 "Test Execution: Check node status on primary and secondary"
