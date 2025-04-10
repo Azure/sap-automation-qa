@@ -76,7 +76,7 @@ toml==0.10.2
 tomli==2.2.1
 typing_extensions==4.12.2
 tzdata==2025.1
-urllib3==2.2.2
+urllib3==2.4.0
 wcmatch==10.0
 wrapt==1.13.3
 yamllint==1.35.1
