@@ -235,7 +235,7 @@ tomli==2.2.1
     #   pytest
 tomlkit==0.13.2
     # via pylint
-typing-extensions==4.13.1
+typing-extensions==4.13.2
     # via
     #   astroid
     #   azure-core
@@ -248,7 +248,7 @@ typing-extensions==4.13.1
     #   rich
 tzdata==2025.2
     # via pandas
-urllib3==2.3.0
+urllib3==2.4.0
     # via requests
 wcmatch==10.0
     # via ansible-lint
