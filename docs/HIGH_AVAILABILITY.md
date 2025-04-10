@@ -20,6 +20,7 @@ Currently SAP Testing Automation Framework is supported for below Linux distros 
 | Component | Type | Cluster Type | Storage |
 |-----------|------|--------------|---------|
 | SAP Central Services | ENSA1 or ENSA2 | Azure Fencing Agent | Azure Files or ANF |
+| SAP Central Services | ENSA1 or ENSA2 | ISCSI (SBD device) | Azure Files or ANF |
 | SAP HANA | Scale-up | Azure Fencing Agent | Azure Managed Disk or ANF |
 | SAP HANA | Scale-up | ISCSI (SBD device) | Azure Managed Disk or ANF |
 
@@ -35,6 +36,15 @@ To run the SAP Testing Automation Framework, you must meet certain prerequisites
 - The SAP system deploymed should follow SAP on Azure best practices as outlined in:
   - [SAP HANA high availability on Azure Virtual Machine](https://learn.microsoft.com/azure/sap/workloads/sap-high-availability-guide-start).
   - [SAP Netweaver high availability on Azure Virtual Machine](https://learn.microsoft.com/azure/sap/workloads/sap-high-availability-guide-start)
+
+### Enabling Cluster Services on Boot
+    
+Before executing the tests, ensure that the cluster services are configured to start automatically during system boot. Run the following command on one of the cluster nodes to enable this setting. The `--all` option ensures that the cluster services are enabled on all nodes within the cluster.
+
+```bash
+crm cluster enable --all  # for SUSE virtual machines
+pcs cluster enable --all  # for RedHat virtual machine
+```
 
 ### Management server
 
