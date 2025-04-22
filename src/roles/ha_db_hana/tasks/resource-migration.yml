@@ -35,22 +35,26 @@
           block:
             - name:                     "Try master resource ID"
               ansible.builtin.shell: >-
-                                        {{ commands
+                                        set -o pipefail && {{ commands
                                           | selectattr('name','equalto','get_hana_resource_id')
                                           | map(attribute=(ansible_os_family|upper))
                                           | first
                                         }}
+              args:
+                executable:             /bin/bash
               changed_when:             false
               register:                 hana_resource_id
               failed_when:              hana_resource_id.rc != 0
           rescue:
             - name:                     "Try clone resource ID"
               ansible.builtin.shell: >-
-                                        {{ commands
+                                        set -o pipefail && {{ commands
                                           | selectattr('name','equalto','get_hana_resource_id')
                                           | map(attribute='REDHAT')
                                           | first
                                         }}
+              args:
+                executable:             /bin/bash
               changed_when:             false
               register:                 hana_resource_id
               failed_when:              hana_resource_id.rc != 0
