@@ -6,7 +6,7 @@ Custom ansible module for formatting the packages list
 """
 
 import logging
-from typing import Dict, Any
+from typing import Dict, Any, Tuple
 from ansible.module_utils.basic import AnsibleModule
 
 try:
@@ -94,25 +94,22 @@ class FileSystemFreeze(SapAutomationQA):
         super().__init__()
         self.database_sid = database_sid
 
-    def _find_filesystem(self) -> str:
+    def _find_filesystem(self) -> Tuple[str, str]:
         """
         Find the filesystem mounted on /hana/shared.
 
         :return: The filesystem mounted on /hana/shared.
-        :rtype: str
+        :rtype: Tuple[str, str]
         """
         try:
             with open("/proc/mounts", "r", encoding="utf-8") as mounts_file:
                 for line in mounts_file:
                     parts = line.split()
-                    if len(parts) > 1 and parts[1] in [
-                        "/hana/shared",
-                        f"/hana/shared/{self.database_sid}",
-                    ]:
-                        return parts[0]
+                    if len(parts) > 1 and parts[1] == "/hana/shared":
+                        return parts[0], parts[1]
         except FileNotFoundError as ex:
             self.handle_error(ex)
-        return None
+        return None, None
 
     def run(self) -> Dict[str, Any]:
         """
@@ -121,22 +118,24 @@ class FileSystemFreeze(SapAutomationQA):
         :return: A dictionary containing the result of the test case.
         :rtype: Dict[str, Any]
         """
-        file_system = self._find_filesystem()
+        file_system, mount_point = self._find_filesystem()
 
-        self.log(
-            logging.INFO,
-            f"Found the filesystem mounted on /hana/shared: {file_system}",
-        )
-
-        if file_system:
-            read_only_output = self.execute_command_subprocess(FREEZE_FILESYSTEM(file_system))
+        if file_system and mount_point:
+            self.log(
+                logging.INFO,
+                f"Found the filesystem mounted on: {file_system} at {mount_point}",
+            )
+            read_only_output = self.execute_command_subprocess(
+                FREEZE_FILESYSTEM(file_system, mount_point)
+            )
             self.log(logging.INFO, read_only_output)
             self.result.update(
                 {
                     "changed": True,
-                    "message": "The file system (/hana/shared) was successfully mounted read-only.",
+                    "message": f"The file system ({mount_point}) was mounted read-only.",
                     "status": TestStatus.SUCCESS.value,
                     "details": read_only_output,
+                    "mount_point": mount_point,
                 }
             )
         else:

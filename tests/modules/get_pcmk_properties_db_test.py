@@ -43,6 +43,8 @@ DUMMY_XML_RESOURCES = """<resources>
   <primitive id="stonith-sbd" class="stonith" type="external/sbd">
     <instance_attributes id="stonith-sbd-instance_attributes">
       <nvpair id="stonith-sbd-instance_attributes-pcmk_delay_max" name="pcmk_delay_max" value="30s"/>
+      <nvpair name="login" value="12345-12345-12345-12345-12345" id="rsc_st_azure-instance_attributes-login"/>
+      <nvpair name="passwd" value="********" id="rsc_st_azure-instance_attributes-passwd"/>
     </instance_attributes>
   </primitive>
   <clone id="cln_SAPHanaTopology_HDB_HDB00">

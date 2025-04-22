@@ -56,7 +56,7 @@
           delegate_to:                      localhost
           ansible.builtin.shell: |
                                             for i in $(seq 1 30); do
-                                              if ! ping -c 1 -w 1 {{ ansible_host }}; then
+                                              if ! nc -zv -w1 {{ ansible_host }} {{ sap_port_to_ping }}; then
                                                 echo "Connection failed on attempt $i"
                                                 exit 1
                                               fi

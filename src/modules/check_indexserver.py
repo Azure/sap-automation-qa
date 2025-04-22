@@ -116,12 +116,20 @@ class IndexServerCheck(SapAutomationQA):
                     }
                 },
             ],
-            "suse": {
-                "[ha_dr_provider_suschksrv]": {
-                    "provider": "susChkSrv",
-                    "path": "/usr/share/SAPHanaSR",
-                }
-            },
+            "suse": [
+                {
+                    "[ha_dr_provider_suschksrv]": {
+                        "provider": "susChkSrv",
+                        "path": "/usr/share/SAPHanaSR",
+                    },
+                },
+                {
+                    "[ha_dr_provider_suschksrv]": {
+                        "provider": "susChkSrv",
+                        "path": "/hana/shared/myHooks",
+                    }
+                },
+            ],
         }
 
         os_props_list = expected_properties.get(self.os_distribution)

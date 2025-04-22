@@ -160,11 +160,25 @@ test_groups:
           service recovery without data loss.
         enabled:                    true
 
+
+# Default values for HANA DB HA Test Cases
+sap_sid:                            "HDB"
+db_sid:                             "HDB"
+db_instance_number:                 "00"
+scs_instance_number:                "00"
+ers_instance_number:                "01"
+NFS_provider:                       "AFS"
+sap_port_to_ping:                   "1128"
+
 # Commands for HANA DB HA Test Cases based on OS family
 commands:
+  - name:                           get_hana_resource_id
+    SUSE:                           "cibadmin --query --xpath \"//primitive[@type='SAPHana']\" --node-path | grep -oP \"master\\[@id='\\K[^']+\""
+    REDHAT:                         "cibadmin --query --xpath \"//primitive[@type='SAPHana']\" --node-path | grep -oP \"clone\\[@id='\\K[^']+\""
+
   - name:                           resource_migration_cmd
-    SUSE:                           "crm resource move msl_SAPHana_{{ db_sid | upper }}_HDB{{ db_instance_number }} {{ cluster_status_pre.secondary_node | default('') }} force"
-    REDHAT:                         "pcs resource move SAPHana_{{ db_sid | upper }}_{{ db_instance_number }}-clone --master"
+    SUSE:                           "crm resource move {{ hana_resource_name | default('msl_SAPHana_' ~ (db_sid | upper) ~ '_HDB' ~ db_instance_number) }} {{ cluster_status_pre.secondary_node | default('') }} force"
+    REDHAT:                         "pcs resource move {{ hana_resource_name | default('SAPHana_' ~ (db_sid | upper) ~ '_' ~ db_instance_number ~ '-clone') }} --master"
 
   - name:                           crm_report_cmd
     SUSE:                           "crm_report -f '{{ test_group_start_time }}' /tmp/{{ test_group_invocation_id }}"
@@ -177,11 +191,3 @@ commands:
   - name:                           ascs_resource_unmigrate_cmd
     SUSE:                           "crm resource clear rsc_sap_{{ sap_sid }}_ASCS{{ scs_instance_number }}"
     REDHAT:                         "pcs resource clear rsc_sap_{{ sap_sid }}_ASCS{{ scs_instance_number }}"
-
-# Default values for HANA DB HA Test Cases
-sap_sid:                            "HDB"
-db_sid:                             "HDB"
-db_instance_number:                 "00"
-scs_instance_number:                "00"
-ers_instance_number:                "01"
-NFS_provider:                       "AFS"

@@ -65,7 +65,7 @@ For the framework to access the properties of the Azure Load Balancer in a high 
 1. Enable system managed identity on the management server by following the steps in [Configure managed identities on Azure VMs](https://learn.microsoft.com/entra/identity/managed-identities-azure-resources/how-to-configure-managed-identities?pivots=qs-configure-portal-windows-vm#system-assigned-managed-identity).
 1. Open the Azure Load Balancer used for the high availability deployment of your SAP system on Azure.
 1. In the Azure Load Balancer panel, go to Access control (IAM).
-1. Follow steps 5 to 10 from [Use managed identity to access Azure Resource](https://learn.microsoft.com/entra/identity/managed-identities-azure-resources/how-to-configure-managed-identities?pivots=qs-configure-portal-windows-vm#system-assigned-managed-identity) to complete the configuration.
+1. Follow steps from [Use managed identity to access Azure Resource](https://learn.microsoft.com/en-us/azure/role-based-access-control/role-assignments-portal) to complete the configuration.
 
 #### Configuring access using user-assigned managed identity
 

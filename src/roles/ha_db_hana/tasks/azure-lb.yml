@@ -13,11 +13,6 @@
     - name:                             "Pre Validations: Validate the Azure Load Balancer config"
       become:                           true
       block:
-        - name:                         "Install azure management network package"
-          ansible.builtin.pip:
-            name:                       "azure-mgmt-network"
-            state:                      present
-
         - name:                         "Retrieve Subscription ID and Resource Group Name"
           ansible.builtin.uri:
             url:                        http://169.254.169.254/metadata/instance?api-version=2021-02-01

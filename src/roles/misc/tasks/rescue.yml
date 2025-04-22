@@ -14,7 +14,7 @@
       ansible.builtin.set_fact:
         cluster_status_pre:             "{{ cluster_status_pre | default({}) }}"
 
-    - name:                             "Set node variables based on cluster status with safe fallbacks"
+    - name:                             "Set first_node variable"
       ansible.builtin.set_fact:
         first_node: >-
           {{
@@ -24,6 +24,9 @@
               )
             )
           }}
+
+    - name:                              "Set second_node variable"
+      ansible.builtin.set_fact:
         second_node: >-
           {{
             cluster_status_pre.secondary_node | default(
@@ -32,6 +35,7 @@
               )
             )
           }}
+
     - name:                             "Combine logs from both Nodes"
       ansible.builtin.set_fact:
         combined_logs: >-

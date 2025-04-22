@@ -1,0 +1,4 @@
+#!/bin/bash
+
+echo 'msl_SAPHana_HDB'
+exit 0

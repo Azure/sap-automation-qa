@@ -47,7 +47,7 @@ VALID_CONFIGS:
   SUSE: {}
   AFA:
     have-watchdog:                    "false"
-    stonith-timeout:                  "900"
+    stonith-timeout:                  "900s"
   ISCSI:
     have-watchdog:                    "true"
     stonith-timeout:                  "144s"
@@ -57,30 +57,31 @@ VALID_CONFIGS:
 # cibadmin --query --scope resources
 RESOURCE_DEFAULTS:
   SUSE:
-    stonith:
-      AFA:
-        instance_attributes:
-          pcmk_delay_max:                 "30s"
-          pcmk_monitor_retries:           "4"
-          pcmk_action_limit:              "3"
-          pcmk_reboot_timeout:            "900"
-          power_timeout:                  "240"
-          pcmk_monitor_timeout:           "120"
-        operations:
-          monitor:
-            interval:                     "3600"
-      ISCSI:
-        instance_attributes:
-          pcmk_delay_max:                 "30s"
-          pcmk_monitor_retries:           "4"
-          pcmk_action_limit:              "3"
-          pcmk_reboot_timeout:            "900"
-          power_timeout:                  "240"
-          pcmk_monitor_timeout:           "120"
-        operations:
-          monitor:
-            interval:                     "600"
-            timeout:                      "15"
+    fence_agent:
+      instance_attributes:
+        pcmk_delay_max:                 "15"
+        pcmk_monitor_retries:           "4"
+        pcmk_action_limit:              "3"
+        pcmk_reboot_timeout:            "900"
+        power_timeout:                  "240"
+        pcmk_monitor_timeout:           "120"
+      operations:
+        monitor:
+          interval:                     "3600"
+          timeout:                      "120"
+
+    sbd_stonith:
+      instance_attributes:
+        pcmk_delay_max:                 "15"
+        pcmk_monitor_retries:           "4"
+        pcmk_action_limit:              "3"
+        pcmk_reboot_timeout:            "900"
+        power_timeout:                  "240"
+        pcmk_monitor_timeout:           "120"
+      operations:
+        monitor:
+          interval:                     "600"
+          timeout:                      "15"
 
     topology:
       meta_attributes:
@@ -163,6 +164,7 @@ RESOURCE_DEFAULTS:
         operations:
           monitor:
             interval:                     "3600"
+            timeout:                      "15"
       ISCSI:
         instance_attributes:
           pcmk_monitor_retries:           "4"
@@ -285,7 +287,7 @@ OS_PARAMETERS:
 GLOBAL_INI:
   SUSE:
     provider:                           "SAPHanaSR"
-    path:                               "/usr/share/SAPHanaSR"
+    path:                               ["/usr/share/SAPHanaSR", "/hana/shared/myHooks"]
     execution_order:                    "1"
 
   REDHAT:

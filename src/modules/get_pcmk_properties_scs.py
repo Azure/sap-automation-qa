@@ -327,16 +327,20 @@ class HAClusterValidator(SapAutomationQA):
         """
         parameters = []
         for nvpair in elements:
-            parameters.append(
-                self._create_parameter(
-                    category=category,
-                    subcategory=subcategory,
-                    op_name=op_name,
-                    id=nvpair.get("id", ""),
-                    name=nvpair.get("name", ""),
-                    value=nvpair.get("value", ""),
+            name = nvpair.get("name", "")
+            if name in ["passwd", "password", "login"]:
+                continue
+            else:
+                parameters.append(
+                    self._create_parameter(
+                        category=category,
+                        subcategory=subcategory,
+                        op_name=op_name,
+                        id=nvpair.get("id", ""),
+                        name=name,
+                        value=nvpair.get("value", ""),
+                    )
                 )
-            )
         return parameters
 
     def _parse_resource(self, element, category):

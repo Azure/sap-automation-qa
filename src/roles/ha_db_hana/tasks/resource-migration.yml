@@ -31,6 +31,36 @@
             test_execution_start:       "{{ now(utc=true, fmt='%Y-%m-%d %H:%M:%S') }}"
             test_execution_hostname:    "{{ hostvars[cluster_status_pre.primary_node].ansible_hostname }}"
 
+        - name:                         "Test Execution: Get HANA resource id"
+          block:
+            - name:                     "Try master resource ID"
+              ansible.builtin.shell: >-
+                                        {{ commands
+                                          | selectattr('name','equalto','get_hana_resource_id')
+                                          | map(attribute=(ansible_os_family|upper))
+                                          | first
+                                        }}
+              changed_when:             false
+              register:                 hana_resource_id
+              failed_when:              hana_resource_id.rc != 0
+          rescue:
+            - name:                     "Try clone resource ID"
+              ansible.builtin.shell: >-
+                                        {{ commands
+                                          | selectattr('name','equalto','get_hana_resource_id')
+                                          | map(attribute='REDHAT')
+                                          | first
+                                        }}
+              changed_when:             false
+              register:                 hana_resource_id
+              failed_when:              hana_resource_id.rc != 0
+              ignore_errors:            true
+          always:
+            - name:                     "Test Execution: Set the resource name"
+              when:                     hana_resource_id.rc == 0
+              ansible.builtin.set_fact:
+                hana_resource_name:     "{{ hana_resource_id.stdout }}"
+
         - name:                         "Test Execution: Move the resource to the targeted node"
           ansible.builtin.command:      "{{ commands | selectattr(
                                         'name', 'equalto', 'resource_migration_cmd') | map(

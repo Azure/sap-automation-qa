@@ -33,12 +33,12 @@ AUTOMATED_REGISTER = [
 ]
 
 
-FREEZE_FILESYSTEM = lambda file_system: [
+FREEZE_FILESYSTEM = lambda file_system, mount_point: [
     "mount",
     "-o",
     "ro",
     file_system,
-    "/hana/shared",
+    mount_point,
 ]
 
 PACEMAKER_STATUS = ["systemctl", "is-active", "pacemaker"]

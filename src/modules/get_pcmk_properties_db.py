@@ -177,7 +177,8 @@ class HAClusterValidator(SapAutomationQA):
     CONSTRAINTS_CATEGORIES = (".//*", "CONSTRAINTS_DEFAULTS")
 
     RESOURCE_CATEGORIES = {
-        "stonith": ".//primitive[@class='stonith']",
+        "sbd_stonith": ".//primitive[@type='external/sbd']",
+        "fence_agent": ".//primitive[@type='fence_azure_arm']",
         "topology": ".//clone/primitive[@type='SAPHanaTopology']",
         "topology_meta": ".//clone/meta_attributes",
         "hana": ".//master/primitive[@type='SAPHana']",
@@ -242,12 +243,9 @@ class HAClusterValidator(SapAutomationQA):
         :return: The expected value for the resource configuration parameter.
         :rtype: str
         """
-        resource_defaults = self.constants["RESOURCE_DEFAULTS"].get(self.os_type, {})
-
-        if resource_type == "stonith":
-            resource_defaults = resource_defaults.get("stonith", {}).get(self.fencing_mechanism, {})
-        else:
-            resource_defaults = resource_defaults.get(resource_type, {})
+        resource_defaults = (
+            self.constants["RESOURCE_DEFAULTS"].get(self.os_type, {}).get(resource_type, {})
+        )
 
         if section == "meta_attributes":
             return resource_defaults.get("meta_attributes", {}).get(param_name)
@@ -333,16 +331,20 @@ class HAClusterValidator(SapAutomationQA):
         """
         parameters = []
         for nvpair in elements:
-            parameters.append(
-                self._create_parameter(
-                    category=category,
-                    subcategory=subcategory,
-                    op_name=op_name,
-                    id=nvpair.get("id", ""),
-                    name=nvpair.get("name", ""),
-                    value=nvpair.get("value", ""),
+            name = nvpair.get("name", "")
+            if name in ["passwd", "password", "login"]:
+                continue
+            else:
+                parameters.append(
+                    self._create_parameter(
+                        category=category,
+                        subcategory=subcategory,
+                        op_name=op_name,
+                        id=nvpair.get("id", ""),
+                        name=name,
+                        value=nvpair.get("value", ""),
+                    )
                 )
-            )
         return parameters
 
     def _parse_os_parameters(self):
@@ -404,6 +406,9 @@ class HAClusterValidator(SapAutomationQA):
 
         for param_name, expected_value in global_ini_defaults.items():
             value = global_ini_properties.get(param_name, "")
+            if isinstance(expected_value, list):
+                if value in expected_value:
+                    expected_value = value
             parameters.append(
                 self._create_parameter(
                     category="global_ini",

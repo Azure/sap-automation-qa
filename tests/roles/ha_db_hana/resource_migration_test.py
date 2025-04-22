@@ -53,8 +53,13 @@ class TestDbResourceMigration(RolesTestingBaseDB):
         commands = [
             {
                 "name": "resource_migration_cmd",
-                "SUSE": "crm resource move SAPHana_HDB_HDB00 db02 force",
-            }
+                "SUSE": "crm resource move {{ hana_resource_name | default('msl_SAPHana_' ~ "
+                "(db_sid | upper) ~ '_HDB' ~ db_instance_number) }} db02 force",
+            },
+            {
+                "name": "get_hana_resource_id",
+                "SUSE": "cibadmin --query --scope resources",
+            },
         ]
 
         temp_dir = self.setup_test_environment(
@@ -67,6 +72,7 @@ class TestDbResourceMigration(RolesTestingBaseDB):
                 "project/library/log_parser",
                 "project/library/send_telemetry_data",
                 "project/library/location_constraints",
+                "bin/cibadmin",
                 "bin/crm_resource",
                 "bin/crm",
             ],
@@ -126,6 +132,7 @@ class TestDbResourceMigration(RolesTestingBaseDB):
             task_result = event.get("event_data", {}).get("res")
             if task and "Move the resource to the targeted node" in task:
                 assert task_result.get("rc") == 0
+                assert task_result.get("cmd")[3] == "msl_SAPHana_HDB"
             elif task and "Test Execution: Validate HANA DB cluster status 1" in task:
                 assert task_result.get("secondary_node") == ""
             elif task and "Test Execution: Validate HANA DB cluster status 2" in task:
@@ -136,6 +143,9 @@ class TestDbResourceMigration(RolesTestingBaseDB):
                 pre_status = task_result
             elif task and "Remove any location_constraints" in task:
                 assert task_result.get("changed")
+            elif task and "Test Execution: Get HANA resource id" in task:
+                assert task_result.get("rc") == 0
+                assert task_result.get("stdout")
 
         assert post_status.get("primary_node") == pre_status.get("secondary_node")
         assert post_status.get("secondary_node") == pre_status.get("primary_node")
