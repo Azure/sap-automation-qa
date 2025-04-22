@@ -152,30 +152,29 @@ RESOURCE_DEFAULTS:
         resource-stickiness:              "0"
 
   REDHAT:
-    stonith:
-      AFA:
-        instance_attributes:
-          pcmk_delay_max:                 "30s"
-          pcmk_monitor_retries:           "4"
-          pcmk_action_limit:              "3"
-          pcmk_reboot_timeout:            "900"
-          power_timeout:                  "240"
-          pcmk_monitor_timeout:           "120"
-        operations:
-          monitor:
-            interval:                     "3600"
-            timeout:                      "15"
-      ISCSI:
-        instance_attributes:
-          pcmk_monitor_retries:           "4"
-          pcmk_action_limit:              "3"
-          pcmk_reboot_timeout:            "900"
-          power_timeout:                  "240"
-          pcmk_monitor_timeout:           "120"
-        operations:
-          monitor:
-            interval:                     "600"
-            timeout:                      "15"
+    fence_agent:
+      instance_attributes:
+        pcmk_delay_max:                 "15"
+        pcmk_monitor_retries:           "4"
+        pcmk_action_limit:              "3"
+        pcmk_reboot_timeout:            "900"
+        power_timeout:                  "240"
+        pcmk_monitor_timeout:           "120"
+      operations:
+        monitor:
+          interval:                     "3600"
+
+    sbd_stonith:
+      instance_attributes:
+        pcmk_monitor_retries:           "4"
+        pcmk_action_limit:              "3"
+        pcmk_reboot_timeout:            "900"
+        power_timeout:                  "240"
+        pcmk_monitor_timeout:           "120"
+      operations:
+        monitor:
+          interval:                     "600"
+          timeout:                      "15"
 
     topology:
       meta_attributes:

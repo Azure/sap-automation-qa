@@ -97,6 +97,8 @@ class FileSystemFreeze(SapAutomationQA):
     def _find_filesystem(self) -> Tuple[str, str]:
         """
         Find the filesystem mounted on /hana/shared.
+        This method reads the /proc/mounts file to identify the filesystem.
+        It returns the filesystem device and the mount point as /hana/shared.
 
         :return: The filesystem mounted on /hana/shared.
         :rtype: Tuple[str, str]
@@ -105,8 +107,11 @@ class FileSystemFreeze(SapAutomationQA):
             with open("/proc/mounts", "r", encoding="utf-8") as mounts_file:
                 for line in mounts_file:
                     parts = line.split()
-                    if len(parts) > 1 and parts[1] == "/hana/shared":
-                        return parts[0], parts[1]
+                    if len(parts) > 1 and parts[1] in [
+                        "/hana/shared",
+                        f"/hana/shared/{self.database_sid}",
+                    ]:
+                        return parts[0], "/hana/shared"
         except FileNotFoundError as ex:
             self.handle_error(ex)
         return None, None
