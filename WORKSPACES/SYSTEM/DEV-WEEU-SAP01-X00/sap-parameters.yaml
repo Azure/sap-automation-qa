@@ -27,3 +27,9 @@ database_cluster_type:         AFA
 #                              Storage Profile                              #
 #############################################################################
 NFS_provider:                  AFS
+
+#############################################################################
+#                        Key Vault Parameters (optional)                    #
+#############################################################################
+key_vault_id:                  /subscriptions/<subscription-id>/resourceGroups/<resource-group>/providers/Microsoft.KeyVault/vaults/<key-vault-name>
+secret_id:                     https://<key-vault-name>.vault.azure.net/secrets/<secret-name>/<id>
