@@ -28,6 +28,7 @@
         virtual_machine_name:           "{{ azure_instance_metadata.json.compute.name }}"
         pcmk_constants:                 "{{ lookup('file', 'constants.yaml') | from_yaml }}"
         fencing_mechanism:              "{{ scs_cluster_type }}"
+        nfs_provider:                   "{{ NFS_provider }}"
       register:                         test_result
 
     - name:                             "Set the test case status to PASSED"

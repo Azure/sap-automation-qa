@@ -33,3 +33,10 @@ NFS_provider:                  AFS
 #############################################################################
 key_vault_id:                  /subscriptions/<subscription-id>/resourceGroups/<resource-group>/providers/Microsoft.KeyVault/vaults/<key-vault-name>
 secret_id:                     https://<key-vault-name>.vault.azure.net/secrets/<secret-name>/<id>
+
+#############################################################################
+#                            MSI Client ID                                  #
+#############################################################################
+# The MSI Client ID is used to authenticate to Azure services
+# and is required if the management server uses user assigned managed identity
+user_assigned_identity_client_id: "00000000-0000-0000-0000-000000000000"

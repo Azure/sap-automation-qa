@@ -8,26 +8,26 @@
 # cibadmin --query --scope crm_config
 CRM_CONFIG_DEFAULTS:
   cluster-infrastructure:             corosync
-  priority-fencing-delay:             '30'
+  priority-fencing-delay:             ["30", "30s"]
   stonith-action:                     reboot
-  stonith-enabled:                    'false'
-  concurrent-fencing:                 'true'
-  maintenance-mode:                   'false'
-  node-health-strategy:               'custom'
-  azure-events-az_globalPullState:    'IDLE'
+  stonith-enabled:                    "true"
+  concurrent-fencing:                 "true"
+  maintenance-mode:                   "false"
+  node-health-strategy:               "custom"
+  azure-events-az_globalPullState:    "IDLE"
 
 # === Operation Defaults ===
 # cibadmin --query --scope op_defaults
 OP_DEFAULTS:
-  record-pending:                     'true'
-  timeout:                            '600'
+  record-pending:                     "true"
+  timeout:                            ["600", "600s"]
 
 # === Resource Defaults ===
 # cibadmin --query --scope rsc_defaults
 RSC_DEFAULTS:
-  migration-threshold:                '3'
-  priority:                           '1'
-  resource-stickiness:                '1'
+  migration-threshold:                "3"
+  priority:                           "1"
+  resource-stickiness:                "1"
 
 # === Constraints ===
 # cibadmin --query --scope constraints
@@ -51,36 +51,49 @@ CONSTRAINTS:
 # Specify the properties that are different for different OS versions
 VALID_CONFIGS:
   REDHAT:
-    priority-fencing-delay:           '15s'
+    priority-fencing-delay:           "15s"
   SUSE: {}
   AFA:
     have-watchdog:                    "false"
-    stonith-timeout:                  "900"
+    stonith-timeout:                  ["900", "900s"]
   ISCSI:
     have-watchdog:                    "true"
-    stonith-timeout:                  "144s"
+    stonith-timeout:                  ["144", "144s"]
 
 # === Resource Defaults ===
 # cibadmin --query --scope resources
 RESOURCE_DEFAULTS:
   SUSE:
-    stonith:
+    fence_agent:
       instance_attributes:
         pcmk_delay_max:                   "15"
         pcmk_monitor_retries:             "4"
         pcmk_action_limit:                "3"
-        pcmk_reboot_timeout:              "900"
-        power_timeout:                    "240"
+        pcmk_reboot_timeout:              ["900", "900s"]
+        power_timeout:                    ["240", "240s"]
       operations:
         monitor:
-          interval:                         "3600"
-          timeout:                          "120"
+          interval:                         ["3600", "3600s"]
+          timeout:                          ["120", "120s"]
         start:
-          interval:                         "0"
-          timeout:                          "20"
+          interval:                         ["0", "0s"]
+          timeout:                          ["20", "20s"]
         stop:
-          interval:                         "0"
-          timeout:                          "20"
+          interval:                         ["0", "0s"]
+          timeout:                          ["20", "20s"]
+
+    sbd_stonith:
+      instance_attributes:
+        pcmk_delay_max:                 "15"
+        pcmk_monitor_retries:           "4"
+        pcmk_action_limit:              "3"
+        pcmk_reboot_timeout:            ["900", "900s"]
+        power_timeout:                  ["240", "240s"]
+        pcmk_monitor_timeout:           ["120", "120s"]
+      operations:
+        monitor:
+          interval:                     ["600", "600s"]
+          timeout:                      ["15", "15s"]
 
     ascs:
       instance_attributes:
@@ -91,20 +104,20 @@ RESOURCE_DEFAULTS:
         priority:                         "100"
       operations:
         monitor:
-          interval:                       "11"
-          timeout:                        "60"
+          interval:                       ["11", "11s"]
+          timeout:                        ["105", "105s"]
         start:
-          interval:                       "0"
-          timeout:                        "180"
+          interval:                       ["0", "0s"]
+          timeout:                        ["180", "180s"]
         stop:
-          interval:                       "0"
-          timeout:                        "240"
+          interval:                       ["0", "0s"]
+          timeout:                        ["240", "240s"]
         promote:
-          interval:                       "0"
-          timeout:                        "320"
+          interval:                       ["0", "0s"]
+          timeout:                        ["320", "320s"]
         demote:
-          interval:                       "0"
-          timeout:                        "320"
+          interval:                       ["0", "0s"]
+          timeout:                        ["320", "320s"]
 
     ers:
       instance_attributes:
@@ -116,48 +129,48 @@ RESOURCE_DEFAULTS:
         priority:                         "100"
       operations:
         monitor:
-          interval:                       "11"
-          timeout:                        "60"
+          interval:                       ["11", "11s"]
+          timeout:                        ["105", "105s"]
         start:
-          interval:                       "0"
-          timeout:                        "180"
+          interval:                       ["0", "0s"]
+          timeout:                        ["180", "180s"]
         stop:
-          interval:                       "0"
-          timeout:                        "240"
+          interval:                       ["0", "0s"]
+          timeout:                        ["240", "240s"]
         promote:
-          interval:                       "0"
-          timeout:                        "320"
+          interval:                       ["0", "0s"]
+          timeout:                        ["320", "320s"]
         demote:
-          interval:                       "0"
-          timeout:                        "320"
+          interval:                       ["0", "0s"]
+          timeout:                        ["320", "320s"]
 
     ipaddr:
       meta_attributes:
         target-role:                      "Started"
       operations:
         monitor:
-          interval:                       "10"
-          timeout:                        "20"
+          interval:                       ["10", "10s"]
+          timeout:                        ["20", "20s"]
         start:
-          interval:                       "0"
-          timeout:                        "20"
+          interval:                       ["0", "0s"]
+          timeout:                        ["20", "20s"]
         stop:
-          interval:                       "0"
-          timeout:                        "20"
+          interval:                       ["0", "0s"]
+          timeout:                        ["20", "20s"]
 
     azurelb:
       meta_attributes:
         resource-stickiness:              "0"
       operations:
         monitor:
-          interval:                       "10"
-          timeout:                        "20"
+          interval:                       ["10", "10s"]
+          timeout:                        ["20", "20s"]
         start:
-          interval:                       "0"
-          timeout:                        "20"
+          interval:                       ["0", "0s"]
+          timeout:                        ["20", "20s"]
         stop:
-          interval:                       "0"
-          timeout:                        "20"
+          interval:                       ["0", "0s"]
+          timeout:                        ["20", "20s"]
 
     azureevents:
       meta_attributes:
@@ -165,14 +178,150 @@ RESOURCE_DEFAULTS:
         failure-timeout:                  "120s"
       operations:
         monitor:
-          interval:                       "10"
-          timeout:                        "240"
+          interval:                       ["10", "10s"]
         start:
-          interval:                       "0"
-          timeout:                        "10"
+          interval:                       ["0", "0s"]
+
+  REDHAT:
+    fence_agent:
+      instance_attributes:
+        pcmk_delay_max:                   "15"
+        pcmk_monitor_retries:             "4"
+        pcmk_action_limit:                "3"
+        pcmk_reboot_timeout:              ["900", "900s"]
+        power_timeout:                    ["240", "240s"]
+      operations:
+        monitor:
+          interval:                         "3600"
+          timeout:                          ["120", "120s"]
+        start:
+          interval:                         ["0", "0s"]
+          timeout:                          ["20", "20s"]
         stop:
-          interval:                       "0"
-          timeout:                        "10"
+          interval:                         ["0", "0s"]
+          timeout:                          ["20", "20s"]
+
+    sbd_stonith:
+      instance_attributes:
+        pcmk_delay_max:                 "15"
+        pcmk_monitor_retries:           "4"
+        pcmk_action_limit:              "3"
+        pcmk_reboot_timeout:            ["900", "900s"]
+        power_timeout:                  ["240", "240s"]
+        pcmk_monitor_timeout:           ["120", "120s"]
+      operations:
+        monitor:
+          interval:                     "600"
+          timeout:                      ["15", "15s"]
+
+    ascs:
+      instance_attributes:
+        AUTOMATIC_RECOVER:                "false"
+        MINIMAL_PROBE:                    "true"
+      meta_attributes:
+        resource-stickiness:              "5000"
+        priority:                         "10"
+      operations:
+        monitor:
+          interval:                       ["20", "20s"]
+          timeout:
+            ANF:                          ["105", "105s"]
+            AFS:                          ["60", "60s"]
+        start:
+          interval:                       ["0", "0s"]
+          timeout:                        ["600", "600s"]
+        stop:
+          interval:                       ["0", "0s"]
+          timeout:                        ["600", "600s"]
+        promote:
+          interval:                       ["0", "0s"]
+          timeout:                        ["320", "320s"]
+        demote:
+          interval:                       ["0", "0s"]
+          timeout:                        ["320", "320s"]
+        methods:
+          timeout:                        ["5", "5s"]
+          interval:                       ["0", "0s"]
+        reload:
+          timeout:                        ["320", "320s"]
+          interval:                       ["0", "0s"]
+
+    ers:
+      instance_attributes:
+        AUTOMATIC_RECOVER:                "false"
+        MINIMAL_PROBE:                    "true"
+        IS_ERS:                           "true"
+      meta_attributes:
+        resource-stickiness:              "3000"
+        priority:                         "100"
+      operations:
+        monitor:
+          interval:                       ["20", "20s"]
+          timeout:
+            ANF:                          ["105", "105s"]
+            AFS:                          ["60", "60s"]
+        start:
+          interval:                       ["0", "0s"]
+          timeout:                        ["600", "600s"]
+        stop:
+          interval:                       ["0", "0s"]
+          timeout:                        ["600", "600s"]
+        promote:
+          interval:                       ["0", "0s"]
+          timeout:                        ["320", "320s"]
+        demote:
+          interval:                       ["0", "0s"]
+          timeout:                        ["320", "320s"]
+        methods:
+          timeout:                        ["5", "5s"]
+          interval:                       ["0", "0s"]
+        reload:
+          timeout:                        ["320", "320s"]
+          interval:                       ["0", "0s"]
+
+    ipaddr:
+      meta_attributes:
+        target-role:                      "Started"
+      operations:
+        monitor:
+          interval:                       ["10", "10s"]
+          timeout:                        ["20", "20s"]
+        start:
+          interval:                       ["0", "0s"]
+          timeout:                        ["20", "20s"]
+        stop:
+          interval:                       ["0", "0s"]
+          timeout:                        ["20", "20s"]
+
+    azurelb:
+      meta_attributes:
+        resource-stickiness:              "0"
+      operations:
+        monitor:
+          interval:                       ["10", "10s"]
+          timeout:                        ["20", "20s"]
+        start:
+          interval:                       ["0", "0s"]
+          timeout:                        ["20", "20s"]
+        stop:
+          interval:                       ["0", "0s"]
+          timeout:                        ["20", "20s"]
+
+    azureevents:
+      meta_attributes:
+        allow-unhealthy-nodes:            "true"
+        failure-timeout:                  ["120", "120s"]
+      operations:
+        monitor:
+          interval:                       ["10", "10s"]
+          timeout:                        ["240", "240s"]
+        start:
+          interval:                       ["0", "0s"]
+          timeout:                        ["10", "10s"]
+        stop:
+          interval:                       ["0", "0s"]
+          timeout:                        ["10", "10s"]
+
 
 # === OS Parameters ===
 # Run command as root. Format of command is: "parent_key child_key"
@@ -192,7 +341,6 @@ AZURE_LOADBALANCER:
   PROBES:
     probe_threshold:                    2
     interval_in_seconds:                5
-    number_of_probes:                   2
 
   RULES:
     idle_timeout_in_minutes:            30

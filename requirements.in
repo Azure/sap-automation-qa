@@ -26,6 +26,7 @@ numpy
 pandas
 
 # Core utilities
+jmespath
 Jinja2
 PyYAML
 requests

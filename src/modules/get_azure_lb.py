@@ -30,38 +30,44 @@ DOCUMENTATION = r"""
 module: get_azure_lb
 short_description: Gets and validates Azure Load Balancer details
 description:
-    - This module retrieves Azure Load Balancer details for DB/SCS/ERS in a specific resource group
-    - Validates load balancer rules and health probe configurations against expected values
-    - Uses Azure SDK to interact with Azure Network resources
+    - This module retrieves Azure Load Balancer details for DB/SCS/ERS in a specific resource group.
+    - Validates load balancer rules and health probe configurations against expected values.
+    - Uses Azure SDK to interact with Azure Network resources.
 options:
     subscription_id:
         description:
-            - The Azure subscription ID
+            - The Azure subscription ID.
         type: str
         required: true
     region:
         description:
-            - Azure region where the resources are deployed
+            - Azure region where the resources are deployed.
         type: str
         required: true
     inbound_rules:
         description:
-            - JSON string containing inbound rule configurations to check for
-            - Must include privateIpAddress fields to match load balancers
+            - JSON string containing inbound rule configurations to check for.
+            - Must include privateIpAddress fields to match load balancers.
         type: str
         required: true
     constants:
         description:
-            - Dictionary containing expected configuration values for validation
-            - Must include AZURE_LOADBALANCER.RULES and AZURE_LOADBALANCER.PROBES
+            - Dictionary containing expected configuration values for validation.
+            - Must include AZURE_LOADBALANCER.RULES and AZURE_LOADBALANCER.PROBES.
         type: dict
         required: true
+    msi_client_id:
+        description:
+            - Managed Identity Client ID for authentication.
+            - Optional; if not provided, the default Managed Identity will be used.
+        type: str
+        required: false
 author:
     - Microsoft Corporation
 notes:
-    - Requires Azure SDK for Python
-    - Uses Managed Identity for authentication
-    - Must be run on a machine with Managed Identity credentials configured
+    - Requires Azure SDK for Python.
+    - Uses Managed Identity for authentication.
+    - Must be run on a machine with Managed Identity credentials configured.
 requirements:
     - python >= 3.6
     - azure-identity
@@ -88,52 +94,69 @@ EXAMPLES = r"""
 - name: Display load balancer validation results
   debug:
     var: lb_result
+
+- name: Use Managed Identity Client ID for authentication
+  get_azure_lb:
+    subscription_id: "{{ azure_subscription_id }}"
+    region: "{{ azure_region }}"
+    inbound_rules: "{{ inbound_rules | to_json }}"
+    constants:
+      AZURE_LOADBALANCER:
+        RULES:
+          idle_timeout_in_minutes: 30
+          load_distribution: "Default"
+          enable_floating_ip: True
+        PROBES:
+          interval_in_seconds: 15
+          number_of_probes: 3
+    msi_client_id: "{{ managed_identity_client_id }}"
+  register: lb_result
 """
 
 RETURN = r"""
 status:
-    description: Status of the validation
+    description: Status of the validation.
     returned: always
     type: str
     sample: "SUCCESS"
 message:
-    description: Descriptive message about the operation and validation results
+    description: Descriptive message about the operation and validation results.
     returned: always
     type: str
-    sample: "Successfully validated load balancer parameters"
+    sample: "Successfully validated load balancer parameters."
 details:
-    description: Detailed validation results for each parameter
+    description: Detailed validation results for each parameter.
     returned: always
     type: dict
     contains:
         parameters:
-            description: List of parameters validated
+            description: List of parameters validated.
             returned: always
             type: list
             elements: dict
             contains:
                 category:
-                    description: Parameter category (load_balancing_rule or probe)
+                    description: Parameter category (load_balancing_rule or probe).
                     type: str
                     sample: "load_balancing_rule"
                 id:
-                    description: Name/identifier of the entity
+                    description: Name/identifier of the entity.
                     type: str
                     sample: "lbRuleSAPILP"
                 name:
-                    description: Name of the parameter
+                    description: Name of the parameter.
                     type: str
                     sample: "idle_timeout_in_minutes"
                 value:
-                    description: Actual value found
+                    description: Actual value found.
                     type: str
                     sample: "30"
                 expected_value:
-                    description: Expected value for comparison
+                    description: Expected value for comparison.
                     type: str
                     sample: "30"
                 status:
-                    description: Result of the comparison
+                    description: Result of the comparison.
                     type: str
                     sample: "SUCCESS"
 """
@@ -156,13 +179,20 @@ class AzureLoadBalancer(SapAutomationQA):
         Create the network client object.
         """
         try:
-            self.credential = ManagedIdentityCredential()
+            if self.module_params.get("msi_client_id"):
+                self.credential = ManagedIdentityCredential(
+                    client_id=self.module_params["msi_client_id"]
+                )
+            else:
+                self.credential = ManagedIdentityCredential()
             self.network_client = NetworkManagementClient(
                 self.credential, self.module_params["subscription_id"]
             )
         except Exception as ex:
             self.handle_error(ex)
-            self.result["message"] += f"Failed to create network client object. {ex} \n"
+            self.result["message"] += (
+                " Failed to authenticate to Azure to read the Load " + f"Balancer Details. {ex} \n"
+            )
 
     def get_load_balancers(self) -> list:
         """
@@ -181,7 +211,7 @@ class AzureLoadBalancer(SapAutomationQA):
 
         except Exception as ex:
             self.handle_error(ex)
-            self.result["message"] += f"Failed to create network client object. {ex} \n"
+            self.result["message"] += f" Failed to get load balancers. {ex} \n"
 
     def get_load_balancers_details(self) -> dict:
         """
@@ -290,7 +320,11 @@ class AzureLoadBalancer(SapAutomationQA):
                 )
                 self.result["message"] += "Successfully validated load balancer parameters"
             else:
-                self.result["message"] += "No load balancer found"
+                self.result["message"] += (
+                    "Load Balancer details not fetched."
+                    " Ensure that the Managed Identity (MSI) has sufficient permissions "
+                    "to access the load balancer details."
+                )
 
         except Exception as ex:
             self.handle_error(ex)
@@ -305,6 +339,7 @@ def run_module():
         region=dict(type="str", required=True),
         inbound_rules=dict(type="str", required=True),
         constants=dict(type="dict", required=True),
+        msi_client_id=dict(type="str", required=False),
     )
 
     module = AnsibleModule(argument_spec=module_args, supports_check_mode=True)

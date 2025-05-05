@@ -45,8 +45,8 @@
             database_sid:               "{{ db_sid | lower }}"
             ansible_os_family:          "{{ ansible_os_family | upper }}"
           register:                     cluster_status_test_execution
-          retries:                      50
-          delay:                        10
+          retries:                      "{{ default_retries }}"
+          delay:                        "{{ default_delay }}"
           until: |
                                         cluster_status_test_execution.primary_node == cluster_status_pre.secondary_node and
                                         cluster_status_test_execution.secondary_node == ""
@@ -87,8 +87,8 @@
             database_sid:               "{{ db_sid | lower }}"
             ansible_os_family:          "{{ ansible_os_family | upper }}"
           register:                     cluster_status_post
-          retries:                      50
-          delay:                        10
+          retries:                      "{{ default_retries }}"
+          delay:                        "{{ default_delay }}"
           until: |
                                         cluster_status_post.primary_node == cluster_status_pre.secondary_node and
                                         cluster_status_post.secondary_node == cluster_status_pre.primary_node

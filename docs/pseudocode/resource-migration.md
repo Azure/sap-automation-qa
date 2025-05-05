@@ -75,3 +75,32 @@ FUNCTION ResourceMigrationTest():
     RETURN "Test Passed"
 END FUNCTION
 ```
+
+## ASCS Migration Test Case
+
+This test case is a specific instance of resource migration, focusing on migrating the ASCS resource to the ERS node.
+
+### Pre-requisites
+
+- Functioning ASCS/ERS cluster
+- Two active nodes (ASCS and ERS)
+- Cluster services running
+- STONITH configuration (stonith-enabled=true)
+
+### Additional Steps for ASCS Migration
+
+- Validate ASCS-specific constraints and cleanup.
+- Ensure proper role changes for ASCS and ERS nodes.
+
+### Pseudocode Extension
+
+```pseudocode
+FUNCTION ManualASCSMigrationTest():
+    // Reuse ResourceMigrationTest pseudocode
+    CALL ResourceMigrationTest()
+
+    // Additional ASCS-specific validations
+    validate_ascs_constraints()
+    ensure_ascs_role_changes()
+END FUNCTION
+```

@@ -155,12 +155,12 @@ class HanaClusterStatusChecker(BaseClusterStatusChecker):
         except Exception:
             self.result["AUTOMATED_REGISTER"] = "unknown"
 
-    def _process_node_attributes(self, node_attributes: ET.Element) -> Dict[str, Any]:
+    def _process_node_attributes(self, cluster_status_xml: ET.Element) -> Dict[str, Any]:
         """
         Processes node attributes and identifies primary and secondary nodes.
 
-        :param node_attributes: XML element containing node attributes.
-        :type node_attributes: ET.Element
+        :param cluster_status_xml: XML element containing node attributes.
+        :type cluster_status_xml: ET.Element
         :return: Dictionary with primary and secondary node information.
         :rtype: Dict[str, Any]
         """
@@ -172,7 +172,7 @@ class HanaClusterStatusChecker(BaseClusterStatusChecker):
             "replication_mode": "",
             "primary_site_name": "",
         }
-
+        node_attributes = cluster_status_xml.find("node_attributes")
         attribute_map = {
             f"hana_{self.database_sid}_op_mode": "operation_mode",
             f"hana_{self.database_sid}_srmode": "replication_mode",
@@ -212,7 +212,6 @@ class HanaClusterStatusChecker(BaseClusterStatusChecker):
                 result["secondary_node"] = node_name
                 result["cluster_status"]["secondary"] = node_attributes_dict
 
-        # Update instance attributes
         self.result.update(result)
         return result
 

@@ -48,7 +48,7 @@
 
         - name:                             "Test Execution: Wait for the cluster to be in a stable state"
           ansible.builtin.wait_for:
-            timeout:                        60
+            timeout:                        "{{ default_timeout }}"
 
     - name:                                 "Test Execution: Check node status on primary and secondary"
       block:
@@ -93,8 +93,8 @@
             database_sid:                   "{{ db_sid | lower }}"
             ansible_os_family:              "{{ ansible_os_family | upper }}"
           register:                         cluster_status_test_execution_primary
-          retries:                          50
-          delay:                            10
+          retries:                          "{{ default_retries }}"
+          delay:                            "{{ default_delay }}"
           until: |
                                             cluster_status_test_execution_primary.primary_node == cluster_status_pre.primary_node and
                                             cluster_status_test_execution_primary.secondary_node == ""
@@ -110,7 +110,7 @@
 
         - name:                             "Test Execution: Wait for the cluster to be in a stable state"
           ansible.builtin.wait_for:
-            timeout:                        60
+            timeout:                        "{{ default_timeout }}"
 
         - name:                             "Test Execution: Validate HANA DB cluster status 2"
           get_cluster_status_db:
@@ -118,8 +118,8 @@
             database_sid:                   "{{ db_sid | lower }}"
             ansible_os_family:              "{{ ansible_os_family | upper }}"
           register:                         cluster_status_post_primary
-          retries:                          50
-          delay:                            10
+          retries:                          "{{ default_retries }}"
+          delay:                            "{{ default_delay }}"
           until: |
                                             cluster_status_post_primary.primary_node == cluster_status_pre.primary_node and
                                             cluster_status_post_primary.secondary_node == cluster_status_pre.secondary_node
@@ -136,15 +136,15 @@
             database_sid:                   "{{ db_sid | lower }}"
             ansible_os_family:              "{{ ansible_os_family | upper }}"
           register:                         cluster_status_test_execution_secondary
-          retries:                          50
-          delay:                            10
+          retries:                          "{{ default_retries }}"
+          delay:                            "{{ default_delay }}"
           until: |
                                             cluster_status_test_execution_secondary.primary_node == cluster_status_pre.secondary_node and
                                             cluster_status_test_execution_secondary.secondary_node == ""
 
         - name:                             "Test Execution: Wait for the cluster to be in a stable state"
           ansible.builtin.wait_for:
-            timeout:                        60
+            timeout:                        "{{ default_timeout }}"
 
         - name:                             "Test Execution: Validate HANA DB cluster status 2"
           get_cluster_status_db:
@@ -152,8 +152,8 @@
             database_sid:                   "{{ db_sid | lower }}"
             ansible_os_family:              "{{ ansible_os_family | upper }}"
           register:                         cluster_status_post_secondary
-          retries:                          50
-          delay:                            10
+          retries:                          "{{ default_retries }}"
+          delay:                            "{{ default_delay }}"
           until: |
                                             cluster_status_post_secondary.primary_node == cluster_status_pre.secondary_node and
                                             cluster_status_post_secondary.secondary_node == cluster_status_pre.primary_node

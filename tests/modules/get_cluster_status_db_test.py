@@ -69,20 +69,22 @@ class TestHanaClusterStatusChecker:
         :param hana_checker: Instance of HanaClusterStatusChecker.
         :type hana_checker: HanaClusterStatusChecker
         """
-        xml_str = """
-        <node_attributes>
-            <node name="node1">
-                <attribute name="hana_TEST_clone_state" value="PROMOTED"/>
-                <attribute name="hana_TEST_sync_state" value="PRIM"/>
-                <attribute name="hana_TEST_site" value="site1"/>
-                <attribute name="hana_TEST_op_mode" value="logreplay"/>
-                <attribute name="hana_TEST_srmode" value="syncmem"/>
-            </node>
-        </node_attributes>
-        """
-        node_attributes = ET.fromstring(xml_str)
 
-        result = hana_checker._process_node_attributes(node_attributes)
+        xml_str = """
+        <dummy>
+            <node_attributes>
+                <node name="node1">
+                    <attribute name="hana_TEST_clone_state" value="PROMOTED"/>
+                    <attribute name="hana_TEST_sync_state" value="PRIM"/>
+                    <attribute name="hana_TEST_site" value="site1"/>
+                    <attribute name="hana_TEST_op_mode" value="logreplay"/>
+                    <attribute name="hana_TEST_srmode" value="syncmem"/>
+                </node>
+            </node_attributes>
+        </dummy>
+        """
+
+        result = hana_checker._process_node_attributes(ET.fromstring(xml_str))
 
         assert result["primary_node"] == "node1"
         assert result["secondary_node"] == ""
@@ -98,24 +100,24 @@ class TestHanaClusterStatusChecker:
         :type hana_checker: HanaClusterStatusChecker
         """
         xml_str = """
-        <node_attributes>
-            <node name="node1">
-                <attribute name="hana_TEST_clone_state" value="PROMOTED"/>
-                <attribute name="hana_TEST_sync_state" value="PRIM"/>
-                <attribute name="hana_TEST_site" value="site1"/>
-                <attribute name="hana_TEST_op_mode" value="logreplay"/>
-                <attribute name="hana_TEST_srmode" value="syncmem"/>
-            </node>
-            <node name="node2">
-                <attribute name="hana_TEST_clone_state" value="DEMOTED"/>
-                <attribute name="hana_TEST_sync_state" value="SOK"/>
-                <attribute name="hana_TEST_site" value="site2"/>
-            </node>
-        </node_attributes>
+        <dummy>
+            <node_attributes>
+                <node name="node1">
+                    <attribute name="hana_TEST_clone_state" value="PROMOTED"/>
+                    <attribute name="hana_TEST_sync_state" value="PRIM"/>
+                    <attribute name="hana_TEST_site" value="site1"/>
+                    <attribute name="hana_TEST_op_mode" value="logreplay"/>
+                    <attribute name="hana_TEST_srmode" value="syncmem"/>
+                </node>
+                <node name="node2">
+                    <attribute name="hana_TEST_clone_state" value="DEMOTED"/>
+                    <attribute name="hana_TEST_sync_state" value="SOK"/>
+                    <attribute name="hana_TEST_site" value="site2"/>
+                </node>
+            </node_attributes>
+        </dummy>
         """
-        node_attributes = ET.fromstring(xml_str)
-
-        result = hana_checker._process_node_attributes(node_attributes)
+        result = hana_checker._process_node_attributes(ET.fromstring(xml_str))
 
         assert result["primary_node"] == "node1"
         assert result["secondary_node"] == "node2"

@@ -7,11 +7,13 @@ from ansible.module_utils.basic import AnsibleModule
 def main():
     module = AnsibleModule(
         argument_spec=dict(
-            start_time=dict(type='str', required=True),
-            end_time=dict(type='str', required=True),
+            start_time=dict(type='str', required=False),
+            end_time=dict(type='str', required=False),
             log_file=dict(type='str', required=False, default='/var/log/messages'),
             keywords=dict(type='list', required=False, default=[]),
-            ansible_os_family=dict(type='str', required=True)
+            ansible_os_family=dict(type='str', required=True),
+            function=dict(type='str', required=True),
+            logs=dict(type='list', required=False)
         )
     )
 

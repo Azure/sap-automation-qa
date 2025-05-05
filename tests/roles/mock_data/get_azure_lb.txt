@@ -8,6 +8,7 @@ def main():
             region=dict(type="str", required=True),
             inbound_rules=dict(type="str", required=True),
             constants=dict(type="dict", required=True),
+            msi_client_id=dict(type="str", required=False)
         )
     )
 

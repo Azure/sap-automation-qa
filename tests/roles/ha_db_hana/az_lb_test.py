@@ -71,7 +71,7 @@ class TestAzLBConfigValidation(RolesTestingBaseDB):
         yield temp_dir
         shutil.rmtree(temp_dir)
 
-    def test_ha_config_validation_success(self, test_environment, ansible_inventory):
+    def test_az_lb_validation_success(self, test_environment, ansible_inventory):
         """
         Test the Azure LB configuration validation tasks using Ansible Runner.
 

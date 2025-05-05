@@ -20,14 +20,17 @@
 # +--------------------------------------------------------------------------*/
 - name:                                 "Test Execution: ASCS Node Crash"
   become:                               true
-  when:
-                                        - node_tier == "scs" or node_tier == "ers"
-                                        - pre_validations_status == "PASSED"
+  when:                                 pre_validations_status == "PASSED"
   block:
     - name:                             "Test Execution: Simulate ASCS Node Crash"
       when:                             ansible_hostname == cluster_status_pre.ascs_node
       become:                           true
       block:
+        - name:                         "Test Execution: Check for ENSA version"
+          ansible.builtin.shell:        pgrep -f 'enq.sap{{ sap_sid | upper }}'
+          register:                     ensa2_check
+          failed_when:                  false
+
         - name:                         "Test Execution: Start timer"
           ansible.builtin.set_fact:
             test_execution_start:       "{{ now(utc=true, fmt='%Y-%m-%d %H:%M:%S') }}"
@@ -43,17 +46,40 @@
       when:                             ansible_hostname == cluster_status_pre.ers_node
       become:                           true
       block:
-        - name:                         "Test Execution: Validate SCS cluster status"
+        - name:                         "Test Execution: Validate ASCS node has stopped"
+          get_cluster_status_scs:
+            sap_sid:                    "{{ sap_sid | lower }}"
+            ansible_os_family:          "{{ ansible_os_family | upper }}"
+          register:                     cluster_status_test_execution_pre
+          retries:                      "{{ default_retries }}"
+          delay:                        "{{ default_delay }}"
+          until:                        cluster_status_test_execution_pre.ascs_node == ""
+
+        - name:                         "Test Execution: Validate SCS cluster status ENSA1"
+          when:                         hostvars[cluster_status_pre.ascs_node].ensa2_check.stdout == ""
           get_cluster_status_scs:
             sap_sid:                    "{{ sap_sid | lower }}"
             ansible_os_family:          "{{ ansible_os_family | upper }}"
           register:                     cluster_status_test_execution
-          retries:                      50
-          delay:                        10
-          failed_when:                  false
+          retries:                      "{{ default_retries }}"
+          delay:                        "{{ default_delay }}"
           until: |
                                         cluster_status_test_execution.ascs_node == cluster_status_pre.ers_node
                                         and cluster_status_test_execution.ers_node == cluster_status_pre.ascs_node
+
+        - name:                         "Test Execution: Validate SCS cluster status ENSA2"
+          when:                         hostvars[cluster_status_pre.ascs_node].ensa2_check.stdout != ""
+          get_cluster_status_scs:
+            sap_sid:                    "{{ sap_sid | lower }}"
+            ansible_os_family:          "{{ ansible_os_family | upper }}"
+          register:                     cluster_status_test_execution
+          retries:                      "{{ default_retries }}"
+          delay:                        "{{ default_delay }}"
+          until: |
+                                        (cluster_status_test_execution.ascs_node == cluster_status_pre.ers_node
+                                        and cluster_status_test_execution.ers_node == cluster_status_pre.ascs_node)
+                                        or (cluster_status_test_execution.ascs_node == cluster_status_pre.ascs_node
+                                        and cluster_status_test_execution.ers_node == cluster_status_pre.ers_node)
 
     - name:                             "Test Execution: Simulate ASCS Node Crash"
       when:                             ansible_hostname == cluster_status_pre.ascs_node
@@ -72,9 +98,9 @@
           ansible.builtin.set_fact:
             test_case_message_from_test_case: |
                                         Old ASCS: {{ cluster_status_pre.ascs_node }}
-                                        New ASCS: {{ hostvars[cluster_status_pre.ers_node].cluster_status_test_execution.ascs_node }}
+                                        New ASCS: {{ hostvars[cluster_status_pre.ers_node].cluster_status_test_execution.ascs_node | default('N/A') }}
                                         Old ERS: {{ cluster_status_pre.ers_node }}
-                                        New ERS: {{ hostvars[cluster_status_pre.ers_node].cluster_status_test_execution.ers_node }}
+                                        New ERS: {{ hostvars[cluster_status_pre.ers_node].cluster_status_test_execution.ers_node | default('N/A') }}
             test_case_details_from_test_case: {
                                         "Pre Validations: Validate HANA DB cluster status": "{{ cluster_status_pre }}",
                                         "Pre Validations: CleanUp any failed resource": "{{ cleanup_failed_resource_pre }}",

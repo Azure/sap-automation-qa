@@ -297,21 +297,32 @@ class HAClusterValidator(SapAutomationQA):
             else:
                 expected_value = self._get_expected_value(category, name)
 
+        if expected_value is None or value == "":
+            status = TestStatus.INFO.value
+        elif isinstance(expected_value, (str, list)):
+            if isinstance(expected_value, list):
+                status = (
+                    TestStatus.SUCCESS.value
+                    if str(value) in expected_value
+                    else TestStatus.ERROR.value
+                )
+                expected_value = expected_value[0]
+            else:
+                status = (
+                    TestStatus.SUCCESS.value
+                    if str(value) == str(expected_value)
+                    else TestStatus.ERROR.value
+                )
+        else:
+            status = TestStatus.ERROR.value
+
         return Parameters(
             category=f"{category}_{subcategory}" if subcategory else category,
             id=id if id else "",
             name=name if not op_name else f"{op_name}_{name}",
             value=value,
             expected_value=expected_value if expected_value is not None else "",
-            status=(
-                TestStatus.INFO.value
-                if expected_value is None or value == ""
-                else (
-                    TestStatus.SUCCESS.value
-                    if str(value) == str(expected_value)
-                    else TestStatus.ERROR.value
-                )
-            ),
+            status=status if status else TestStatus.ERROR.value,
         ).to_dict()
 
     def _parse_nvpair_elements(self, elements, category, subcategory=None, op_name=None):
@@ -482,9 +493,6 @@ class HAClusterValidator(SapAutomationQA):
         if operations is not None:
             for operation in operations.findall(".//op"):
                 for op_type in ["timeout", "interval"]:
-                    value = operation.get(op_type, "")
-                    if value.endswith("s"):
-                        value = value[:-1]
                     parameters.append(
                         self._create_parameter(
                             category=category,
@@ -492,7 +500,7 @@ class HAClusterValidator(SapAutomationQA):
                             id=operation.get("id", ""),
                             name=op_type,
                             op_name=operation.get("name", ""),
-                            value=value,
+                            value=operation.get(op_type, ""),
                         )
                     )
         return parameters

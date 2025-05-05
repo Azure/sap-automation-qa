@@ -34,7 +34,8 @@ DOCUMENTATION = r"""
 module: get_pcmk_properties_scs
 short_description: Validates Pacemaker cluster configurations for SAP ASCS/ERS
 description:
-    - Validates Pacemaker cluster configurations against predefined standards for SAP Application Tier ASCS/ERS deployments
+    - Validates Pacemaker cluster configurations against predefined standards for SAP Application
+    Tier ASCS/ERS deployments
     - Checks basic cluster properties, resource configurations, constraints, and OS parameters
     - Provides detailed validation results for each parameter
     - Supports different configurations based on operating system and fencing mechanism
@@ -74,6 +75,12 @@ options:
             - Type of fencing mechanism used
         type: str
         required: true
+    nfs_provider:
+        description:
+            - NFS provider type (e.g., AFS, ANF)
+        type: str
+        required: false
+        default: ""
 author:
     - Microsoft Corporation
 notes:
@@ -178,7 +185,8 @@ class HAClusterValidator(SapAutomationQA):
     CONSTRAINTS_CATEGORIES = (".//*", "CONSTRAINTS_DEFAULTS")
 
     RESOURCE_CATEGORIES = {
-        "stonith": ".//primitive[@class='stonith']",
+        "sbd_stonith": ".//primitive[@type='external/sbd']",
+        "fence_agent": ".//primitive[@type='fence_azure_arm']",
         "ipaddr": ".//primitive[@type='IPaddr2']",
         "azurelb": ".//primitive[@type='azure-lb']",
         "azureevents": ".//primitive[@type='azure-events-az']",
@@ -193,6 +201,7 @@ class HAClusterValidator(SapAutomationQA):
         virtual_machine_name,
         constants,
         fencing_mechanism,
+        nfs_provider=None,
         category=None,
     ):
         super().__init__()
@@ -204,6 +213,7 @@ class HAClusterValidator(SapAutomationQA):
         self.virtual_machine_name = virtual_machine_name
         self.fencing_mechanism = fencing_mechanism
         self.constants = constants
+        self.nfs_provider = nfs_provider
         self.parse_ha_cluster_config()
 
     def _get_expected_value(self, category, name):
@@ -282,6 +292,7 @@ class HAClusterValidator(SapAutomationQA):
         :return: Parameters object
         :rtype: Parameters
         """
+        status = None
         if expected_value is None:
             if category in self.RESOURCE_CATEGORIES or category in ["ascs", "ers"]:
                 expected_value = self._get_resource_expected_value(
@@ -293,21 +304,38 @@ class HAClusterValidator(SapAutomationQA):
             else:
                 expected_value = self._get_expected_value(category, name)
 
+        if expected_value is None or value == "":
+            status = TestStatus.INFO.value
+        elif isinstance(expected_value, (str, list)):
+            if isinstance(expected_value, list):
+                status = (
+                    TestStatus.SUCCESS.value
+                    if str(value) in expected_value
+                    else TestStatus.ERROR.value
+                )
+                expected_value = expected_value[0]
+            else:
+                status = (
+                    TestStatus.SUCCESS.value
+                    if str(value) == str(expected_value)
+                    else TestStatus.ERROR.value
+                )
+        elif isinstance(expected_value, dict):
+            expected_value = expected_value.get(self.nfs_provider, "AFS")
+            status = (
+                TestStatus.SUCCESS.value if str(value) in expected_value else TestStatus.ERROR.value
+            )
+            expected_value = expected_value[0]
+        else:
+            status = TestStatus.ERROR.value
+
         return Parameters(
             category=f"{category}_{subcategory}" if subcategory else category,
             id=id if id else "",
             name=name if not op_name else f"{op_name}_{name}",
             value=value,
             expected_value=expected_value if expected_value is not None else "",
-            status=(
-                TestStatus.INFO.value
-                if expected_value is None or value == ""
-                else (
-                    TestStatus.SUCCESS.value
-                    if str(value) == str(expected_value)
-                    else TestStatus.ERROR.value
-                )
-            ),
+            status=status if status else TestStatus.ERROR.value,
         ).to_dict()
 
     def _parse_nvpair_elements(self, elements, category, subcategory=None, op_name=None):
@@ -371,9 +399,6 @@ class HAClusterValidator(SapAutomationQA):
         if operations is not None:
             for operation in operations.findall(".//op"):
                 for op_type in ["timeout", "interval"]:
-                    value = operation.get(op_type, "")
-                    if value.endswith("s"):
-                        value = value[:-1]
                     parameters.append(
                         self._create_parameter(
                             category=category,
@@ -381,7 +406,7 @@ class HAClusterValidator(SapAutomationQA):
                             id=operation.get("id", ""),
                             name=op_type,
                             op_name=operation.get("name", ""),
-                            value=value,
+                            value=operation.get(op_type, ""),
                         )
                     )
         return parameters
@@ -565,6 +590,7 @@ def main() -> None:
             virtual_machine_name=dict(type="str"),
             pcmk_constants=dict(type="dict"),
             fencing_mechanism=dict(type="str"),
+            nfs_provider=dict(type="str", default=""),
         )
     )
 
@@ -576,6 +602,7 @@ def main() -> None:
         virtual_machine_name=module.params["virtual_machine_name"],
         constants=module.params["pcmk_constants"],
         fencing_mechanism=module.params["fencing_mechanism"],
+        nfs_provider=module.params.get("nfs_provider"),
     )
     module.exit_json(**validator.get_result())
 

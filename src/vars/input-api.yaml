@@ -130,25 +130,37 @@ test_groups:
           mechanisms, and ensures system replication resumes properly after service restoration.
         enabled:                    true
 
-
   - name:                           HA_SCS
     test_cases:
       - name:                       "HA Parameters Validation"
         task_name:                  ha-config
         description: |
-          The HA parameter validation test validates HA configuration,
-          including Corosync settings, Pacemaker resources, SBD device configuration,
-          and HANA system replication setup.
+          The HA parameter validation test validates HA configuration
+          including Corosync settings, Pacemaker resources, SBD device configuration, and SCS system
+          replication setup.
+        enabled:                    true
+
+      - name:                       Azure Load Balancer Validation
+        task_name:                  azure-lb
+        description: |
+          The Azure LB configuration test validates Azure Load Balancer setup including health probe
+          configuration, backend pool settings, load balancing rules, and frontend IP configuration.
+        enabled:                    true
+
+      - name:                       "SAPControl Config Validation"
+        task_name:                  sapcontrol-config
+        description: |
+          The SAPControl Config Validation test runs multiple sapcontrol commands to validate the
+          SCS configuration. It executes commands like HAGetFailoverConfig,
+          HACheckFailoverConfig, and HACheckConfig, capturing their outputs and statuses to
+          ensure proper configuration and functionality.
         enabled:                    true
 
       - name:                       "Manual ASCS Migration"
         task_name:                  ascs-migration
         description: |
-          The Resource Migration test validates planned failover scenarios by executing controlled
-          resource movement between ASCS and ERS nodes. It performs a graceful migration of the ASCS
-          resources to the ERS node, verifies proper role changes, ensures cluster maintains
-          stability throughout the transition, and validates complete data synchronization after
-          migration.
+          The Resource Migration test validates planned failover scenarios by controlling resource
+          movement between SCS nodes, ensuring proper role changes.
         enabled:                    true
 
       - name:                       "ASCS Node Crash"
@@ -157,7 +169,66 @@ test_groups:
           The ASCS Node Crash test simulates cluster behavior when the ASCS node crashes. It
           simulates an ASCS node failure by forcefully terminating the process, then verifies
           automatic failover to the ERS node, monitors system replication status, and confirms
-          service recovery without data loss.
+          service recovery.
+        enabled:                    true
+
+      - name:                       "Block Network Communication"
+        task_name:                  block-network
+        description: |
+          The Block Network test validates cluster behavior during network partition scenarios by
+          implementing iptables rules to block communication between ASCS and ERS nodes. It
+          verifies split-brain prevention mechanisms, validates proper failover execution when
+          nodes become isolated, and ensures cluster stability after network connectivity is
+          restored.
+        enabled:                    true
+
+      - name:                       "Kill Message Server Process"
+        task_name:                  kill-message-server
+        description: |
+          The Message Server Process Kill test simulates failure of the message server process on
+          the ASCS node by forcefully terminating it using the kill -9 signal. It verifies proper
+          cluster reaction, automatic failover to the ERS node, and ensures service continuity
+          after the process failure.
+        enabled:                    true
+
+      - name:                       "Kill Enqueue Server Process"
+        task_name:                  kill-enqueue-server
+        description: |
+          The Enqueue Server Process Kill test simulates failure of the enqueue server process on
+          the ASCS node by forcefully terminating it using the kill -9 signal. It validates proper
+          cluster behavior, automatic failover execution.
+        enabled:                    true
+
+      - name:                       "Kill Enqueue Replication Server Process"
+        task_name:                  kill-enqueue-replication
+        description: |
+          The Enqueue Server Process Kill test simulates failure of the enqueue server process on
+          the ASCS node by forcefully terminating it using the kill -9 signal. It validates proper
+          cluster behavior, automatic failover execution.
+        enabled:                    true
+
+      - name:                       "Kill sapstartsrv Process for ASCS"
+        task_name:                  kill-sapstartsrv-process
+        description: |
+          The Enqueue Server Process Kill test simulates failure of the enqueue server process on
+          the ASCS node by forcefully terminating it using the kill -9 signal. It validates proper
+          cluster behavior, automatic failover execution.
+        enabled:                    true
+
+      - name:                       "Manual Restart of ASCS Instance"
+        task_name:                  manual-restart
+        description: |
+          The Enqueue Server Process Kill test simulates failure of the enqueue server process on
+          the ASCS node by forcefully terminating it using the kill -9 signal. It validates proper
+          cluster behavior, automatic failover execution.
+        enabled:                    true
+
+      - name:                       "HAFailoverToNode Test"
+        task_name:                  ha-failover-to-node
+        description: |
+          The Enqueue Server Process Kill test simulates failure of the enqueue server process on
+          the ASCS node by forcefully terminating it using the kill -9 signal. It validates proper
+          cluster behavior, automatic failover execution.
         enabled:                    true
 
 
@@ -169,6 +240,12 @@ scs_instance_number:                "00"
 ers_instance_number:                "01"
 NFS_provider:                       "AFS"
 sap_port_to_ping:                   "1128"
+
+# Default values for retries, delay, timeout
+default_retries:                    50
+default_delay:                      10
+default_timeout:                    60
+ascs_stonith_timeout:               120
 
 # Commands for HANA DB HA Test Cases based on OS family
 commands:
@@ -184,10 +261,14 @@ commands:
     SUSE:                           "crm_report -f '{{ test_group_start_time }}' /tmp/{{ test_group_invocation_id }}"
     REDHAT:                         "crm_report -f '{{ test_group_start_time }}' --dest /tmp/{{ test_group_invocation_id }} -yes"
 
+  - name:                           get_sap_instance_resource_id
+    SUSE:                           "cibadmin --query --xpath \"//primitive[@type='SAPInstance']\" --node-path | grep -oP \"primitive\\[@id='\\K[^']+\" | grep ASCS"
+    REDHAT:                         "cibadmin --query --xpath \"//primitive[@type='SAPInstance']\" --node-path | grep ASCS | grep -oP \"primitive\\[@id='\\K[^']+\""
+
   - name:                           ascs_resource_migration_cmd
-    SUSE:                           "crm resource move rsc_sap_{{ sap_sid }}_ASCS{{ scs_instance_number }} force"
-    REDHAT:                         "pcs resource move rsc_sap_{{ sap_sid }}_ASCS{{ scs_instance_number }}"
+    SUSE:                           "crm resource move {{ cluster_status_pre.ascs_resource_id | default('rsc_sap_' ~ sap_sid ~ '_ASCS' ~ scs_instance_number) }} force"
+    REDHAT:                         "pcs resource move {{ cluster_status_pre.ascs_resource_id | default('rsc_sap_' ~ sap_sid ~ '_ASCS' ~ scs_instance_number) }}"
 
   - name:                           ascs_resource_unmigrate_cmd
-    SUSE:                           "crm resource clear rsc_sap_{{ sap_sid }}_ASCS{{ scs_instance_number }}"
-    REDHAT:                         "pcs resource clear rsc_sap_{{ sap_sid }}_ASCS{{ scs_instance_number }}"
+    SUSE:                           "crm resource clear {{ cluster_status_pre.ascs_resource_id | default('rsc_sap_' ~ sap_sid ~ '_ASCS' ~ scs_instance_number) }}"
+    REDHAT:                         "pcs resource clear {{ cluster_status_pre.ascs_resource_id | default('rsc_sap_' ~ sap_sid ~ '_ASCS' ~ scs_instance_number) }}"

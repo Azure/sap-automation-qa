@@ -20,9 +20,7 @@
 # +--------------------------------------------------------------------------*/
 - name:                                 "Test Execution: Manual ASCS Migration"
   become:                               true
-  when:
-                                        - node_tier == "scs" or node_tier == "ers"
-                                        - pre_validations_status == "PASSED"
+  when:                                 pre_validations_status == "PASSED"
   block:
     - name:                             "Test Execution: Start timer"
       ansible.builtin.set_fact:
@@ -44,9 +42,8 @@
             sap_sid:                    "{{ sap_sid | lower }}"
             ansible_os_family:          "{{ ansible_os_family | upper }}"
           register:                     cluster_status_test_execution
-          retries:                      50
-          delay:                        10
-          failed_when:                  false
+          retries:                      "{{ default_retries }}"
+          delay:                        "{{ default_delay }}"
           until: |
                                         cluster_status_test_execution.ascs_node == cluster_status_pre.ers_node
                                         and cluster_status_test_execution.ers_node == cluster_status_pre.ascs_node
