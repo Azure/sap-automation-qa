@@ -1,0 +1,126 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+
+---
+# /*---------------------------------------------------------------------------
+# |                    Manual Restart of ASCS Instance                        |
+# +--------------------------------------------------------------------------*/
+- name:                                 "Test Setup Tasks"
+  ansible.builtin.include_tasks:        "roles/misc/tasks/test-case-setup.yml"
+  run_once:                             true
+
+# /*---------------------------------------------------------------------------
+# |                          Pre Validations                                  |
+# +--------------------------------------------------------------------------*/
+- name:                                 "Pre Validations: SCS Nodes"
+  ansible.builtin.include_tasks:        "roles/misc/tasks/pre-validations-scs.yml"
+
+# /*---------------------------------------------------------------------------
+# |                          Test Execution                                   |
+# +--------------------------------------------------------------------------*/
+- name:                                 "Test Execution: Manual Restart of ASCS Instance"
+  become:                               true
+  when:                                 pre_validations_status == "PASSED" and (ansible_os_family | upper) == "SUSE"
+  block:
+    - name:                             "Test Execution: Stop ASCS on ASCS Node"
+      when:                             ansible_hostname == cluster_status_pre.ascs_node
+      become:                           true
+      block:
+        - name:                         "Test Execution: Start timer"
+          ansible.builtin.set_fact:
+            test_execution_start:       "{{ now(utc=true, fmt='%Y-%m-%d %H:%M:%S') }}"
+            test_execution_hostname:    "{{ hostvars[cluster_status_pre.ascs_node].ansible_hostname }}"
+
+        - name:                         "Test Execution: Stop ASCS Instance"
+          become:                       true
+          become_user:                  "{{ sap_sid | lower }}adm"
+          ansible.builtin.shell:        /usr/sap/{{ sap_sid | upper }}/SYS/exe/run/sapcontrol -nr {{ scs_instance_number }} -function StopWait 600 2
+          environment:
+            PATH:                       /usr/local/bin:/usr/bin:/usr/local/sbin:/usr/sbin:/usr/sap/{{ sap_sid | upper }}/SYS/exe/uc/linuxx86_64:/usr/sap/{{ sap_sid | upper }}/SYS/exe/run:/home/{{ sap_sid | lower }}adm
+            DIR_LIBRARY:                /usr/sap/{{ sap_sid | upper }}/SYS/exe/run
+            LD_LIBRARY_PATH:            /usr/sap/{{ sap_sid | upper }}/SYS/exe/run:/usr/sap/{ sap_sid | upper }}/SYS/exe/uc/linuxx86_64
+            SAPSYSTEMNAME:              "{{ sap_sid | upper }}"
+          register:                     stop_ascs_result
+          failed_when:                  false
+
+        - name:                         "Test Execution: Validate SCS cluster status 1"
+          get_cluster_status_scs:
+            sap_sid:                    "{{ sap_sid | lower }}"
+            ansible_os_family:          "{{ ansible_os_family | upper }}"
+          register:                     cluster_status_test_execution
+          retries:                      "{{ default_retries }}"
+          delay:                        "{{ default_delay }}"
+          until: |
+                                        cluster_status_test_execution.ascs_node == ""
+                                        and cluster_status_test_execution.ers_node == cluster_status_pre.ers_node
+
+        - name:                         "Test Execution: Start ASCS Instance"
+          become:                       true
+          become_user:                  "{{ sap_sid | lower }}adm"
+          ansible.builtin.shell:        /usr/sap/{{ sap_sid | upper }}/SYS/exe/run/sapcontrol -nr {{ scs_instance_number }} -function StartWait 600 2
+          environment:
+            PATH:                       /usr/local/bin:/usr/bin:/usr/local/sbin:/usr/sbin:/usr/sap/{{ sap_sid | upper }}/SYS/exe/uc/linuxx86_64:/usr/sap/{{ sap_sid | upper }}/SYS/exe/run:/home/{{ sap_sid | lower }}adm
+            DIR_LIBRARY:                /usr/sap/{{ sap_sid | upper }}/SYS/exe/run
+            LD_LIBRARY_PATH:            /usr/sap/{{ sap_sid | upper }}/SYS/exe/run:/usr/sap/{ sap_sid | upper }}/SYS/exe/uc/linuxx86_64
+            SAPSYSTEMNAME:              "{{ sap_sid | upper }}"
+          register:                     start_ascs_result
+          failed_when:                  false
+
+        - name:                         "Test Execution: Cleanup resources"
+          ansible.builtin.command:      crm_resource --cleanup
+          register:                     cleanup_failed_resource_test_execution
+          changed_when:                 cleanup_failed_resource_test_execution.rc == 0
+
+        - name:                         "Test Execution: Validate SCS cluster status 2"
+          get_cluster_status_scs:
+            sap_sid:                    "{{ sap_sid | lower }}"
+            ansible_os_family:          "{{ ansible_os_family | upper }}"
+          register:                     cluster_status_test_execution_2
+          retries:                      "{{ default_retries }}"
+          delay:                        "{{ default_delay }}"
+          until: |
+                                        cluster_status_test_execution_2.ascs_node == cluster_status_pre.ascs_node
+                                        and cluster_status_test_execution_2.ers_node == cluster_status_pre.ers_node
+
+        - name:                         "Test Execution: Stop timer"
+          ansible.builtin.set_fact:
+            test_execution_end:         "{{ now(utc=true, fmt='%Y-%m-%d %H:%M:%S') }}"
+
+        - name:                         "Set test case message and details"
+          ansible.builtin.set_fact:
+            test_case_message_from_test_case: |
+                                        Old ASCS: {{ cluster_status_pre.ascs_node }}
+                                        New ASCS: {{ cluster_status_test_execution_2.ascs_node }}
+                                        Old ERS: {{ cluster_status_pre.ers_node }}
+                                        New ERS: {{ cluster_status_test_execution_2.ers_node }}
+            test_case_details_from_test_case: {
+                                        "Pre Validations: Validate SCS cluster status": "{{ cluster_status_pre }}",
+                                        "Pre Validations: CleanUp any failed resource": "{{ cleanup_failed_resource_pre }}",
+                                        "Test Execution: Stop ASCS Instance": "{{ stop_ascs_result }}",
+                                        "Test Execution: Start ASCS Instance": "{{ start_ascs_result }}",
+                                        "Test Execution: Cleanup resources": "{{ cleanup_failed_resource_test_execution }}",
+                                        "Post Validations Result": "{{ cluster_status_test_execution_2 }}",
+                                        }
+# /*---------------------------------------------------------------------------
+# |                          Post Validations                                 |
+# +--------------------------------------------------------------------------*/
+    - name:                             "Post Validations Tasks"
+      ansible.builtin.include_tasks:    "roles/misc/tasks/post-validations.yml"
+
+  rescue:
+    - name:                             "Rescue operation"
+      ansible.builtin.include_tasks:    "roles/misc/tasks/rescue.yml"
+
+- name:                                 "Pre Validations: Test Case Skipped"
+  become:                               true
+  when:                                 pre_validations_status == "FAILED"
+  block:
+    - name:                             "Set test case message and details"
+      ansible.builtin.set_fact:
+        test_case_message_from_test_case: "Pre Validations for SCS cluster status checks failed. Please check the details."
+        test_case_details_from_test_case: {
+                                          "Pre Validations: Validate SCS cluster status": "{{ cluster_status_pre }}",
+                                        }
+
+    - name:                             "Post Validations Tasks"
+      ansible.builtin.include_tasks:    "roles/misc/tasks/post-validations.yml"

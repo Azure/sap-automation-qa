@@ -3,16 +3,19 @@
 
 from ansible.module_utils.basic import AnsibleModule
 import os
+import json
 
 def main():
     module = AnsibleModule(
         argument_spec=dict(
             sap_sid=dict(type='str', required=True),
-            ansible_os_family=dict(type='str', required=True)
+            ansible_os_family=dict(type='str', required=True),
         )
     )
 
-    counter_file = "/tmp/get_cluster_status_counter"
+    task_name = os.environ.get('TASK_NAME', '')
+    
+    counter_file = f"/tmp/get_cluster_status_counter_{task_name}" if task_name else "/tmp/get_cluster_status_counter"
 
     if os.path.exists(counter_file):
         with open(counter_file, "r") as f:
@@ -23,24 +26,121 @@ def main():
     counter += 1
     with open(counter_file, "w") as f:
         f.write(str(counter))
+    
+    # Define initial and final states that are common
+    initial_state = {
+        "changed": False,
+        "ascs_node": "scs01",
+        "ers_node": "scs02",
+        "status": "PASSED",
+        "pacemaker_status": "running"
+    }
+    
+    swapped_state = {
+        "changed": False,
+        "ascs_node": "scs02",
+        "ers_node": "scs01",
+        "status": "PASSED",
+        "pacemaker_status": "running"
+    }
 
-    if counter == 3:
-        result = {
-            "changed": False,
-            "ascs_node": "scs01",
-            "ers_node": "scs02",
-            "status": "PASSED",
-            "pacemaker_status": "running"
-        }
-    else:
-        result = {
-            "changed": False,
-            "ascs_node": "scs02",
-            "ers_node": "scs01",
-            "status": "PASSED",
-            "pacemaker_status": "running"
-        }
+    # Define intermediate states for specific test cases
+    empty_ascs_state = {
+        "changed": False,
+        "ascs_node": "",
+        "ers_node": "scs02",
+        "status": "PASSED", 
+        "pacemaker_status": "running"
+    }
 
+    empty_ers_state = {
+        "changed": False,
+        "ascs_node": "scs01",
+        "ers_node": "",
+        "status": "PASSED", 
+        "pacemaker_status": "running"
+    }
+    
+    # Define the sequence of states for each test case
+    # Each task has an array of states that will be returned in sequence
+    # as the mock is called multiple times during the test
+    test_sequences = {
+        "manual-restart": [
+            initial_state,   # Initial call - pre-validation  
+            initial_state,   # Initial call - pre-validation  
+            empty_ascs_state, # After stopping ASCS - ASCS node is empty
+            initial_state,   # Final state after restart (roles swapped)
+        ],
+        "ascs-migration": [
+            initial_state,   # Initial call - pre-validation
+            initial_state,   # During migration  
+            swapped_state,   # After migration validation (first check)
+        ],
+        "ascs-node-crash": [
+            initial_state,   # Initial pre-validation
+            initial_state,   # Initial pre-validation
+            empty_ascs_state,   # After node crash
+            swapped_state,   # Additional validation checks 
+        ],
+        "kill-message-server": [
+            initial_state,    # Initial pre-validation
+            initial_state,    # Initial pre-validation
+            empty_ascs_state, # After process kill
+            swapped_state,    # Final Check
+        ],
+        "kill-enqueue-server": [
+            initial_state,    # Initial pre-validation
+            initial_state,    # Initial pre-validation
+            empty_ascs_state, # After process kill
+            swapped_state,    # Additional validation checks
+        ],
+        "kill-enqueue-replication": [
+            initial_state,    # Initial pre-validation
+            initial_state,    # After killing ERS process - no node swap expected
+            empty_ers_state,    # Should remain the same (no node swap for this test)
+            initial_state,    # Final check
+        ],
+        "kill-sapstartsrv-process": [
+            initial_state,    # Initial pre-validation
+            initial_state,    # Initial pre-validation
+            initial_state,    # Final check
+        ],
+        "sapcontrol-config": [
+            initial_state,
+            initial_state,    # Further calls - should remain the same
+        ],
+        "ha-failover-to-node": [
+            initial_state,    # Initial pre-validation
+            initial_state,    # Initial pre-validation
+            swapped_state,    # After HAFailoverToNode
+        ],
+        "block-network": [
+            initial_state,    # Initial pre-validation
+            swapped_state,    # After network block
+            swapped_state,    # Additional validation checks
+            swapped_state,    # Final check
+        ]
+    }
+    
+    # Define fallback sequence if test case isn't defined
+    default_sequence = [
+        initial_state,    # First call
+        swapped_state,    # Second call
+        swapped_state,    # Third call onwards
+    ]
+    
+    # Get the correct sequence for this test case
+    sequence = test_sequences.get(task_name, default_sequence)
+    
+    # Get the appropriate state based on counter
+    # If we've reached the end of the defined sequence, keep returning the last state
+    index = min(counter - 1, len(sequence) - 1)
+    result = sequence[index]
+    
+    # Log the request and response for debugging
+    with open("/tmp/get_cluster_status_debug.log", "a") as f:
+        f.write(f"Task: {task_name}, Call #: {counter}, Index: {index}, Result: {json.dumps(result)}\n")
+    
     module.exit_json(**result)
 
 if __name__ == '__main__':

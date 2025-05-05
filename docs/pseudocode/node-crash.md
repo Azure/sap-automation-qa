@@ -70,3 +70,32 @@ FUNCTION PrimaryNodeCrashTest():
     RETURN "Test Passed"
 END FUNCTION
 ```
+
+## ASCS Node Crash Test Case
+
+This test case is a specific instance of node crash, focusing on simulating an ASCS node crash and validating failover behavior.
+
+### Pre-requisites
+
+- Functioning ASCS/ERS cluster
+- Two active nodes (ASCS and ERS)
+- Cluster services running
+- STONITH configuration (stonith-enabled=true)
+
+### Additional Steps for ASCS Node Crash
+
+- Validate ASCS-specific failover behavior.
+- Ensure proper role changes for ASCS and ERS nodes.
+
+### Pseudocode Extension
+
+```pseudocode
+FUNCTION ASCSNodeCrashTest():
+    // Reuse PrimaryNodeCrashTest pseudocode
+    CALL PrimaryNodeCrashTest()
+
+    // Additional ASCS-specific validations
+    validate_ascs_failover_behavior()
+    ensure_ascs_role_changes()
+END FUNCTION
+```

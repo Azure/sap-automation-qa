@@ -36,22 +36,19 @@
             )
           }}
 
-    - name:                             "Combine logs from both Nodes"
+    - name:                             "Merge and sort logs from all nodes by timestamp"
+      delegate_to:                      localhost
+      log_parser:
+        function:                       "merge_logs"
+        ansible_os_family:              "{{ ansible_os_family | upper }}"
+        logs:
+          - "{{ hostvars[first_node]['var_log_messages_output'].filtered_logs | default('[]') }}"
+          - "{{ hostvars[second_node]['var_log_messages_output'].filtered_logs | default('[]') }}"
+      register:                         merged_logs_output
+
+    - name:                           "Set combined logs variable"
       ansible.builtin.set_fact:
-        combined_logs: >-
-                                        {{
-                                          (
-                                            hostvars[first_node]['var_log_messages_output'].filtered_logs
-                                            | default('[]')
-                                            | from_json
-                                          )
-                                          +
-                                          (
-                                            hostvars[second_node]['var_log_messages_output'].filtered_logs
-                                            | default('[]')
-                                            | from_json
-                                          )
-                                        }}
+        combined_logs:                "{{ merged_logs_output.filtered_logs | from_json }}"
 
     - name:                             "Post Validations: Rescure operation set test case status"
       delegate_to:                      localhost

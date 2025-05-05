@@ -90,3 +90,8 @@
     - name:                            "Run test cases by including them as roles"
       ansible.builtin.include_tasks:   "./roles/misc/tasks/render-html-report.yml"
       when:                            test_group_name is defined
+
+    - name:                            "Debug the group_invocation_id"
+      ansible.builtin.debug:
+        msg:                           "Group invocation ID: {{ test_group_invocation_id }}"
+      when:                            test_group_invocation_id is defined

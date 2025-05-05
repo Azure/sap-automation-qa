@@ -1,0 +1,38 @@
+#!/bin/bash
+
+echo "MOCK SAPCONTROL CALLED: $@" >> /tmp/sapcontrol_calls.log
+
+# Check if we're calling HAFailoverToNode
+if [[ "$*" == *"HAFailoverToNode"* ]]; then
+    echo "Failover to node successfully triggered."
+    exit 0
+# Check if we're calling Stop
+elif [[ "$*" == *"Stop"* ]]; then
+    echo "Instance stopped successfully."
+    exit 0
+# Check if we're calling Start
+elif [[ "$*" == *"Start"* ]]; then
+    echo "Instance started successfully."
+    exit 0
+# Check if we're calling HAGetFailoverConfig
+elif [[ "$*" == *"HAGetFailoverConfig"* ]]; then
+    echo "HAActive: TRUE"
+    echo "HAProductVersion: 1.0"
+    echo "HASAPInterfaceVersion: 1.0"
+    echo "ok"
+    exit 0
+# Check if we're calling HACheckFailoverConfig
+elif [[ "$*" == *"HACheckFailoverConfig"* ]]; then
+    echo "Check of HA failover configuration successful."
+    echo "ok"
+    exit 0
+# Check if we're calling HACheckConfig
+elif [[ "$*" == *"HACheckConfig"* ]]; then
+    echo "SAP HA configuration check successful."
+    echo "ok"
+    exit 0
+# For any other command, return failure
+else
+    echo "Unknown sapcontrol command: $@" >> /tmp/sapcontrol_calls.log
+    exit 1
+fi

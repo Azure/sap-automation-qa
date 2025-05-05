@@ -9,6 +9,7 @@ defined in roles/ha_scs/tasks/ascs-node-crash.yml. It sets up a temporary test e
 mocks necessary Python modules and commands, and verifies the execution of the tasks.
 """
 
+import os
 import shutil
 from pathlib import Path
 import pytest
@@ -44,6 +45,10 @@ class TestASCSNodeCrash(RolesTestingBaseSCS):
         :yield temp_dir: Path to the temporary test environment.
         :ytype: str
         """
+        os.environ["TASK_NAME"] = "ascs-node-crash"
+        task_counter_file = "/tmp/get_cluster_status_counter_ascs-node-crash"
+        if os.path.exists(task_counter_file):
+            os.remove(task_counter_file)
         temp_dir = self.setup_test_environment(
             role_type="ha_scs",
             ansible_inventory=ansible_inventory,

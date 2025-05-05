@@ -31,22 +31,18 @@
                                         - is_primary_node | bool
                                         - cluster_status_pre is defined
   block:
-    - name:                             "Combine logs from both Nodes"
+    - name:                             "Merge and sort logs from all nodes by timestamp"
+      log_parser:
+        function:                       "merge_logs"
+        ansible_os_family:              "{{ ansible_os_family | upper }}"
+        logs:
+          - "{{ hostvars[primary_node]['var_log_messages_output'].filtered_logs | default('[]') }}"
+          - "{{ hostvars[secondary_node]['var_log_messages_output'].filtered_logs | default('[]') }}"
+      register:                         merged_logs_output
+
+    - name:                             "Set combined logs variable"
       ansible.builtin.set_fact:
-        combined_logs: >-
-                                        {{
-                                          (
-                                            hostvars[primary_node]['var_log_messages_output'].filtered_logs
-                                            | default('[]')
-                                            | from_json
-                                          )
-                                          +
-                                          (
-                                            hostvars[secondary_node]['var_log_messages_output'].filtered_logs
-                                            | default('[]')
-                                            | from_json
-                                          )
-                                        }}
+        combined_logs:                  "{{ merged_logs_output.filtered_logs | from_json }}"
 
     - name:                             "Post Validations: Set test case status"
       delegate_to:                      localhost

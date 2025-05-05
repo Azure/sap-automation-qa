@@ -1,0 +1,117 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+
+---
+# /*---------------------------------------------------------------------------
+# |                     Kill sapstartsrv Process                              |
+# +--------------------------------------------------------------------------*/
+- name:                                 "Test Setup Tasks"
+  ansible.builtin.include_tasks:        "roles/misc/tasks/test-case-setup.yml"
+  run_once:                             true
+
+# /*---------------------------------------------------------------------------
+# |                          Pre Validations                                  |
+# +--------------------------------------------------------------------------*/
+- name:                                 "Pre Validations: SCS Nodes"
+  ansible.builtin.include_tasks:        "roles/misc/tasks/pre-validations-scs.yml"
+
+# /*---------------------------------------------------------------------------
+# |                          Test Execution                                   |
+# +--------------------------------------------------------------------------*/
+- name:                                 "Test Execution: Kill sapstartsrv Process"
+  become:                               true
+  when:                                 pre_validations_status == "PASSED"
+  block:
+    - name:                             "Test Execution: Kill sapstartsrv on ASCS Node"
+      when:                             ansible_hostname == cluster_status_pre.ascs_node
+      become:                           true
+      block:
+        - name:                         "Test Execution: Start timer"
+          ansible.builtin.set_fact:
+            test_execution_start:       "{{ now(utc=true, fmt='%Y-%m-%d %H:%M:%S') }}"
+            test_execution_hostname:    "{{ hostvars[cluster_status_pre.ascs_node].ansible_hostname }}"
+
+        - name:                         "Test Execution: Find sapstartsrv PID"
+          ansible.builtin.shell:        set -o pipefail && pgrep -fl 'ASCS{{ scs_instance_number }}.*sapstartsrv' | grep -v pgrep | awk '{print $1}'
+          environment:
+            PATH:                       /usr/local/bin:/usr/bin:/usr/local/sbin:/usr/sbin:/usr/sap/{{ sap_sid | upper }}/SYS/exe/uc/linuxx86_64:/usr/sap/{{ sap_sid | upper }}/SYS/exe/run:/home/{{ sap_sid | lower }}adm
+            LD_LIBRARY_PATH:            /usr/sap/{{ sap_sid | upper }}/SYS/exe/run:/usr/sap/{{ sap_sid | upper }}/SYS/exe/uc/linuxx86_64
+          register:                     sapstartsrv_pid
+          failed_when:                  sapstartsrv_pid.stdout == ""
+
+        - name:                         "Test Execution: Kill sapstartsrv Process"
+          ansible.builtin.shell:        set -o pipefail && echo '{{ sapstartsrv_pid.stdout_lines | join(" ") }}' | xargs -r kill -9
+          register:                     kill_sapstartsrv_result
+          failed_when:                  false
+
+        - name:                         "Test Execution: Wait for the cluster to be in a stable state"
+          ansible.builtin.wait_for:
+            timeout:                    30
+
+        - name:                         "Test Execution: Find sapstartsrv PID after killing the process"
+          ansible.builtin.shell:        set -o pipefail && pgrep -fl 'ASCS{{ scs_instance_number }}.*sapstartsrv' | grep -v pgrep | awk '{print $1}'
+          environment:
+            PATH:                       /usr/local/bin:/usr/bin:/usr/local/sbin:/usr/sbin:/usr/sap/{{ sap_sid | upper }}/SYS/exe/uc/linuxx86_64:/usr/sap/{{ sap_sid | upper }}/SYS/exe/run:/home/{{ sap_sid | lower }}adm
+            LD_LIBRARY_PATH:            /usr/sap/{{ sap_sid | upper }}/SYS/exe/run:/usr/sap/{{ sap_sid | upper }}/SYS/exe/uc/linuxx86_64
+          register:                     sapstartsrv_pid_after_kill
+          failed_when:                  sapstartsrv_pid_after_kill.stdout == ""
+
+        - name:                         "Test Execution: Validate the process restarted with new PID"
+          ansible.builtin.assert:
+            that:                       sapstartsrv_pid_after_kill.stdout != sapstartsrv_pid.stdout
+            msg:                        "The sapstartsrv process did not restart with a new PID after being killed."
+
+        - name:                         "Test Execution: Validate SCS cluster status"
+          get_cluster_status_scs:
+            sap_sid:                    "{{ sap_sid | lower }}"
+            ansible_os_family:          "{{ ansible_os_family | upper }}"
+          register:                     cluster_status_test_execution
+          retries:                      "{{ default_retries }}"
+          delay:                        "{{ default_delay }}"
+          until: |
+                                        cluster_status_test_execution.ascs_node == cluster_status_pre.ascs_node
+                                        and cluster_status_test_execution.ers_node == cluster_status_pre.ers_node
+
+        - name:                         "Test Execution: Stop timer"
+          ansible.builtin.set_fact:
+            test_execution_end:         "{{ now(utc=true, fmt='%Y-%m-%d %H:%M:%S') }}"
+
+        - name:                         "Set test case message and details"
+          ansible.builtin.set_fact:
+            test_case_message_from_test_case: |
+                                        Old ASCS: {{ cluster_status_pre.ascs_node }}
+                                        New ASCS: {{ cluster_status_test_execution.ascs_node }}
+                                        Old ERS: {{ cluster_status_pre.ers_node }}
+                                        New ERS: {{ cluster_status_test_execution.ers_node }}
+                                        Old PID: {{ sapstartsrv_pid.stdout }}
+                                        New PID: {{ sapstartsrv_pid_after_kill.stdout }}
+            test_case_details_from_test_case: {
+                                        "Pre Validations: Validate SCS cluster status": "{{ cluster_status_pre }}",
+                                        "Pre Validations: CleanUp any failed resource": "{{ cleanup_failed_resource_pre }}",
+                                        "Test Execution: Find sapstartsrv PID": "{{ sapstartsrv_pid }}",
+                                        "Test Execution: Find sapstartsrv PID after killing the process": "{{ sapstartsrv_pid_after_kill }}",
+                                        "Post Validations Result": "{{ cluster_status_test_execution }}",
+                                        }
+# /*---------------------------------------------------------------------------
+# |                          Post Validations                                 |
+# +--------------------------------------------------------------------------*/
+    - name:                             "Post Validations Tasks"
+      ansible.builtin.include_tasks:    "roles/misc/tasks/post-validations.yml"
+
+  rescue:
+    - name:                             "Rescue operation"
+      ansible.builtin.include_tasks:    "roles/misc/tasks/rescue.yml"
+
+- name:                                 "Pre Validations: Test Case Skipped"
+  become:                               true
+  when:                                 pre_validations_status == "FAILED"
+  block:
+    - name:                             "Set test case message and details"
+      ansible.builtin.set_fact:
+        test_case_message_from_test_case: "Pre Validations for SCS cluster status checks failed. Please check the details."
+        test_case_details_from_test_case: {
+                                          "Pre Validations: Validate SCS cluster status": "{{ cluster_status_pre }}",
+                                        }
+
+    - name:                             "Post Validations Tasks"
+      ansible.builtin.include_tasks:    "roles/misc/tasks/post-validations.yml"

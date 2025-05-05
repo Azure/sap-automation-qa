@@ -82,3 +82,33 @@ FUNCTION BlockNetworkTest():
     RETURN "TEST_PASSED"
 END FUNCTION
 ```
+
+## ASCS Block Network Test Case
+
+This test case is a specific instance of blocking network communication, focusing on ASCS-specific scenarios.
+
+### Pre-requisites
+
+- Functioning ASCS/ERS cluster
+- Two active nodes (ASCS and ERS)
+- Cluster services running
+- iptables service accessible
+- STONITH configuration (stonith-enabled=true)
+
+### Additional Steps for ASCS Block Network
+
+- Validate ASCS-specific failover behavior.
+- Ensure proper role changes for ASCS and ERS nodes.
+
+### Pseudocode Extension
+
+```pseudocode
+FUNCTION ASCSBlockNetworkTest():
+    // Reuse BlockNetworkTest pseudocode
+    CALL BlockNetworkTest()
+
+    // Additional ASCS-specific validations
+    validate_ascs_failover_behavior()
+    ensure_ascs_role_changes()
+END FUNCTION
+```

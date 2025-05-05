@@ -112,9 +112,13 @@ DUMMY_CONSTANTS = {
     "CRM_CONFIG_DEFAULTS": {"stonith-enabled": "true"},
     "RESOURCE_DEFAULTS": {
         "REDHAT": {
-            "stonith": {
-                "meta_attributes": {"priority": "10"},
-                "operations": {"monitor": {"timeout": "30"}},
+            "fence_agent": {
+                "meta_attributes": {"pcmk_delay_max": "15"},
+                "operations": {"monitor": {"timeout": ["700", "700s"]}},
+            },
+            "sbd_stonith": {
+                "meta_attributes": {"pcmk_delay_max": "15"},
+                "operations": {"monitor": {"timeout": ["30", "30s"]}},
             },
             "hana": {"meta_attributes": {"clone-max": "2"}},
         }

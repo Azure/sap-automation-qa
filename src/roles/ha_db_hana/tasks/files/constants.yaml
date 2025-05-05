@@ -8,7 +8,7 @@
 # cibadmin --query --scope crm_config
 CRM_CONFIG_DEFAULTS:
   cluster-infrastructure:             corosync
-  priority-fencing-delay:             '30'
+  priority-fencing-delay:             ['30', '30s']
   stonith-action:                     reboot
   stonith-enabled:                    'true'
   concurrent-fencing:                 'true'
@@ -20,7 +20,7 @@ CRM_CONFIG_DEFAULTS:
 # cibadmin --query --scope op_defaults
 OP_DEFAULTS:
   record-pending:                     'true'
-  timeout:                            '600'
+  timeout:                            ['600', '600s']
 
 # === Resource Defaults ===
 # cibadmin --query --scope rsc_defaults
@@ -43,14 +43,14 @@ CONSTRAINTS:
 # Specify the properties that are different for different OS versions
 VALID_CONFIGS:
   REDHAT:
-    priority-fencing-delay:           '15s'
+    priority-fencing-delay:           ['15', '15s']
   SUSE: {}
   AFA:
     have-watchdog:                    "false"
-    stonith-timeout:                  "900s"
+    stonith-timeout:                  ["900s", "900"]
   ISCSI:
     have-watchdog:                    "true"
-    stonith-timeout:                  "144s"
+    stonith-timeout:                  ["144", "144s"]
 
 
 # === Resource Defaults ===
@@ -62,26 +62,26 @@ RESOURCE_DEFAULTS:
         pcmk_delay_max:                 "15"
         pcmk_monitor_retries:           "4"
         pcmk_action_limit:              "3"
-        pcmk_reboot_timeout:            "900"
-        power_timeout:                  "240"
-        pcmk_monitor_timeout:           "120"
+        pcmk_reboot_timeout:            ["900", "900s"]
+        power_timeout:                  ["240", "240s"]
+        pcmk_monitor_timeout:           ["120", "120s"]
       operations:
         monitor:
-          interval:                     "3600"
-          timeout:                      "120"
+          interval:                     ["3600", "3600s"]
+          timeout:                      ["120", "120s"]
 
     sbd_stonith:
       instance_attributes:
         pcmk_delay_max:                 "15"
         pcmk_monitor_retries:           "4"
         pcmk_action_limit:              "3"
-        pcmk_reboot_timeout:            "900"
-        power_timeout:                  "240"
-        pcmk_monitor_timeout:           "120"
+        pcmk_reboot_timeout:            ["900", "900s"]
+        power_timeout:                  ["240", "240s"]
+        pcmk_monitor_timeout:           ["120", "120s"]
       operations:
         monitor:
-          interval:                     "600"
-          timeout:                      "15"
+          interval:                     ["600", "600s"]
+          timeout:                      ["15", "15s"]
 
     topology:
       meta_attributes:
@@ -90,14 +90,14 @@ RESOURCE_DEFAULTS:
         interleave:                       "true"
       operations:
         monitor:
-          interval:                       "10"
-          timeout:                        "600"
+          interval:                       ["10", "10s"]
+          timeout:                        ["600", "600s"]
         start:
-          interval:                       "0"
-          timeout:                        "600"
+          interval:                       ["0", "0s"]
+          timeout:                        ["600", "600s"]
         stop:
-          interval:                       "0"
-          timeout:                        "300"
+          interval:                       ["0", "0s"]
+          timeout:                        ["300", "300s"]
 
     hana:
       meta_attributes:
@@ -113,24 +113,24 @@ RESOURCE_DEFAULTS:
         AUTOMATED_REGISTER:               "true"
       operations:
         start:
-          interval:                       "0"
-          timeout:                        "3600"
+          interval:                       ["0", "0s"]
+          timeout:                        ["3600", "3600s"]
         stop:
-          interval:                       "0"
-          timeout:                        "3600"
+          interval:                       ["0", "0s"]
+          timeout:                        ["3600", "3600s"]
         promote:
-          interval:                       "0"
-          timeout:                        "3600"
+          interval:                       ["0", "0s"]
+          timeout:                        ["3600", "3600s"]
         monitor:
-          timeout:                        "700"
+          timeout:                        ["700", "700s"]
 
     ipaddr:
       meta_attributes:
         target-role:                      "Started"
       operations:
         monitor:
-          interval:                       "10"
-          timeout:                        "20"
+          interval:                       ["10", "10s"]
+          timeout:                        ["20", "20s"]
 
     filesystem:
       meta_attributes:
@@ -138,14 +138,14 @@ RESOURCE_DEFAULTS:
         interleave:                       "true"
       operations:
         monitor:
-          interval:                       "120"
-          timeout:                        "120"
+          interval:                       ["120", "120s"]
+          timeout:                        ["120", "120s"]
         start:
-          interval:                       "0"
-          timeout:                        "120"
+          interval:                       ["0", "0s"]
+          timeout:                        ["120", "120s"]
         stop:
-          interval:                       "0"
-          timeout:                        "120"
+          interval:                       ["0", "0s"]
+          timeout:                        ["120", "120s"]
 
     azurelb:
       meta_attributes:
@@ -162,19 +162,19 @@ RESOURCE_DEFAULTS:
         pcmk_monitor_timeout:           "120"
       operations:
         monitor:
-          interval:                     "3600"
+          interval:                     ["3600", "3600s"]
 
     sbd_stonith:
       instance_attributes:
         pcmk_monitor_retries:           "4"
         pcmk_action_limit:              "3"
-        pcmk_reboot_timeout:            "900"
-        power_timeout:                  "240"
-        pcmk_monitor_timeout:           "120"
+        pcmk_reboot_timeout:            ["900", "900s"]
+        power_timeout:                  ["240", "240s"]
+        pcmk_monitor_timeout:           ["120", "120s"]
       operations:
         monitor:
-          interval:                     "600"
-          timeout:                      "15"
+          interval:                     ["600", "600s"]
+          timeout:                      ["15", "15s"]
 
     topology:
       meta_attributes:
@@ -185,20 +185,20 @@ RESOURCE_DEFAULTS:
         failure-timeout:                  "120s"
       operations:
         monitor:
-          interval:                       "10"
-          timeout:                        "600"
+          interval:                       ["10", "10s"]
+          timeout:                        ["600", "600s"]
         start:
-          interval:                       "0"
-          timeout:                        "600"
+          interval:                       ["0", "0s"]
+          timeout:                        ["600", "600s"]
         stop:
-          interval:                       "0"
-          timeout:                        "300"
+          interval:                       ["0", "0s"]
+          timeout:                        ["300", "300s"]
         methods:
-          timeout:                        "5"
-          interval:                       "0"
+          timeout:                        ["5", "5s"]
+          interval:                       ["0", "0s"]
         reload:
-          timeout:                        "5"
-          interval:                       "0"
+          timeout:                        ["5", "5s"]
+          interval:                       ["0", "0s"]
 
     hana:
       meta_attributes:
@@ -214,30 +214,30 @@ RESOURCE_DEFAULTS:
         AUTOMATED_REGISTER:               "true"
       operations:
         start:
-          interval:                       "0"
-          timeout:                        "3600"
+          interval:                       ["0", "0s"]
+          timeout:                        ["3600", "3600s"]
         stop:
-          interval:                       "0"
-          timeout:                        "3600"
+          interval:                       ["0", "0s"]
+          timeout:                        ["3600", "3600s"]
         promote:
-          interval:                       "0"
-          timeout:                        "3600"
+          interval:                       ["0", "0s"]
+          timeout:                        ["3600", "3600s"]
         monitor:
-          timeout:                        "700"
+          timeout:                        ["700", "700s"]
 
     ipaddr:
       meta_attributes:
         target-role:                      "Started"
       operations:
         monitor:
-          interval:                       "10"
-          timeout:                        "20"
+          interval:                       ["10", "10s"]
+          timeout:                        ["20", "20s"]
         start:
-          interval:                       "0"
-          timeout:                        "20"
+          interval:                       ["0", "0s"]
+          timeout:                        ["20", "20s"]
         stop:
-          interval:                       "0"
-          timeout:                        "20"
+          interval:                       ["0", "0s"]
+          timeout:                        ["20", "20s"]
 
     filesystem:
       meta_attributes:
@@ -245,28 +245,28 @@ RESOURCE_DEFAULTS:
         interleave:                       "true"
       operations:
         monitor:
-          interval:                       "20"
-          timeout:                        "120"
+          interval:                       ["20", "20s"]
+          timeout:                        ["120", "120s"]
         start:
-          interval:                       "0"
-          timeout:                        "60"
+          interval:                       ["0", "0s"]
+          timeout:                        ["60", "60s"]
         stop:
-          interval:                       "0"
-          timeout:                        "60"
+          interval:                       ["0", "0s"]
+          timeout:                        ["60", "60s"]
 
     azurelb:
       meta_attributes:
         resource-stickiness:              "0"
       operations:
         monitor:
-          interval:                       "10"
-          timeout:                        "20"
+          interval:                       ["10", "10s"]
+          timeout:                        ["20", "20s"]
         start:
-          interval:                       "0"
-          timeout:                        "20"
+          interval:                       ["0", "0s"]
+          timeout:                        ["20", "20s"]
         stop:
-          interval:                       "0"
-          timeout:                        "20"
+          interval:                       ["0", "0s"]
+          timeout:                        ["20", "20s"]
 
 
 # === OS Parameters ===
@@ -291,7 +291,7 @@ GLOBAL_INI:
 
   REDHAT:
     provider:                           "SAPHanaSR"
-    path:                               "/hana/shared/myHooks"
+    path:                               ["/usr/share/SAPHanaSR/srHook", "/hana/shared/myHooks"]
     execution_order:                    "1"
 
 
@@ -301,7 +301,6 @@ AZURE_LOADBALANCER:
   PROBES:
     probe_threshold:                    2
     interval_in_seconds:                5
-    number_of_probes:                   2
 
   RULES:
     idle_timeout_in_minutes:            30

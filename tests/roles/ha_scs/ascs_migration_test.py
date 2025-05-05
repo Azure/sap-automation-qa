@@ -9,6 +9,7 @@ defined in roles/ha_scs/tasks/ascs-migration.yml. It sets up a temporary test en
 mocks necessary Python modules and commands, and verifies the execution of the tasks.
 """
 
+import os
 import shutil
 from pathlib import Path
 import pytest
@@ -45,7 +46,13 @@ class TestASCSMigration(RolesTestingBaseSCS):
         :ytype: str
         """
 
+        os.environ["TASK_NAME"] = "ascs-migration"
+        task_counter_file = "/tmp/get_cluster_status_counter_ascs-migration"
+        if os.path.exists(task_counter_file):
+            os.remove(task_counter_file)
+
         commands = [
+            {"name": "get_sap_instance_resource_id", "SUSE": "cibadmin --query --scope resources"},
             {
                 "name": "ascs_resource_migration_cmd",
                 "SUSE": "crm resource migrate SAP_ASCS00_ascs00 scs02",
@@ -67,6 +74,7 @@ class TestASCSMigration(RolesTestingBaseSCS):
                 "project/library/send_telemetry_data",
                 "bin/crm_resource",
                 "bin/crm",
+                "bin/cibadmin",
             ],
             extra_vars_override={"commands": commands, "node_tier": "scs"},
         )

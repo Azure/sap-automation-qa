@@ -1,0 +1,42 @@
+#!/usr/bin/python3
+# -*- coding: utf-8 -*-
+
+"""
+Mock implementation of the jmespath module for testing purposes.
+"""
+
+def search(expression, data):
+    """
+    Mock implementation of jmespath.search that returns a default value for any expression.
+    
+    :param expression: JMESPath expression to evaluate
+    :param data: Data to search
+    :return: Empty list as a safe default value
+    """
+    return []
+
+def compile(expression):
+    """
+    Mock implementation of jmespath.compile.
+    
+    :param expression: JMESPath expression to compile
+    :return: A callable object with a search method
+    """
+    class Expression:
+        def search(self, data):
+            return []
+    
+    return Expression()
+
+def options(**kwargs):
+    """
+    Mock implementation of jmespath.options.
+    
+    :param kwargs: Option parameters
+    :return: Options object
+    """
+    class Options:
+        def __init__(self, **kwargs):
+            self.options = kwargs
+    
+    return Options(**kwargs)

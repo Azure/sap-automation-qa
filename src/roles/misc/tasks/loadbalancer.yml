@@ -1,0 +1,60 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+
+# /*---------------------------------------------------------------------------
+# |                          Azure Load Balancer Validation                   |
+# +--------------------------------------------------------------------------*/
+- name:                                 "Azure LB Validation"
+  run_once:                             true
+  block:
+    - name:                             "Test Setup Tasks"
+      ansible.builtin.include_tasks:    "roles/misc/tasks/test-case-setup.yml"
+
+    - name:                             "Pre Validations: Validate the Azure Load Balancer config"
+      become:                           true
+      block:
+        - name:                         "Retrieve Subscription ID and Resource Group Name"
+          ansible.builtin.uri:
+            url:                        http://169.254.169.254/metadata/instance?api-version=2021-02-01
+            use_proxy:                  false
+            headers:
+              Metadata:                 true
+          register:                     azure_instance_metadata
+
+        - name:                         "Get the Azure Load Balancer IP"
+          ansible.builtin.uri:
+            url:                        http://169.254.169.254:80/metadata/loadbalancer?api-version=2020-10-01
+            use_proxy:                  false
+            headers:
+              Metadata:                 true
+          register:                     azure_loadbalancer_metadata
+
+        - name:                         "Azure Load Balancer check for the DB nodes"
+          delegate_to:                  localhost
+          get_azure_lb:
+            subscription_id:            "{{ azure_instance_metadata.json.compute.subscriptionId }}"
+            region:                     "{{ azure_instance_metadata.json.compute.location }}"
+            inbound_rules:              "{{ azure_loadbalancer_metadata.json.loadbalancer.inboundRules }}"
+            constants:                  "{{ all_constants }}"
+            msi_client_id:              "{{ user_assigned_identity_client_id | default('') }}"
+          register:                     test_result
+
+        - name:                         "Set the test case status"
+          ansible.builtin.set_fact:
+            test_case_name:             "{{ item.name }}: {{ virtual_host }}"
+            test_case_message:          "{{ test_result.message }}"
+            test_case_details:          "{{ test_result.details }}"
+            test_case_hostname:         "{{ virtual_host }}"
+            test_case_status:           "{{ test_result.status }}"
+
+      rescue:
+        - name:                         "Test case failed"
+          ansible.builtin.set_fact:
+              test_case_name:           "{{ item.name }}: {{ virtual_host }}"
+              test_case_status:         "FAILED"
+              test_case_details:        "{{ test_result }}"
+              test_case_message:        "{{ ansible_failed_result }}"
+              test_case_hostname:       "{{ virtual_host }}"
+
+    - name:                             "Post Telemetry Data"
+      ansible.builtin.include_tasks:    "roles/misc/tasks/post-telemetry-data.yml"

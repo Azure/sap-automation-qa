@@ -1,0 +1,175 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+
+---
+# /*---------------------------------------------------------------------------
+# |                  Block Network Communication Test                          |
+# +--------------------------------------------------------------------------*/
+- name:                                 "Test Setup Tasks"
+  ansible.builtin.include_tasks:        "roles/misc/tasks/test-case-setup.yml"
+  run_once:                             true
+
+# /*---------------------------------------------------------------------------
+# |                          Pre Validations                                  |
+# +--------------------------------------------------------------------------*/
+- name:                                 "Pre Validations: SCS Nodes"
+  ansible.builtin.include_tasks:        "roles/misc/tasks/pre-validations-scs.yml"
+
+# /*---------------------------------------------------------------------------
+# |                          Test Execution                                   |
+# +--------------------------------------------------------------------------*/
+- name:                                 "Test Execution: Block Network Communication"
+  become:                               true
+  when:                                 pre_validations_status == "PASSED"
+  block:
+    - name:                             "Test Execution: Block Network on ASCS Node"
+      when:                             ansible_hostname == cluster_status_pre.ascs_node
+      become:                           true
+      block:
+        - name:                         "Test Execution: Start timer"
+          ansible.builtin.set_fact:
+            test_execution_start:       "{{ now(utc=true, fmt='%Y-%m-%d %H:%M:%S') }}"
+            test_execution_hostname:    "{{ hostvars[cluster_status_pre.ascs_node].ansible_hostname }}"
+
+        - name:                         "Test Execution: Get peer ERS node IP address"
+          ansible.builtin.set_fact:
+            ers_ip:                     "{{ hostvars[cluster_status_pre.ers_node].ansible_host }}"
+          register:                     ers_ip_result
+
+        - name:                         "Test Execution: Block network communication"
+          ansible.builtin.shell: |
+                                        iptables -A INPUT -s {{ ers_ip }} -j DROP;
+                                        iptables -A OUTPUT -d {{ ers_ip }} -j DROP
+          register:                     block_network_result
+
+        - name:                         "Test Execution: Wait for the cluster to be in a stable state"
+          ansible.builtin.wait_for:
+            timeout:                    "{{ default_timeout }}"
+
+
+    - name:                             "Test Execution: Check node status on primary and secondary"
+      block:
+        - name:                         "Test Execution: Check node connectivity from controller"
+          delegate_to:                  localhost
+          ansible.builtin.shell: |
+                                        for i in $(seq 1 30); do
+                                          if ! nc -zv -w1 {{ ansible_host }} {{ sap_port_to_ping }}; then
+                                            echo "Connection failed on attempt $i"
+                                            exit 1
+                                          fi
+                                          sleep 1
+                                        done
+          register:                     node_status
+          ignore_errors:                true
+
+        - name:                         "Set Node Status Facts"
+          ansible.builtin.set_fact:
+            ascs_node_down:             "{{ hostvars[cluster_status_pre.ascs_node].node_status is failed }}"
+            ers_node_down:              "{{ hostvars[cluster_status_pre.ers_node].node_status is failed }}"
+
+        - name:                         "Fail if both nodes are unavailable"
+          ansible.builtin.fail:
+            msg: |
+                                        "Error: Both ASCS and ERS nodes are unreachable.
+                                        This may be caused by a fence race condition triggered during the block network
+                                        test case execution, where both nodes potentially fenced each other.
+                                        Please verify if the priority-fencing-delay cluster property is configured.
+                                        If not, refer to the SAP on Azure high availability documentation for
+                                        instructions on how to configure it."
+          when:                         ascs_node_down and ers_node_down
+
+    - name:                             "Test Execution: Monitor failover on ERS Node"
+      when:
+                                        - ansible_hostname == cluster_status_pre.ers_node
+                                        - ascs_node_down and not ers_node_down
+      become:                           true
+      block:
+        - name:                         "Test Execution: Validate SCS cluster status"
+          get_cluster_status_scs:
+            sap_sid:                    "{{ sap_sid | lower }}"
+            ansible_os_family:          "{{ ansible_os_family | upper }}"
+          register:                     cluster_status_test_execution
+          retries:                      "{{ default_retries }}"
+          delay:                        "{{ default_delay }}"
+          until: |
+                                        cluster_status_test_execution.ascs_node == cluster_status_pre.ers_node
+                                        and cluster_status_test_execution.ers_node == cluster_status_pre.ascs_node
+
+    - name:                             "Test Execution: Restore Network on ASCS Node"
+      when:
+                                        - ansible_hostname == cluster_status_pre.ascs_node
+                                        - not ascs_node_down and ers_node_down
+      become:                           true
+      block:
+        - name:                         "Test Execution: Restore network communication"
+          ansible.builtin.shell: |
+                                        iptables -D INPUT -s {{ ers_ip }} -j DROP;
+                                        iptables -D OUTPUT -d {{ ers_ip }} -j DROP
+          register:                     unblock_network_result
+
+    - name:                             "Test Execution: Restore Network on ASCS Node"
+      when:                             ansible_hostname == cluster_status_pre.ascs_node
+      become:                           true
+      block:
+        - name:                         "Test Execution: Wait for the cluster to be in a stable state"
+          ansible.builtin.wait_for:
+            timeout:                    "{{ ascs_stonith_timeout }}"
+
+        - name:                         "Test Execution: Validate SCS cluster status"
+          get_cluster_status_scs:
+            sap_sid:                    "{{ sap_sid | lower }}"
+            ansible_os_family:          "{{ ansible_os_family | upper }}"
+          register:                     cluster_status_test_execution
+          retries:                      "{{ default_retries }}"
+          delay:                        "{{ default_delay }}"
+          until: |
+                                        cluster_status_test_execution.ascs_node == cluster_status_pre.ascs_node
+                                        and cluster_status_test_execution.ers_node == cluster_status_pre.ers_node
+
+        - name:                         "Test Execution: Cleanup resources"
+          ansible.builtin.command:      crm_resource --cleanup
+          register:                     cleanup_failed_resource_test_execution
+          changed_when:                 cleanup_failed_resource_test_execution.rc == 0
+
+        - name:                         "Test Execution: Stop timer"
+          ansible.builtin.set_fact:
+            test_execution_end:         "{{ now(utc=true, fmt='%Y-%m-%d %H:%M:%S') }}"
+
+        - name:                         "Set test case message and details"
+          ansible.builtin.set_fact:
+            test_case_message_from_test_case: |
+                                        Old ASCS: {{ cluster_status_pre.ascs_node }}
+                                        New ASCS: {{ cluster_status_test_execution.ascs_node }}
+                                        Old ERS: {{ cluster_status_pre.ers_node }}
+                                        New ERS: {{ cluster_status_test_execution.ers_node }}
+            test_case_details_from_test_case: {
+                                        "Pre Validations: Validate SCS cluster status": "{{ cluster_status_pre }}",
+                                        "Pre Validations: CleanUp any failed resource": "{{ cleanup_failed_resource_pre }}",
+                                        "Test Execution: Block network": "{{ block_network_result }}",
+                                        "Test Execution: Unblock network": "{{ unblock_network_result }}",
+                                        "Test Execution: Cleanup resources": "{{ cleanup_failed_resource_test_execution }}",
+                                        "Post Validations Result": "{{ cluster_status_test_execution }}",
+                                        }
+# /*---------------------------------------------------------------------------
+# |                          Post Validations                                 |
+# +--------------------------------------------------------------------------*/
+    - name:                             "Post Validations Tasks"
+      ansible.builtin.include_tasks:    "roles/misc/tasks/post-validations.yml"
+
+  rescue:
+    - name:                             "Rescue operation"
+      ansible.builtin.include_tasks:    "roles/misc/tasks/rescue.yml"
+
+- name:                                 "Pre Validations: Test Case Skipped"
+  become:                               true
+  when:                                 pre_validations_status == "FAILED"
+  block:
+    - name:                             "Set test case message and details"
+      ansible.builtin.set_fact:
+        test_case_message_from_test_case: "Pre Validations for SCS cluster status checks failed. Please check the details."
+        test_case_details_from_test_case: {
+                                          "Pre Validations: Validate SCS cluster status": "{{ cluster_status_pre }}",
+                                        }
+
+    - name:                             "Post Validations Tasks"
+      ansible.builtin.include_tasks:    "roles/misc/tasks/post-validations.yml"

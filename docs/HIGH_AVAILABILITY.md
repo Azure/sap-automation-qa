@@ -255,6 +255,13 @@ platform: "HANA"
 # - ANF (for Azure NetApp Files)
 # - AFS (for Azure File Share)
 NFS_provider: "ANF"  # or "AFS"
+
+# If you're using a user-assigned managed identity (as explained in "Azure RBAC" section above):
+#  - Enter the client ID of that identity here
+#  - You can find this ID in Azure Portal → Managed Identities → Your Identity → Properties → Client ID
+# If you're using system-assigned managed identity instead:
+#  - Leave this blank or set to empty string ""
+user_assigned_identity_client_id: "000000-00000-00000-00000-000000"
 ```
 
 2.2.3. Credential Files

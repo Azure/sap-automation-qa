@@ -86,7 +86,7 @@ class BaseClusterStatusChecker(SapAutomationQA):
                 self.result["message"] = f"Node {node.attrib['name']} is not online"
                 self.log(logging.WARNING, self.result["message"])
 
-    def _process_node_attributes(self, node_attributes: ET.Element) -> Dict[str, Any]:
+    def _process_node_attributes(self, cluster_status_xml: ET.Element) -> Dict[str, Any]:
         """
         Abstract method to process node attributes.
 
@@ -115,7 +115,7 @@ class BaseClusterStatusChecker(SapAutomationQA):
                 self.log(logging.INFO, "Cluster status retrieved")
 
                 self._validate_cluster_basic_status(cluster_status_xml)
-                self._process_node_attributes(cluster_status_xml.find("node_attributes"))
+                self._process_node_attributes(cluster_status_xml=cluster_status_xml)
 
             if not self._is_cluster_stable():
                 self.result["message"] = "Pacemaker cluster isn't stable"

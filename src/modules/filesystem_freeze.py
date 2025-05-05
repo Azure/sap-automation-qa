@@ -21,28 +21,37 @@ DOCUMENTATION = r"""
 module: filesystem_freeze
 short_description: Freezes the filesystem mounted on /hana/shared
 description:
-    - This module freezes (mounts as read-only) the filesystem mounted on /hana/shared
-    - Identifies the device that is mounted on /hana/shared automatically
-    - Only proceeds with the operation if NFS provider is Azure NetApp Files (ANF)
+    - This module freezes (mounts as read-only) the filesystem mounted on /hana/shared.
+    - Identifies the device that is mounted on /hana/shared automatically.
+    - Only proceeds with the operation if the NFS provider is Azure NetApp Files (ANF).
+    - Ensures the operation is skipped for non-ANF providers.
 options:
     nfs_provider:
         description:
-            - The NFS provider type
-            - Module only executes if this is set to "ANF"
+            - The NFS provider type.
+            - Module only executes if this is set to "ANF".
+        type: str
+        required: true
+    database_sid:
+        description:
+            - The SAP HANA database System ID (SID).
+            - Used to identify the specific /hana/shared/<SID> mount point.
         type: str
         required: true
 author:
     - Microsoft Corporation
 notes:
-    - This module requires root permissions to execute filesystem commands
-    - Uses /proc/mounts to identify the filesystem device
-    - Only works with Azure NetApp Files as the NFS provider
+    - This module requires root permissions to execute filesystem commands.
+    - Uses /proc/mounts to identify the filesystem device.
+    - Only works with Azure NetApp Files as the NFS provider.
+    - Skips the operation if the NFS provider is not ANF.
 """
 
 EXAMPLES = r"""
 - name: Freeze the filesystem on /hana/shared
   filesystem_freeze:
     nfs_provider: "ANF"
+    database_sid: "HDB"
   register: freeze_result
 
 - name: Display freeze operation results
@@ -52,30 +61,36 @@ EXAMPLES = r"""
 - name: Skip freezing for non-ANF providers
   filesystem_freeze:
     nfs_provider: "Other"
+    database_sid: "HDB"
   register: freeze_result
 """
 
 RETURN = r"""
 changed:
-    description: Whether the module made any changes
+    description: Whether the module made any changes.
     returned: always
     type: bool
     sample: true
 message:
-    description: Status message describing the result
+    description: Status message describing the result.
     returned: always
     type: str
     sample: "The file system (/hana/shared) was successfully mounted read-only."
 status:
-    description: Status code of the operation
+    description: Status code of the operation.
     returned: always
     type: str
     sample: "SUCCESS"
 details:
-    description: Command output from the freeze operation
+    description: Command output from the freeze operation.
     returned: on success
     type: str
-    sample: "filesystem /dev/mapper/vg_hana-shared successfully frozen"
+    sample: "filesystem /dev/mapper/vg_hana-shared successfully frozen."
+mount_point:
+    description: The mount point that was frozen.
+    returned: on success
+    type: str
+    sample: "/hana/shared"
 """
 
 

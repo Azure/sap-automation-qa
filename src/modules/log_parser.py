@@ -17,49 +17,64 @@ except ImportError:
 DOCUMENTATION = r"""
 ---
 module: log_parser
-short_description: Parses system logs for SAP-related keywords
+short_description: Parses and merges system logs for SAP-related keywords
 description:
-    - This module parses system log files for specific SAP and cluster-related keywords
-    - Filters log entries within a specified time range
-    - Supports different log formats based on operating system family
-    - Returns filtered log entries containing predefined or custom keywords
+    - This module parses system log files for specific SAP and cluster-related keywords.
+    - Filters log entries within a specified time range.
+    - Supports merging multiple log files and sorting them chronologically.
+    - Handles different log formats based on the operating system family.
+    - Returns filtered or merged log entries containing predefined or custom keywords.
 options:
     start_time:
         description:
-            - Start time for log filtering in format "YYYY-MM-DD HH:MM:SS"
+            - Start time for log filtering in format "YYYY-MM-DD HH:MM:SS".
         type: str
-        required: true
+        required: false
     end_time:
         description:
-            - End time for log filtering in format "YYYY-MM-DD HH:MM:SS"
+            - End time for log filtering in format "YYYY-MM-DD HH:MM:SS".
         type: str
-        required: true
+        required: false
     log_file:
         description:
-            - Path to the log file to be parsed
-            - Default is system messages log
+            - Path to the log file to be parsed.
+            - Default is system messages log.
         type: str
         required: false
         default: /var/log/messages
     keywords:
         description:
-            - Additional keywords to filter logs by
-            - These are combined with the predefined SAP and Pacemaker keywords
+            - Additional keywords to filter logs by.
+            - These are combined with the predefined SAP and Pacemaker keywords.
         type: list
         required: false
         default: []
     ansible_os_family:
         description:
-            - Operating system family (REDHAT, SUSE, etc.)
-            - Used to determine the appropriate log timestamp format
+            - Operating system family (e.g., REDHAT, SUSE).
+            - Used to determine the appropriate log timestamp format.
         type: str
         required: true
+    function:
+        description:
+            - Specifies the function to execute: "parse_logs" or "merge_logs".
+        type: str
+        required: true
+        choices: ["parse_logs", "merge_logs"]
+    logs:
+        description:
+            - List of log entries or JSON strings to merge and sort.
+            - Used only when the function is set to "merge_logs".
+        type: list
+        required: false
+        default: []
 author:
     - Microsoft Corporation
 notes:
-    - Predefined keyword sets are included for Pacemaker and SAP system logs
-    - Log entries are filtered by both time range and keyword presence
-    - All entries containing backslashes or quotes will have these characters removed
+    - Predefined keyword sets are included for Pacemaker and SAP system logs.
+    - Log entries are filtered by both time range and keyword presence.
+    - All entries containing backslashes or quotes will have these characters removed.
+    - Merging logs requires proper timestamp formats based on the OS family.
 requirements:
     - python >= 3.6
 """
@@ -77,52 +92,53 @@ EXAMPLES = r"""
   debug:
     var: parse_result.filtered_logs
 
-- name: Parse custom log file with additional keywords
+- name: Merge and sort multiple log files
   log_parser:
-    start_time: "2023-01-01 00:00:00"
-    end_time: "2023-01-02 00:00:00"
-    log_file: "/var/log/pacemaker.log"
-    keywords:
-      - "SAPHana_HDB_00"
-      - "error"
-      - "failure"
-    ansible_os_family: "SUSE"
-  register: custom_logs
+    function: "merge_logs"
+    logs:
+      - "[\"Jan 01 12:34:56 server1 pacemaker-controld: Notice: Resource SAPHana_HDB_00 started\"]"
+      - "[\"Jan 01 12:35:00 server2 pacemaker-controld: Notice: Resource SAPHana_HDB_01 started\"]"
+    ansible_os_family: "REDHAT"
+  register: merge_result
+
+- name: Display merged log entries
+  debug:
+    var: merge_result.filtered_logs
 """
 
 RETURN = r"""
 status:
-    description: Status of the log parsing operation
+    description: Status of the log parsing or merging operation.
     returned: always
     type: str
     sample: "SUCCESS"
 message:
-    description: Error message in case of failure
+    description: Error message in case of failure.
     returned: on failure
     type: str
-    sample: "Could not open file /var/log/messages: No such file or directory"
+    sample: "Could not open file /var/log/messages: No such file or directory."
 start_time:
-    description: Start time used for filtering
-    returned: always
+    description: Start time used for filtering.
+    returned: when function is "parse_logs".
     type: str
     sample: "2023-01-01 00:00:00"
 end_time:
-    description: End time used for filtering
-    returned: always
+    description: End time used for filtering.
+    returned: when function is "parse_logs".
     type: str
     sample: "2023-01-02 00:00:00"
 log_file:
-    description: Path to the log file that was parsed
-    returned: always
+    description: Path to the log file that was parsed.
+    returned: when function is "parse_logs".
     type: str
     sample: "/var/log/messages"
 keywords:
-    description: List of keywords used for filtering
-    returned: always
+    description: List of keywords used for filtering.
+    returned: when function is "parse_logs".
     type: list
     sample: ["SAPHana", "pacemaker-fenced", "reboot"]
 filtered_logs:
-    description: JSON string containing filtered log entries
+    description: JSON string containing filtered or merged log entries.
     returned: always
     type: str
     sample: "[\"Jan 01 12:34:56 server1 pacemaker-controld: Notice: Resource SAPHana_HDB_00 started\"]"
@@ -180,6 +196,7 @@ class LogParser(SapAutomationQA):
         end_time: str,
         log_file: str,
         ansible_os_family: str,
+        logs: list = None,
     ):
         super().__init__()
         self.start_time = start_time
@@ -187,6 +204,7 @@ class LogParser(SapAutomationQA):
         self.log_file = log_file
         self.keywords = list(PCMK_KEYWORDS | SYS_KEYWORDS)
         self.ansible_os_family = ansible_os_family
+        self.logs = logs if logs else []
         self.result.update(
             {
                 "start_time": start_time,
@@ -196,6 +214,62 @@ class LogParser(SapAutomationQA):
                 "filtered_logs": [],
             }
         )
+
+    def merge_logs(self) -> None:
+        """
+        Merges multiple log files into a single list for processing.
+        """
+        try:
+            all_logs = []
+            parsed_logs = []
+            if not self.logs:
+                self.result.update(
+                    {
+                        "filtered_logs": json.dumps([]),
+                        "status": TestStatus.SUCCESS.value,
+                        "message": "No logs provided to merge",
+                    }
+                )
+                return
+
+            for logs in self.logs:
+                if isinstance(logs, str):
+                    try:
+                        parsed = json.loads(logs)
+                        parsed_logs.extend(parsed)
+                    except json.JSONDecodeError:
+                        parsed_logs.append(logs)
+                else:
+                    parsed_logs.extend(logs)
+
+            for log in parsed_logs:
+                try:
+                    if self.ansible_os_family == "REDHAT":
+                        timestamp_str = " ".join(log.split()[:3])
+                        log_time = datetime.strptime(timestamp_str, "%b %d %H:%M:%S")
+                        log_time = log_time.replace(year=datetime.now().year)
+                        all_logs.append((log_time, log))
+
+                    elif self.ansible_os_family == "SUSE":
+                        timestamp_str = log.split(".")[0]
+                        log_time = datetime.strptime(timestamp_str, "%Y-%m-%dT%H:%M:%S")
+                        all_logs.append((log_time, log))
+
+                    else:
+                        all_logs.append((datetime.min, log))
+                except (ValueError, IndexError):
+                    all_logs.append((datetime.min, log))
+
+            sorted_logs = [log for _, log in sorted(all_logs, key=lambda x: x[0])]
+
+            self.result.update(
+                {
+                    "filtered_logs": json.dumps(sorted_logs),
+                    "status": TestStatus.SUCCESS.value,
+                }
+            )
+        except Exception as ex:
+            self.handle_error(ex)
 
     def parse_logs(self) -> None:
         """
@@ -245,22 +319,28 @@ def run_module() -> None:
     Sets up and runs the log parsing module with the specified arguments.
     """
     module_args = dict(
-        start_time=dict(type="str", required=True),
-        end_time=dict(type="str", required=True),
+        start_time=dict(type="str", required=False),
+        end_time=dict(type="str", required=False),
         log_file=dict(type="str", required=False, default="/var/log/messages"),
         keywords=dict(type="list", required=False, default=[]),
         ansible_os_family=dict(type="str", required=True),
+        function=dict(type="str", required=True, choices=["parse_logs", "merge_logs"]),
+        logs=dict(type="list", required=False, default=[]),
     )
 
     module = AnsibleModule(argument_spec=module_args, supports_check_mode=True)
 
     parser = LogParser(
-        start_time=module.params["start_time"],
-        end_time=module.params["end_time"],
-        log_file=module.params["log_file"],
+        start_time=module.params.get("start_time"),
+        end_time=module.params.get("end_time"),
+        log_file=module.params.get("log_file"),
         ansible_os_family=module.params["ansible_os_family"],
+        logs=module.params.get("logs"),
     )
-    parser.parse_logs()
+    if module.params["function"] == "parse_logs":
+        parser.parse_logs()
+    elif module.params["function"] == "merge_logs":
+        parser.merge_logs()
 
     result = parser.get_result()
     module.exit_json(**result)

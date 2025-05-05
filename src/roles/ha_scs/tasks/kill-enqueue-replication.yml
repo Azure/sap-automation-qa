@@ -1,0 +1,117 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+
+---
+# /*---------------------------------------------------------------------------
+# |                     Kill Enqueue Replication Server Process               |
+# +--------------------------------------------------------------------------*/
+- name:                                 "Test Setup Tasks"
+  ansible.builtin.include_tasks:        "roles/misc/tasks/test-case-setup.yml"
+  run_once:                             true
+
+# /*---------------------------------------------------------------------------
+# |                          Pre Validations                                  |
+# +--------------------------------------------------------------------------*/
+- name:                                 "Pre Validations: SCS Nodes"
+  ansible.builtin.include_tasks:        "roles/misc/tasks/pre-validations-scs.yml"
+
+# /*---------------------------------------------------------------------------
+# |                          Test Execution                                   |
+# +--------------------------------------------------------------------------*/
+- name:                                 "Test Execution: Kill Enqueue Replication Server Process"
+  become:                               true
+  when:                                 pre_validations_status == "PASSED"
+  block:
+    - name:                             "Test Execution: Kill Enqueue Replication Server on ERS Node"
+      when:                             ansible_hostname == cluster_status_pre.ers_node
+      become:                           true
+      block:
+        - name:                         "Test Execution: Start timer"
+          ansible.builtin.set_fact:
+            test_execution_start:       "{{ now(utc=true, fmt='%Y-%m-%d %H:%M:%S') }}"
+            test_execution_hostname:    "{{ hostvars[cluster_status_pre.ers_node].ansible_hostname }}"
+
+        - name:                         "Test Execution: Check for ENSA version"
+          ansible.builtin.shell:        pgrep -f 'enqr.sap{{ sap_sid | upper }}'
+          register:                     ensa2_check
+          failed_when:                  false
+
+        - name:                         "Test Execution: Kill Enqueue Replication Server Process (ENSA1)"
+          when:                         ensa2_check.stdout == ""
+          ansible.builtin.shell:        set -o pipefail && pgrep -f 'er.sap{{ sap_sid | upper }}' | xargs kill -9
+          register:                     kill_er_result
+          failed_when:                  false
+
+        - name:                         "Test Execution: Kill Enqueue Replication Server Process (ENSA2)"
+          when:                         ensa2_check.stdout != ""
+          ansible.builtin.shell:        set -o pipefail && pgrep -f 'enqr.sap{{ sap_sid | upper }}' | xargs kill -9
+          register:                     kill_enqr_result
+          failed_when:                  false
+
+        - name:                         "Test Execution: Validate ERS node is not running"
+          get_cluster_status_scs:
+            sap_sid:                    "{{ sap_sid | lower }}"
+            ansible_os_family:          "{{ ansible_os_family | upper }}"
+          register:                     cluster_status_test_execution_pre
+          retries:                      "{{ default_retries }}"
+          delay:                        "{{ default_delay }}"
+          until:                        cluster_status_test_execution_pre.ers_node == ""
+
+        - name:                         "Test Execution: Cleanup resources"
+          ansible.builtin.command:      crm_resource --cleanup
+          register:                     cleanup_failed_resource_test_execution
+          changed_when:                 cleanup_failed_resource_test_execution.rc == 0
+
+        - name:                         "Test Execution: Validate SCS cluster status"
+          get_cluster_status_scs:
+            sap_sid:                    "{{ sap_sid | lower }}"
+            ansible_os_family:          "{{ ansible_os_family | upper }}"
+          register:                     cluster_status_test_execution
+          retries:                      "{{ default_retries }}"
+          delay:                        "{{ default_delay }}"
+          until: |
+                                        cluster_status_test_execution.ascs_node == cluster_status_pre.ascs_node
+                                        and cluster_status_test_execution.ers_node == cluster_status_pre.ers_node
+
+        - name:                         "Test Execution: Stop timer"
+          ansible.builtin.set_fact:
+            test_execution_end:         "{{ now(utc=true, fmt='%Y-%m-%d %H:%M:%S') }}"
+
+        - name:                         "Set test case message and details"
+          ansible.builtin.set_fact:
+            test_case_message_from_test_case: |
+                                        ENSA Version: {{ "ENSA1" if ensa2_check.stdout == "" else "ENSA2" }}
+                                        ASCS Node: {{ cluster_status_pre.ascs_node }}
+                                        ERS Node: {{ cluster_status_pre.ers_node }}
+            test_case_details_from_test_case: {
+                                        "Pre Validations: Validate SCS cluster status": "{{ cluster_status_pre }}",
+                                        "Pre Validations: CleanUp any failed resource": "{{ cleanup_failed_resource_pre }}",
+                                        "Test Execution: ENSA Version Check": "{{ ensa2_check }}",
+                                        "Test Execution: Kill Enqueue Replication Server Process (ENSA1)": "{{ kill_er_result | default(omit) }}",
+                                        "Test Execution: Kill Enqueue Replication Server Process (ENSA2)": "{{ kill_enqr_result | default(omit) }}",
+                                        "Test Execution: Cleanup resources": "{{ cleanup_failed_resource_test_execution }}",
+                                        "Post Validations Result": "{{ cluster_status_test_execution }}",
+                                        }
+# /*---------------------------------------------------------------------------
+# |                          Post Validations                                 |
+# +--------------------------------------------------------------------------*/
+    - name:                             "Post Validations Tasks"
+      ansible.builtin.include_tasks:    "roles/misc/tasks/post-validations.yml"
+
+  rescue:
+    - name:                             "Rescue operation"
+      ansible.builtin.include_tasks:    "roles/misc/tasks/rescue.yml"
+
+- name:                                 "Pre Validations: Test Case Skipped"
+  become:                               true
+  when:                                 pre_validations_status == "FAILED"
+  block:
+    - name:                             "Set test case message and details"
+      ansible.builtin.set_fact:
+        test_case_message_from_test_case: "Pre Validations for SCS cluster status checks failed. Please check the details."
+        test_case_details_from_test_case: {
+                                          "Pre Validations: Validate SCS cluster status": "{{ cluster_status_pre }}",
+                                        }
+
+    - name:                             "Post Validations Tasks"
+      ansible.builtin.include_tasks:    "roles/misc/tasks/post-validations.yml"

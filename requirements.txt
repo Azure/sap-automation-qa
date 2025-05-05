@@ -6,12 +6,12 @@
 #
 ansible-compat==25.1.5
     # via ansible-lint
-ansible-core==2.17.10
+ansible-core==2.17.11
     # via
     #   -r requirements.in
     #   ansible-compat
     #   ansible-lint
-ansible-lint==25.2.1
+ansible-lint==25.4.0
     # via -r requirements.in
 ansible-runner==2.4.1
     # via -r requirements.in
@@ -23,7 +23,7 @@ attrs==25.3.0
     #   referencing
 azure-common==1.1.28
     # via azure-mgmt-network
-azure-core==1.33.0
+azure-core==1.34.0
     # via
     #   azure-identity
     #   azure-kusto-data
@@ -34,17 +34,17 @@ azure-identity==1.21.0
     # via
     #   -r requirements.in
     #   azure-kusto-data
-azure-kusto-data==5.0.2
+azure-kusto-data==5.0.3
     # via
     #   -r requirements.in
     #   azure-kusto-ingest
-azure-kusto-ingest==5.0.2
+azure-kusto-ingest==5.0.3
     # via -r requirements.in
 azure-mgmt-core==1.5.0
     # via azure-mgmt-network
 azure-mgmt-network==28.1.0
     # via -r requirements.in
-azure-storage-blob==12.25.1
+azure-storage-blob==12.23.0
     # via
     #   -r requirements.in
     #   azure-kusto-ingest
@@ -58,11 +58,11 @@ black==25.1.0
     #   ansible-lint
 bracex==2.5.post1
     # via wcmatch
-certifi==2025.1.31
+certifi==2025.4.26
     # via requests
 cffi==1.17.1
     # via cryptography
-charset-normalizer==3.4.1
+charset-normalizer==3.4.2
     # via requests
 click==8.1.8
     # via
@@ -72,7 +72,7 @@ coverage[toml]==7.8.0
     # via
     #   -r requirements.in
     #   pytest-cov
-cryptography==44.0.2
+cryptography==44.0.3
     # via
     #   ansible-core
     #   azure-identity
@@ -90,7 +90,7 @@ idna==3.10
     # via requests
 ijson==3.3.0
     # via azure-kusto-data
-importlib-metadata==8.6.1
+importlib-metadata==8.7.0
     # via ansible-lint
 iniconfig==2.1.0
     # via pytest
@@ -105,11 +105,13 @@ jinja2==3.1.6
     # via
     #   -r requirements.in
     #   ansible-core
+jmespath==1.0.1
+    # via -r requirements.in
 jsonschema==4.23.0
     # via
     #   ansible-compat
     #   ansible-lint
-jsonschema-specifications==2024.10.1
+jsonschema-specifications==2025.4.1
     # via jsonschema
 lockfile==0.12.2
     # via python-daemon
@@ -121,14 +123,14 @@ mccabe==0.7.0
     # via pylint
 mdurl==0.1.2
     # via markdown-it-py
-msal==1.32.0
+msal==1.32.3
     # via
     #   azure-identity
     #   azure-kusto-data
     #   msal-extensions
 msal-extensions==1.3.1
     # via azure-identity
-mypy-extensions==1.0.0
+mypy-extensions==1.1.0
     # via black
 numpy==2.2.5
     # via
@@ -167,7 +169,7 @@ pyjwt[crypto]==2.10.1
     # via
     #   msal
     #   pyjwt
-pylint==3.3.6
+pylint==3.3.7
     # via -r requirements.in
 pytest==8.3.5
     # via
@@ -252,7 +254,7 @@ urllib3==2.4.0
     # via requests
 wcmatch==10.0
     # via ansible-lint
-yamllint==1.37.0
+yamllint==1.37.1
     # via ansible-lint
 zipp==3.21.0
     # via importlib-metadata

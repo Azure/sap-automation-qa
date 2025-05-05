@@ -60,13 +60,41 @@ This guide will help you set up your existing SAP Deployment Automation Framewor
    | **SAP Functional Tests Type** | Test category to run | Yes | DatabaseHighAvailability |
    | **Telemetry Data Destination** | Where to send test data | No | AzureLogAnalytics |
 
-   **For AzureLogAnalytics destination** (required parameters):
+   **Providing Telemetry Data Destination Parameters**
+   
+   To configure the Telemetry Data Destination for the SAP Testing Automation Framework, you need to specify the required parameters in the Extra Parameters input field. This allows the pipeline to send telemetry data to the desired destination, such as Azure Log Analytics or Azure Data Explorer.
+
+   **How to Specify Telemetry Parameters**
+
+   Use the following format in the Extra Parameters field:
+
+   ```bash
+   --extra-vars "laws_workspace_id=<workspace-id>,laws_shared_key=<shared-key>,telemetry_table_name=<table-name>"
+   ```
+
+   Telemetry Data Destination Options
+   1. **Azure Log Analytics**
+   If you are using Azure Log Analytics as the telemetry destination, the following parameters are required:
    - `laws_workspace_id`: Log Analytics Workspace ID
    - `laws_shared_key`: Log Analytics Shared Key
    - `telemetry_table_name`: Name of the table in Log Analytics
 
-   **For AzureDataExplorer destination** (required parameters):
+   ```bash
+   --extra-vars "laws_workspace_id=12345678-1234-1234-1234-123456789abc,laws_shared_key=**********,telemetry_table_name=SAPTelemetry"
+   ```
+
+   2. **Azure Data Explorer**
+   If you are using Azure Data Explorer (ADX) as the telemetry destination, the following parameters are required:
    - `adx_cluster_fqdn`: Azure Data Explorer Cluster FQDN
    - `adx_database_name`: Azure Data Explorer Database Name  
    - `adx_client_id`: Azure Data Explorer Client ID
    - `telemetry_table_name`: Name of the table in ADX database
+
+   ```bash
+   --extra-vars "adx_cluster_fqdn=myadxcluster.kusto.windows.net,adx_database_name=SAPTelemetryDB,adx_client_id=12345678-1234-1234-1234-123456789abc,telemetry_table_name=SAPTelemetry"
+   ```
+
+  
+
+
+
