@@ -105,7 +105,9 @@ RESOURCE_DEFAULTS:
       operations:
         monitor:
           interval:                       ["11", "11s"]
-          timeout:                        ["105", "105s"]
+          timeout:
+            ANF:                          ["105", "105s"]
+            AFS:                          ["60", "60s"]
         start:
           interval:                       ["0", "0s"]
           timeout:                        ["180", "180s"]
@@ -130,7 +132,9 @@ RESOURCE_DEFAULTS:
       operations:
         monitor:
           interval:                       ["11", "11s"]
-          timeout:                        ["105", "105s"]
+          timeout:
+            ANF:                          ["105", "105s"]
+            AFS:                          ["60", "60s"]
         start:
           interval:                       ["0", "0s"]
           timeout:                        ["180", "180s"]
