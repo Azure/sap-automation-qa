@@ -292,9 +292,9 @@ To execute the script, run following command:
 ./scripts/sap_automation_qa.sh
 ```
 
-### 4. Viewing Test Reports
+### 4. Viewing Test Results
 
-After the test execution completes, a detailed report is generated. This report summarizes the PASS/FAIL status of each test case and includes detailed execution logs for every step of the automation run.
+After the test execution completes, a detailed HTML report is generated that summarizes the PASS/FAIL status of each test case and includes detailed execution logs for every step of the automation run.
 
 **To locate and view your test report:**
 
