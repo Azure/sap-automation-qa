@@ -403,7 +403,6 @@ FodyWeavers.xsd
 .vscode
 
 # System configuration files
-WORKSPACES/*
 .ppk
 VMWPASSWORD
 .coverage.*

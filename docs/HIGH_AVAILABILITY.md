@@ -262,6 +262,15 @@ NFS_provider: "ANF"  # or "AFS"
 # If you're using system-assigned managed identity instead:
 #  - Leave this blank or set to empty string ""
 user_assigned_identity_client_id: "000000-00000-00000-00000-000000"
+
+# If you've the SSHKEY or VMPASSWORD stored in the an Azure Key Vault as Secret:
+#  - Enter the Azure Key Vault Resource ID in key_vault_id parameter and the Secrete ID in secret_id paramter.
+#  - You can find the Resource ID of Key Vault in Azure Portal → Key Vaults → Your Key Vault → JSON view → Copy the Resource ID
+#  - You can find the Resource ID of Secret in Your Key Vault → Secrets → Select Secret → Current Version → Copy the Secrete Identifier  
+# If you're creating SSHKEY or VMPASSWORD file locally:
+#  - Remove the following two parameters
+key_vault_id:                  /subscriptions/<subscription-id>/resourceGroups/<resource-group>/providers/Microsoft.KeyVault/vaults/<key-vault-name>
+secret_id:                     https://<key-vault-name>.vault.azure.net/secrets/<secret-name>/<id>
 ```
 
 2.2.3. Credential Files
@@ -272,7 +281,7 @@ The required credential files depend on the authentication method used to connec
 1. Username and Password Authentication: If connecting using a username and password, create a password file by running the following command. It takes the username from hosts.yaml file. 
 
   ```bash
-  echo "password" > WORKSPACE/SYSTEM/<DIRECTORY>/password
+  echo "password" > WORKSPACES/SYSTEM/<DIRECTORY>/password
   ```
 
 ### 3. Test Execution
@@ -283,13 +292,37 @@ To execute the script, run following command:
 ./scripts/sap_automation_qa.sh
 ```
 
-## Troubleshooting
+### 4. Viewing Test Reports
 
-Test results and logs can be found in:
+After the test execution completes, a detailed report is generated. This report summarizes the PASS/FAIL status of each test case and includes detailed execution logs for every step of the automation run.
 
-```bash
-cd WORKSPACES/SYSTEM/<SYSTEM_CONFIG_NAME>/quality_assurance/
-```
+**To locate and view your test report:**
+
+1. **Navigate to your SAP system’s workspace directory:**
+
+   Replace `<SYSTEM_CONFIG_NAME>` with the name of your SAP system configuration (for example, `DEV-WEEU-SAP01-X00`):
+
+   ```bash
+   cd WORKSPACES/SYSTEM/<SYSTEM_CONFIG_NAME>/quality_assurance/
+   ```
+2. **Find your report file:**
+
+   The report file is named using the following format:
+
+   ```
+   HA_{SAP_TIER}_{DATABASE_TYPE}_{OS_DISTRO_NAME}_{INVOCATION_ID}.html
+   ```
+
+   - `SAP_TIER`: The SAP tier tested (e.g., DB, SCS)
+   - `DATABASE_TYPE`: The database type (e.g., HANA)
+   - `OS_DISTRO_NAME`: The operating system distribution (e.g., SLES15SP4)
+   - `INVOCATION_ID`: A unique identifier (Group invocation ID) for the test run which is logged at the end of test execution. Find example screenshot below:
+
+      ![Test Execution Completion Screenshot](./images/execution_screenshot.png)
+
+3. **View the report**
+
+   You can open the HTML report in any web browser to review the results and logs.
 
 ## Update the framework
 
@@ -333,7 +366,7 @@ To ensure you have the latest features and fixes, it's important to keep your fo
 
 This process will update your fork with all the latest features, bug fixes, and improvements from the original SAP Testing Automation Framework repository.
 
-> [!NOTE]
+> **NOTE**
 > If you've made local changes to your fork, you might encounter merge conflicts during step 4. In that case, you'll need to resolve these conflicts before proceeding with the push in step 5.
 
 ## Additional Resources

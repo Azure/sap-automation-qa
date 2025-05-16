@@ -9,6 +9,8 @@ sap_sid:                       X00
 # if the SAP Central Services are deployed using high availability
 scs_high_availability:         true
 scs_cluster_type:              AFA
+scs_instance_number:           "00"
+ers_instance_number:           "01"
 
 #############################################################################
 #                              Database tier                                #
