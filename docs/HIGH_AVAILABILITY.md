@@ -263,10 +263,10 @@ NFS_provider: "ANF"  # or "AFS"
 #  - Leave this blank or set to empty string ""
 user_assigned_identity_client_id: "000000-00000-00000-00000-000000"
 
-# If you've the SSHKEY or VMPASSWORD stored in the an Azure Key Vault as Secret:
-#  - Enter the Azure Key Vault Resource ID in key_vault_id parameter and the Secrete ID in secret_id paramter.
-#  - You can find the Resource ID of Key Vault in Azure Portal → Key Vaults → Your Key Vault → JSON view → Copy the Resource ID
-#  - You can find the Resource ID of Secret in Your Key Vault → Secrets → Select Secret → Current Version → Copy the Secrete Identifier  
+# If you have the SSH key or VM password stored in an Azure Key Vault as a secret:
+#  - Enter the Azure Key Vault Resource ID in the key_vault_id parameter and the Secret ID in the secret_id parameter.
+#  - You can find the Resource ID of the Key Vault in Azure Portal → Key Vaults → Your Key Vault → JSON view → Copy the Resource ID  
+#  - You can find the Resource ID of the Secret in Your Key Vault → Secrets → Select Secret → Current Version → Copy the Secret Identifier  
 # If you're creating SSHKEY or VMPASSWORD file locally:
 #  - Remove the following two parameters
 key_vault_id:                  /subscriptions/<subscription-id>/resourceGroups/<resource-group>/providers/Microsoft.KeyVault/vaults/<key-vault-name>
