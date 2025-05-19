@@ -132,7 +132,7 @@ msal-extensions==1.3.1
     # via azure-identity
 mypy-extensions==1.1.0
     # via black
-numpy==2.2.5
+numpy==2.2.6
     # via
     #   -r requirements.in
     #   pandas
