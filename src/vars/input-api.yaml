@@ -84,7 +84,7 @@ test_groups:
           executing the 'echo b' command to trigger an abrupt reboot without proper shutdown. This
           tests the cluster's ability to handle unexpected primary node failures, validates proper
           failover execution, and verifies data consistency after recovery.
-        enabled:                    true
+        enabled:                    false
 
       - name:                       HA Functional Test- Secondary Node Kill
         task_name:                  secondary-node-kill
@@ -102,7 +102,7 @@ test_groups:
           by executing the 'echo b' command, triggering an immediate reboot without proper shutdown
           procedures. The test validates that the primary node maintains operation, verifies cluster
           stability, and ensures system replication resumes correctly after the secondary node recovers.
-        enabled:                    true
+        enabled:                    false
 
       - name:                       HA Functional Test- Freeze File System on Primary Node
         task_name:                  fs-freeze
@@ -252,6 +252,9 @@ commands:
   - name:                           get_hana_resource_id
     SUSE:                           "cibadmin --query --xpath \"//primitive[@type='SAPHana']\" --node-path | grep -oP \"master\\[@id='\\K[^']+\""
     REDHAT:                         "cibadmin --query --xpath \"//primitive[@type='SAPHana']\" --node-path | grep -oP \"clone\\[@id='\\K[^']+\""
+
+  - name:                           get_hana_resource_id_saphanasr_angi
+    SUSE:                           "cibadmin --query --xpath \"//primitive[@type='SAPHanaController']\" --node-path | grep -oP \"primitive\\[@id='\\K[^']+\""
 
   - name:                           resource_migration_cmd
     SUSE:                           "crm resource move {{ hana_resource_name | default('msl_SAPHana_' ~ (db_sid | upper) ~ '_HDB' ~ db_instance_number) }} {{ cluster_status_pre.secondary_node | default('') }} force"

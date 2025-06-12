@@ -20,17 +20,11 @@ from azure.kusto.ingest import QueuedIngestClient, IngestionProperties, ReportLe
 from ansible.module_utils.basic import AnsibleModule
 
 try:
-    from ansible.module_utils.sap_automation_qa import (
-        SapAutomationQA,
-        TestStatus,
-        TelemetryDataDestination,
-    )
+    from ansible.module_utils.sap_automation_qa import SapAutomationQA
+    from ansible.module_utils.enums import TelemetryDataDestination, TestStatus
 except ImportError:
-    from src.module_utils.sap_automation_qa import (
-        SapAutomationQA,
-        TestStatus,
-        TelemetryDataDestination,
-    )
+    from src.module_utils.sap_automation_qa import SapAutomationQA
+    from src.module_utils.enums import TelemetryDataDestination, TestStatus
 
 DOCUMENTATION = r"""
 ---
@@ -248,9 +242,9 @@ class TelemetryDataSender(SapAutomationQA):
         """
         import pandas as pd
 
-        telemetry_json_data = json.loads(telemetry_json_data)
+        telemetry_json_dict = json.loads(telemetry_json_data)
         data_frame = pd.DataFrame(
-            [telemetry_json_data.values()], columns=telemetry_json_data.keys()
+            [telemetry_json_dict.values()], columns=telemetry_json_dict.keys()
         )
         ingestion_properties = IngestionProperties(
             database=self.module_params["adx_database_name"],

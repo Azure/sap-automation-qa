@@ -8,6 +8,7 @@ Unit tests for the log_parser module.
 import json
 import pytest
 from src.modules.log_parser import LogParser, PCMK_KEYWORDS, SYS_KEYWORDS, main
+from src.module_utils.enums import OperatingSystemFamily
 
 
 class TestLogParser:
@@ -27,7 +28,7 @@ class TestLogParser:
             start_time="2025-01-01 00:00:00",
             end_time="2025-01-01 23:59:59",
             log_file="test_log_file.log",
-            ansible_os_family="REDHAT",
+            ansible_os_family=OperatingSystemFamily.REDHAT,
         )
 
     @pytest.fixture
@@ -42,7 +43,7 @@ class TestLogParser:
             start_time="2023-01-01 00:00:00",
             end_time="2023-01-01 23:59:59",
             log_file="test_log_file.log",
-            ansible_os_family="SUSE",
+            ansible_os_family=OperatingSystemFamily.SUSE,
         )
 
     def test_parse_logs_success(self, mocker, log_parser_redhat):
@@ -152,8 +153,20 @@ class TestLogParser:
             def exit_json(self, **kwargs):
                 mock_result.update(kwargs)
 
+        def mock_ansible_facts(module):
+            """
+            Mock function to return Ansible facts for RedHat.
+
+            :param module: Mock Ansible module instance.
+            :type module: MockAnsibleModule
+            :return: Dictionary with Ansible facts.
+            :rtype: dict
+            """
+            return {"os_family": "RedHat"}
+
         with monkeypatch.context() as monkey_patch:
             monkey_patch.setattr("src.modules.log_parser.AnsibleModule", MockAnsibleModule)
+            monkey_patch.setattr("src.modules.log_parser.ansible_facts", mock_ansible_facts)
             main()
             assert mock_result["status"] == "FAILED"
 

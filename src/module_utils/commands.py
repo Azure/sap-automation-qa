@@ -9,6 +9,11 @@ and configuration.
 """
 from __future__ import absolute_import, division, print_function
 
+try:
+    from ansible.module_utils.enums import OperatingSystemFamily
+except ImportError:
+    from src.module_utils.enums import OperatingSystemFamily
+
 __metaclass__ = type
 
 DOCUMENTATION = r"""
@@ -21,8 +26,8 @@ module_utils:
 """
 
 STONITH_ACTION = {
-    "REDHAT": ["pcs", "property", "config", "stonith-action"],
-    "SUSE": ["crm", "configure", "get_property", "stonith-action"],
+    OperatingSystemFamily.REDHAT: ["pcs", "property", "config", "stonith-action"],
+    OperatingSystemFamily.SUSE: ["crm", "configure", "get_property", "stonith-action"],
 }
 
 AUTOMATED_REGISTER = [
@@ -48,8 +53,8 @@ CLUSTER_STATUS = ["crm_mon", "--output-as=xml"]
 CONSTRAINTS = ["cibadmin", "--query", "--scope", "constraints"]
 
 RSC_CLEAR = {
-    "SUSE": lambda rsc: ["crm", "resource", "clear", rsc],
-    "REDHAT": lambda rsc: ["pcs", "resource", "clear", rsc],
+    OperatingSystemFamily.SUSE: lambda rsc: ["crm", "resource", "clear", rsc],
+    OperatingSystemFamily.REDHAT: lambda rsc: ["pcs", "resource", "clear", rsc],
 }
 
 CIB_ADMIN = lambda scope: ["cibadmin", "--query", "--scope", scope]

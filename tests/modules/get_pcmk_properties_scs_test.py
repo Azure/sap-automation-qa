@@ -8,6 +8,7 @@ Unit tests for the get_pcmk_properties_db module.
 import io
 import pytest
 from src.modules.get_pcmk_properties_scs import HAClusterValidator, main
+from src.module_utils.enums import OperatingSystemFamily
 
 DUMMY_XML_RSC = """<rsc_defaults>
   <meta_attributes id="build-resource-defaults">
@@ -192,7 +193,7 @@ class TestHAClusterValidator:
             :return: Mocked command output.
             :rtype: str
             """
-            command = args[1] if len(args) > 1 else kwargs.get("command")
+            command = str(args[1]) if len(args) > 1 else str(kwargs.get("command"))
             if "sysctl" in command:
                 return DUMMY_OS_COMMAND
             return mock_xml_outputs.get(command[-1], "")
@@ -203,7 +204,7 @@ class TestHAClusterValidator:
         )
         monkeypatch.setattr("builtins.open", fake_open_factory(DUMMY_GLOBAL_INI))
         return HAClusterValidator(
-            os_type="REDHAT",
+            os_type=OperatingSystemFamily.REDHAT,
             sid="PRD",
             scs_instance_number="00",
             ers_instance_number="01",
@@ -241,7 +242,6 @@ class TestHAClusterValidator:
                     "sid": "PRD",
                     "ascs_instance_number": "00",
                     "ers_instance_number": "01",
-                    "ansible_os_family": "REDHAT",
                     "virtual_machine_name": "vm_name",
                     "fencing_mechanism": "AFA",
                     "pcmk_constants": DUMMY_CONSTANTS,
@@ -251,9 +251,24 @@ class TestHAClusterValidator:
                 nonlocal mock_result
                 mock_result = kwargs
 
+        def mock_ansible_facts(module):
+            """
+            Mock function to return Ansible facts.
+
+            :param module: Ansible module instance.
+            :type module: AnsibleModule
+            :return: Mocked Ansible facts.
+            :rtype: dict
+            """
+            return {"os_family": "REDHAT"}
+
         monkeypatch.setattr(
             "src.modules.get_pcmk_properties_scs.AnsibleModule",
             MockAnsibleModule,
+        )
+        monkeypatch.setattr(
+            "src.modules.get_pcmk_properties_scs.ansible_facts",
+            mock_ansible_facts,
         )
 
         main()

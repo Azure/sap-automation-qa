@@ -7,7 +7,6 @@ def main():
             sid=dict(type='str', required=True),
             ascs_instance_number=dict(type='str', required=True),
             ers_instance_number=dict(type='str', required=True),
-            ansible_os_family=dict(type='str', required=True),
             virtual_machine_name=dict(type='str', required=True),
             pcmk_constants=dict(type='dict', required=True),
             fencing_mechanism=dict(type='str', required=True),

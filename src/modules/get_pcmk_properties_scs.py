@@ -12,20 +12,15 @@ Classes:
 """
 
 from ansible.module_utils.basic import AnsibleModule
+from ansible.module_utils.facts.compat import ansible_facts
 
 try:
-    from ansible.module_utils.sap_automation_qa import (
-        SapAutomationQA,
-        TestStatus,
-        Parameters,
-    )
+    from ansible.module_utils.sap_automation_qa import SapAutomationQA
+    from ansible.module_utils.enums import OperatingSystemFamily, Parameters, TestStatus
     from ansible.module_utils.commands import CIB_ADMIN
 except ImportError:
-    from src.module_utils.sap_automation_qa import (
-        SapAutomationQA,
-        TestStatus,
-        Parameters,
-    )
+    from src.module_utils.sap_automation_qa import SapAutomationQA
+    from src.module_utils.enums import OperatingSystemFamily, Parameters, TestStatus
     from src.module_utils.commands import CIB_ADMIN
 
 
@@ -53,11 +48,6 @@ options:
     ers_instance_number:
         description:
             - SAP ERS instance number
-        type: str
-        required: true
-    ansible_os_family:
-        description:
-            - Operating system family (redhat, suse, etc.)
         type: str
         required: true
     virtual_machine_name:
@@ -98,7 +88,6 @@ EXAMPLES = r"""
     sid: "S4D"
     ascs_instance_number: "00"
     ers_instance_number: "10"
-    ansible_os_family: "{{ ansible_os_family|lower }}"
     virtual_machine_name: "{{ ansible_hostname }}"
     pcmk_constants: "{{ pcmk_validation_constants }}"
     fencing_mechanism: "sbd"
@@ -194,18 +183,18 @@ class HAClusterValidator(SapAutomationQA):
 
     def __init__(
         self,
-        os_type,
-        sid,
-        scs_instance_number,
-        ers_instance_number,
-        virtual_machine_name,
-        constants,
-        fencing_mechanism,
+        os_type: OperatingSystemFamily,
+        sid: str,
+        scs_instance_number: str,
+        ers_instance_number: str,
+        virtual_machine_name: str,
+        constants: dict,
+        fencing_mechanism: str,
         nfs_provider=None,
         category=None,
     ):
         super().__init__()
-        self.os_type = os_type
+        self.os_type = os_type.value.upper()
         self.category = category
         self.sid = sid
         self.scs_instance_number = scs_instance_number
@@ -586,11 +575,11 @@ def main() -> None:
             sid=dict(type="str"),
             ascs_instance_number=dict(type="str"),
             ers_instance_number=dict(type="str"),
-            ansible_os_family=dict(type="str"),
             virtual_machine_name=dict(type="str"),
             pcmk_constants=dict(type="dict"),
             fencing_mechanism=dict(type="str"),
             nfs_provider=dict(type="str", default=""),
+            filter=dict(type="str", required=False, default="os_family"),
         )
     )
 
@@ -598,7 +587,7 @@ def main() -> None:
         sid=module.params["sid"],
         scs_instance_number=module.params["ascs_instance_number"],
         ers_instance_number=module.params["ers_instance_number"],
-        os_type=module.params["ansible_os_family"],
+        os_type=OperatingSystemFamily(str(ansible_facts(module).get("os_family", "SUSE")).upper()),
         virtual_machine_name=module.params["virtual_machine_name"],
         constants=module.params["pcmk_constants"],
         fencing_mechanism=module.params["fencing_mechanism"],

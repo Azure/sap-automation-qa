@@ -21,8 +21,10 @@ Currently SAP Testing Automation Framework is supported for below Linux distros 
 |-----------|------|--------------|---------|
 | SAP Central Services | ENSA1 or ENSA2 | Azure Fencing Agent | Azure Files or ANF |
 | SAP Central Services | ENSA1 or ENSA2 | ISCSI (SBD device) | Azure Files or ANF |
+| SAP Central Services | ENSA1 or ENSA2 | Azure Shared Disks (SBD device) | Azure Files or ANF |
 | SAP HANA | Scale-up | Azure Fencing Agent | Azure Managed Disk or ANF |
 | SAP HANA | Scale-up | ISCSI (SBD device) | Azure Managed Disk or ANF |
+| SAP HANA | Scale-up | Azure Shared Disks (SBD device) | Azure Managed Disk or ANF |
 
 For SAP Central Services on SLES, both the simple mount approach and the classic method are supported.
 
@@ -238,9 +240,10 @@ db_high_availability: true
 
 # The high availability configuration of the SCS and DB instance. Supported values are:
 # - AFA (for Azure Fencing Agent)
-# - ISCSI (for SBD devices)
-scs_cluster_type: "AFA"  # or "ISCSI"
-database_cluster_type: "AFA"  # or "ISCSI"
+# - ISCSI (for SBD devices with ISCSI target servers)
+# - ASD (for SBD devices with Azure Shared Disks)
+scs_cluster_type: "AFA"  # or "ISCSI" or "ASD"
+database_cluster_type: "AFA"  # or "ISCSI" or "ASD"
 
 # The instance number of the SCS, ERS and DB instance.
 scs_instance_number: "00"

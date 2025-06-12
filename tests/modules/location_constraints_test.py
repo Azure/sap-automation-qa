@@ -8,6 +8,7 @@ Unit tests for the location_constraints module converted to a class-based approa
 import xml.etree.ElementTree as ET
 import pytest
 from src.modules.location_constraints import LocationConstraintsManager, main
+from src.module_utils.enums import OperatingSystemFamily
 
 LC_STR = """<constraints>
     <rsc_location id="location-rsc_SAPHana_HDB_HA1" rsc="rsc_SAPHana_HDB_HA1" node="node1" score="INFINITY"/>
@@ -49,7 +50,7 @@ class TestLocationConstraints:
         :return: LocationConstraintsManager instance
         :rtype: LocationConstraintsManager
         """
-        return LocationConstraintsManager(ansible_os_family="SUSE")
+        return LocationConstraintsManager(ansible_os_family=OperatingSystemFamily.SUSE)
 
     def test_location_constraints_exists_success(
         self,
@@ -131,7 +132,7 @@ class TestLocationConstraints:
             """
 
             def __init__(self, argument_spec, supports_check_mode):
-                self.params = {"action": "remove", "ansible_os_family": "SUSE"}
+                self.params = {"action": "remove"}
                 self.check_mode = False
 
             def exit_json(self, **kwargs):
@@ -140,9 +141,23 @@ class TestLocationConstraints:
                 """
                 mock_result.update(kwargs)
 
+        def mock_ansible_facts(module):
+            """
+            Mock function to return Ansible facts.
+
+            :param module: Mock Ansible module instance.
+            :type module: MockAnsibleModule
+            :return: Dictionary with Ansible facts.
+            :rtype: dict
+            """
+            return {"os_family": "SUSE"}
+
         with monkeypatch.context() as monkey_patch:
             monkey_patch.setattr(
                 "src.modules.location_constraints.AnsibleModule", MockAnsibleModule
+            )
+            monkey_patch.setattr(
+                "src.modules.location_constraints.ansible_facts", mock_ansible_facts
             )
             main()
             assert mock_result["status"] == "INFO"

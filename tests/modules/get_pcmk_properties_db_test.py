@@ -8,6 +8,7 @@ Unit tests for the get_pcmk_properties_db module.
 import io
 import pytest
 from src.modules.get_pcmk_properties_db import HAClusterValidator, main
+from src.module_utils.enums import OperatingSystemFamily, HanaSRProvider
 
 DUMMY_XML_RSC = """<rsc_defaults>
   <meta_attributes id="build-resource-defaults">
@@ -88,8 +89,8 @@ DUMMY_OS_COMMAND = """kernel.numa_balancing = 0"""
 DUMMY_GLOBAL_INI = """[DEFAULT]
 dumm1 = dummy2
 
-[ha_dr_provider_SAPHanaSR]
-provider = SAPHanaSR
+[ha_dr_provider_sushanasr]
+provider = SAPHanaSR-angi
 """
 
 DUMMY_CONSTANTS = {
@@ -198,7 +199,7 @@ class TestHAClusterValidator:
             :return: Mocked command output.
             :rtype: str
             """
-            command = args[1] if len(args) > 1 else kwargs.get("command")
+            command = str(args[1]) if len(args) > 1 else str(kwargs.get("command"))
             if "sysctl" in command:
                 return DUMMY_OS_COMMAND
             return mock_xml_outputs.get(command[-1], "")
@@ -209,13 +210,14 @@ class TestHAClusterValidator:
         )
         monkeypatch.setattr("builtins.open", fake_open_factory(DUMMY_GLOBAL_INI))
         return HAClusterValidator(
-            os_type="REDHAT",
+            os_type=OperatingSystemFamily.REDHAT,
             os_version="9.2",
             sid="PRD",
             instance_number="00",
             fencing_mechanism="AFA",
             virtual_machine_name="vmname",
             constants=DUMMY_CONSTANTS,
+            saphanasr_provider=HanaSRProvider.SAPHANASR,
         )
 
     def test_parse_ha_cluster_config_success(self, validator):
@@ -246,11 +248,11 @@ class TestHAClusterValidator:
                 self.params = {
                     "sid": "PRD",
                     "instance_number": "00",
-                    "ansible_os_family": "REDHAT",
                     "virtual_machine_name": "vm_name",
                     "fencing_mechanism": "AFA",
                     "os_version": "9.2",
                     "pcmk_constants": DUMMY_CONSTANTS,
+                    "saphanasr_provider": HanaSRProvider.SAPHANASR.value,
                 }
 
             def exit_json(self, **kwargs):

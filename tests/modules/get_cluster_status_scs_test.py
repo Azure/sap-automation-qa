@@ -186,6 +186,9 @@ class TestRunModule:
         mocker.patch(
             "src.modules.get_cluster_status_scs.AnsibleModule", return_value=mock_ansible_module
         )
+        mocker.patch(
+            "src.modules.get_cluster_status_scs.ansible_facts", return_value={"os_family": "REDHAT"}
+        )
 
         mock_run = mocker.MagicMock()
         mock_checker = mocker.MagicMock()

@@ -87,7 +87,6 @@
         - name:                         "Test Execution: Validate SCS cluster status"
           get_cluster_status_scs:
             sap_sid:                    "{{ sap_sid | lower }}"
-            ansible_os_family:          "{{ ansible_os_family | upper }}"
           register:                     cluster_status_test_execution
           retries:                      "{{ default_retries }}"
           delay:                        "{{ default_delay }}"
@@ -118,7 +117,6 @@
         - name:                         "Test Execution: Validate SCS cluster status"
           get_cluster_status_scs:
             sap_sid:                    "{{ sap_sid | lower }}"
-            ansible_os_family:          "{{ ansible_os_family | upper }}"
           register:                     cluster_status_test_execution
           retries:                      "{{ default_retries }}"
           delay:                        "{{ default_delay }}"
