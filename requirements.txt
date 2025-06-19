@@ -201,7 +201,7 @@ referencing==0.36.2
     #   ansible-lint
     #   jsonschema
     #   jsonschema-specifications
-requests==2.32.3
+requests==2.32.4
     # via
     #   -r requirements.in
     #   azure-core
@@ -250,7 +250,7 @@ typing-extensions==4.13.2
     #   rich
 tzdata==2025.2
     # via pandas
-urllib3==2.4.0
+urllib3==2.5.0
     # via requests
 wcmatch==10.0
     # via ansible-lint
