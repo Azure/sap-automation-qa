@@ -14,8 +14,8 @@ try:
     from ansible.module_utils.sap_automation_qa import SapAutomationQA, TestStatus
     from ansible.module_utils.enums import OperatingSystemFamily
 except ImportError:
-    from src.module_utils.sap_automation_qa import SapAutomationQA, TestStatus
-    from src.module_utils.enums import OperatingSystemFamily
+    from src.module_utils.sap_automation_qa import SapAutomationQA
+    from src.module_utils.enums import OperatingSystemFamily, TestStatus
 
 DOCUMENTATION = r"""
 ---
