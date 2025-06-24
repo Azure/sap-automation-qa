@@ -60,6 +60,10 @@ class TestDbResourceMigration(RolesTestingBaseDB):
                 "name": "get_hana_resource_id",
                 "SUSE": "cibadmin --query --scope resources",
             },
+            {
+                "name": "get_hana_resource_id_saphanasr_angi",
+                "SUSE": "cibadmin --query --scope resources",
+            },
         ]
 
         temp_dir = self.setup_test_environment(
@@ -75,6 +79,7 @@ class TestDbResourceMigration(RolesTestingBaseDB):
                 "bin/cibadmin",
                 "bin/crm_resource",
                 "bin/crm",
+                "bin/SAPHanaSR-manageProvider",
             ],
             extra_vars_override={"commands": commands, "node_tier": "hana"},
         )

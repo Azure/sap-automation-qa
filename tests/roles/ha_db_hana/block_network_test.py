@@ -51,6 +51,7 @@ class TestBlockNetworkTest(RolesTestingBaseDB):
             "bin/nc",
             "bin/echo",
             "bin/sleep",
+            "bin/SAPHanaSR-manageProvider",
         ]
 
         temp_dir = self.setup_test_environment(
@@ -101,8 +102,8 @@ class TestBlockNetworkTest(RolesTestingBaseDB):
 
         assert result.rc == 0, (
             f"Playbook failed with status: {result.rc}\n"
-            f"STDOUT: {result.stdout.read() if result.stdout else 'No output'}\n"
-            f"STDERR: {result.stderr.read() if result.stderr else 'No errors'}\n"
+            f"STDOUT: {result.stdout if hasattr(result, 'stdout') else 'No output'}\n"
+            f"STDERR: {result.stderr if hasattr(result, 'stderr') else 'No errors'}\n"
             f"Events: {[e.get('event') for e in result.events if 'event' in e]}"
         )
 

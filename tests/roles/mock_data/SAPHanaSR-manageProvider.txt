@@ -1,0 +1,5 @@
+#!/bin/bash
+
+echo "[ha_dr_provider_saphanasr]"
+
+exit 0

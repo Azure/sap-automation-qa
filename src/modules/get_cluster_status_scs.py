@@ -9,15 +9,18 @@ import logging
 import xml.etree.ElementTree as ET
 from typing import Dict, Any
 from ansible.module_utils.basic import AnsibleModule
+from ansible.module_utils.facts.compat import ansible_facts
 
 try:
     from ansible.module_utils.get_cluster_status import BaseClusterStatusChecker
     from ansible.module_utils.commands import CIB_ADMIN
+    from ansible.module_utils.enums import OperatingSystemFamily
 except ImportError:
     from src.module_utils.get_cluster_status import BaseClusterStatusChecker
     from src.module_utils.commands import (
         CIB_ADMIN,
     )
+    from src.module_utils.enums import OperatingSystemFamily
 
 
 DOCUMENTATION = r"""
@@ -36,12 +39,6 @@ options:
             - Used to identify the specific ASCS and ERS resources.
         type: str
         required: true
-    ansible_os_family:
-        description:
-            - Operating system family (e.g., redhat, suse).
-            - Used to determine OS-specific commands and configurations.
-        type: str
-        required: false
 author:
     - Microsoft Corporation
 notes:
@@ -58,7 +55,6 @@ EXAMPLES = r"""
 - name: Check SAP SCS cluster status
   get_cluster_status_scs:
     sap_sid: "S4D"
-    ansible_os_family: "{{ ansible_os_family|lower }}"
   register: cluster_result
 
 - name: Display SCS cluster status
@@ -118,7 +114,7 @@ class SCSClusterStatusChecker(BaseClusterStatusChecker):
     def __init__(
         self,
         sap_sid: str,
-        ansible_os_family: str = "",
+        ansible_os_family: OperatingSystemFamily,
     ):
         super().__init__(ansible_os_family)
         self.sap_sid = sap_sid
@@ -285,14 +281,15 @@ def run_module() -> None:
     """
     module_args = dict(
         sap_sid=dict(type="str", required=True),
-        ansible_os_family=dict(type="str", required=False),
+        filter=dict(type="str", required=False, default="os_family"),
     )
 
     module = AnsibleModule(argument_spec=module_args, supports_check_mode=True)
+    ansible_os_family = str(ansible_facts(module).get("os_family", "SUSE")).upper()
 
     checker = SCSClusterStatusChecker(
         sap_sid=module.params["sap_sid"],
-        ansible_os_family=module.params["ansible_os_family"],
+        ansible_os_family=OperatingSystemFamily(ansible_os_family),
     )
     checker.run()
 

@@ -6,19 +6,22 @@ Base class for cluster status checking implementations.
 """
 
 import logging
+from abc import abstractmethod
 import xml.etree.ElementTree as ET
 from datetime import datetime
 from typing import Dict, Any
 
 try:
-    from ansible.module_utils.sap_automation_qa import SapAutomationQA, TestStatus
+    from ansible.module_utils.sap_automation_qa import SapAutomationQA
+    from ansible.module_utils.enums import TestStatus, OperatingSystemFamily
     from ansible.module_utils.commands import (
         STONITH_ACTION,
         PACEMAKER_STATUS,
         CLUSTER_STATUS,
     )
 except ImportError:
-    from src.module_utils.sap_automation_qa import SapAutomationQA, TestStatus
+    from src.module_utils.sap_automation_qa import SapAutomationQA
+    from src.module_utils.enums import TestStatus, OperatingSystemFamily
     from src.module_utils.commands import (
         STONITH_ACTION,
         PACEMAKER_STATUS,
@@ -31,7 +34,7 @@ class BaseClusterStatusChecker(SapAutomationQA):
     Base class to check the status of a pacemaker cluster.
     """
 
-    def __init__(self, ansible_os_family: str = ""):
+    def __init__(self, ansible_os_family: OperatingSystemFamily):
         super().__init__()
         self.ansible_os_family = ansible_os_family
         self.result.update(
@@ -43,6 +46,43 @@ class BaseClusterStatusChecker(SapAutomationQA):
                 "stonith_action": "",
             }
         )
+
+    @abstractmethod
+    def _process_node_attributes(self, cluster_status_xml: ET.Element) -> Dict[str, Any]:
+        """
+        Abstract method to process node attributes.
+
+        :param node_attributes: XML element containing node attributes.
+        :type node_attributes: ET.Element
+        :raises NotImplementedError: If the method is not implemented in a child class.
+        :return: Dictionary with node attributes.
+        :rtype: Dict[str, Any]
+        """
+        raise NotImplementedError("Child classes must implement this method")
+
+    @abstractmethod
+    def _is_cluster_ready(self) -> bool:
+        """
+        Abstract method to check if the cluster is ready.
+        To be implemented by child classes.
+
+        :raises NotImplementedError: If the method is not implemented in a child class.
+        :return: True if the cluster is ready, False otherwise.
+        :rtype: bool
+        """
+        raise NotImplementedError("Child classes must implement this method")
+
+    @abstractmethod
+    def _is_cluster_stable(self) -> bool:
+        """
+        Abstract method to check if the cluster is in a stable state.
+        To be implemented by child classes.
+
+        :raises NotImplementedError: If the method is not implemented in a child class.
+        :return: True if the cluster is ready, False otherwise.
+        :rtype: bool
+        """
+        raise NotImplementedError("Child classes must implement this method")
 
     def _get_stonith_action(self) -> None:
         """
@@ -63,7 +103,7 @@ class BaseClusterStatusChecker(SapAutomationQA):
         except Exception as ex:
             self.log(logging.WARNING, f"Failed to get stonith action: {str(ex)}")
 
-    def _validate_cluster_basic_status(self, cluster_status_xml: ET.Element):
+    def _validate_cluster_basic_status(self, cluster_status_xml: ET.Element) -> None:
         """
         Validate the basic status of the cluster.
 
@@ -76,27 +116,31 @@ class BaseClusterStatusChecker(SapAutomationQA):
             self.result["pacemaker_status"] = "stopped"
         self.log(logging.INFO, f"Pacemaker status: {self.result['pacemaker_status']}")
 
-        if int(cluster_status_xml.find("summary").find("nodes_configured").attrib["number"]) < 2:
-            self.result["message"] = "Pacemaker cluster isn't stable (insufficient nodes)"
+        summary = cluster_status_xml.find("summary")
+        if summary is None:
+            self.log(logging.ERROR, "Cluster status summary not found in XML")
+            return
+
+        nodes_configured = summary.find("nodes_configured")
+        if nodes_configured is None:
+            self.log(logging.ERROR, "Nodes configured not found in cluster status summary")
+            return
+
+        if int(nodes_configured.attrib.get("number", 0)) < 2:
+            self.result["message"] = (
+                "Pacemaker cluster isn't stable (insufficient nodes configured)"
+            )
             self.log(logging.WARNING, self.result["message"])
 
         nodes = cluster_status_xml.find("nodes")
+        if nodes is None:
+            self.log(logging.ERROR, "Nodes not found in cluster status XML")
+            return
+
         for node in nodes:
             if node.attrib["online"] != "true":
                 self.result["message"] = f"Node {node.attrib['name']} is not online"
                 self.log(logging.WARNING, self.result["message"])
-
-    def _process_node_attributes(self, cluster_status_xml: ET.Element) -> Dict[str, Any]:
-        """
-        Abstract method to process node attributes.
-
-        :param node_attributes: XML element containing node attributes.
-        :type node_attributes: ET.Element
-        :raises NotImplementedError: If the method is not implemented in a child class.
-        :return: Dictionary with node attributes.
-        :rtype: Dict[str, Any]
-        """
-        raise NotImplementedError("Child classes must implement this method")
 
     def run(self) -> Dict[str, str]:
         """
@@ -128,25 +172,3 @@ class BaseClusterStatusChecker(SapAutomationQA):
         self.result["status"] = TestStatus.SUCCESS.value
         self.log(logging.INFO, "Cluster status check completed")
         return self.result
-
-    def _is_cluster_ready(self) -> bool:
-        """
-        Abstract method to check if the cluster is ready.
-        To be implemented by child classes.
-
-        :raises NotImplementedError: If the method is not implemented in a child class.
-        :return: True if the cluster is ready, False otherwise.
-        :rtype: bool
-        """
-        raise NotImplementedError("Child classes must implement this method")
-
-    def _is_cluster_stable(self) -> bool:
-        """
-        Abstract method to check if the cluster is in a stable state.
-        To be implemented by child classes.
-
-        :raises NotImplementedError: If the method is not implemented in a child class.
-        :return: True if the cluster is ready, False otherwise.
-        :rtype: bool
-        """
-        raise NotImplementedError("Child classes must implement this method")

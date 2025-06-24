@@ -10,12 +10,13 @@
   get_cluster_status_db:
     operation_step:                     "cluster_report_collection"
     database_sid:                       "{{ db_sid | lower | default('') }}"
-    ansible_os_family:                  "{{ ansible_os_family | upper }}"
+    saphanasr_provider:                 "{{ saphanasr_provider | default('SAPHanaSR') }}"
   register:                             cluster_status
   failed_when:                          cluster_status.primary_node == ""
 
 - name:                                 "Get the cluster report from the primary node"
   become:                               true
+  run_once:                             true
   when:
                                         - cluster_status is defined
                                         - cluster_status.primary_node == ansible_hostname

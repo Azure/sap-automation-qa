@@ -52,9 +52,9 @@ packages=("python3-pip" "ansible" "sshpass" "python3-venv")
 
 install_packages "${packages[@]}"
 
-if [ ! -d "../.venv" ]; then
+if [ ! -d ".venv" ]; then
     log "INFO" "Creating Python virtual environment..."
-    if python3 -m venv ../.venv; then
+    if python3 -m venv .venv; then
         log "INFO" "Python virtual environment created."
     else
         log "ERROR" "Failed to create Python virtual environment."
@@ -64,7 +64,7 @@ fi
 
 # Ensure virtual environment is activated
 log "INFO" "Activating Python virtual environment..."
-if source ../.venv/bin/activate; then
+if source .venv/bin/activate; then
     log "INFO" "Python virtual environment activated."
 else
     log "ERROR" "Failed to activate Python virtual environment."

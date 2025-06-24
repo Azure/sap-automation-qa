@@ -18,7 +18,6 @@
   become:                               true
   check_indexserver:
     database_sid:                       "{{ db_sid | upper }}"
-    ansible_os_family:                  "{{ ansible_os_family | lower }}"
   register:                             index_server_check
 
 # /*---------------------------------------------------------------------------
@@ -55,8 +54,8 @@
         - name:                         "Test Execution: Validate HANA DB cluster status"
           get_cluster_status_db:
             operation_step:             "test_execution"
-            ansible_os_family:          "{{ ansible_os_family | upper }}"
             database_sid:               "{{ db_sid | lower }}"
+            saphanasr_provider:         "{{ saphanasr_provider | default('SAPHanaSR') }}"
           register:                     cluster_status_test_execution
           retries:                      "{{ default_retries }}"
           delay:                        "{{ default_delay }}"
@@ -68,7 +67,7 @@
           get_cluster_status_db:
             operation_step:             "post_failover"
             database_sid:               "{{ db_sid | lower }}"
-            ansible_os_family:          "{{ ansible_os_family | upper }}"
+            saphanasr_provider:         "{{ saphanasr_provider | default('SAPHanaSR') }}"
           register:                     cluster_status_post
           retries:                      "{{ default_retries }}"
           delay:                        "{{ default_delay }}"

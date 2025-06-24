@@ -34,7 +34,6 @@
     - name:                             "Merge and sort logs from all nodes by timestamp"
       log_parser:
         function:                       "merge_logs"
-        ansible_os_family:              "{{ ansible_os_family | upper }}"
         logs:
           - "{{ hostvars[primary_node]['var_log_messages_output'].filtered_logs | default('[]') }}"
           - "{{ hostvars[secondary_node]['var_log_messages_output'].filtered_logs | default('[]') }}"

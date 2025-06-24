@@ -129,7 +129,7 @@ class FileSystemFreeze(SapAutomationQA):
                         return parts[0], "/hana/shared"
         except FileNotFoundError as ex:
             self.handle_error(ex)
-        return None, None
+        return "", ""
 
     def run(self) -> Dict[str, Any]:
         """

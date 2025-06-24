@@ -47,7 +47,6 @@
         - name:                         "Test Execution: Validate ASCS node has stopped"
           get_cluster_status_scs:
             sap_sid:                    "{{ sap_sid | lower }}"
-            ansible_os_family:          "{{ ansible_os_family | upper }}"
           register:                     cluster_status_test_execution_pre
           retries:                      "{{ default_retries }}"
           delay:                        "{{ default_delay }}"
@@ -57,7 +56,6 @@
           when:                         ensa2_check.stdout == ""
           get_cluster_status_scs:
             sap_sid:                    "{{ sap_sid | lower }}"
-            ansible_os_family:          "{{ ansible_os_family | upper }}"
           register:                     cluster_status_test_execution
           retries:                      "{{ default_retries }}"
           delay:                        "{{ default_delay }}"
@@ -69,7 +67,6 @@
           when:                         ensa2_check.stdout != "1"
           get_cluster_status_scs:
             sap_sid:                    "{{ sap_sid | lower }}"
-            ansible_os_family:          "{{ ansible_os_family | upper }}"
           register:                     cluster_status_test_execution
           retries:                      "{{ default_retries }}"
           delay:                        "{{ default_delay }}"

@@ -8,11 +8,14 @@ Custom ansible module for log parsing
 import json
 from datetime import datetime
 from ansible.module_utils.basic import AnsibleModule
+from ansible.module_utils.facts.compat import ansible_facts
 
 try:
     from ansible.module_utils.sap_automation_qa import SapAutomationQA, TestStatus
+    from ansible.module_utils.enums import OperatingSystemFamily
 except ImportError:
     from src.module_utils.sap_automation_qa import SapAutomationQA, TestStatus
+    from src.module_utils.enums import OperatingSystemFamily
 
 DOCUMENTATION = r"""
 ---
@@ -49,12 +52,6 @@ options:
         type: list
         required: false
         default: []
-    ansible_os_family:
-        description:
-            - Operating system family (e.g., REDHAT, SUSE).
-            - Used to determine the appropriate log timestamp format.
-        type: str
-        required: true
     function:
         description:
             - Specifies the function to execute: "parse_logs" or "merge_logs".
@@ -85,7 +82,6 @@ EXAMPLES = r"""
     start_time: "{{ (ansible_date_time.iso8601 | to_datetime - '1 hour') | to_datetime('%Y-%m-%d %H:%M:%S') }}"
     end_time: "{{ ansible_date_time.iso8601 | to_datetime('%Y-%m-%d %H:%M:%S') }}"
     log_file: "/var/log/messages"
-    ansible_os_family: "{{ ansible_os_family|upper }}"
   register: parse_result
 
 - name: Display filtered log entries
@@ -98,7 +94,6 @@ EXAMPLES = r"""
     logs:
       - "[\"Jan 01 12:34:56 server1 pacemaker-controld: Notice: Resource SAPHana_HDB_00 started\"]"
       - "[\"Jan 01 12:35:00 server2 pacemaker-controld: Notice: Resource SAPHana_HDB_01 started\"]"
-    ansible_os_family: "REDHAT"
   register: merge_result
 
 - name: Display merged log entries
@@ -195,8 +190,8 @@ class LogParser(SapAutomationQA):
         start_time: str,
         end_time: str,
         log_file: str,
-        ansible_os_family: str,
-        logs: list = None,
+        ansible_os_family: OperatingSystemFamily,
+        logs: list = list(),
     ):
         super().__init__()
         self.start_time = start_time
@@ -244,13 +239,13 @@ class LogParser(SapAutomationQA):
 
             for log in parsed_logs:
                 try:
-                    if self.ansible_os_family == "REDHAT":
+                    if self.ansible_os_family == OperatingSystemFamily.REDHAT:
                         timestamp_str = " ".join(log.split()[:3])
                         log_time = datetime.strptime(timestamp_str, "%b %d %H:%M:%S")
                         log_time = log_time.replace(year=datetime.now().year)
                         all_logs.append((log_time, log))
 
-                    elif self.ansible_os_family == "SUSE":
+                    elif self.ansible_os_family == OperatingSystemFamily.SUSE:
                         timestamp_str = log.split(".")[0]
                         log_time = datetime.strptime(timestamp_str, "%Y-%m-%dT%H:%M:%S")
                         all_logs.append((log_time, log))
@@ -282,12 +277,12 @@ class LogParser(SapAutomationQA):
             with open(self.log_file, "r", encoding="utf-8") as file:
                 for line in file:
                     try:
-                        if self.ansible_os_family == "REDHAT":
+                        if self.ansible_os_family == OperatingSystemFamily.REDHAT:
                             log_time = datetime.strptime(
                                 " ".join(line.split()[:3]), "%b %d %H:%M:%S"
                             )
                             log_time = log_time.replace(year=start_dt.year)
-                        elif self.ansible_os_family == "SUSE":
+                        elif self.ansible_os_family == OperatingSystemFamily.SUSE:
                             log_time = datetime.strptime(line.split(".")[0], "%Y-%m-%dT%H:%M:%S")
                         else:
                             continue
@@ -323,18 +318,19 @@ def run_module() -> None:
         end_time=dict(type="str", required=False),
         log_file=dict(type="str", required=False, default="/var/log/messages"),
         keywords=dict(type="list", required=False, default=[]),
-        ansible_os_family=dict(type="str", required=True),
         function=dict(type="str", required=True, choices=["parse_logs", "merge_logs"]),
         logs=dict(type="list", required=False, default=[]),
+        filter=dict(type="str", required=False, default="os_family"),
     )
 
     module = AnsibleModule(argument_spec=module_args, supports_check_mode=True)
-
     parser = LogParser(
         start_time=module.params.get("start_time"),
         end_time=module.params.get("end_time"),
         log_file=module.params.get("log_file"),
-        ansible_os_family=module.params["ansible_os_family"],
+        ansible_os_family=OperatingSystemFamily(
+            str(ansible_facts(module).get("os_family", "SUSE")).upper()
+        ),
         logs=module.params.get("logs"),
     )
     if module.params["function"] == "parse_logs":

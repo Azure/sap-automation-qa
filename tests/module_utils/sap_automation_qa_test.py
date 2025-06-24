@@ -6,7 +6,8 @@ Unit tests for the sap_automation_qa module.
 """
 
 import xml.etree.ElementTree as ET
-from src.module_utils.sap_automation_qa import SapAutomationQA, TestStatus
+from src.module_utils.sap_automation_qa import SapAutomationQA
+from src.module_utils.enums import TestStatus
 
 
 class MockLogger:
@@ -66,7 +67,6 @@ class TestSapAutomationQA:
         Test the initialization of the SapAutomationQA class.
         """
         sap_qa = SapAutomationQA()
-        assert sap_qa.result["status"] == TestStatus.NOT_STARTED.value
         assert sap_qa.result["message"] == ""
         assert not sap_qa.result["details"]
         assert not sap_qa.result["logs"]

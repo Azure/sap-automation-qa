@@ -7,13 +7,11 @@ def main():
     module = AnsibleModule(
         argument_spec=dict(
             action=dict(type="str", required=True),
-            ansible_os_family=dict(type="str", required=True),
         ),
         supports_check_mode=True
     )
 
     action = module.params["action"]
-    ansible_os_family = module.params["ansible_os_family"]
 
 
 

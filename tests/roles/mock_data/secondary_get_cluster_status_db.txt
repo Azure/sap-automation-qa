@@ -9,7 +9,7 @@ def main():
         argument_spec=dict(
             operation_step=dict(type="str", required=True),
             database_sid=dict(type="str", required=True),
-            ansible_os_family=dict(type="str", required=False),
+            saphanasr_provider=dict(type="str", required=True)
         )
     )
 

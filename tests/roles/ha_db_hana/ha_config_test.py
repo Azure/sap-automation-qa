@@ -59,6 +59,7 @@ class TestDbHaConfigValidation(RolesTestingBaseDB):
                 "project/library/get_package_list",
                 "bin/crm_resource",
                 "bin/crm",
+                "bin/SAPHanaSR-manageProvider",
             ],
             extra_vars_override={"node_tier": "hana"},
         )

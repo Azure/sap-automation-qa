@@ -113,6 +113,7 @@ class TestDbHDBOperations(RolesTestingBaseDB):
             "bin/crm",
             "bin/echo",
             "bin/killall",
+            "bin/SAPHanaSR-manageProvider",
         ]
 
         if task_type["task_name"] == "sbd-fencing":

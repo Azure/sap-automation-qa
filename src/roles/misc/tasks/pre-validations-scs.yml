@@ -11,7 +11,6 @@
     - name:                         "Pre Validation: Validate SCS cluster status on ASCS node"
       get_cluster_status_scs:
         sap_sid:                    "{{ sap_sid | lower }}"
-        ansible_os_family:          "{{ ansible_os_family | upper }}"
       become:                       true
       register:                     cluster_status_pre
 

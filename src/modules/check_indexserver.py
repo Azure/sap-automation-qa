@@ -7,11 +7,14 @@ This module is used to check if SAP HANA indexserver is configured.
 
 import logging
 from ansible.module_utils.basic import AnsibleModule
+from ansible.module_utils.facts.compat import ansible_facts
 
 try:
-    from ansible.module_utils.sap_automation_qa import SapAutomationQA, TestStatus
+    from ansible.module_utils.sap_automation_qa import SapAutomationQA
+    from ansible.module_utils.enums import TestStatus, OperatingSystemFamily
 except ImportError:
-    from src.module_utils.sap_automation_qa import SapAutomationQA, TestStatus
+    from src.module_utils.sap_automation_qa import SapAutomationQA
+    from src.module_utils.enums import TestStatus, OperatingSystemFamily
 
 DOCUMENTATION = r"""
 ---
@@ -27,11 +30,6 @@ options:
             - SAP HANA database SID
         type: str
         required: true
-    ansible_os_family:
-        description:
-            - Operating system distribution (e.g., 'redhat' or 'suse')
-        type: str
-        required: true
 author:
     - Microsoft Corporation
 notes:
@@ -45,7 +43,6 @@ EXAMPLES = r"""
 - name: Check if SAP HANA indexserver is configured
   check_indexserver:
     database_sid: "HDB"
-    ansible_os_family: "{{ ansible_os_family|lower }}"
   register: indexserver_result
 
 - name: Display indexserver check results
@@ -92,7 +89,7 @@ class IndexServerCheck(SapAutomationQA):
     :type os_distribution: str
     """
 
-    def __init__(self, database_sid: str, os_distribution: str):
+    def __init__(self, database_sid: str, os_distribution: OperatingSystemFamily):
         super().__init__()
         self.database_sid = database_sid
         self.os_distribution = os_distribution
@@ -102,7 +99,7 @@ class IndexServerCheck(SapAutomationQA):
         Checks if the indexserver is configured.
         """
         expected_properties = {
-            "redhat": [
+            OperatingSystemFamily.REDHAT: [
                 {
                     "[ha_dr_provider_chksrv]": {
                         "provider": "ChkSrv",
@@ -116,7 +113,7 @@ class IndexServerCheck(SapAutomationQA):
                     }
                 },
             ],
-            "suse": [
+            OperatingSystemFamily.SUSE: [
                 {
                     "[ha_dr_provider_suschksrv]": {
                         "provider": "susChkSrv",
@@ -127,6 +124,12 @@ class IndexServerCheck(SapAutomationQA):
                     "[ha_dr_provider_suschksrv]": {
                         "provider": "susChkSrv",
                         "path": "/hana/shared/myHooks",
+                    }
+                },
+                {
+                    "[ha_dr_provider_suschksrv]": {
+                        "provider": "susChkSrv",
+                        "path": "/usr/share/SAPHanaSR-angi",
                     }
                 },
             ],
@@ -211,14 +214,18 @@ def main():
     module = AnsibleModule(
         argument_spec=dict(
             database_sid=dict(type="str", required=True),
-            ansible_os_family=dict(type="str", required=True),
+            filter=dict(type="str", required=False, default="os_family"),
         )
     )
 
     database_sid = module.params["database_sid"]
-    os_distribution = module.params["ansible_os_family"]
 
-    index_server_check = IndexServerCheck(database_sid, os_distribution)
+    index_server_check = IndexServerCheck(
+        database_sid=database_sid,
+        os_distribution=OperatingSystemFamily(
+            str(ansible_facts(module).get("os_family", "SUSE")).upper()
+        ),
+    )
     index_server_check.check_indexserver()
 
     module.exit_json(**index_server_check.get_result())

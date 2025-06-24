@@ -7,7 +7,7 @@ Unit tests for the check_indexserver module.
 
 import io
 from src.modules.check_indexserver import IndexServerCheck, main
-from src.module_utils.sap_automation_qa import TestStatus
+from src.module_utils.enums import OperatingSystemFamily, TestStatus
 
 
 def fake_open_factory(file_content):
@@ -54,7 +54,9 @@ class TestIndexServerCheck:
         ]
         with monkeypatch.context() as monkey_patch:
             monkey_patch.setattr("builtins.open", fake_open_factory(file_lines))
-            checker = IndexServerCheck(database_sid="TEST", os_distribution="redhat")
+            checker = IndexServerCheck(
+                database_sid="TEST", os_distribution=OperatingSystemFamily.REDHAT
+            )
             checker.check_indexserver()
             result = checker.get_result()
 
@@ -77,9 +79,17 @@ class TestIndexServerCheck:
             "path=/usr/share/SAPHanaSR",
             "dummy=dummy",
         ]
+        file_lines_angi = [
+            "[ha_dr_provider_suschksrv]",
+            "provider=susChkSrv",
+            "path=/usr/share/SAPHanaSR",
+            "dummy=dummy",
+        ]
         with monkeypatch.context() as monkey_patch:
             monkey_patch.setattr("builtins.open", fake_open_factory(file_lines))
-            checker = IndexServerCheck(database_sid="TEST", os_distribution="suse")
+            checker = IndexServerCheck(
+                database_sid="TEST", os_distribution=OperatingSystemFamily.SUSE
+            )
             checker.check_indexserver()
             result = checker.get_result()
 
@@ -89,12 +99,17 @@ class TestIndexServerCheck:
             assert "provider" in result["details"]
             assert "path" in result["details"]
 
+            monkey_patch.setattr("builtins.open", fake_open_factory(file_lines_angi))
+            checker.check_indexserver()
+            result = checker.get_result()
+            assert result["status"] == TestStatus.SUCCESS.value
+
     def test_unsupported_os(self):
         """
         Test unsupported OS distribution.
         """
         with io.StringIO() as _:
-            checker = IndexServerCheck(database_sid="TEST", os_distribution="windows")
+            checker = IndexServerCheck(database_sid="TEST", os_distribution="unsupported_os")
             checker.check_indexserver()
             result = checker.get_result()
 
@@ -117,7 +132,9 @@ class TestIndexServerCheck:
         ]
         with monkeypatch.context() as monkey_patch:
             monkey_patch.setattr("builtins.open", fake_open_factory(file_lines))
-            index_server_check = IndexServerCheck(database_sid="HDB", os_distribution="redhat")
+            index_server_check = IndexServerCheck(
+                database_sid="HDB", os_distribution=OperatingSystemFamily.REDHAT
+            )
             index_server_check.check_indexserver()
             result = index_server_check.get_result()
 
@@ -143,7 +160,9 @@ class TestIndexServerCheck:
 
         with monkeypatch.context() as monkey_patch:
             monkey_patch.setattr("builtins.open", fake_open)
-            index_server_check = IndexServerCheck(database_sid="HDB", os_distribution="redhat")
+            index_server_check = IndexServerCheck(
+                database_sid="HDB", os_distribution=OperatingSystemFamily.REDHAT
+            )
             index_server_check.check_indexserver()
             result = index_server_check.get_result()
 
@@ -174,7 +193,6 @@ class TestIndexServerCheck:
             def __init__(self, *args, **kwargs):
                 self.params = {
                     "database_sid": "TEST",
-                    "ansible_os_family": "redhat",
                 }
 
             def exit_json(self, **kwargs):
@@ -184,8 +202,22 @@ class TestIndexServerCheck:
                 nonlocal mock_result
                 mock_result = kwargs
 
+        def mock_ansible_facts_suse(module):
+            """
+            Mock function to return Ansible facts for Suse.
+
+            :param module: Mock Ansible module instance.
+            :type module: MockAnsibleModule
+            :return: Dictionary with Suse facts.
+            :rtype: dict
+            """
+            return {"os_family": "Suse", "distribution": "SLES", "ansible_os_family": "Suse"}
+
         with monkeypatch.context() as monkey_patch:
             monkey_patch.setattr("src.modules.check_indexserver.AnsibleModule", MockAnsibleModule)
             monkey_patch.setattr("builtins.open", fake_open_factory(file_lines))
+            monkey_patch.setattr(
+                "src.modules.check_indexserver.ansible_facts", mock_ansible_facts_suse
+            )
             main()
             assert mock_result["status"] == TestStatus.ERROR.value

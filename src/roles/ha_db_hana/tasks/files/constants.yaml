@@ -99,6 +99,22 @@ RESOURCE_DEFAULTS:
           interval:                       ["0", "0s"]
           timeout:                        ["300", "300s"]
 
+    angi_topology:
+      meta_attributes:
+        clone-node-max:                   "1"
+        target-role:                      "Started"
+        interleave:                       "true"
+      operations:
+        monitor:
+          interval:                       ["50", "50s"]
+          timeout:                        ["600", "600s"]
+        start:
+          interval:                       ["0", "0s"]
+          timeout:                        ["600", "600s"]
+        stop:
+          interval:                       ["0", "0s"]
+          timeout:                        ["300", "300s"]
+
     hana:
       meta_attributes:
         notify:                           "true"
@@ -121,6 +137,34 @@ RESOURCE_DEFAULTS:
         promote:
           interval:                       ["0", "0s"]
           timeout:                        ["3600", "3600s"]
+        monitor:
+          timeout:                        ["700", "700s"]
+
+    angi_hana:
+      meta_attributes:
+        notify:                           "true"
+        clone-max:                        "2"
+        clone-node-max:                   "1"
+        target-role:                      "Started"
+        interleave:                       "true"
+        priority:                         "100"
+      instance_attributes:
+        PREFER_SITE_TAKEOVER:             "true"
+        DUPLICATE_PRIMARY_TIMEOUT:        "7200"
+        AUTOMATED_REGISTER:               "true"
+      operations:
+        start:
+          interval:                       ["0", "0s"]
+          timeout:                        ["3600", "3600s"]
+        stop:
+          interval:                       ["0", "0s"]
+          timeout:                        ["3600", "3600s"]
+        promote:
+          interval:                       ["0", "0s"]
+          timeout:                        ["3600", "3600s"]
+        demote:
+          interval:                       ["0", "0s"]
+          timeout:                        ["320", "320s"]
         monitor:
           timeout:                        ["700", "700s"]
 
@@ -147,9 +191,28 @@ RESOURCE_DEFAULTS:
           interval:                       ["0", "0s"]
           timeout:                        ["120", "120s"]
 
+    angi_filesystem:
+      meta_attributes:
+        clone-node-max:                   "1"
+        interleave:                       "true"
+      operations:
+        monitor:
+          interval:                       ["120", "120s"]
+          timeout:                        ["120", "120s"]
+        start:
+          interval:                       ["0", "0s"]
+          timeout:                        ["10", "10s"]
+        stop:
+          interval:                       ["0", "0s"]
+          timeout:                        ["20", "20s"]
+
     azurelb:
       meta_attributes:
         resource-stickiness:              "0"
+      operations:
+        monitor:
+          interval:                       ["10", "10s"]
+          timeout:                        ["20", "20s"]
 
   REDHAT:
     fence_agent:
@@ -285,14 +348,19 @@ OS_PARAMETERS:
 # Reading the global.ini file to get the provider and path for the SAPHanaSR resource agent
 GLOBAL_INI:
   SUSE:
-    provider:                           "SAPHanaSR"
-    path:                               ["/usr/share/SAPHanaSR", "/hana/shared/myHooks"]
-    execution_order:                    "1"
-
+    SAPHanaSR:
+      provider:                           "SAPHanaSR"
+      path:                               ["/usr/share/SAPHanaSR", "/hana/shared/myHooks"]
+      execution_order:                    "1"
+    SAPHanaSR-angi:
+      provider:                           "susHanaSR"
+      path:                               ["/usr/share/SAPHanaSR", "/hana/shared/myHooks"]
+      execution_order:                    "1"
   REDHAT:
-    provider:                           "SAPHanaSR"
-    path:                               ["/usr/share/SAPHanaSR/srHook", "/hana/shared/myHooks"]
-    execution_order:                    "1"
+    SAPHanaSR:
+      provider:                           "SAPHanaSR"
+      path:                               ["/usr/share/SAPHanaSR/srHook", "/hana/shared/myHooks"]
+      execution_order:                    "1"
 
 
 # === Azure Load Balancer ===

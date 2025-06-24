@@ -7,7 +7,11 @@ Unit tests for the get_cluster_status_db module.
 
 import xml.etree.ElementTree as ET
 import pytest
-from src.modules.get_cluster_status_db import HanaClusterStatusChecker, run_module
+from src.modules.get_cluster_status_db import (
+    HanaClusterStatusChecker,
+    run_module,
+)
+from src.module_utils.enums import OperatingSystemFamily, HanaSRProvider
 
 
 class TestHanaClusterStatusChecker:
@@ -16,58 +20,76 @@ class TestHanaClusterStatusChecker:
     """
 
     @pytest.fixture
-    def hana_checker(self):
+    def hana_checker_classic(self):
         """
-        Fixture for creating a HanaClusterStatusChecker instance.
+        Fixture for creating a HanaClusterStatusChecker instance with classic SAP HANA SR provider.
 
         :return: Instance of HanaClusterStatusChecker.
         :rtype: HanaClusterStatusChecker
         """
-        return HanaClusterStatusChecker(database_sid="TEST", ansible_os_family="REDHAT")
+        return HanaClusterStatusChecker(
+            database_sid="TEST",
+            ansible_os_family=OperatingSystemFamily.REDHAT,
+            saphanasr_provider=HanaSRProvider.SAPHANASR,
+        )
 
-    def test_get_automation_register(self, mocker, hana_checker):
+    @pytest.fixture
+    def hana_checker_angi(self):
+        """
+        Fixture for creating a HanaClusterStatusChecker instance with ANGI SAP HANA SR provider.
+
+        :return: Instance of HanaClusterStatusChecker.
+        :rtype: HanaClusterStatusChecker
+        """
+        return HanaClusterStatusChecker(
+            database_sid="TEST",
+            ansible_os_family=OperatingSystemFamily.SUSE,
+            saphanasr_provider=HanaSRProvider.ANGI,
+        )
+
+    def test_get_automation_register(self, mocker, hana_checker_classic):
         """
         Test the _get_automation_register method.
 
         :param mocker: Mocking library for Python.
         :type mocker: _mocker.MagicMock
-        :param hana_checker: Instance of HanaClusterStatusChecker.
-        :type hana_checker: HanaClusterStatusChecker
+        :param hana_checker_classic: Instance of HanaClusterStatusChecker.
+        :type hana_checker_classic: HanaClusterStatusChecker
         """
         mocker.patch.object(
-            hana_checker,
+            hana_checker_classic,
             "execute_command_subprocess",
             return_value='<nvpair id="cib-bootstrap-options-AUTOMATED_REGISTER" '
             + 'name="AUTOMATED_REGISTER" value="true"/>',
         )
 
-        hana_checker._get_automation_register()
+        hana_checker_classic._get_automation_register()
 
-        assert hana_checker.result["AUTOMATED_REGISTER"] == "true"
+        assert hana_checker_classic.result["AUTOMATED_REGISTER"] == "true"
 
-    def test_get_automation_register_exception(self, mocker, hana_checker):
+    def test_get_automation_register_exception(self, mocker, hana_checker_classic):
         """
         Test the _get_automation_register method when an exception occurs.
 
         :param mocker: Mocking library for Python.
         :type mocker: _mocker.MagicMock
-        :param hana_checker: Instance of HanaClusterStatusChecker.
-        :type hana_checker: HanaClusterStatusChecker
+        :param hana_checker_classic: Instance of HanaClusterStatusChecker.
+        :type hana_checker_classic: HanaClusterStatusChecker
         """
         mocker.patch.object(
-            hana_checker, "execute_command_subprocess", side_effect=Exception("Test error")
+            hana_checker_classic, "execute_command_subprocess", side_effect=Exception("Test error")
         )
 
-        hana_checker._get_automation_register()
+        hana_checker_classic._get_automation_register()
 
-        assert hana_checker.result["AUTOMATED_REGISTER"] == "unknown"
+        assert hana_checker_classic.result["AUTOMATED_REGISTER"] == "unknown"
 
-    def test_process_node_attributes_primary_only(self, hana_checker):
+    def test_process_node_attributes_primary_only(self, hana_checker_classic):
         """
         Test processing node attributes with only the primary node.
 
-        :param hana_checker: Instance of HanaClusterStatusChecker.
-        :type hana_checker: HanaClusterStatusChecker
+        :param hana_checker_classic: Instance of HanaClusterStatusChecker.
+        :type hana_checker_classic: HanaClusterStatusChecker
         """
 
         xml_str = """
@@ -84,7 +106,7 @@ class TestHanaClusterStatusChecker:
         </dummy>
         """
 
-        result = hana_checker._process_node_attributes(ET.fromstring(xml_str))
+        result = hana_checker_classic._process_node_attributes(ET.fromstring(xml_str))
 
         assert result["primary_node"] == "node1"
         assert result["secondary_node"] == ""
@@ -92,12 +114,73 @@ class TestHanaClusterStatusChecker:
         assert result["replication_mode"] == "syncmem"
         assert result["primary_site_name"] == "site1"
 
-    def test_process_node_attributes_both_nodes(self, hana_checker):
+    def test_process_node_attributes_primary_only_angi(self, hana_checker_angi):
+        """
+        Test processing node attributes with only the primary node when using ANGI provider.
+
+        :param hana_checker_angi: Instance of HanaClusterStatusChecker.
+        :type hana_checker_angi: HanaClusterStatusChecker
+        """
+
+        xml_str = """
+        <dummy>
+            <node_attributes>
+                <node name="node1">
+                    <attribute name="hana_TEST_clone_state" value="PROMOTED"/>
+                    <attribute name="hana_TEST_roles" value="master1:master:worker:master"/>
+                    <attribute name="hana_TEST_site" value="SITEA"/>
+                    <attribute name="hana_TEST_vhost" value="node1"/>
+                    <attribute name="master-rsc_SAPHanaCon_TEST_HDB00" value="150"/>
+                </node>
+            </node_attributes>
+        </dummy>
+        """
+
+        result = hana_checker_angi._process_node_attributes(ET.fromstring(xml_str))
+
+        assert result["primary_node"] == "node1"
+        assert result["secondary_node"] == ""
+        assert result["primary_site_name"] == "SITEA"
+
+    def test_process_node_attributes_both_nodes_angi(self, hana_checker_angi):
         """
         Test processing node attributes with both primary and secondary nodes.
 
-        :param hana_checker: Instance of HanaClusterStatusChecker.
-        :type hana_checker: HanaClusterStatusChecker
+        :param hana_checker_angi: Instance of HanaClusterStatusChecker.
+        :type hana_checker_angi: HanaClusterStatusChecker
+        """
+        xml_str = """
+        <dummy>
+            <node_attributes>
+                <node name="node1">
+                    <attribute name="hana_TEST_clone_state" value="PROMOTED"/>
+                    <attribute name="hana_TEST_roles" value="master1:master:worker:master"/>
+                    <attribute name="hana_TEST_site" value="SITEA"/>
+                    <attribute name="hana_TEST_vhost" value="node1"/>
+                    <attribute name="master-rsc_SAPHanaCon_TEST_HDB00" value="150"/>
+                </node>
+                <node name="node2">
+                    <attribute name="hana_TEST_clone_state" value="DEMOTED"/>
+                    <attribute name="hana_TEST_roles" value="master1:master:worker:master"/>
+                    <attribute name="hana_TEST_site" value="SITEB"/>
+                    <attribute name="hana_TEST_vhost" value="node2"/>
+                    <attribute name="master-rsc_SAPHanaCon_TEST_HDB00" value="100"/>
+                </node>
+            </node_attributes>
+        </dummy>
+        """
+        result = hana_checker_angi._process_node_attributes(ET.fromstring(xml_str))
+
+        assert result["primary_node"] == "node1"
+        assert result["secondary_node"] == "node2"
+        assert result["primary_site_name"] == "SITEA"
+
+    def test_process_node_attributes_both_nodes(self, hana_checker_classic):
+        """
+        Test processing node attributes with both primary and secondary nodes.
+
+        :param hana_checker_classic: Instance of HanaClusterStatusChecker.
+        :type hana_checker_classic: HanaClusterStatusChecker
         """
         xml_str = """
         <dummy>
@@ -117,7 +200,7 @@ class TestHanaClusterStatusChecker:
             </node_attributes>
         </dummy>
         """
-        result = hana_checker._process_node_attributes(ET.fromstring(xml_str))
+        result = hana_checker_classic._process_node_attributes(ET.fromstring(xml_str))
 
         assert result["primary_node"] == "node1"
         assert result["secondary_node"] == "node2"
@@ -125,54 +208,54 @@ class TestHanaClusterStatusChecker:
         assert result["replication_mode"] == "syncmem"
         assert result["primary_site_name"] == "site1"
 
-    def test_is_cluster_ready(self, hana_checker):
+    def test_is_cluster_ready(self, hana_checker_classic):
         """
         Test the _is_cluster_ready method.
 
-        :param hana_checker: Instance of HanaClusterStatusChecker.
-        :type hana_checker: HanaClusterStatusChecker
+        :param hana_checker_classic: Instance of HanaClusterStatusChecker.
+        :type hana_checker_classic: HanaClusterStatusChecker
         """
-        hana_checker.result["primary_node"] = ""
-        assert not hana_checker._is_cluster_ready()
+        hana_checker_classic.result["primary_node"] = ""
+        assert not hana_checker_classic._is_cluster_ready()
 
-        hana_checker.result["primary_node"] = "node1"
-        assert hana_checker._is_cluster_ready()
+        hana_checker_classic.result["primary_node"] = "node1"
+        assert hana_checker_classic._is_cluster_ready()
 
-    def test_is_cluster_stable(self, hana_checker):
+    def test_is_cluster_stable(self, hana_checker_classic):
         """
         Test the _is_cluster_stable method.
 
-        :param hana_checker: Instance of HanaClusterStatusChecker.
-        :type hana_checker: HanaClusterStatusChecker
+        :param hana_checker_classic: Instance of HanaClusterStatusChecker.
+        :type hana_checker_classic: HanaClusterStatusChecker
         """
-        hana_checker.result["primary_node"] = ""
-        hana_checker.result["secondary_node"] = ""
-        assert not hana_checker._is_cluster_stable()
+        hana_checker_classic.result["primary_node"] = ""
+        hana_checker_classic.result["secondary_node"] = ""
+        assert not hana_checker_classic._is_cluster_stable()
 
-        hana_checker.result["primary_node"] = "node1"
-        hana_checker.result["secondary_node"] = ""
-        assert not hana_checker._is_cluster_stable()
+        hana_checker_classic.result["primary_node"] = "node1"
+        hana_checker_classic.result["secondary_node"] = ""
+        assert not hana_checker_classic._is_cluster_stable()
 
-        hana_checker.result["primary_node"] = "node1"
-        hana_checker.result["secondary_node"] = "node2"
-        assert hana_checker._is_cluster_stable()
+        hana_checker_classic.result["primary_node"] = "node1"
+        hana_checker_classic.result["secondary_node"] = "node2"
+        assert hana_checker_classic._is_cluster_stable()
 
-    def test_run(self, mocker, hana_checker):
+    def test_run(self, mocker, hana_checker_classic):
         """
         Test the run method of the HanaClusterStatusChecker class.
         :param mocker: Mocking library for Python.
         :type mocker: _mocker.MagicMock
-        :param hana_checker: Instance of HanaClusterStatusChecker.
-        :type hana_checker: HanaClusterStatusChecker
+        :param hana_checker_classic: Instance of HanaClusterStatusChecker.
+        :type hana_checker_classic: HanaClusterStatusChecker
         """
         mock_super_run = mocker.patch(
             "src.module_utils.get_cluster_status.BaseClusterStatusChecker.run",
             return_value={"status": "PASSED"},
         )
 
-        mock_get_automation = mocker.patch.object(hana_checker, "_get_automation_register")
+        mock_get_automation = mocker.patch.object(hana_checker_classic, "_get_automation_register")
 
-        result = hana_checker.run()
+        result = hana_checker_classic.run()
 
         mock_super_run.assert_called_once()
         mock_get_automation.assert_called_once()
@@ -194,9 +277,13 @@ class TestRunModule:
         mock_ansible_module = mocker.MagicMock()
         mock_ansible_module.params = {
             "database_sid": "TEST",
-            "ansible_os_family": "REDHAT",
             "operation_step": "check",
+            "saphanasr_provider": "SAPHanaSR",
         }
+        mocker.patch(
+            "src.modules.get_cluster_status_db.ansible_facts", return_value={"os_family": "REDHAT"}
+        )
+
         mocker.patch(
             "src.modules.get_cluster_status_db.AnsibleModule", return_value=mock_ansible_module
         )

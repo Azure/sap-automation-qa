@@ -7,7 +7,6 @@ def main():
     module = AnsibleModule(
         argument_spec=dict(
             database_sid=dict(type="str", required=True),
-            ansible_os_family=dict(type="str", required=True),
         )
     )
 

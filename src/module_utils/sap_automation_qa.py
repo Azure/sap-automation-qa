@@ -4,63 +4,16 @@ and setup base variables for the test case running in the sap-automation-qa
 """
 
 from abc import ABC
-from enum import Enum
 import sys
 import logging
 import subprocess
 from typing import Optional, Dict, Any
 import xml.etree.ElementTree as ET
 
-
-class TelemetryDataDestination(Enum):
-    """
-    Enum for the destination of the telemetry data.
-    """
-
-    KUSTO = "azuredataexplorer"
-    LOG_ANALYTICS = "azureloganalytics"
-
-
-class TestStatus(Enum):
-    """
-    Enum for the status of the test case/step.
-    """
-
-    SUCCESS = "PASSED"
-    ERROR = "FAILED"
-    WARNING = "WARNING"
-    INFO = "INFO"
-    NOT_STARTED = "NOT_STARTED"
-
-
-class Parameters:
-    """
-    This class is used to store the parameters for the test case
-    """
-
-    def __init__(self, category, id, name, value, expected_value, status):
-        self.category = category
-        self.id = id
-        self.name = name
-        self.value = value
-        self.expected_value = expected_value
-        self.status = status
-
-    def to_dict(self) -> Dict[str, Any]:
-        """
-        This method is used to convert the parameters to a dictionary
-
-        :return: Dictionary containing the parameters
-        :rtype: Dict[str, Any]
-        """
-        return {
-            "category": self.category,
-            "id": self.id,
-            "name": self.name,
-            "value": self.value,
-            "expected_value": self.expected_value,
-            "status": self.status,
-        }
+try:
+    from ansible.module_utils.enums import Result, TestStatus
+except ImportError:
+    from src.module_utils.enums import Result, TestStatus
 
 
 class SapAutomationQA(ABC):
@@ -71,13 +24,7 @@ class SapAutomationQA(ABC):
 
     def __init__(self):
         self.logger = self.setup_logger()
-        self.result = {
-            "status": TestStatus.NOT_STARTED.value,
-            "message": "",
-            "details": [],
-            "logs": [],
-            "changed": False,
-        }
+        self.result = Result().to_dict()
 
     def setup_logger(self) -> logging.Logger:
         """
@@ -107,7 +54,7 @@ class SapAutomationQA(ABC):
         message.replace("\n", " ")
         self.result["logs"].append(message)
 
-    def handle_error(self, exception: Exception, stderr: str = None):
+    def handle_error(self, exception: Exception, stderr: str = ""):
         """
         Handles command execution errors by logging and updating the result dictionary.
 
@@ -125,7 +72,7 @@ class SapAutomationQA(ABC):
         self.result["message"] = error_message
         self.result["logs"].append(error_message)
 
-    def execute_command_subprocess(self, command: str, shell_command: bool = False) -> str:
+    def execute_command_subprocess(self, command: Any, shell_command: bool = False) -> str:
         """
         Executes a shell command using subprocess with a timeout and logs output or errors.
 

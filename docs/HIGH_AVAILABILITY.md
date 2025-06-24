@@ -21,8 +21,10 @@ Currently SAP Testing Automation Framework is supported for below Linux distros 
 |-----------|------|--------------|---------|
 | SAP Central Services | ENSA1 or ENSA2 | Azure Fencing Agent | Azure Files or ANF |
 | SAP Central Services | ENSA1 or ENSA2 | ISCSI (SBD device) | Azure Files or ANF |
+| SAP Central Services | ENSA1 or ENSA2 | Azure Shared Disks (SBD device) | Azure Files or ANF |
 | SAP HANA | Scale-up | Azure Fencing Agent | Azure Managed Disk or ANF |
 | SAP HANA | Scale-up | ISCSI (SBD device) | Azure Managed Disk or ANF |
+| SAP HANA | Scale-up | Azure Shared Disks (SBD device) | Azure Managed Disk or ANF |
 
 For SAP Central Services on SLES, both the simple mount approach and the classic method are supported.
 
@@ -238,9 +240,10 @@ db_high_availability: true
 
 # The high availability configuration of the SCS and DB instance. Supported values are:
 # - AFA (for Azure Fencing Agent)
-# - ISCSI (for SBD devices)
-scs_cluster_type: "AFA"  # or "ISCSI"
-database_cluster_type: "AFA"  # or "ISCSI"
+# - ISCSI (for SBD devices with ISCSI target servers)
+# - ASD (for SBD devices with Azure Shared Disks)
+scs_cluster_type: "AFA"  # or "ISCSI" or "ASD"
+database_cluster_type: "AFA"  # or "ISCSI" or "ASD"
 
 # The instance number of the SCS, ERS and DB instance.
 scs_instance_number: "00"
@@ -273,23 +276,54 @@ key_vault_id:                  /subscriptions/<subscription-id>/resourceGroups/<
 secret_id:                     https://<key-vault-name>.vault.azure.net/secrets/<secret-name>/<id>
 ```
 
-2.2.3. Credential Files
+2.2.3. **Credential Files** (Available locally)
 
 The required credential files depend on the authentication method used to connect to the SAP system:
 
-1. SSH Key Authentication: If connecting via SSH key, place the private key inside `WORKSPACE/SYSTEM/<DIRECTORY>` and name the file "ssh_key.ppk".
-1. Username and Password Authentication: If connecting using a username and password, create a password file by running the following command. It takes the username from hosts.yaml file. 
+1. **SSH Key Authentication**: If connecting via SSH key, place the private key inside `WORKSPACE/SYSTEM/<DIRECTORY>` and name the file "ssh_key.ppk".
+1. **Password Authentication**: If connecting using a username and password, create a password file by running the following command. It takes the username from hosts.yaml file. 
 
   ```bash
   echo "password" > WORKSPACES/SYSTEM/<DIRECTORY>/password
   ```
+
+2.2.4. **Credential Files** (From Azure Key Vault)
+
+When using Azure Key Vault to store credentials, the framework retrieves authentication details directly from the key vault using the configured managed identity.
+
+  **Authentication Methods:**
+
+  1. **SSH Key Authentication**: Store the private SSH key content in Azure Key Vault as a secret.
+  2. **Password Authentication**: Store the password in Azure Key Vault as a secret. The username is taken from the `hosts.yaml` file.
+
+  **Setup:**
+
+  1. Ensure the managed identity has "Key Vault Secrets User" role on the key vault.
+
+  2. Configure `key_vault_id` and `secret_id` parameters in `sap-parameters.yaml` as shown in section 2.2.2.
+
+  **Important**: When using Key Vault authentication, do NOT create local credential files (`ssh_key.ppk` or `password` files).
+
 
 ### 3. Test Execution
 
 To execute the script, run following command:
 
 ```bash
+# Run all the tests with default parameters
 ./scripts/sap_automation_qa.sh
+
+# Run specific test cases from HA_DB_HANA group
+./scripts/sap_automation_qa.sh --test_groups=HA_DB_HANA --test_cases=[ha-config,primary-node-crash]
+
+# Run all enabled tests in HA_DB_HANA group
+./scripts/sap_automation_qa.sh --test_groups=HA_DB_HANA
+
+# Run all enabled tests in HA_SCS group
+./scripts/sap_automation_qa.sh --test_groups=HA_SCS
+
+# Run with verbose output
+./scripts/sap_automation_qa.sh --test_groups=HA_DB_HANA --test_cases=[ha-config] -vv
 ```
 
 ### 4. Viewing Test Results

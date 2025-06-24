@@ -40,7 +40,6 @@
       delegate_to:                      localhost
       log_parser:
         function:                       "merge_logs"
-        ansible_os_family:              "{{ ansible_os_family | upper }}"
         logs:
           - "{{ hostvars[first_node]['var_log_messages_output'].filtered_logs | default('[]') }}"
           - "{{ hostvars[second_node]['var_log_messages_output'].filtered_logs | default('[]') }}"

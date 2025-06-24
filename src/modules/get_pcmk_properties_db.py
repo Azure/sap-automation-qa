@@ -11,21 +11,22 @@ Classes:
     HAClusterValidator: Main validator class for cluster configurations.
 """
 
+import logging
 from ansible.module_utils.basic import AnsibleModule
+from ansible.module_utils.facts.compat import ansible_facts
 
 try:
-    from ansible.module_utils.sap_automation_qa import (
-        SapAutomationQA,
-        TestStatus,
+    from ansible.module_utils.sap_automation_qa import SapAutomationQA
+    from ansible.module_utils.enums import (
+        OperatingSystemFamily,
         Parameters,
+        TestStatus,
+        HanaSRProvider,
     )
     from ansible.module_utils.commands import CIB_ADMIN
 except ImportError:
-    from src.module_utils.sap_automation_qa import (
-        SapAutomationQA,
-        TestStatus,
-        Parameters,
-    )
+    from src.module_utils.sap_automation_qa import SapAutomationQA
+    from src.module_utils.enums import OperatingSystemFamily, Parameters, TestStatus, HanaSRProvider
     from src.module_utils.commands import CIB_ADMIN
 
 DOCUMENTATION = r"""
@@ -48,11 +49,6 @@ options:
             - SAP HANA instance number
         type: str
         required: true
-    ansible_os_family:
-        description:
-            - Operating system family (redhat, suse, etc.)
-        type: str
-        required: true
     virtual_machine_name:
         description:
             - Name of the virtual machine
@@ -73,6 +69,11 @@ options:
             - Dictionary of constants for validation
         type: dict
         required: true
+    saphanasr_provider:
+        description:
+            - SAP HANA SR provider type (e.g., SAPHanaSR, SAPHanaSR-angi)
+        type: str
+        required: true
 author:
     - Microsoft Corporation
 notes:
@@ -89,7 +90,6 @@ EXAMPLES = r"""
   get_pcmk_properties_db:
     sid: "HDB"
     instance_number: "00"
-    ansible_os_family: "{{ ansible_os_family|lower }}"
     virtual_machine_name: "{{ ansible_hostname }}"
     fencing_mechanism: "sbd"
     os_version: "{{ ansible_distribution_version }}"
@@ -180,27 +180,31 @@ class HAClusterValidator(SapAutomationQA):
         "sbd_stonith": ".//primitive[@type='external/sbd']",
         "fence_agent": ".//primitive[@type='fence_azure_arm']",
         "topology": ".//clone/primitive[@type='SAPHanaTopology']",
+        "angi_topology": ".//clone/primitive[@type='SAPHanaTopology']",
         "topology_meta": ".//clone/meta_attributes",
         "hana": ".//master/primitive[@type='SAPHana']",
         "hana_meta": ".//master/meta_attributes",
         "ipaddr": ".//primitive[@type='IPaddr2']",
         "filesystem": ".//primitive[@type='Filesystem']",
         "azurelb": ".//primitive[@type='azure-lb']",
+        "angi_filesystem": ".//primitive[@type='SAPHanaFilesystem']",
+        "angi_hana": ".//primitive[@type='SAPHanaController']",
     }
 
     def __init__(
         self,
-        os_type,
-        os_version,
-        sid,
-        instance_number,
-        fencing_mechanism,
-        virtual_machine_name,
-        constants,
+        os_type: OperatingSystemFamily,
+        os_version: str,
+        sid: str,
+        instance_number: str,
+        fencing_mechanism: str,
+        virtual_machine_name: str,
+        constants: dict,
+        saphanasr_provider: HanaSRProvider,
         category=None,
     ):
         super().__init__()
-        self.os_type = os_type
+        self.os_type = os_type.value.upper()
         self.os_version = os_version
         self.category = category
         self.sid = sid
@@ -208,6 +212,7 @@ class HAClusterValidator(SapAutomationQA):
         self.fencing_mechanism = fencing_mechanism
         self.virtual_machine_name = virtual_machine_name
         self.constants = constants
+        self.saphanasr_provider = saphanasr_provider
         self.parse_ha_cluster_config()
 
     def _get_expected_value(self, category, name):
@@ -396,16 +401,22 @@ class HAClusterValidator(SapAutomationQA):
         :rtype: list
         """
         parameters = []
-        global_ini_defaults = self.constants["GLOBAL_INI"].get(self.os_type, {})
-
+        global_ini_defaults = (
+            self.constants["GLOBAL_INI"]
+            .get(self.os_type, {})
+            .get(self.saphanasr_provider.value, {})
+        )
         with open(
             f"/usr/sap/{self.sid}/SYS/global/hdb/custom/config/global.ini",
             "r",
             encoding="utf-8",
         ) as file:
             global_ini_content = file.read().splitlines()
-
-        section_start = global_ini_content.index("[ha_dr_provider_SAPHanaSR]")
+        section_start = (
+            global_ini_content.index("[ha_dr_provider_sushanasr]")
+            if self.saphanasr_provider == HanaSRProvider.ANGI
+            else global_ini_content.index("[ha_dr_provider_SAPHanaSR]")
+        )
         properties_slice = global_ini_content[section_start + 1 : section_start + 4]
 
         global_ini_properties = {
@@ -420,6 +431,10 @@ class HAClusterValidator(SapAutomationQA):
             if isinstance(expected_value, list):
                 if value in expected_value:
                     expected_value = value
+            self.log(
+                logging.INFO,
+                f"param_name: {param_name}, value: {value}, expected_value: {expected_value}",
+            )
             parameters.append(
                 self._create_parameter(
                     category="global_ini",
@@ -569,7 +584,12 @@ class HAClusterValidator(SapAutomationQA):
 
             elif self.category == "resources":
                 try:
-                    for sub_category, xpath in self.RESOURCE_CATEGORIES.items():
+                    resource_categories = self.RESOURCE_CATEGORIES.copy()
+                    if self.saphanasr_provider == HanaSRProvider.ANGI:
+                        resource_categories.pop("topology", None)
+                    else:
+                        resource_categories.pop("angi_topology", None)
+                    for sub_category, xpath in resource_categories.items():
                         elements = root.findall(xpath)
                         for element in elements:
                             parameters.extend(self._parse_resource(element, sub_category))
@@ -620,22 +640,24 @@ def main() -> None:
         argument_spec=dict(
             sid=dict(type="str"),
             instance_number=dict(type="str"),
-            ansible_os_family=dict(type="str"),
             virtual_machine_name=dict(type="str"),
             fencing_mechanism=dict(type="str"),
             os_version=dict(type="str"),
             pcmk_constants=dict(type="dict"),
+            saphanasr_provider=dict(type="str"),
+            filter=dict(type="str", required=False, default="os_family"),
         )
     )
 
     validator = HAClusterValidator(
-        os_type=module.params["ansible_os_family"],
+        os_type=OperatingSystemFamily(str(ansible_facts(module).get("os_family", "SUSE")).upper()),
         os_version=module.params["os_version"],
         instance_number=module.params["instance_number"],
         sid=module.params["sid"],
         virtual_machine_name=module.params["virtual_machine_name"],
         fencing_mechanism=module.params["fencing_mechanism"],
         constants=module.params["pcmk_constants"],
+        saphanasr_provider=HanaSRProvider(module.params["saphanasr_provider"]),
     )
 
     module.exit_json(**validator.get_result())

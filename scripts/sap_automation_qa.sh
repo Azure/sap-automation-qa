@@ -21,6 +21,57 @@ NC='\033[0m'
 # Global variable to store the path of the temporary file.
 temp_file=""
 
+# Parse command line arguments and extract verbose flags
+# Sets global ANSIBLE_VERBOSE variable
+parse_arguments() {
+    ANSIBLE_VERBOSE=""
+
+    for arg in "$@"; do
+        case "$arg" in
+            -v|-vv|-vvv|-vvvv|-vvvvv|-vvvvvv)
+                ANSIBLE_VERBOSE="$arg"
+                ;;
+            --test_groups=*)
+                TEST_GROUPS="${arg#*=}"
+                ;;
+            --test_cases=*)
+                TEST_CASES="${arg#*=}"
+                # Remove brackets and convert to array
+                TEST_CASES="${TEST_CASES#[}"
+                TEST_CASES="${TEST_CASES%]}"
+                ;;
+						--extra-vars=*)
+								EXTRA_VARS="${arg#*=}"
+								;;
+            -h|--help)
+                show_usage
+                exit 0
+                ;;
+        esac
+    done
+}
+
+show_usage() {
+    cat << EOF
+Usage: $0 [OPTIONS]
+
+Options:
+  -v, -vv, -vvv, etc.       Set Ansible verbosity level
+  --test_groups=GROUP       Specify test group to run (e.g., HA_DB_HANA, HA_SCS)
+  --test_cases=[case1,case2] Specify specific test cases to run (comma-separated, in brackets)
+	--extra-vars=VAR          Specify additional Ansible extra variables (e.g., --extra-vars='{"key":"value"}')
+  -h, --help                Show this help message
+
+Examples:
+  $0 --test_groups=HA_DB_HANA --test_cases=[ha-config,primary-node-crash]
+  $0 --test_groups=HA_SCS
+	$0 --test_groups=HA_DB_HANA --test_cases=[ha-config,primary-node-crash] -vv
+	$0 --test_groups=HA_DB_HANA --test_cases=[ha-config,primary-node-crash] --extra-vars='{"key":"value"}'
+
+Configuration is read from vars.yaml file.
+EOF
+}
+
 # Print logs with color based on severity.
 # :param severity: The severity level of the log (e.g., "INFO", "ERROR").
 # :param message: The message to log.
@@ -127,6 +178,40 @@ get_playbook_name() {
     esac
 }
 
+# Generate filtered test configuration as JSON for Ansible extra vars
+# :return: JSON string with filtered test configuration
+get_filtered_test_config() {
+    local input_api_file="${cmd_dir}/../src/vars/input-api.yaml"
+    local test_filter_script="${cmd_dir}/../src/module_utils/filter_tests.py"
+
+    if [[ ! -f "$test_filter_script" ]]; then
+        log "ERROR" "Test filter script not found: $test_filter_script" >&2
+        exit 1
+    fi
+
+    local group_arg="null"
+    local cases_arg="null"
+
+    if [[ -n "$TEST_GROUPS" ]]; then
+        group_arg="$TEST_GROUPS"
+    fi
+
+    if [[ -n "$TEST_CASES" ]]; then
+        cases_arg="$TEST_CASES"
+    fi
+
+    local filtered_config
+    filtered_config=$(python3 "$test_filter_script" "$input_api_file" "$group_arg" "$cases_arg" 2>&1)
+    local exit_code=$?
+
+    if [[ $exit_code -ne 0 ]]; then
+        log "ERROR" "Failed to filter test configuration: $filtered_config" >&2
+        exit 1
+    fi
+
+    echo "$filtered_config"
+}
+
 # Retrieve a secret from Azure Key Vault.
 # :param key_vault_id: The ID of the Key Vault.
 # :param secret_id: The ID of the secret in the Key Vault.
@@ -184,7 +269,7 @@ retrieve_secret_from_key_vault() {
     if [[ -f "$temp_file" ]]; then
         log "ERROR" "Temporary file already exists: $temp_file"
         exit 1
-    fi    
+    fi
 
     # Create the temporary file and write the secret value to it
     echo "$secret_value" > "$temp_file"
@@ -210,6 +295,22 @@ run_ansible_playbook() {
     local auth_type=$4
     local system_config_folder=$5
 
+
+    local extra_vars=""
+    if [[ -n "$TEST_GROUPS" || -n "$TEST_CASES" ]]; then
+        local filtered_config
+        filtered_config=$(get_filtered_test_config)
+        if [[ -n "$filtered_config" ]]; then
+            extra_vars="--extra-vars '$filtered_config'"
+        fi
+    fi
+
+		if [[ -n "$EXTRA_VARS" ]]; then
+				log a "INFO" "Using additional extra vars: $EXTRA_VARS"
+				escaped_extra_vars="${EXTRA_VARS//\'/\'\"\'\"\'}"
+				extra_vars+=" --extra-vars '$escaped_extra_vars'"
+		fi
+
     # Set local secret_id and key_vault_id if defined
     local secret_id=$(grep "^secret_id:" "$system_params" | awk '{split($0,a,": "); print a[2]}' | xargs || true)
     local key_vault_id=$(grep "^key_vault_id:" "$system_params" | awk '{split($0,a,": "); print a[2]}' | xargs || true)
@@ -232,13 +333,39 @@ run_ansible_playbook() {
             check_file_exists "$temp_file" \
                 "Temporary SSH key file not found. Please check the Key Vault secret ID."
             command="ansible-playbook ${cmd_dir}/../src/$playbook_name.yml -i $system_hosts --private-key $temp_file \
-                -e @$VARS_FILE -e @$system_params -e '_workspace_directory=$system_config_folder'"
+                -e @$VARS_FILE -e @$system_params -e '_workspace_directory=$system_config_folder' $extra_vars"
         else
-            check_file_exists "${cmd_dir}/../WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME/ssh_key.ppk" \
-                "ssh_key.ppk not found in WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME directory."
-            ssh_key="${cmd_dir}/../WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME/ssh_key.ppk"
+            local ssh_key_dir="${cmd_dir}/../WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME"
+            local ssh_key=""
+            local extensions=("ppk" "pem" "key" "private" "rsa" "ed25519" "ecdsa" "dsa" "")
+
+            for ext in "${extensions[@]}"; do
+                if [[ -n "$ext" ]]; then
+                    local key_file="${ssh_key_dir}/ssh_key.${ext}"
+                else
+                    local key_file="${ssh_key_dir}/ssh_key"
+                fi
+
+                if [[ -f "$key_file" ]]; then
+                    ssh_key="$key_file"
+                    log "INFO" "Found SSH key file: $ssh_key"
+                    break
+                fi
+            done
+
+            if [[ -z "$ssh_key" ]]; then
+                ssh_key=$(find "$ssh_key_dir" -name "*ssh_key*" -type f | head -n 1)
+                if [[ -n "$ssh_key" ]]; then
+                    log "INFO" "Found SSH key file with pattern: $ssh_key"
+                fi
+            fi
+
+            check_file_exists "$ssh_key" \
+                "SSH key file not found in WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME directory. Looked for files with patterns: ssh_key.*, *ssh_key*"
+
+            chmod 600 "$ssh_key"
             command="ansible-playbook ${cmd_dir}/../src/$playbook_name.yml -i $system_hosts --private-key $ssh_key \
-                -e @$VARS_FILE -e @$system_params -e '_workspace_directory=$system_config_folder'"
+                -e @$VARS_FILE -e @$system_params -e '_workspace_directory=$system_config_folder' $extra_vars"
         fi
 
     elif [[ "$auth_type" == "VMPASSWORD" ]]; then
@@ -267,8 +394,12 @@ run_ansible_playbook() {
         exit 1
     fi
 
-    log "INFO" "Running ansible playbook..."
-    log "INFO" "Executing: $command"
+		# Add verbosity if specified
+		if [[ -n "$ANSIBLE_VERBOSE" ]]; then
+				command+=" $ANSIBLE_VERBOSE"
+		fi
+
+    log "INFO" "Running ansible playbook... Command: $command"
     eval $command
     return_code=$?
     log "INFO" "Ansible playbook execution completed with return code: $return_code"
@@ -287,6 +418,16 @@ run_ansible_playbook() {
 main() {
     log "INFO" "Activate the virtual environment..."
     set -e
+
+		# Parse command line arguments
+		parse_arguments "$@"
+
+		if [[ -n "$TEST_GROUPS" ]]; then
+        log "INFO" "Test group specified: $TEST_GROUPS"
+    fi
+    if [[ -n "$TEST_CASES" ]]; then
+        log "INFO" "Test cases specified: $TEST_CASES"
+    fi
 
     # Validate parameters
     validate_params
@@ -314,4 +455,4 @@ main() {
 }
 
 # Execute the main function
-main
+main "$@"

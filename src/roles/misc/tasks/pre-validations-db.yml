@@ -12,16 +12,23 @@
       become:                       true
       location_constraints:
         action:                     "remove"
-        ansible_os_family:          "{{ ansible_os_family | upper}}"
       register:                     location_constraints_results
+
+    - name:                         "Pre validation: Get SAPHanaSR provider"
+      when:                         (ansible_os_family | upper) == "SUSE"
+      ansible.builtin.include_tasks: "roles/misc/tasks/get-saphanasr-provider.yml"
 
     - name:                         "Pre Validation: Validate HANA DB cluster status on primary node"
       become:                       true
       get_cluster_status_db:
         operation_step:             "pre_failover"
-        ansible_os_family:          "{{ ansible_os_family | upper }}"
         database_sid:               "{{ db_sid | lower }}"
+        saphanasr_provider:         "{{ saphanasr_provider | default('SAPHanaSR') }}"
       register:                     cluster_status_pre
+      until:                        cluster_status_pre.primary_node != "" or
+                                    cluster_status_pre.secondary_node != ""
+      timeout:                      5
+      retries:                      3
 
     - name:                         "Pre Validation: CleanUp any failed resource"
       become:                       true

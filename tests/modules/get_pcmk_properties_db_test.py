@@ -6,8 +6,10 @@ Unit tests for the get_pcmk_properties_db module.
 """
 
 import io
+import xml.etree.ElementTree as ET
 import pytest
 from src.modules.get_pcmk_properties_db import HAClusterValidator, main
+from src.module_utils.enums import OperatingSystemFamily, HanaSRProvider, TestStatus
 
 DUMMY_XML_RSC = """<rsc_defaults>
   <meta_attributes id="build-resource-defaults">
@@ -88,8 +90,8 @@ DUMMY_OS_COMMAND = """kernel.numa_balancing = 0"""
 DUMMY_GLOBAL_INI = """[DEFAULT]
 dumm1 = dummy2
 
-[ha_dr_provider_SAPHanaSR]
-provider = SAPHanaSR
+[ha_dr_provider_sushanasr]
+provider = SAPHanaSR-angi
 """
 
 DUMMY_CONSTANTS = {
@@ -126,7 +128,7 @@ DUMMY_CONSTANTS = {
     "OS_PARAMETERS": {
         "DEFAULTS": {"sysctl": {"kernel.numa_balancing": "kernel.numa_balancing = 0"}}
     },
-    "GLOBAL_INI": {"REDHAT": {"provider": "SAPHanaSR"}},
+    "GLOBAL_INI": {"REDHAT": {"provider": "SAPHanaSR"}, "SUSE": {"provider": "SAPHanaSR-angi"}},
     "CONSTRAINTS": {"rsc_location": {"score": "INFINITY"}},
 }
 
@@ -198,7 +200,7 @@ class TestHAClusterValidator:
             :return: Mocked command output.
             :rtype: str
             """
-            command = args[1] if len(args) > 1 else kwargs.get("command")
+            command = str(args[1]) if len(args) > 1 else str(kwargs.get("command"))
             if "sysctl" in command:
                 return DUMMY_OS_COMMAND
             return mock_xml_outputs.get(command[-1], "")
@@ -209,14 +211,267 @@ class TestHAClusterValidator:
         )
         monkeypatch.setattr("builtins.open", fake_open_factory(DUMMY_GLOBAL_INI))
         return HAClusterValidator(
-            os_type="REDHAT",
+            os_type=OperatingSystemFamily.REDHAT,
             os_version="9.2",
             sid="PRD",
             instance_number="00",
             fencing_mechanism="AFA",
             virtual_machine_name="vmname",
             constants=DUMMY_CONSTANTS,
+            saphanasr_provider=HanaSRProvider.SAPHANASR,
         )
+
+    @pytest.fixture
+    def validator_angi(self, monkeypatch, mock_xml_outputs):
+        """
+        Fixture for creating a HAClusterValidator instance.
+
+        :param monkeypatch: Monkeypatch fixture for mocking.
+        :type monkeypatch: pytest.MonkeyPatch
+        :param mock_xml_outputs: Mock XML outputs.
+        :type mock_xml_outputs: dict
+        :return: HAClusterValidator instance.
+        :rtype: HAClusterValidator
+        """
+
+        def mock_execute_command(*args, **kwargs):
+            """
+            Mock function to replace execute_command_subprocess.
+
+            :param *args: Positional arguments.
+            :param **kwargs: Keyword arguments.
+            :return: Mocked command output.
+            :rtype: str
+            """
+            command = str(args[1]) if len(args) > 1 else str(kwargs.get("command"))
+            if "sysctl" in command:
+                return DUMMY_OS_COMMAND
+            return mock_xml_outputs.get(command[-1], "")
+
+        monkeypatch.setattr(
+            "src.module_utils.sap_automation_qa.SapAutomationQA.execute_command_subprocess",
+            mock_execute_command,
+        )
+        monkeypatch.setattr("builtins.open", fake_open_factory(DUMMY_GLOBAL_INI))
+        return HAClusterValidator(
+            os_type=OperatingSystemFamily.SUSE,
+            os_version="9.2",
+            sid="PRD",
+            instance_number="00",
+            fencing_mechanism="AFA",
+            virtual_machine_name="vmname",
+            constants=DUMMY_CONSTANTS,
+            saphanasr_provider=HanaSRProvider.ANGI,
+        )
+
+    def test_get_expected_value_fence_config(self, validator):
+        """
+        Test _get_expected_value method with fence configuration.
+        """
+        validator.fencing_mechanism = "azure-fence-agent"
+        expected = validator._get_expected_value("crm_config", "priority")
+        assert expected == "10"
+
+    def test_get_expected_value_os_config(self, validator):
+        """
+        Test _get_expected_value method with OS configuration.
+        """
+        expected = validator._get_expected_value("crm_config", "stonith-enabled")
+        assert expected == "true"
+
+    def test_get_expected_value_defaults(self, validator):
+        """
+        Test _get_expected_value method with defaults.
+        """
+        expected = validator._get_expected_value("crm_config", "unknown-param")
+        assert expected is None
+
+    def test_get_resource_expected_value_meta_attributes(self, validator):
+        """
+        Test _get_resource_expected_value method for meta_attributes section.
+        """
+        expected = validator._get_resource_expected_value(
+            "fence_agent", "meta_attributes", "pcmk_delay_max"
+        )
+        assert expected == "15"
+
+    def test_get_resource_expected_value_operations(self, validator):
+        """
+        Test _get_resource_expected_value method for operations section.
+        """
+        expected = validator._get_resource_expected_value(
+            "fence_agent", "operations", "timeout", "monitor"
+        )
+        assert expected == ["700", "700s"]
+
+    def test_get_resource_expected_value_unknown_section(self, validator):
+        """
+        Test _get_resource_expected_value method for unknown section.
+        """
+        expected = validator._get_resource_expected_value("fence_agent", "unknown_section", "param")
+        assert expected is None
+
+    def test_create_parameter_with_empty_value(self, validator):
+        """
+        Test _create_parameter method when value is empty.
+        """
+        param = validator._create_parameter(
+            category="test_category", name="test_param", value="", expected_value="expected"
+        )
+        assert param["status"] == TestStatus.INFO.value
+
+    def test_create_parameter_with_list_expected_value_success(self, validator):
+        """
+        Test _create_parameter method with list expected value - success case.
+        """
+        param = validator._create_parameter(
+            category="test_category",
+            name="test_param",
+            value="value1",
+            expected_value=["value1", "value2"],
+        )
+        assert param["status"] == TestStatus.SUCCESS.value
+        assert param["expected_value"] == "value1"
+
+    def test_create_parameter_with_list_expected_value_error(self, validator):
+        """
+        Test _create_parameter method with list expected value - error case.
+        """
+        param = validator._create_parameter(
+            category="test_category",
+            name="test_param",
+            value="value3",
+            expected_value=["value1", "value2"],
+        )
+        assert param["status"] == TestStatus.ERROR.value
+
+    def test_create_parameter_with_string_expected_value_success(self, validator):
+        """
+        Test _create_parameter method with string expected value - success case.
+        """
+        param = validator._create_parameter(
+            category="test_category",
+            name="test_param",
+            value="expected_value",
+            expected_value="expected_value",
+        )
+        assert param["status"] == TestStatus.SUCCESS.value
+
+    def test_create_parameter_with_string_expected_value_error(self, validator):
+        """
+        Test _create_parameter method with string expected value - error case.
+        """
+        param = validator._create_parameter(
+            category="test_category",
+            name="test_param",
+            value="actual_value",
+            expected_value="expected_value",
+        )
+        assert param["status"] == TestStatus.ERROR.value
+
+    def test_create_parameter_with_invalid_expected_value_type(self, validator):
+        """
+        Test _create_parameter method with invalid expected value type.
+        """
+        param = validator._create_parameter(
+            category="test_category",
+            name="test_param",
+            value="test_value",
+            expected_value={"invalid": "type"},
+        )
+        assert param["status"] == TestStatus.ERROR.value
+
+    def test_create_parameter_with_none_expected_value(self, validator):
+        """
+        Test _create_parameter method when expected_value is None.
+        """
+        param = validator._create_parameter(
+            category="crm_config", name="test_param", value="test_value", expected_value=None
+        )
+        assert param["status"] == TestStatus.INFO.value
+
+    def test_parse_global_ini_parameters_angi_provider(self, validator_angi):
+        """
+        Test _parse_global_ini_parameters method with ANGI provider.
+        Covers lines 420-447.
+        """
+        result = validator_angi.get_result()
+        assert "details" in result
+        assert "parameters" in result["details"]
+
+    def test_parse_basic_config(self, validator):
+        """
+        Test _parse_basic_config method.
+        Covers lines 462-473.
+        """
+        xml_str = """<test>
+            <nvpair name="test_param" value="test_value" id="test_id"/>
+            <nvpair name="another_param" value="another_value" id="another_id"/>
+        </test>"""
+        params = validator._parse_basic_config(
+            ET.fromstring(xml_str), "crm_config", "test_subcategory"
+        )
+        assert len(params) == 2
+        assert params[0]["category"] == "crm_config_test_subcategory"
+        assert params[0]["name"] == "test_param"
+        assert params[0]["value"] == "test_value"
+
+    def test_parse_resource_hana_meta_and_topology_meta(self, validator):
+        """
+        Test _parse_resource method for hana_meta and topology_meta categories.
+        Covers lines 486-521.
+        """
+        xml_str = """<primitive>
+            <nvpair name="meta_param" value="meta_value" id="meta_id"/>
+        </primitive>"""
+        element = ET.fromstring(xml_str)
+        params = validator._parse_resource(element, "hana_meta")
+        assert len(params) > 0
+        params = validator._parse_resource(element, "topology_meta")
+        assert len(params) > 0
+
+    def test_parse_constraints_with_valid_constraints(self, validator_angi):
+        """
+        Test _parse_constraints method with valid constraints.
+        Covers lines 532-552.
+        """
+        xml_str = """<constraints>
+            <rsc_location id="loc_test" score="INFINITY" rsc="test_resource"/>
+            <rsc_colocation id="col_test" score="4000" rsc="resource1"/>
+            <rsc_order id="ord_test" kind="Optional" first="resource1"/>
+            <unknown_constraint id="unknown_test" attribute="value"/>
+        </constraints>"""
+        root = ET.fromstring(xml_str)
+        params = validator_angi._parse_constraints(root)
+        constraint_params = [p for p in params if p["category"] == "constraints_rsc_location"]
+        assert len(constraint_params) >= 1
+
+    def test_parse_ha_cluster_config_redhat_skip_op_defaults(self, monkeypatch):
+        """
+        Test parse_ha_cluster_config method with REDHAT OS skipping op_defaults.
+        Covers lines 574-607.
+        """
+
+        def mock_execute_command(*args, **kwargs):
+            return "<dummy/>"
+
+        monkeypatch.setattr(
+            "src.module_utils.sap_automation_qa.SapAutomationQA.execute_command_subprocess",
+            mock_execute_command,
+        )
+        monkeypatch.setattr("builtins.open", fake_open_factory(DUMMY_GLOBAL_INI))
+        validator = HAClusterValidator(
+            os_type=OperatingSystemFamily.REDHAT,
+            os_version="9.2",
+            sid="PRD",
+            instance_number="00",
+            fencing_mechanism="AFA",
+            virtual_machine_name="vmname",
+            constants=DUMMY_CONSTANTS,
+            saphanasr_provider=HanaSRProvider.SAPHANASR,
+        )
+        result = validator.get_result()
+        assert "details" in result
 
     def test_parse_ha_cluster_config_success(self, validator):
         """
@@ -246,11 +501,11 @@ class TestHAClusterValidator:
                 self.params = {
                     "sid": "PRD",
                     "instance_number": "00",
-                    "ansible_os_family": "REDHAT",
                     "virtual_machine_name": "vm_name",
                     "fencing_mechanism": "AFA",
                     "os_version": "9.2",
                     "pcmk_constants": DUMMY_CONSTANTS,
+                    "saphanasr_provider": HanaSRProvider.SAPHANASR.value,
                 }
 
             def exit_json(self, **kwargs):

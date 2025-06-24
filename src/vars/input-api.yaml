@@ -253,6 +253,9 @@ commands:
     SUSE:                           "cibadmin --query --xpath \"//primitive[@type='SAPHana']\" --node-path | grep -oP \"master\\[@id='\\K[^']+\""
     REDHAT:                         "cibadmin --query --xpath \"//primitive[@type='SAPHana']\" --node-path | grep -oP \"clone\\[@id='\\K[^']+\""
 
+  - name:                           get_hana_resource_id_saphanasr_angi
+    SUSE:                           "cibadmin --query --xpath \"//primitive[@type='SAPHanaController']\" --node-path | grep -oP \"primitive\\[@id='\\K[^']+\""
+
   - name:                           resource_migration_cmd
     SUSE:                           "crm resource move {{ hana_resource_name | default('msl_SAPHana_' ~ (db_sid | upper) ~ '_HDB' ~ db_instance_number) }} {{ cluster_status_pre.secondary_node | default('') }} force"
     REDHAT:                         "pcs resource move {{ hana_resource_name | default('SAPHana_' ~ (db_sid | upper) ~ '_' ~ db_instance_number ~ '-clone') }} --master"

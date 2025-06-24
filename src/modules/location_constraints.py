@@ -8,13 +8,16 @@ Custom ansible module for location constraints
 import xml.etree.ElementTree as ET
 from typing import List
 from ansible.module_utils.basic import AnsibleModule
+from ansible.module_utils.facts.compat import ansible_facts
 
 try:
-    from ansible.module_utils.sap_automation_qa import SapAutomationQA, TestStatus
+    from ansible.module_utils.sap_automation_qa import SapAutomationQA
     from ansible.module_utils.commands import RSC_CLEAR, CONSTRAINTS
+    from ansible.module_utils.enums import OperatingSystemFamily, TestStatus
 except ImportError:
-    from src.module_utils.sap_automation_qa import SapAutomationQA, TestStatus
+    from src.module_utils.sap_automation_qa import SapAutomationQA
     from src.module_utils.commands import RSC_CLEAR, CONSTRAINTS
+    from src.module_utils.enums import OperatingSystemFamily, TestStatus
 
 
 DOCUMENTATION = r"""
@@ -33,12 +36,6 @@ options:
         type: str
         required: true
         choices: ['remove']
-    ansible_os_family:
-        description:
-            - Operating system family (redhat, suse, etc.)
-            - Used to determine the appropriate command format for the OS
-        type: str
-        required: true
 author:
     - Microsoft Corporation
 notes:
@@ -54,7 +51,6 @@ EXAMPLES = r"""
 - name: Remove all location constraints
   location_constraints:
     action: "remove"
-    ansible_os_family: "{{ ansible_os_family|lower }}"
   register: constraints_result
 
 - name: Display constraint removal results
@@ -96,7 +92,7 @@ class LocationConstraintsManager(SapAutomationQA):
     Class to manage the location constraints in a pacemaker cluster.
     """
 
-    def __init__(self, ansible_os_family: str):
+    def __init__(self, ansible_os_family: OperatingSystemFamily):
         super().__init__()
         self.ansible_os_family = ansible_os_family
         self.result.update(
@@ -139,7 +135,8 @@ class LocationConstraintsManager(SapAutomationQA):
             self.result["details"] = xml_output
             return ET.fromstring(xml_output).findall(".//rsc_location") if xml_output else []
         except Exception as ex:
-            self.handle_exception(ex)
+            self.handle_error(ex)
+        return []
 
 
 def run_module() -> None:
@@ -149,14 +146,17 @@ def run_module() -> None:
     """
     module_args = dict(
         action=dict(type="str", required=True),
-        ansible_os_family=dict(type="str", required=True),
+        filter=dict(type="str", required=False, default="os_family"),
     )
 
     module = AnsibleModule(argument_spec=module_args, supports_check_mode=True)
     action = module.params["action"]
-    ansible_os_family = module.params["ansible_os_family"]
 
-    manager = LocationConstraintsManager(ansible_os_family)
+    manager = LocationConstraintsManager(
+        ansible_os_family=OperatingSystemFamily(
+            str(ansible_facts(module).get("os_family", "SUSE")).upper()
+        )
+    )
 
     if module.check_mode:
         module.exit_json(**manager.get_result())

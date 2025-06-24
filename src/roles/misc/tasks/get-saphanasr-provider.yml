@@ -1,0 +1,28 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+
+# /*---------------------------------------------------------------------------
+# |                          Get SAPHanaSR Provider (on SUSE only)            |
+# +--------------------------------------------------------------------------*/
+
+- name:                               Get SAPHanaSR provider for SUSE
+  when:                               (ansible_os_family | upper) == "SUSE"
+  block:
+  - name:                             "Get SAPHanaSR Provider using command"
+    become:                           true
+    become_user:                      "{{ db_sid | lower }}adm"
+    ansible.builtin.command:          "SAPHanaSR-manageProvider --sid {{ db_sid | upper }} --show --provider=sushanasr"
+    register:                         hanasr_command_output
+    changed_when:                     false
+    args:
+      chdir:                          "/usr/sbin"
+
+  - name:                             "Set SAPHanaSR-angi Provider"
+    when:                             hanasr_command_output.stdout != 0
+    ansible.builtin.set_fact:
+      saphanasr_provider:             "SAPHanaSR-angi"
+
+  - name:                             "Set SAPHanaSR Provider"
+    when:                             hanasr_command_output.stdout == ""
+    ansible.builtin.set_fact:
+      saphanasr_provider:             "SAPHanaSR"

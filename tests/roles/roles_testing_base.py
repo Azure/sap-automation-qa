@@ -162,6 +162,7 @@ class RolesTestingBase:
             "misc/tasks/var-log-messages.yml",
             "misc/tasks/post-telemetry-data.yml",
             "misc/tasks/loadbalancer.yml",
+            "misc/tasks/get-saphanasr-provider.yml",
         ]
 
         task_file = f"{role_type}/tasks/{task_name}.yml"

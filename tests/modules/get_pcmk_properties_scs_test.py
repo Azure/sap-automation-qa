@@ -6,8 +6,10 @@ Unit tests for the get_pcmk_properties_db module.
 """
 
 import io
+import xml.etree.ElementTree as ET
 import pytest
 from src.modules.get_pcmk_properties_scs import HAClusterValidator, main
+from src.module_utils.enums import OperatingSystemFamily, TestStatus
 
 DUMMY_XML_RSC = """<rsc_defaults>
   <meta_attributes id="build-resource-defaults">
@@ -115,6 +117,11 @@ DUMMY_CONSTANTS = {
                 "operations": {"monitor": {"timeout": "30"}},
             },
             "hana": {"meta_attributes": {"clone-max": "2"}},
+            "fence_agent": {
+                "meta_attributes": {"pcmk_delay_max": "15"},
+                "operations": {"monitor": {"timeout": ["700", "700s"]}},
+                "instance_attributes": {"resourceGroup": "test-rg"},
+            },
         }
     },
     "OS_PARAMETERS": {
@@ -192,7 +199,7 @@ class TestHAClusterValidator:
             :return: Mocked command output.
             :rtype: str
             """
-            command = args[1] if len(args) > 1 else kwargs.get("command")
+            command = str(args[1]) if len(args) > 1 else str(kwargs.get("command"))
             if "sysctl" in command:
                 return DUMMY_OS_COMMAND
             return mock_xml_outputs.get(command[-1], "")
@@ -203,7 +210,7 @@ class TestHAClusterValidator:
         )
         monkeypatch.setattr("builtins.open", fake_open_factory(DUMMY_GLOBAL_INI))
         return HAClusterValidator(
-            os_type="REDHAT",
+            os_type=OperatingSystemFamily.REDHAT,
             sid="PRD",
             scs_instance_number="00",
             ers_instance_number="01",
@@ -241,7 +248,6 @@ class TestHAClusterValidator:
                     "sid": "PRD",
                     "ascs_instance_number": "00",
                     "ers_instance_number": "01",
-                    "ansible_os_family": "REDHAT",
                     "virtual_machine_name": "vm_name",
                     "fencing_mechanism": "AFA",
                     "pcmk_constants": DUMMY_CONSTANTS,
@@ -251,11 +257,198 @@ class TestHAClusterValidator:
                 nonlocal mock_result
                 mock_result = kwargs
 
+        def mock_ansible_facts(module):
+            """
+            Mock function to return Ansible facts.
+
+            :param module: Ansible module instance.
+            :type module: AnsibleModule
+            :return: Mocked Ansible facts.
+            :rtype: dict
+            """
+            return {"os_family": "REDHAT"}
+
         monkeypatch.setattr(
             "src.modules.get_pcmk_properties_scs.AnsibleModule",
             MockAnsibleModule,
+        )
+        monkeypatch.setattr(
+            "src.modules.get_pcmk_properties_scs.ansible_facts",
+            mock_ansible_facts,
         )
 
         main()
 
         assert mock_result["status"] == "PASSED"
+
+    def test_get_expected_value_fence_config(self, validator):
+        """
+        Test _get_expected_value method with fence configuration.
+        """
+        validator.fencing_mechanism = "azure-fence-agent"
+        expected = validator._get_expected_value("crm_config", "priority")
+        assert expected == "10"
+
+    def test_get_resource_expected_value_meta_attributes(self, validator):
+        """
+        Test _get_resource_expected_value method for meta_attributes section.
+        """
+        expected = validator._get_resource_expected_value(
+            "fence_agent", "meta_attributes", "pcmk_delay_max"
+        )
+        assert expected == "15"
+
+    def test_create_parameter_with_none_expected_value_resource_category(self, validator):
+        """
+        Test _create_parameter method when expected_value is None and category is
+        in RESOURCE_CATEGORIES.
+        """
+        param = validator._create_parameter(
+            category="ipaddr", name="test_param", value="test_value", subcategory="meta_attributes"
+        )
+        assert param["category"] == "ipaddr_meta_attributes"
+
+    def test_create_parameter_with_none_expected_value_or_empty_value(self, validator):
+        """
+        Test _create_parameter method when expected_value is None or value is empty.
+
+        """
+        param = validator._create_parameter(
+            category="crm_config", name="test_param", value="test_value", expected_value=None
+        )
+        assert param["status"] == TestStatus.INFO.value
+
+        param = validator._create_parameter(
+            category="crm_config", name="test_param", value="", expected_value="expected"
+        )
+        assert param["status"] == TestStatus.INFO.value
+
+    def test_parse_resource_with_meta_and_instance_attributes(self, validator):
+        """
+        Test _parse_resource method with meta_attributes and instance_attributes.
+        """
+        xml_str = """<primitive>
+            <meta_attributes>
+                <nvpair name="meta_param" value="meta_value" id="meta_id"/>
+            </meta_attributes>
+            <instance_attributes>
+                <nvpair name="instance_param" value="instance_value" id="instance_id"/>
+            </instance_attributes>
+        </primitive>"""
+        element = ET.fromstring(xml_str)
+
+        params = validator._parse_resource(element, "sbd_stonith")
+
+        meta_params = [p for p in params if p["category"] == "sbd_stonith_meta_attributes"]
+        instance_params = [p for p in params if p["category"] == "sbd_stonith_instance_attributes"]
+
+        assert len(meta_params) >= 1
+        assert len(instance_params) >= 1
+
+    def test_parse_basic_config(self, validator):
+        """
+        Test _parse_basic_config method.
+        """
+        xml_str = """<test>
+            <nvpair name="test_param" value="test_value" id="test_id"/>
+            <nvpair name="another_param" value="another_value" id="another_id"/>
+        </test>"""
+        element = ET.fromstring(xml_str)
+
+        params = validator._parse_basic_config(element, "crm_config", "test_subcategory")
+
+        assert len(params) == 2
+        assert params[0]["category"] == "crm_config_test_subcategory"
+        assert params[0]["name"] == "test_param"
+        assert params[0]["value"] == "test_value"
+
+    def test_parse_constraints_with_missing_attributes(self, validator):
+        """
+        Test _parse_constraints method with missing attributes.
+        """
+        xml_str = """<constraints>
+            <rsc_location id="loc_test" rsc="test_resource"/>
+        </constraints>"""
+        root = ET.fromstring(xml_str)
+        params = validator._parse_constraints(root)
+        assert isinstance(params, list)
+
+    def test_parse_ha_cluster_config_with_empty_root(self, monkeypatch):
+        """
+        Test parse_ha_cluster_config method when root is empty.
+        Covers lines 508-546.
+        """
+
+        def mock_execute_command(*args, **kwargs):
+            return ""
+
+        monkeypatch.setattr(
+            "src.module_utils.sap_automation_qa.SapAutomationQA.execute_command_subprocess",
+            mock_execute_command,
+        )
+
+        validator = HAClusterValidator(
+            os_type=OperatingSystemFamily.SUSE,
+            sid="PRD",
+            scs_instance_number="00",
+            ers_instance_number="01",
+            fencing_mechanism="AFA",
+            virtual_machine_name="vmname",
+            constants=DUMMY_CONSTANTS,
+        )
+
+        result = validator.get_result()
+        assert "details" in result
+
+    def test_get_resource_expected_value_operations_section(self, validator):
+        """
+        Test _get_resource_expected_value method for operations section.
+        """
+        expected = validator._get_resource_expected_value(
+            "fence_agent", "operations", "timeout", "monitor"
+        )
+        assert expected == ["700", "700s"]
+
+    def test_get_resource_expected_value_return_none(self, validator):
+        """
+        Test _get_resource_expected_value method returns None for unknown section.
+        """
+        expected = validator._get_resource_expected_value("fence_agent", "unknown_section", "param")
+        assert expected is None
+
+    def test_create_parameter_with_list_expected_value_success(self, validator):
+        """
+        Test _create_parameter method with list expected value - success case.
+        """
+        param = validator._create_parameter(
+            category="test_category",
+            name="test_param",
+            value="value1",
+            expected_value=["value1", "value2"],
+        )
+        assert param["status"] == TestStatus.SUCCESS.value
+        assert param["expected_value"] == "value1"
+
+    def test_create_parameter_with_list_expected_value_error(self, validator):
+        """
+        Test _create_parameter method with list expected value - error case.
+        """
+        param = validator._create_parameter(
+            category="test_category",
+            name="test_param",
+            value="value3",
+            expected_value=["value1", "value2"],
+        )
+        assert param["status"] == TestStatus.ERROR.value
+
+    def test_create_parameter_with_invalid_expected_value_type(self, validator):
+        """
+        Test _create_parameter method with invalid expected value type.
+        """
+        param = validator._create_parameter(
+            category="test_category",
+            name="test_param",
+            value="test_value",
+            expected_value=123,
+        )
+        assert param["status"] == TestStatus.ERROR.value

@@ -5,16 +5,20 @@
 Python script to get and validate the status of a HANA cluster.
 """
 
+import logging
 import xml.etree.ElementTree as ET
 from typing import Dict, Any
 from ansible.module_utils.basic import AnsibleModule
+from ansible.module_utils.facts.compat import ansible_facts
 
 try:
     from ansible.module_utils.get_cluster_status import BaseClusterStatusChecker
+    from ansible.module_utils.enums import OperatingSystemFamily, HanaSRProvider
     from ansible.module_utils.commands import AUTOMATED_REGISTER
 except ImportError:
     from src.module_utils.get_cluster_status import BaseClusterStatusChecker
     from src.module_utils.commands import AUTOMATED_REGISTER
+    from src.module_utils.enums import OperatingSystemFamily, HanaSRProvider
 
 
 DOCUMENTATION = r"""
@@ -37,11 +41,11 @@ options:
             - SAP HANA database SID
         type: str
         required: true
-    ansible_os_family:
+    saphanasr_provider:
         description:
-            - Operating system family (redhat, suse, etc.)
+            - The SAP HANA system replication provider type
         type: str
-        required: false
+        required: true
 author:
     - Microsoft Corporation
 notes:
@@ -58,7 +62,7 @@ EXAMPLES = r"""
   get_cluster_status_db:
     operation_step: "check_cluster"
     database_sid: "HDB"
-    ansible_os_family: "{{ ansible_os_family|lower }}"
+    saphanasr_provider: "SAPHanaSR"
   register: cluster_result
 
 - name: Display cluster status
@@ -131,9 +135,15 @@ class HanaClusterStatusChecker(BaseClusterStatusChecker):
     Class to check the status of a pacemaker cluster in a SAP HANA environment.
     """
 
-    def __init__(self, database_sid: str, ansible_os_family: str = ""):
+    def __init__(
+        self,
+        database_sid: str,
+        saphanasr_provider: HanaSRProvider,
+        ansible_os_family: OperatingSystemFamily,
+    ):
         super().__init__(ansible_os_family)
         self.database_sid = database_sid
+        self.saphanasr_provider = saphanasr_provider
         self.result.update(
             {
                 "primary_node": "",
@@ -173,44 +183,60 @@ class HanaClusterStatusChecker(BaseClusterStatusChecker):
             "primary_site_name": "",
         }
         node_attributes = cluster_status_xml.find("node_attributes")
-        attribute_map = {
-            f"hana_{self.database_sid}_op_mode": "operation_mode",
-            f"hana_{self.database_sid}_srmode": "replication_mode",
+        if node_attributes is None:
+            self.log(
+                logging.ERROR,
+                "No node attributes found in the cluster status XML.",
+            )
+            return result
+
+        providers = {
+            HanaSRProvider.SAPHANASR: {
+                "clone_attr": f"hana_{self.database_sid}_clone_state",
+                "sync_attr": f"hana_{self.database_sid}_sync_state",
+                "primary": {"clone": "PROMOTED", "sync": "PRIM"},
+                "secondary": {"clone": "DEMOTED", "sync": "SOK"},
+            },
+            HanaSRProvider.ANGI: {
+                "clone_attr": f"hana_{self.database_sid}_clone_state",
+                "sync_attr": f"master-rsc_SAPHanaCon_{self.database_sid.upper()}_HDB00",
+                "primary": {"clone": "PROMOTED", "sync": "150"},
+                "secondary": {"clone": "DEMOTED", "sync": "100"},
+            },
         }
+        provider_config = providers.get(
+            self.saphanasr_provider, providers[HanaSRProvider.SAPHANASR]
+        )
 
         for node in node_attributes:
             node_name = node.attrib["name"]
-            node_states = {}
-            node_attributes_dict = {}
-
-            for attribute in node:
-                attr_name = attribute.attrib["name"]
-                attr_value = attribute.attrib["value"]
-                node_attributes_dict[attr_name] = attr_value
-
-                if attr_name in attribute_map:
-                    result[attribute_map[attr_name]] = attr_value
-
-                if attr_name == f"hana_{self.database_sid}_clone_state":
-                    node_states["clone_state"] = attr_value
-                elif attr_name == f"hana_{self.database_sid}_sync_state":
-                    node_states["sync_state"] = attr_value
-
+            attrs = {attr.attrib["name"]: attr.attrib["value"] for attr in node}
+            result["operation_mode"] = attrs.get(
+                f"hana_{self.database_sid}_op_mode", result["operation_mode"]
+            )
+            result["replication_mode"] = attrs.get(
+                f"hana_{self.database_sid}_srmode", result["replication_mode"]
+            )
+            clone_state = attrs.get(provider_config["clone_attr"], "")
+            sync_state = attrs.get(provider_config["sync_attr"], "")
             if (
-                node_states.get("clone_state") == "PROMOTED"
-                and node_states.get("sync_state") == "PRIM"
+                clone_state == provider_config["primary"]["clone"]
+                and sync_state == provider_config["primary"]["sync"]
             ):
-                result["primary_node"] = node_name
-                result["cluster_status"]["primary"] = node_attributes_dict
-                result["primary_site_name"] = node_attributes_dict.get(
-                    f"hana_{self.database_sid}_site", ""
+                result.update(
+                    {
+                        "primary_node": node_name,
+                        "primary_site_name": attrs.get(f"hana_{self.database_sid}_site", ""),
+                    }
                 )
+                result["cluster_status"]["primary"] = attrs
+
             elif (
-                node_states.get("clone_state") == "DEMOTED"
-                and node_states.get("sync_state") == "SOK"
+                clone_state == provider_config["secondary"]["clone"]
+                and sync_state == provider_config["secondary"]["sync"]
             ):
                 result["secondary_node"] = node_name
-                result["cluster_status"]["secondary"] = node_attributes_dict
+                result["cluster_status"]["secondary"] = attrs
 
         self.result.update(result)
         return result
@@ -252,14 +278,18 @@ def run_module() -> None:
     module_args = dict(
         operation_step=dict(type="str", required=True),
         database_sid=dict(type="str", required=True),
-        ansible_os_family=dict(type="str", required=False),
+        saphanasr_provider=dict(type="str", required=True),
+        filter=dict(type="str", required=False, default="os_family"),
     )
 
     module = AnsibleModule(argument_spec=module_args, supports_check_mode=True)
 
     checker = HanaClusterStatusChecker(
         database_sid=module.params["database_sid"],
-        ansible_os_family=module.params["ansible_os_family"],
+        saphanasr_provider=HanaSRProvider(module.params["saphanasr_provider"]),
+        ansible_os_family=OperatingSystemFamily(
+            str(ansible_facts(module).get("os_family", "SUSE")).upper()
+        ),
     )
     checker.run()
 

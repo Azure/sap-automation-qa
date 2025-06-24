@@ -13,17 +13,11 @@ from azure.mgmt.network import NetworkManagementClient
 from ansible.module_utils.basic import AnsibleModule
 
 try:
-    from ansible.module_utils.sap_automation_qa import (
-        SapAutomationQA,
-        TestStatus,
-        Parameters,
-    )
+    from ansible.module_utils.sap_automation_qa import SapAutomationQA
+    from ansible.module_utils.enums import TestStatus, Parameters
 except ImportError:
-    from src.module_utils.sap_automation_qa import (
-        SapAutomationQA,
-        TestStatus,
-        Parameters,
-    )
+    from src.module_utils.sap_automation_qa import SapAutomationQA
+    from src.module_utils.enums import TestStatus, Parameters
 
 DOCUMENTATION = r"""
 ---
@@ -174,7 +168,7 @@ class AzureLoadBalancer(SapAutomationQA):
         self.network_client = None
         self.constants = module_params["constants"].get("AZURE_LOADBALANCER", {})
 
-    def _create_network_client(self):
+    def _create_network_client(self) -> bool:
         """
         Create the network client object.
         """
@@ -188,11 +182,13 @@ class AzureLoadBalancer(SapAutomationQA):
             self.network_client = NetworkManagementClient(
                 self.credential, self.module_params["subscription_id"]
             )
+            return True
         except Exception as ex:
             self.handle_error(ex)
             self.result["message"] += (
                 " Failed to authenticate to Azure to read the Load " + f"Balancer Details. {ex} \n"
             )
+            return False
 
     def get_load_balancers(self) -> list:
         """
@@ -202,23 +198,24 @@ class AzureLoadBalancer(SapAutomationQA):
         :rtype: list
         """
         try:
+            if self.network_client is None:
+                return []
+
             load_balancers = self.network_client.load_balancers.list_all()
             return [
                 lb.as_dict()
                 for lb in load_balancers
-                if lb.location.lower() == self.module_params["region"].lower()
+                if str(lb.location).lower() == self.module_params["region"].lower()
             ]
 
         except Exception as ex:
             self.handle_error(ex)
             self.result["message"] += f" Failed to get load balancers. {ex} \n"
+        return []
 
-    def get_load_balancers_details(self) -> dict:
+    def get_load_balancers_details(self) -> None:
         """
         Get the details of the load balancers in a specific resource group.
-
-        :return: Dictionary containing the result of the test case.
-        :rtype: dict
         """
         self._create_network_client()
 
