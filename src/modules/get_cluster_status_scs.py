@@ -285,7 +285,7 @@ def run_module() -> None:
     )
 
     module = AnsibleModule(argument_spec=module_args, supports_check_mode=True)
-    ansible_os_family = str(ansible_facts(module).get("os_family", "SUSE")).upper()
+    ansible_os_family = str(ansible_facts(module).get("os_family", "UNKNOWN")).upper()
 
     checker = SCSClusterStatusChecker(
         sap_sid=module.params["sap_sid"],

@@ -1,8 +1,9 @@
+#!/bin/bash
+
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
-#!/bin/bash
-
+set -euo pipefail
 # Function to check if a command exists
 command_exists() {
     command -v "$1" &> /dev/null

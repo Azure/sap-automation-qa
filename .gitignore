@@ -408,3 +408,4 @@ WORKSPACES/*
 VMWPASSWORD
 .coverage.*
 *.ini
+.ansible/

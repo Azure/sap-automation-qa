@@ -8,6 +8,7 @@
 - name:                                 "Get the cluster status"
   become:                               true
   get_cluster_status_db:
+    db_instance_number:                 "{{ db_instance_number }}"
     operation_step:                     "cluster_report_collection"
     database_sid:                       "{{ db_sid | lower | default('') }}"
     saphanasr_provider:                 "{{ saphanasr_provider | default('SAPHanaSR') }}"

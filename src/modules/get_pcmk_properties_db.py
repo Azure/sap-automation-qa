@@ -650,7 +650,7 @@ def main() -> None:
     )
 
     validator = HAClusterValidator(
-        os_type=OperatingSystemFamily(str(ansible_facts(module).get("os_family", "SUSE")).upper()),
+        os_type=OperatingSystemFamily(str(ansible_facts(module).get("os_family", "UNKNOWN")).upper()),
         os_version=module.params["os_version"],
         instance_number=module.params["instance_number"],
         sid=module.params["sid"],

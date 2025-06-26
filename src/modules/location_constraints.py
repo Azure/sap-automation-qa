@@ -154,7 +154,7 @@ def run_module() -> None:
 
     manager = LocationConstraintsManager(
         ansible_os_family=OperatingSystemFamily(
-            str(ansible_facts(module).get("os_family", "SUSE")).upper()
+            str(ansible_facts(module).get("os_family", "UNKNOWN")).upper()
         )
     )
 

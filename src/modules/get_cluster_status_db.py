@@ -46,6 +46,11 @@ options:
             - The SAP HANA system replication provider type
         type: str
         required: true
+    db_instance_number:
+        description:
+            - The instance number of the SAP HANA database
+        type: str
+        required: true
 author:
     - Microsoft Corporation
 notes:
@@ -138,12 +143,14 @@ class HanaClusterStatusChecker(BaseClusterStatusChecker):
     def __init__(
         self,
         database_sid: str,
+        db_instance_number: str,
         saphanasr_provider: HanaSRProvider,
         ansible_os_family: OperatingSystemFamily,
     ):
         super().__init__(ansible_os_family)
         self.database_sid = database_sid
         self.saphanasr_provider = saphanasr_provider
+        self.db_instance_number = db_instance_number
         self.result.update(
             {
                 "primary_node": "",
@@ -199,7 +206,8 @@ class HanaClusterStatusChecker(BaseClusterStatusChecker):
             },
             HanaSRProvider.ANGI: {
                 "clone_attr": f"hana_{self.database_sid}_clone_state",
-                "sync_attr": f"master-rsc_SAPHanaCon_{self.database_sid.upper()}_HDB00",
+                "sync_attr": f"master-rsc_SAPHanaCon_{self.database_sid.upper()}"
+                + f"_HDB{self.db_instance_number}",
                 "primary": {"clone": "PROMOTED", "sync": "150"},
                 "secondary": {"clone": "DEMOTED", "sync": "100"},
             },
@@ -279,6 +287,7 @@ def run_module() -> None:
         operation_step=dict(type="str", required=True),
         database_sid=dict(type="str", required=True),
         saphanasr_provider=dict(type="str", required=True),
+        db_instance_number=dict(type="str", required=True),
         filter=dict(type="str", required=False, default="os_family"),
     )
 
@@ -288,8 +297,9 @@ def run_module() -> None:
         database_sid=module.params["database_sid"],
         saphanasr_provider=HanaSRProvider(module.params["saphanasr_provider"]),
         ansible_os_family=OperatingSystemFamily(
-            str(ansible_facts(module).get("os_family", "SUSE")).upper()
+            str(ansible_facts(module).get("os_family", "UNKNOWN")).upper()
         ),
+        db_instance_number=module.params["db_instance_number"],
     )
     checker.run()
 

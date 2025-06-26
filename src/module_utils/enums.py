@@ -36,6 +36,7 @@ class OperatingSystemFamily(Enum):
     SUSE = "SUSE"
     DEBIAN = "DEBIAN"
     WINDOWS = "WINDOWS"
+    UNKNOWN = "UNKNOWN"
 
 
 class HanaSRProvider(Enum):

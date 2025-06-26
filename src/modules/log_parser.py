@@ -329,7 +329,7 @@ def run_module() -> None:
         end_time=module.params.get("end_time"),
         log_file=module.params.get("log_file"),
         ansible_os_family=OperatingSystemFamily(
-            str(ansible_facts(module).get("os_family", "SUSE")).upper()
+            str(ansible_facts(module).get("os_family", "UNKNOWN")).upper()
         ),
         logs=module.params.get("logs"),
     )

@@ -223,7 +223,7 @@ def main():
     index_server_check = IndexServerCheck(
         database_sid=database_sid,
         os_distribution=OperatingSystemFamily(
-            str(ansible_facts(module).get("os_family", "SUSE")).upper()
+            str(ansible_facts(module).get("os_family", "UNKNOWN")).upper()
         ),
     )
     index_server_check.check_indexserver()

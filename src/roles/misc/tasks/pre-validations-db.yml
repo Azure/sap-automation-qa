@@ -21,6 +21,7 @@
     - name:                         "Pre Validation: Validate HANA DB cluster status on primary node"
       become:                       true
       get_cluster_status_db:
+        db_instance_number:         "{{ db_instance_number }}"
         operation_step:             "pre_failover"
         database_sid:               "{{ db_sid | lower }}"
         saphanasr_provider:         "{{ saphanasr_provider | default('SAPHanaSR') }}"

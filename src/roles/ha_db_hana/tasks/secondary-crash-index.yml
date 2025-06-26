@@ -53,6 +53,7 @@
       block:
         - name:                         "Test Execution: Validate HANA DB cluster status"
           get_cluster_status_db:
+            db_instance_number:         "{{ db_instance_number }}"
             operation_step:             "test_execution"
             database_sid:               "{{ db_sid | lower }}"
             saphanasr_provider:         "{{ saphanasr_provider | default('SAPHanaSR') }}"
@@ -65,6 +66,7 @@
 
         - name:                         "Test Execution: Validate HANA DB cluster status 2"
           get_cluster_status_db:
+            db_instance_number:         "{{ db_instance_number }}"
             operation_step:             "post_failover"
             database_sid:               "{{ db_sid | lower }}"
             saphanasr_provider:         "{{ saphanasr_provider | default('SAPHanaSR') }}"
