@@ -32,9 +32,9 @@
             test_execution_hostname:    "{{ hostvars[cluster_status_pre.primary_node].ansible_hostname }}"
 
         - name:                         "Test Execution: Get HANA resource id for saphanasr_angi"
+          when:                         saphanasr_provider | default('SAPHanaSR') == "SAPHanaSR-angi"
           block:
             - name:                     "Test Execution: Get HANA resource id for saphanasr_angi"
-              when:                     saphanasr_provider | default('SAPHanaSR') == "SAPHanaSR-angi"
               ansible.builtin.shell: >-
                                         set -o pipefail && {{ commands
                                           | selectattr('name','equalto','get_hana_resource_id_saphanasr_angi')
