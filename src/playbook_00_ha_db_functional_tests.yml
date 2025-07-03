@@ -87,7 +87,7 @@
       ansible.builtin.include_tasks:   "./roles/misc/tasks/cluster-report.yml"
       when:                            test_group_name is defined
 
-    - name:                            "Run test cases by including them as roles"
+    - name:                            "Render HTML report for the test group logs"
       ansible.builtin.include_tasks:   "./roles/misc/tasks/render-html-report.yml"
       when:                            test_group_name is defined
 

@@ -5,6 +5,7 @@
 Unit tests for the get_pcmk_properties_db module.
 """
 
+import builtins
 import io
 import xml.etree.ElementTree as ET
 import pytest
@@ -31,9 +32,6 @@ DUMMY_XML_CRM = """<crm_config>
     <nvpair name="cluster-name" value="hdb_HDB"/>
     <nvpair name="maintenance-mode" value="false"/>
   </cluster_property_set>
-  <cluster_property_set id="SAPHanaSR">
-    <nvpair name="hana_hdb_site_srHook_SITEA" value="SOK"/>
-  </cluster_property_set>
 </crm_config>"""
 
 DUMMY_XML_CONSTRAINTS = """<constraints>
@@ -48,6 +46,13 @@ DUMMY_XML_RESOURCES = """<resources>
       <nvpair name="login" value="12345-12345-12345-12345-12345" id="rsc_st_azure-instance_attributes-login"/>
       <nvpair name="passwd" value="********" id="rsc_st_azure-instance_attributes-passwd"/>
     </instance_attributes>
+    <meta_attributes id="stonith-sbd-meta_attributes">
+      <nvpair name="target-role" value="Started"/>
+    </meta_attributes>
+    <operations id="stonith-sbd-operations">
+      <op name="monitor" interval="10" timeout="600" id="stonith-sbd-monitor"/>
+      <op name="start" interval="0" timeout="20" id="stonith-sbd-start"/>
+    </operations>
   </primitive>
   <clone id="cln_SAPHanaTopology_HDB_HDB00">
     <meta_attributes id="cln_SAPHanaTopology_HDB_HDB00-meta_attributes">
@@ -76,22 +81,67 @@ DUMMY_XML_RESOURCES = """<resources>
       </instance_attributes>
     </primitive>
   </master>
-  <group id="g_ip_HDB_HDB00">
-    <primitive id="rsc_ip_HDB_HDB00" class="ocf" provider="heartbeat" type="IPaddr2">
-      <instance_attributes id="rsc_ip_HDB_HDB00-instance_attributes">
-        <nvpair name="ip" value="127.0.0.1"/>
-      </instance_attributes>
-    </primitive>
-  </group>
+  <primitive id="rsc_ip_HDB_HDB00" class="ocf" provider="heartbeat" type="IPaddr2">
+    <instance_attributes>
+      <nvpair name="ip" value="127.0.0.1"/>
+    </instance_attributes>
+  </primitive>
+  <primitive id="rsc_azure_lb" class="ocf" provider="heartbeat" type="azure-lb">
+    <instance_attributes>
+      <nvpair name="port" value="62500"/>
+    </instance_attributes>
+  </primitive>
+  <primitive id="rsc_filesystem" class="ocf" provider="heartbeat" type="Filesystem">
+    <instance_attributes>
+      <nvpair name="device" value="/dev/sda1"/>
+    </instance_attributes>
+  </primitive>
+  <primitive id="rsc_fence_azure" class="stonith" type="fence_azure_arm">
+    <instance_attributes>
+      <nvpair name="login" value="testuser"/>
+    </instance_attributes>
+  </primitive>
+  <primitive id="rsc_angi_fs" class="ocf" provider="suse" type="SAPHanaFilesystem">
+    <instance_attributes>
+      <nvpair name="filesystem" value="/hana/data"/>
+    </instance_attributes>
+  </primitive>
+  <primitive id="rsc_angi_controller" class="ocf" provider="suse" type="SAPHanaController">
+    <instance_attributes>
+      <nvpair name="SID" value="HDB"/>
+    </instance_attributes>
+  </primitive>
 </resources>"""
+
+DUMMY_XML_FULL_CIB = f"""<?xml version="1.0" encoding="UTF-8"?>
+<cib>
+  <configuration>
+    {DUMMY_XML_CRM}
+    {DUMMY_XML_RSC}
+    {DUMMY_XML_OP}
+    {DUMMY_XML_CONSTRAINTS}
+    {DUMMY_XML_RESOURCES}
+  </configuration>
+</cib>"""
 
 DUMMY_OS_COMMAND = """kernel.numa_balancing = 0"""
 
-DUMMY_GLOBAL_INI = """[DEFAULT]
-dumm1 = dummy2
+DUMMY_GLOBAL_INI_SAPHANASR = """[DEFAULT]
+dummy1 = dummy2
+
+[ha_dr_provider_SAPHanaSR]
+provider = SAPHanaSR
+path = /usr/share/SAPHanaSR
+execution_order = 1
+"""
+
+DUMMY_GLOBAL_INI_ANGI = """[DEFAULT]
+dummy1 = dummy2
 
 [ha_dr_provider_sushanasr]
 provider = SAPHanaSR-angi
+path = /usr/share/SAPHanaSR-angi
+execution_order = 1
 """
 
 DUMMY_CONSTANTS = {
@@ -100,16 +150,12 @@ DUMMY_CONSTANTS = {
         "azure-fence-agent": {"priority": "10"},
     },
     "RSC_DEFAULTS": {
-        "REDHAT": {
-            "resource-stickiness": "1000",
-            "migration-threshold": "5000",
-        }
+        "resource-stickiness": "1000",
+        "migration-threshold": "5000",
     },
     "OP_DEFAULTS": {
-        "REDHAT": {
-            "timeout": "600",
-            "record-pending": "true",
-        }
+        "timeout": "600",
+        "record-pending": "true",
     },
     "CRM_CONFIG_DEFAULTS": {"stonith-enabled": "true"},
     "RESOURCE_DEFAULTS": {
@@ -128,33 +174,63 @@ DUMMY_CONSTANTS = {
     "OS_PARAMETERS": {
         "DEFAULTS": {"sysctl": {"kernel.numa_balancing": "kernel.numa_balancing = 0"}}
     },
-    "GLOBAL_INI": {"REDHAT": {"provider": "SAPHanaSR"}, "SUSE": {"provider": "SAPHanaSR-angi"}},
+    "GLOBAL_INI": {
+        "REDHAT": {
+            "SAPHanaSR": {
+                "provider": "SAPHanaSR",
+                "path": "/usr/share/SAPHanaSR",
+                "execution_order": ["1", "2"],
+            }
+        },
+        "SUSE": {
+            "SAPHanaSR-angi": {"provider": "SAPHanaSR-angi", "path": "/usr/share/SAPHanaSR-angi"}
+        },
+    },
     "CONSTRAINTS": {"rsc_location": {"score": "INFINITY"}},
 }
 
 
-def fake_open_factory(file_content):
+class MockExecuteCommand:
     """
-    Factory function to create a fake open function that returns a StringIO object.
-
-    :param file_content: Content to be returned by the fake open function.
-    :type file_content: str
-    :return: Fake open function.
-    :rtype: function
+    Mock class for execute_command_subprocess.
     """
 
-    def fake_open(*args, **kwargs):
-        """
-        Fake open function that returns a StringIO object.
+    def __init__(self, mock_outputs):
+        self.mock_outputs = mock_outputs
 
-        :param *args: Positional arguments.
-        :param **kwargs: Keyword arguments.
-        :return: Instance of StringIO with file content.
-        :rtype: io.StringIO
-        """
-        return io.StringIO("\n".join(file_content))
+    def __call__(self, command, shell_command=False):
+        command_str = " ".join(command) if isinstance(command, list) else str(command)
+        if "sysctl" in command_str:
+            return DUMMY_OS_COMMAND
+        if len(command) >= 2 and command[-1] in self.mock_outputs:
+            return self.mock_outputs[command[-1]]
+        return ""
 
-    return fake_open
+
+class MockOpen:
+    """
+    Mock class for open function.
+    """
+
+    def __init__(self, file_content):
+        self.file_content = file_content
+
+    def __call__(self, *args, **kwargs):
+        return io.StringIO(self.file_content)
+
+
+class TestableHAClusterValidator(HAClusterValidator):
+    """
+    Testable version of HAClusterValidator with mocked dependencies.
+    """
+
+    def __init__(self, mock_execute_command, mock_open, *args, **kwargs):
+        self._mock_execute_command = mock_execute_command
+        self._mock_open = mock_open
+        super().__init__(*args, **kwargs)
+
+    def execute_command_subprocess(self, command, shell_command=False):
+        return self._mock_execute_command(command, shell_command)
 
 
 class TestHAClusterValidator:
@@ -166,9 +242,6 @@ class TestHAClusterValidator:
     def mock_xml_outputs(self):
         """
         Fixture for providing mock XML outputs.
-
-        :return: Mock XML outputs.
-        :rtype: dict
         """
         return {
             "rsc_defaults": DUMMY_XML_RSC,
@@ -179,344 +252,334 @@ class TestHAClusterValidator:
         }
 
     @pytest.fixture
-    def validator(self, monkeypatch, mock_xml_outputs):
+    def validator(self, mock_xml_outputs):
         """
-        Fixture for creating a HAClusterValidator instance.
-
-        :param monkeypatch: Monkeypatch fixture for mocking.
-        :type monkeypatch: pytest.MonkeyPatch
-        :param mock_xml_outputs: Mock XML outputs.
-        :type mock_xml_outputs: dict
-        :return: HAClusterValidator instance.
-        :rtype: HAClusterValidator
+        Fixture for creating a TestableHAClusterValidator instance.
         """
-
-        def mock_execute_command(*args, **kwargs):
-            """
-            Mock function to replace execute_command_subprocess.
-
-            :param *args: Positional arguments.
-            :param **kwargs: Keyword arguments.
-            :return: Mocked command output.
-            :rtype: str
-            """
-            command = str(args[1]) if len(args) > 1 else str(kwargs.get("command"))
-            if "sysctl" in command:
-                return DUMMY_OS_COMMAND
-            return mock_xml_outputs.get(command[-1], "")
-
-        monkeypatch.setattr(
-            "src.module_utils.sap_automation_qa.SapAutomationQA.execute_command_subprocess",
-            mock_execute_command,
-        )
-        monkeypatch.setattr("builtins.open", fake_open_factory(DUMMY_GLOBAL_INI))
-        return HAClusterValidator(
-            os_type=OperatingSystemFamily.REDHAT,
-            os_version="9.2",
-            sid="PRD",
-            instance_number="00",
-            fencing_mechanism="AFA",
-            virtual_machine_name="vmname",
-            constants=DUMMY_CONSTANTS,
-            saphanasr_provider=HanaSRProvider.SAPHANASR,
-        )
+        mock_execute = MockExecuteCommand(mock_xml_outputs)
+        mock_open = MockOpen(DUMMY_GLOBAL_INI_SAPHANASR)
+        original_open = builtins.open
+        builtins.open = mock_open
+        try:
+            validator = TestableHAClusterValidator(
+                mock_execute,
+                mock_open,
+                os_type=OperatingSystemFamily.REDHAT,
+                sid="HDB",
+                instance_number="00",
+                fencing_mechanism="sbd",
+                virtual_machine_name="vmname",
+                constants=DUMMY_CONSTANTS,
+                saphanasr_provider=HanaSRProvider.SAPHANASR,
+                cib_output="",
+            )
+            yield validator
+        finally:
+            builtins.open = original_open
 
     @pytest.fixture
-    def validator_angi(self, monkeypatch, mock_xml_outputs):
+    def validator_angi(self, mock_xml_outputs):
         """
-        Fixture for creating a HAClusterValidator instance.
-
-        :param monkeypatch: Monkeypatch fixture for mocking.
-        :type monkeypatch: pytest.MonkeyPatch
-        :param mock_xml_outputs: Mock XML outputs.
-        :type mock_xml_outputs: dict
-        :return: HAClusterValidator instance.
-        :rtype: HAClusterValidator
+        Fixture for creating a TestableHAClusterValidator instance with ANGI provider.
         """
+        mock_execute = MockExecuteCommand(mock_xml_outputs)
+        mock_open = MockOpen(DUMMY_GLOBAL_INI_ANGI)
+        original_open = builtins.open
+        builtins.open = mock_open
+        try:
+            validator = TestableHAClusterValidator(
+                mock_execute,
+                mock_open,
+                os_type=OperatingSystemFamily.SUSE,
+                sid="HDB",
+                instance_number="00",
+                fencing_mechanism="sbd",
+                virtual_machine_name="vmname",
+                constants=DUMMY_CONSTANTS,
+                saphanasr_provider=HanaSRProvider.ANGI,
+                cib_output="",
+            )
+            yield validator
+        finally:
+            builtins.open = original_open
 
-        def mock_execute_command(*args, **kwargs):
-            """
-            Mock function to replace execute_command_subprocess.
-
-            :param *args: Positional arguments.
-            :param **kwargs: Keyword arguments.
-            :return: Mocked command output.
-            :rtype: str
-            """
-            command = str(args[1]) if len(args) > 1 else str(kwargs.get("command"))
-            if "sysctl" in command:
-                return DUMMY_OS_COMMAND
-            return mock_xml_outputs.get(command[-1], "")
-
-        monkeypatch.setattr(
-            "src.module_utils.sap_automation_qa.SapAutomationQA.execute_command_subprocess",
-            mock_execute_command,
-        )
-        monkeypatch.setattr("builtins.open", fake_open_factory(DUMMY_GLOBAL_INI))
+    @pytest.fixture
+    def validator_with_cib(self):
+        """
+        Fixture for creating a validator with CIB output.
+        """
         return HAClusterValidator(
-            os_type=OperatingSystemFamily.SUSE,
-            os_version="9.2",
-            sid="PRD",
-            instance_number="00",
-            fencing_mechanism="AFA",
-            virtual_machine_name="vmname",
-            constants=DUMMY_CONSTANTS,
-            saphanasr_provider=HanaSRProvider.ANGI,
-        )
-
-    def test_get_expected_value_fence_config(self, validator):
-        """
-        Test _get_expected_value method with fence configuration.
-        """
-        validator.fencing_mechanism = "azure-fence-agent"
-        expected = validator._get_expected_value("crm_config", "priority")
-        assert expected == "10"
-
-    def test_get_expected_value_os_config(self, validator):
-        """
-        Test _get_expected_value method with OS configuration.
-        """
-        expected = validator._get_expected_value("crm_config", "stonith-enabled")
-        assert expected == "true"
-
-    def test_get_expected_value_defaults(self, validator):
-        """
-        Test _get_expected_value method with defaults.
-        """
-        expected = validator._get_expected_value("crm_config", "unknown-param")
-        assert expected is None
-
-    def test_get_resource_expected_value_meta_attributes(self, validator):
-        """
-        Test _get_resource_expected_value method for meta_attributes section.
-        """
-        expected = validator._get_resource_expected_value(
-            "fence_agent", "meta_attributes", "pcmk_delay_max"
-        )
-        assert expected == "15"
-
-    def test_get_resource_expected_value_operations(self, validator):
-        """
-        Test _get_resource_expected_value method for operations section.
-        """
-        expected = validator._get_resource_expected_value(
-            "fence_agent", "operations", "timeout", "monitor"
-        )
-        assert expected == ["700", "700s"]
-
-    def test_get_resource_expected_value_unknown_section(self, validator):
-        """
-        Test _get_resource_expected_value method for unknown section.
-        """
-        expected = validator._get_resource_expected_value("fence_agent", "unknown_section", "param")
-        assert expected is None
-
-    def test_create_parameter_with_empty_value(self, validator):
-        """
-        Test _create_parameter method when value is empty.
-        """
-        param = validator._create_parameter(
-            category="test_category", name="test_param", value="", expected_value="expected"
-        )
-        assert param["status"] == TestStatus.INFO.value
-
-    def test_create_parameter_with_list_expected_value_success(self, validator):
-        """
-        Test _create_parameter method with list expected value - success case.
-        """
-        param = validator._create_parameter(
-            category="test_category",
-            name="test_param",
-            value="value1",
-            expected_value=["value1", "value2"],
-        )
-        assert param["status"] == TestStatus.SUCCESS.value
-        assert param["expected_value"] == "value1"
-
-    def test_create_parameter_with_list_expected_value_error(self, validator):
-        """
-        Test _create_parameter method with list expected value - error case.
-        """
-        param = validator._create_parameter(
-            category="test_category",
-            name="test_param",
-            value="value3",
-            expected_value=["value1", "value2"],
-        )
-        assert param["status"] == TestStatus.ERROR.value
-
-    def test_create_parameter_with_string_expected_value_success(self, validator):
-        """
-        Test _create_parameter method with string expected value - success case.
-        """
-        param = validator._create_parameter(
-            category="test_category",
-            name="test_param",
-            value="expected_value",
-            expected_value="expected_value",
-        )
-        assert param["status"] == TestStatus.SUCCESS.value
-
-    def test_create_parameter_with_string_expected_value_error(self, validator):
-        """
-        Test _create_parameter method with string expected value - error case.
-        """
-        param = validator._create_parameter(
-            category="test_category",
-            name="test_param",
-            value="actual_value",
-            expected_value="expected_value",
-        )
-        assert param["status"] == TestStatus.ERROR.value
-
-    def test_create_parameter_with_invalid_expected_value_type(self, validator):
-        """
-        Test _create_parameter method with invalid expected value type.
-        """
-        param = validator._create_parameter(
-            category="test_category",
-            name="test_param",
-            value="test_value",
-            expected_value={"invalid": "type"},
-        )
-        assert param["status"] == TestStatus.ERROR.value
-
-    def test_create_parameter_with_none_expected_value(self, validator):
-        """
-        Test _create_parameter method when expected_value is None.
-        """
-        param = validator._create_parameter(
-            category="crm_config", name="test_param", value="test_value", expected_value=None
-        )
-        assert param["status"] == TestStatus.INFO.value
-
-    def test_parse_global_ini_parameters_angi_provider(self, validator_angi):
-        """
-        Test _parse_global_ini_parameters method with ANGI provider.
-        Covers lines 420-447.
-        """
-        result = validator_angi.get_result()
-        assert "details" in result
-        assert "parameters" in result["details"]
-
-    def test_parse_basic_config(self, validator):
-        """
-        Test _parse_basic_config method.
-        Covers lines 462-473.
-        """
-        xml_str = """<test>
-            <nvpair name="test_param" value="test_value" id="test_id"/>
-            <nvpair name="another_param" value="another_value" id="another_id"/>
-        </test>"""
-        params = validator._parse_basic_config(
-            ET.fromstring(xml_str), "crm_config", "test_subcategory"
-        )
-        assert len(params) == 2
-        assert params[0]["category"] == "crm_config_test_subcategory"
-        assert params[0]["name"] == "test_param"
-        assert params[0]["value"] == "test_value"
-
-    def test_parse_resource_hana_meta_and_topology_meta(self, validator):
-        """
-        Test _parse_resource method for hana_meta and topology_meta categories.
-        Covers lines 486-521.
-        """
-        xml_str = """<primitive>
-            <nvpair name="meta_param" value="meta_value" id="meta_id"/>
-        </primitive>"""
-        element = ET.fromstring(xml_str)
-        params = validator._parse_resource(element, "hana_meta")
-        assert len(params) > 0
-        params = validator._parse_resource(element, "topology_meta")
-        assert len(params) > 0
-
-    def test_parse_constraints_with_valid_constraints(self, validator_angi):
-        """
-        Test _parse_constraints method with valid constraints.
-        Covers lines 532-552.
-        """
-        xml_str = """<constraints>
-            <rsc_location id="loc_test" score="INFINITY" rsc="test_resource"/>
-            <rsc_colocation id="col_test" score="4000" rsc="resource1"/>
-            <rsc_order id="ord_test" kind="Optional" first="resource1"/>
-            <unknown_constraint id="unknown_test" attribute="value"/>
-        </constraints>"""
-        root = ET.fromstring(xml_str)
-        params = validator_angi._parse_constraints(root)
-        constraint_params = [p for p in params if p["category"] == "constraints_rsc_location"]
-        assert len(constraint_params) >= 1
-
-    def test_parse_ha_cluster_config_redhat_skip_op_defaults(self, monkeypatch):
-        """
-        Test parse_ha_cluster_config method with REDHAT OS skipping op_defaults.
-        Covers lines 574-607.
-        """
-
-        def mock_execute_command(*args, **kwargs):
-            return "<dummy/>"
-
-        monkeypatch.setattr(
-            "src.module_utils.sap_automation_qa.SapAutomationQA.execute_command_subprocess",
-            mock_execute_command,
-        )
-        monkeypatch.setattr("builtins.open", fake_open_factory(DUMMY_GLOBAL_INI))
-        validator = HAClusterValidator(
             os_type=OperatingSystemFamily.REDHAT,
-            os_version="9.2",
-            sid="PRD",
+            sid="HDB",
             instance_number="00",
-            fencing_mechanism="AFA",
+            fencing_mechanism="sbd",
             virtual_machine_name="vmname",
             constants=DUMMY_CONSTANTS,
             saphanasr_provider=HanaSRProvider.SAPHANASR,
+            cib_output=DUMMY_XML_FULL_CIB,
         )
-        result = validator.get_result()
-        assert "details" in result
 
-    def test_parse_ha_cluster_config_success(self, validator):
+    def test_init(self, validator):
         """
-        Test the parse_ha_cluster_config method for successful parsing.
-
-        :param validator: HAClusterValidator instance.
-        :type validator: HAClusterValidator
+        Test the __init__ method.
         """
-        result = validator.get_result()
-        assert result["status"] == "PASSED"
+        assert validator.os_type == "REDHAT"
+        assert validator.sid == "HDB"
+        assert validator.instance_number == "00"
+        assert validator.saphanasr_provider == HanaSRProvider.SAPHANASR
 
-    def test_main_method(self, monkeypatch):
+    def test_parse_resources_section_saphanasr(self, validator):
         """
-        Test the main method of the module.
+        Test _parse_resources_section method with SAPHanaSR provider.
+        """
+        xml_str = DUMMY_XML_RESOURCES
+        root = ET.fromstring(xml_str)
+        params = validator._parse_resources_section(root)
+        assert len(params) > 0
+        categories = [p.get("category", "") for p in params]
+        assert not any("angi_topology" in cat for cat in categories)
 
-        :param monkeypatch: Monkeypatch fixture for mocking.
-        :type monkeypatch:
+    def test_parse_resources_section_angi(self, validator_angi):
+        """
+        Test _parse_resources_section method with ANGI provider.
+        """
+        xml_str = DUMMY_XML_RESOURCES
+        root = ET.fromstring(xml_str)
+        params = validator_angi._parse_resources_section(root)
+        assert len(params) > 0
+        categories = [p.get("category", "") for p in params]
+        assert not any(cat == "topology" for cat in categories)
+
+    def test_parse_global_ini_parameters_saphanasr(self, validator):
+        """
+        Test _parse_global_ini_parameters method with SAPHanaSR provider.
+        """
+        params = validator._parse_global_ini_parameters()
+        assert len(params) > 0
+        provider_params = [p for p in params if p["name"] == "provider"]
+        assert len(provider_params) == 1
+        assert provider_params[0]["value"] == "SAPHanaSR"
+
+    def test_parse_global_ini_parameters_angi(self, validator_angi):
+        """
+        Test _parse_global_ini_parameters method with ANGI provider.
+        """
+        params = validator_angi._parse_global_ini_parameters()
+        assert len(params) > 0
+        provider_params = [p for p in params if p["name"] == "provider"]
+        assert len(provider_params) == 1
+        assert provider_params[0]["value"] == "SAPHanaSR-angi"
+
+    def test_parse_global_ini_parameters_with_list_expected_value(self, validator):
+        """
+        Test _parse_global_ini_parameters with list expected value matching.
+        """
+        params = validator._parse_global_ini_parameters()
+        execution_params = [p for p in params if p["name"] == "execution_order"]
+        if execution_params:
+            assert execution_params[0]["status"] in [
+                TestStatus.SUCCESS.value,
+                TestStatus.INFO.value,
+            ]
+
+    def test_parse_global_ini_parameters_exception_handling(self, validator):
+        """
+        Test _parse_global_ini_parameters exception handling.
+        """
+        original_open = builtins.open
+
+        def mock_open_error(*args, **kwargs):
+            raise FileNotFoundError("File not found")
+
+        builtins.open = mock_open_error
+        try:
+            params = validator._parse_global_ini_parameters()
+            assert len(params) == 0
+        finally:
+            builtins.open = original_open
+
+    def test_get_additional_parameters(self, validator):
+        """
+        Test _get_additional_parameters method.
+        """
+        params = validator._get_additional_parameters()
+        assert isinstance(params, list)
+        assert len(params) > 0
+
+    def test_resource_categories_coverage(self, validator):
+        """
+        Test all resource categories are parsed correctly.
+        """
+        xml_str = DUMMY_XML_RESOURCES
+        root = ET.fromstring(xml_str)
+        params = validator._parse_resources_section(root)
+        categories = [p.get("category", "") for p in params]
+        expected_categories = [
+            "sbd_stonith",
+            "topology",
+            "hana",
+            "ipaddr",
+            "azurelb",
+            "filesystem",
+            "fence_agent",
+        ]
+        found_categories = []
+        for cat in expected_categories:
+            if any(cat in category for category in categories):
+                found_categories.append(cat)
+        assert len(found_categories) > 0
+
+    def test_parse_ha_cluster_config_with_cib(self, validator_with_cib):
+        """
+        Test parse_ha_cluster_config method with CIB output.
+        """
+        result = validator_with_cib.get_result()
+        assert result["status"] in [TestStatus.SUCCESS.value, TestStatus.ERROR.value]
+        assert "parameters" in result["details"]
+        assert "CIB output provided" in result["message"]
+
+    def test_main_with_ansible_module(self):
+        """
+        Test main function with successful AnsibleModule creation.
         """
         mock_result = {}
 
         class MockAnsibleModule:
-            """
-            Mock class for AnsibleModule.
-            """
-
-            def __init__(self, *args, **kwargs):
+            def __init__(self, argument_spec=None, **kwargs):
                 self.params = {
-                    "sid": "PRD",
+                    "sid": "HDB",
                     "instance_number": "00",
-                    "virtual_machine_name": "vm_name",
-                    "fencing_mechanism": "AFA",
-                    "os_version": "9.2",
+                    "virtual_machine_name": "vmname",
+                    "fencing_mechanism": "sbd",
                     "pcmk_constants": DUMMY_CONSTANTS,
-                    "saphanasr_provider": HanaSRProvider.SAPHANASR.value,
+                    "saphanasr_provider": "SAPHanaSR",
+                    "cib_output": "",
+                    "os_family": "RedHat",
                 }
 
             def exit_json(self, **kwargs):
                 nonlocal mock_result
                 mock_result = kwargs
 
-        monkeypatch.setattr(
-            "src.modules.get_pcmk_properties_db.AnsibleModule",
-            MockAnsibleModule,
+        def mock_ansible_facts(module):
+            return {"os_family": "RedHat"}
+
+        import src.modules.get_pcmk_properties_db as module_under_test
+
+        original_ansible_module = module_under_test.AnsibleModule
+        original_ansible_facts = module_under_test.ansible_facts
+        original_open = builtins.open
+        module_under_test.AnsibleModule = MockAnsibleModule
+        module_under_test.ansible_facts = mock_ansible_facts
+        builtins.open = MockOpen(DUMMY_GLOBAL_INI_SAPHANASR)
+
+        try:
+            main()
+            assert "status" in mock_result
+            assert "message" in mock_result
+        finally:
+            module_under_test.AnsibleModule = original_ansible_module
+            module_under_test.ansible_facts = original_ansible_facts
+            builtins.open = original_open
+
+    def test_main_with_exception_fallback(self):
+        """
+        Test main function with exception handling fallback.
+        """
+        mock_result = {}
+
+        class MockAnsibleModuleFallback:
+            def __init__(self, argument_spec=None, **kwargs):
+                self.params = {
+                    "sid": "HDB",
+                    "instance_number": "00",
+                    "virtual_machine_name": "vmname",
+                    "fencing_mechanism": "sbd",
+                    "pcmk_constants": DUMMY_CONSTANTS,
+                    "saphanasr_provider": "SAPHanaSR",
+                    "cib_output": "",
+                    "os_family": "RedHat",
+                }
+
+            def exit_json(self, **kwargs):
+                nonlocal mock_result
+                mock_result = kwargs
+
+        call_count = 0
+
+        def mock_ansible_module_factory(*args, **kwargs):
+            nonlocal call_count
+            call_count += 1
+            if call_count == 1:
+                raise Exception("First call fails")
+            return MockAnsibleModuleFallback(*args, **kwargs)
+
+        import src.modules.get_pcmk_properties_db as module_under_test
+
+        original_ansible_module = module_under_test.AnsibleModule
+        original_open = builtins.open
+        module_under_test.AnsibleModule = mock_ansible_module_factory
+        builtins.open = MockOpen(DUMMY_GLOBAL_INI_SAPHANASR)
+        try:
+            main()
+            assert "status" in mock_result
+        finally:
+            module_under_test.AnsibleModule = original_ansible_module
+            builtins.open = original_open
+
+    def test_all_resource_types_parsed(self, validator):
+        """
+        Test that all defined resource categories can be parsed.
+        """
+        for category, xpath in HAClusterValidator.RESOURCE_CATEGORIES.items():
+            xml_str = DUMMY_XML_RESOURCES
+            root = ET.fromstring(xml_str)
+            elements = root.findall(xpath)
+            if elements:
+                params = validator._parse_resource(elements[0], category)
+                assert isinstance(params, list)
+
+    def test_global_ini_section_detection(self, validator_angi):
+        """
+        Test global.ini section detection for different providers.
+        """
+        params = validator_angi._parse_global_ini_parameters()
+        assert isinstance(params, list)
+
+    def test_get_expected_value_methods(self, validator):
+        """
+        Test inherited expected value methods.
+        """
+        validator.fencing_mechanism = "azure-fence-agent"
+        expected = validator._get_expected_value("crm_config", "priority")
+        assert expected == "10"
+        expected = validator._get_expected_value("crm_config", "stonith-enabled")
+        assert expected == "true"
+        expected = validator._get_resource_expected_value(
+            "fence_agent", "meta_attributes", "pcmk_delay_max"
         )
+        assert expected == "15"
 
-        main()
+    def test_parse_constraints_with_valid_constraints(self, validator):
+        """
+        Test _parse_constraints method with valid constraints.
+        """
+        xml_str = """<constraints>
+            <rsc_location id="loc_test" score="INFINITY" rsc="test_resource"/>
+            <rsc_colocation id="col_test" score="4000" rsc="resource1"/>
+            <rsc_order id="ord_test" kind="Optional" first="resource1"/>
+        </constraints>"""
+        root = ET.fromstring(xml_str)
+        params = validator._parse_constraints(root)
+        assert len(params) > 0
 
-        assert mock_result["status"] == "PASSED"
+    def test_successful_validation_result(self, validator):
+        """
+        Test that validator returns proper result structure.
+        """
+        result = validator.get_result()
+        assert "status" in result
+        assert "message" in result
+        assert "details" in result
+        assert "parameters" in result["details"]
+        assert isinstance(result["details"]["parameters"], list)

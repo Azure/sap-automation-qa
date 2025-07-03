@@ -108,18 +108,18 @@ class SapAutomationQA(ABC):
             self.handle_error(ex, "")
         return ""
 
-    def parse_xml_output(self, xml_output: str) -> Optional[ET.Element]:
+    def parse_xml_output(self, xml_output: str) -> ET.Element:
         """
         Parses the XML output and returns the root element.
 
         :param xml_output: XML output to parse
         :type xml_output: str
         :return: The root element of the XML output
-        :rtype: Optional[ET.Element]
+        :rtype: ET.Element
         """
         if xml_output.startswith("<"):
             return ET.fromstring(xml_output)
-        return None
+        return ET.Element("root")
 
     def get_result(self) -> Dict[str, Any]:
         """

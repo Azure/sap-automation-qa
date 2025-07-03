@@ -52,11 +52,8 @@ pcs cluster enable --all  # for RedHat virtual machine
 
 The SAP Testing Automation Framework requires a jumpbox or management server with the following setup:
 
-- **Operating System**: Ubuntu 22.04 LTS.
+- **Operating System**: Supported (Ubuntu 22.04 LTS, SLES 15 SP4, 15 SP6).
 - **Location**: Must be deployed on Azure.
-  
-> [!NOTE]
-> Currently, only Ubuntu 22.04 LTS is supported for running the SAP Testing Automation Framework.
 
 ### Azure RBAC
 
@@ -91,13 +88,29 @@ The management server must have network connectivity to the SAP system to perfor
 
 ### 1. Environment Setup
 
-To set up your enviroment in management server, follow these steps:
+To set up your environment in management server, follow these steps:
 
-1.1. **Login to the Ubuntu management server**:
+1.1. **Login to the management server**:
 
-Ensure you are logged into the Ubuntu management server that is connected to the SAP system's virtual network.
+Ensure you are logged into the management server that is connected to the SAP system's virtual network.
 
-1.2. **Fork and clone the repository**:
+1.2. **Install git on management server**:
+
+```bash
+# Debian/Ubuntu
+sudo su -
+apt-get install git
+
+# RHEL/CentOS
+sudo su -
+yum install git
+
+# SUSE
+sudo su -
+zypper install git
+```
+
+1.3. **Fork and clone the repository**:
 
 ```bash
 # sudo to root
@@ -111,7 +124,7 @@ git clone https://github.com/GITHUB-USERNAME/sap-automation-qa.git
 cd sap-automation-qa
 ```
 
-1.3. **Run the initial setup script**:
+1.4. **Run the initial setup script**:
 
 ```bash
 ./scripts/setup.sh
@@ -316,14 +329,11 @@ To execute the script, run following command:
 # Run specific test cases from HA_DB_HANA group
 ./scripts/sap_automation_qa.sh --test_groups=HA_DB_HANA --test_cases=[ha-config,primary-node-crash]
 
-# Run all enabled tests in HA_DB_HANA group
-./scripts/sap_automation_qa.sh --test_groups=HA_DB_HANA
-
-# Run all enabled tests in HA_SCS group
-./scripts/sap_automation_qa.sh --test_groups=HA_SCS
+# Run specific test cases from HA_SCS group
+./scripts/sap_automation_qa.sh --test_groups=HA_SCS --test_cases=[ha-config]
 
 # Run with verbose output
-./scripts/sap_automation_qa.sh --test_groups=HA_DB_HANA --test_cases=[ha-config] -vv
+./scripts/sap_automation_qa.sh --test_groups=HA_DB_HANA --test_cases=[primary-node-crash] -vvv
 ```
 
 ### 4. Viewing Test Results

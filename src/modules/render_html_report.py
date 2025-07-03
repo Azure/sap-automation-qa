@@ -14,9 +14,11 @@ import jinja2
 from ansible.module_utils.basic import AnsibleModule
 
 try:
-    from ansible.module_utils.sap_automation_qa import SapAutomationQA, TestStatus
+    from ansible.module_utils.sap_automation_qa import SapAutomationQA
+    from ansible.module_utils.enums import TestStatus
 except ImportError:
-    from src.module_utils.sap_automation_qa import SapAutomationQA, TestStatus
+    from src.module_utils.sap_automation_qa import SapAutomationQA
+    from src.module_utils.enums import TestStatus
 
 DOCUMENTATION = r"""
 ---
