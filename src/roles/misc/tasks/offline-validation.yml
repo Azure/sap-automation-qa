@@ -1,0 +1,84 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+
+# /*---------------------------------------------------------------------------
+# |                    Process HA Configuration for Single Host               |
+# +--------------------------------------------------------------------------*/
+
+- name:                                 "Extract hostname from CIB file path"
+  ansible.builtin.set_fact:
+    current_hostname:                   "{{ offline_validation_host.path | regex_replace('.*/offline_validation/([^/]+)/cib$', '\\1') }}"
+
+- name:                                 "Test Setup Tasks for {{ current_hostname }}"
+  ansible.builtin.include_tasks:        "roles/misc/tasks/test-case-setup.yml"
+
+- name:                                 "Read CIB content for {{ current_hostname }}"
+  ansible.builtin.slurp:
+    src:                                "{{ offline_validation_host.path }}"
+  register:                             cib_file_content
+  delegate_to:                          localhost
+
+- name:                                 "HA Configuration check for {{ current_hostname }}"
+  block:
+    - name:                             "Offline HA Configuration validation for DB"
+      when:                             sap_functional_test_type == "DatabaseHighAvailability"
+      block:
+        - name:                         "Get Pacemaker properties for DB"
+          get_pcmk_properties_db:
+            sid:                        "{{ db_sid | upper }}"
+            instance_number:            "{{ db_instance_number }}"
+            virtual_machine_name:       "{{ current_hostname }}"
+            fencing_mechanism:          "{{ database_cluster_type }}"
+            pcmk_constants:             "{{ lookup('file', '../../ha_db_hana/tasks/files/constants.yaml') | from_yaml }}"
+            saphanasr_provider:         "{{ saphanasr_provider | default('SAPHanaSR') }}"
+            os_family:                  "{{ target_os_family | default('UNKNOWN') }}"
+            cib_output:                 "{{ cib_file_content.content | b64decode if cib_file_content.content is defined else '' }}"
+          register:                     test_result
+
+        - name:                         "Set the test case status to PASSED for {{ current_hostname }}"
+          ansible.builtin.set_fact:
+            test_case_name:             "HA Parameters Validation: {{ current_hostname }}"
+            test_case_status:           "{{ test_result.status }}"
+            test_case_message:          "{{ test_result.message }}"
+            test_case_details:          "{{ test_result.details }}"
+            test_case_hostname:         "{{ current_hostname }}"
+
+    - name:                             "Offline HA Configuration validation for SCS"
+      when:                             sap_functional_test_type == "CentralServicesHighAvailability"
+      block:
+        - name:                         "Get Pacemaker properties for SCS"
+          get_pcmk_properties_scs:
+            sid:                        "{{ sap_sid | upper }}"
+            ascs_instance_number:       "{{ scs_instance_number }}"
+            ers_instance_number:        "{{ ers_instance_number }}"
+            virtual_machine_name:       "{{ current_hostname }}"
+            pcmk_constants:             "{{ lookup('file', '../../ha_scs/tasks/files/constants.yaml') | from_yaml }}"
+            fencing_mechanism:          "{{ scs_cluster_type }}"
+            nfs_provider:               "{{ NFS_provider }}"
+            os_family:                  "{{ target_os_family | default('UNKNOWN') }}"
+            cib_output:                 "{{ cib_file_content.content | b64decode if cib_file_content.content is defined else '' }}"
+          register:                     test_result
+
+        - name:                         "Set the test case status to PASSED for {{ current_hostname }}"
+          ansible.builtin.set_fact:
+            test_case_name:             "HA Parameters Validation: {{ current_hostname }}"
+            test_case_status:           "{{ test_result.status }}"
+            test_case_message:          "{{ test_result.message }}"
+            test_case_details:          "{{ test_result.details }}"
+            test_case_hostname:         "{{ current_hostname }}"
+
+    - name:                             "Post Telemetry Data for {{ current_hostname }}"
+      ansible.builtin.include_tasks:    "roles/misc/tasks/post-telemetry-data.yml"
+
+  rescue:
+    - name:                             "Test case failed for {{ current_hostname }}"
+      ansible.builtin.set_fact:
+        test_case_name:                 "HA Parameters Validation: {{ current_hostname }}"
+        test_case_status:               "FAILED"
+        test_case_details:              "{{ test_result | default('Test execution failed') }}"
+        test_case_message:              "{{ ansible_failed_result.msg | default('Unknown error occurred') }}"
+        test_case_hostname:             "{{ current_hostname }}"
+        package_versions:               "{{ packages_list.details | default({}) }}"
+
+    - name:                             "Post Telemetry Data for failed {{ current_hostname }}"
+      ansible.builtin.include_tasks:    "roles/misc/tasks/post-telemetry-data.yml"

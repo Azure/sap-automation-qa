@@ -22,6 +22,15 @@ test_groups:
           and HANA system replication setup.
         enabled:                    true
 
+      - name:                       HA Parameters Validation Offline
+        task_name:                  ha-config-offline
+        description: |
+          The HA parameter validation test validates HA configuration,
+          including Corosync settings, Pacemaker resources, SBD device configuration,
+          and HANA system replication setup. This test is run in an offline mode where the CIB files are
+          already available in the offline_validation directory.
+        enabled:                    false
+
       - name:                       Azure Load Balancer Validation
         task_name:                  azure-lb
         description: |
@@ -139,6 +148,15 @@ test_groups:
           including Corosync settings, Pacemaker resources, SBD device configuration, and SCS system
           replication setup.
         enabled:                    true
+
+      - name:                       "HA Parameters Validation Offline"
+        task_name:                  ha-config-offline
+        description: |
+          The HA parameter validation test validates HA configuration
+          including Corosync settings, Pacemaker resources, SBD device configuration, and SCS system
+          replication setup. This test is run in an offline mode where the CIB files are
+          already available in the offline_validation directory.
+        enabled:                    false
 
       - name:                       Azure Load Balancer Validation
         task_name:                  azure-lb

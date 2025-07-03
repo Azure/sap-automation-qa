@@ -1,0 +1,56 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+
+# /*---------------------------------------------------------------------------
+# |                          HA Configuration Validation                       |
+# +--------------------------------------------------------------------------*/
+
+- name:                                 "Find all CIB files in offline_validation directory"
+  ansible.builtin.find:
+    paths:                              "{{ _workspace_directory }}/offline_validation/"
+    patterns:                           "cib"
+    recurse:                            true
+  register:                             cib_files
+  delegate_to:                          localhost
+
+- name:                                 "Get SCS and ERS hostnames from inventory"
+  ansible.builtin.set_fact:
+    scs_hostnames:                      "{{ groups
+                                          | dict2items
+                                          | selectattr('key', 'match', '.*_SCS$')
+                                          | map(attribute='value')
+                                          | flatten }}"
+
+    ers_hostnames:                      "{{ groups
+                                          | dict2items
+                                          | selectattr('key', 'match', '.*_ERS$')
+                                          | map(attribute='value')
+                                          | flatten }}"
+
+- name:                                 "Combine SCS and ERS hostnames"
+  ansible.builtin.set_fact:
+    scs_ers_hostnames:                  "{{ (scs_hostnames | default([])) + (ers_hostnames | default([])) }}"
+
+- name:                                 "Filter CIB files for SCS and ERS hosts only"
+  ansible.builtin.set_fact:
+    scs_ers_cib_files:                  "{{ cib_files.files
+                                          | selectattr('path', 'match', '.*offline_validation/(' + (scs_ers_hostnames | join('|')) + ')/cib$')
+                                          | list }}"
+  when:                                 cib_files.files | length > 0 and scs_ers_hostnames | length > 0
+
+- name:                                 "Set empty list if no SCS and ERS hosts found"
+  ansible.builtin.set_fact:
+    scs_ers_cib_files:                  []
+  when:                                 scs_ers_hostnames | default([]) | length == 0
+
+- name:                                 "Debug message when no SCS and ERS hosts found"
+  ansible.builtin.debug:
+    msg:                                "No hosts found for SCS and ERS layers, validation not run"
+  when:                                 scs_ers_cib_files | default([]) | length == 0
+
+- name:                                 "Process HA Configuration for each SCS and ERS host"
+  ansible.builtin.include_tasks:        "./roles/misc/tasks/offline-validation.yml"
+  loop:                                 "{{ scs_ers_cib_files | default([]) }}"
+  loop_control:
+    loop_var:                           offline_validation_host
+  when:                                 scs_ers_cib_files | default([]) | length > 0

@@ -245,7 +245,6 @@ class TestBaseClusterStatusChecker:
             "active",
         ]
 
-        # Set the test ready flag to True
         base_checker.test_ready = True
         base_checker.test_stable = True
 
@@ -266,7 +265,7 @@ class TestBaseClusterStatusChecker:
         mocker.patch.object(base_checker, "execute_command_subprocess", return_value="reboot")
 
         base_checker.test_ready = True
-        base_checker.test_stable = False  # Cluster is not stable
+        base_checker.test_stable = False
 
         result = base_checker.run()
 

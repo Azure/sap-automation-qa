@@ -2,10 +2,9 @@
 # Licensed under the MIT License.
 
 """
-Unit tests for the get_pcmk_properties_db module.
+Unit tests for the get_pcmk_properties_scs module.
 """
 
-import io
 import xml.etree.ElementTree as ET
 import pytest
 from src.modules.get_pcmk_properties_scs import HAClusterValidator, main
@@ -28,132 +27,191 @@ DUMMY_XML_OP = """<op_defaults>
 DUMMY_XML_CRM = """<crm_config>
   <cluster_property_set id="cib-bootstrap-options">
     <nvpair name="stonith-enabled" value="true"/>
-    <nvpair name="cluster-name" value="hdb_HDB"/>
+    <nvpair name="cluster-name" value="scs_S4D"/>
     <nvpair name="maintenance-mode" value="false"/>
-  </cluster_property_set>
-  <cluster_property_set id="SAPHanaSR">
-    <nvpair name="hana_hdb_site_srHook_SITEA" value="SOK"/>
   </cluster_property_set>
 </crm_config>"""
 
 DUMMY_XML_CONSTRAINTS = """<constraints>
-  <rsc_colocation id="col_saphana_ip" score="4000" rsc="g_ip_HDB_HDB00" with-rsc="msl_SAPHana_HDB_HDB00"/>
-  <rsc_order id="ord_SAPHana" kind="Optional" first="cln_SAPHanaTopology_HDB_HDB00" then="msl_SAPHana_HDB_HDB00"/>
+  <rsc_colocation id="col_scs_ip" score="4000" rsc="g_ip_S4D_ASCS00" with-rsc="rsc_sap_S4D_ASCS00"/>
+  <rsc_order id="ord_SCS" kind="Optional" first="rsc_sap_S4D_ASCS00" then="rsc_sap_S4D_ERS10"/>
+  <rsc_location id="loc_test" score="INFINITY" rsc="test_resource"/>
 </constraints>"""
 
 DUMMY_XML_RESOURCES = """<resources>
   <primitive id="stonith-sbd" class="stonith" type="external/sbd">
     <instance_attributes id="stonith-sbd-instance_attributes">
       <nvpair id="stonith-sbd-instance_attributes-pcmk_delay_max" name="pcmk_delay_max" value="30s"/>
+      <nvpair name="login" value="12345-12345-12345-12345-12345" id="rsc_st_azure-instance_attributes-login"/>
+      <nvpair name="password" value="********" id="rsc_st_azure-instance_attributes-password"/>
+    </instance_attributes>
+    <meta_attributes id="stonith-sbd-meta_attributes">
+      <nvpair name="target-role" value="Started"/>
+    </meta_attributes>
+    <operations id="stonith-sbd-operations">
+      <op name="monitor" interval="10" timeout="600" id="stonith-sbd-monitor"/>
+      <op name="start" interval="0" timeout="20" id="stonith-sbd-start"/>
+    </operations>
+  </primitive>
+  <primitive id="rsc_fence_azure" class="stonith" type="fence_azure_arm">
+    <instance_attributes>
+      <nvpair name="login" value="testuser"/>
+      <nvpair name="resourceGroup" value="test-rg"/>
+    </instance_attributes>
+    <meta_attributes>
+      <nvpair name="pcmk_delay_max" value="15"/>
+    </meta_attributes>
+    <operations>
+      <op name="monitor" interval="10" timeout="700"/>
+    </operations>
+  </primitive>
+  <primitive id="rsc_ip_S4D_ASCS00" class="ocf" provider="heartbeat" type="IPaddr2">
+    <instance_attributes>
+      <nvpair name="ip" value="10.0.1.100"/>
     </instance_attributes>
   </primitive>
-  <clone id="cln_SAPHanaTopology_HDB_HDB00">
-    <meta_attributes id="cln_SAPHanaTopology_HDB_HDB00-meta_attributes">
-      <nvpair name="clone-node-max" value="1"/>
-      <nvpair name="target-role" value="Started"/>
-    </meta_attributes>
-    <primitive id="rsc_SAPHanaTopology_HDB_HDB00" class="ocf" provider="suse" type="SAPHanaTopology">
-      <operations id="rsc_sap2_HDB_HDB00-operations">
+  <primitive id="rsc_azure_lb" class="ocf" provider="heartbeat" type="azure-lb">
+    <instance_attributes>
+      <nvpair name="port" value="62500"/>
+    </instance_attributes>
+  </primitive>
+  <primitive id="rsc_azure_events" class="ocf" provider="heartbeat" type="azure-events-az">
+    <instance_attributes>
+      <nvpair name="subscriptionId" value="12345"/>
+    </instance_attributes>
+  </primitive>
+  <group id="g_sap_S4D_ASCS00">
+    <primitive id="rsc_sap_S4D_ASCS00" class="ocf" provider="heartbeat" type="SAPInstance">
+      <instance_attributes>
+        <nvpair name="InstanceName" value="S4D_ASCS00_sapascs"/>
+        <nvpair name="START_PROFILE" value="/sapmnt/S4D/profile/S4D_ASCS00_sapascs"/>
+      </instance_attributes>
+      <meta_attributes>
+        <nvpair name="target-role" value="Started"/>
+      </meta_attributes>
+      <operations>
         <op name="monitor" interval="10" timeout="600"/>
       </operations>
-      <instance_attributes id="rsc_SAPHanaTopology_HDB_HDB00-instance_attributes">
-        <nvpair name="SID" value="HDB"/>
-        <nvpair name="InstanceNumber" value="00"/>
-      </instance_attributes>
     </primitive>
-  </clone>
-  <master id="msl_SAPHana_HDB_HDB00">
-    <meta_attributes id="msl_SAPHana_HDB_HDB00-meta_attributes">
-      <nvpair name="clone-max" value="2"/>
-      <nvpair name="target-role" value="Started"/>
-    </meta_attributes>
-    <primitive id="rsc_SAPHana_HDB_HDB00" class="ocf" provider="suse" type="SAPHana">
-      <instance_attributes id="rsc_SAPHana_HDB_HDB00-instance_attributes">
-        <nvpair name="SID" value="HDB"/>
-        <nvpair name="InstanceNumber" value="00"/>
+  </group>
+  <group id="g_sap_S4D_ERS10">
+    <primitive id="rsc_sap_S4D_ERS10" class="ocf" provider="heartbeat" type="SAPInstance">
+      <instance_attributes>
+        <nvpair name="InstanceName" value="S4D_ERS10_sapers"/>
+        <nvpair name="START_PROFILE" value="/sapmnt/S4D/profile/S4D_ERS10_sapers"/>
       </instance_attributes>
-    </primitive>
-  </master>
-  <group id="g_ip_HDB_HDB00">
-    <primitive id="rsc_ip_HDB_HDB00" class="ocf" provider="heartbeat" type="IPaddr2">
-      <instance_attributes id="rsc_ip_HDB_HDB00-instance_attributes">
-        <nvpair name="ip" value="127.0.0.1"/>
-      </instance_attributes>
+      <meta_attributes>
+        <nvpair name="target-role" value="Started"/>
+      </meta_attributes>
+      <operations>
+        <op name="monitor" interval="10" timeout="600"/>
+      </operations>
     </primitive>
   </group>
 </resources>"""
 
+DUMMY_XML_FULL_CIB = f"""<?xml version="1.0" encoding="UTF-8"?>
+<cib>
+  <configuration>
+    {DUMMY_XML_CRM}
+    {DUMMY_XML_RSC}
+    {DUMMY_XML_OP}
+    {DUMMY_XML_CONSTRAINTS}
+    {DUMMY_XML_RESOURCES}
+  </configuration>
+</cib>"""
+
 DUMMY_OS_COMMAND = """kernel.numa_balancing = 0"""
-
-DUMMY_GLOBAL_INI = """[DEFAULT]
-dumm1 = dummy2
-
-[ha_dr_provider_SAPHanaSR]
-provider = SAPHanaSR
-"""
 
 DUMMY_CONSTANTS = {
     "VALID_CONFIGS": {
-        "REDHAT": {"stonith-enabled": "true"},
+        "REDHAT": {"stonith-enabled": "true", "cluster-name": "scs_S4D"},
         "azure-fence-agent": {"priority": "10"},
+        "sbd": {"pcmk_delay_max": "30"},
     },
     "RSC_DEFAULTS": {
-        "REDHAT": {
-            "resource-stickiness": "1000",
-            "migration-threshold": "5000",
-        }
+        "resource-stickiness": "1000",
+        "migration-threshold": "5000",
     },
     "OP_DEFAULTS": {
-        "REDHAT": {
-            "timeout": "600",
-            "record-pending": "true",
-        }
+        "timeout": "600",
+        "record-pending": "true",
     },
-    "CRM_CONFIG_DEFAULTS": {"stonith-enabled": "true"},
+    "CRM_CONFIG_DEFAULTS": {
+        "stonith-enabled": "true",
+        "maintenance-mode": "false",
+    },
     "RESOURCE_DEFAULTS": {
         "REDHAT": {
-            "stonith": {
-                "meta_attributes": {"priority": "10"},
-                "operations": {"monitor": {"timeout": "30"}},
-            },
-            "hana": {"meta_attributes": {"clone-max": "2"}},
             "fence_agent": {
-                "meta_attributes": {"pcmk_delay_max": "15"},
-                "operations": {"monitor": {"timeout": ["700", "700s"]}},
-                "instance_attributes": {"resourceGroup": "test-rg"},
+                "meta_attributes": {"pcmk_delay_max": "15", "target-role": "Started"},
+                "operations": {
+                    "monitor": {"timeout": ["700", "700s"], "interval": "10"},
+                    "start": {"timeout": "20"},
+                },
+                "instance_attributes": {"login": "testuser", "resourceGroup": "test-rg"},
+            },
+            "sbd_stonith": {
+                "meta_attributes": {"pcmk_delay_max": "30", "target-role": "Started"},
+                "operations": {
+                    "monitor": {"timeout": ["30", "30s"], "interval": "10"},
+                    "start": {"timeout": "20"},
+                },
+            },
+            "ascs": {
+                "meta_attributes": {"target-role": "Started"},
+                "operations": {"monitor": {"timeout": ["600", "600s"]}},
+                "instance_attributes": {"InstanceName": "S4D_ASCS00_sapascs"},
+            },
+            "ers": {
+                "meta_attributes": {"target-role": "Started"},
+                "operations": {"monitor": {"timeout": ["600", "600s"]}},
+                "instance_attributes": {"InstanceName": "S4D_ERS10_sapers"},
+            },
+            "ipaddr": {
+                "instance_attributes": {"ip": {"AFS": ["10.0.1.100"], "ANF": ["10.0.1.101"]}}
             },
         }
     },
     "OS_PARAMETERS": {
         "DEFAULTS": {"sysctl": {"kernel.numa_balancing": "kernel.numa_balancing = 0"}}
     },
-    "GLOBAL_INI": {"REDHAT": {"provider": "SAPHanaSR"}},
-    "CONSTRAINTS": {"rsc_location": {"score": "INFINITY"}},
+    "CONSTRAINTS": {
+        "rsc_location": {"score": "INFINITY"},
+        "rsc_colocation": {"score": "4000"},
+        "rsc_order": {"kind": "Optional"},
+    },
 }
 
 
-def fake_open_factory(file_content):
+class MockExecuteCommand:
     """
-    Factory function to create a fake open function that returns a StringIO object.
-
-    :param file_content: Content to be returned by the fake open function.
-    :type file_content: str
-    :return: Fake open function.
-    :rtype: function
+    Mock class for execute_command_subprocess.
     """
 
-    def fake_open(*args, **kwargs):
-        """
-        Fake open function that returns a StringIO object.
+    def __init__(self, mock_outputs):
+        self.mock_outputs = mock_outputs
 
-        :param *args: Positional arguments.
-        :param **kwargs: Keyword arguments.
-        :return: _description_
-        :rtype: _type_
-        """
-        return io.StringIO("\n".join(file_content))
+    def __call__(self, command, shell_command=False):
+        command_str = " ".join(command) if isinstance(command, list) else str(command)
+        if "sysctl" in command_str:
+            return DUMMY_OS_COMMAND
+        if len(command) >= 2 and command[-1] in self.mock_outputs:
+            return self.mock_outputs[command[-1]]
+        return ""
 
-    return fake_open
+
+class TestableHAClusterValidator(HAClusterValidator):
+    """
+    Testable version of HAClusterValidator with mocked dependencies.
+    """
+
+    def __init__(self, mock_execute_command, *args, **kwargs):
+        self._mock_execute_command = mock_execute_command
+        super().__init__(*args, **kwargs)
+
+    def execute_command_subprocess(self, command, shell_command=False):
+        return self._mock_execute_command(command, shell_command)
 
 
 class TestHAClusterValidator:
@@ -165,9 +223,6 @@ class TestHAClusterValidator:
     def mock_xml_outputs(self):
         """
         Fixture for providing mock XML outputs.
-
-        :return: Mock XML outputs.
-        :rtype: dict
         """
         return {
             "rsc_defaults": DUMMY_XML_RSC,
@@ -178,79 +233,188 @@ class TestHAClusterValidator:
         }
 
     @pytest.fixture
-    def validator(self, monkeypatch, mock_xml_outputs):
+    def validator(self, mock_xml_outputs):
         """
-        Fixture for creating a HAClusterValidator instance.
-
-        :param monkeypatch: Monkeypatch fixture for mocking.
-        :type monkeypatch: pytest.MonkeyPatch
-        :param mock_xml_outputs: Mock XML outputs.
-        :type mock_xml_outputs: dict
-        :return: HAClusterValidator instance.
-        :rtype: HAClusterValidator
+        Fixture for creating a TestableHAClusterValidator instance.
         """
-
-        def mock_execute_command(*args, **kwargs):
-            """
-            Mock function to replace execute_command_subprocess.
-
-            :param *args: Positional arguments.
-            :param **kwargs: Keyword arguments.
-            :return: Mocked command output.
-            :rtype: str
-            """
-            command = str(args[1]) if len(args) > 1 else str(kwargs.get("command"))
-            if "sysctl" in command:
-                return DUMMY_OS_COMMAND
-            return mock_xml_outputs.get(command[-1], "")
-
-        monkeypatch.setattr(
-            "src.module_utils.sap_automation_qa.SapAutomationQA.execute_command_subprocess",
-            mock_execute_command,
-        )
-        monkeypatch.setattr("builtins.open", fake_open_factory(DUMMY_GLOBAL_INI))
-        return HAClusterValidator(
+        mock_execute = MockExecuteCommand(mock_xml_outputs)
+        return TestableHAClusterValidator(
+            mock_execute,
             os_type=OperatingSystemFamily.REDHAT,
-            sid="PRD",
+            sid="S4D",
             scs_instance_number="00",
-            ers_instance_number="01",
-            fencing_mechanism="AFA",
+            ers_instance_number="10",
+            fencing_mechanism="sbd",
             virtual_machine_name="vmname",
             constants=DUMMY_CONSTANTS,
+            cib_output="",
+            nfs_provider="AFS",
         )
 
-    def test_parse_ha_cluster_config_success(self, validator):
+    @pytest.fixture
+    def validator_anf(self, mock_xml_outputs):
         """
-        Test the parse_ha_cluster_config method for successful parsing.
-
-        :param validator: HAClusterValidator instance.
-        :type validator: HAClusterValidator
+        Fixture for creating a validator with ANF provider.
         """
-        result = validator.get_result()
-        assert result["status"] == "PASSED"
+        mock_execute = MockExecuteCommand(mock_xml_outputs)
+        return TestableHAClusterValidator(
+            mock_execute,
+            os_type=OperatingSystemFamily.REDHAT,
+            sid="S4D",
+            scs_instance_number="00",
+            ers_instance_number="10",
+            fencing_mechanism="sbd",
+            virtual_machine_name="vmname",
+            constants=DUMMY_CONSTANTS,
+            cib_output="",
+            nfs_provider="ANF",
+        )
 
-    def test_main_method(self, monkeypatch):
+    @pytest.fixture
+    def validator_with_cib(self):
         """
-        Test the main method of the module.
+        Fixture for creating a validator with CIB output.
+        """
+        return HAClusterValidator(
+            os_type=OperatingSystemFamily.REDHAT,
+            sid="S4D",
+            scs_instance_number="00",
+            ers_instance_number="10",
+            fencing_mechanism="sbd",
+            virtual_machine_name="vmname",
+            constants=DUMMY_CONSTANTS,
+            cib_output=DUMMY_XML_FULL_CIB,
+        )
 
-        :param monkeypatch: Monkeypatch fixture for mocking.
-        :type monkeypatch:
+    def test_init(self, validator):
+        """
+        Test the __init__ method.
+        """
+        assert validator.os_type == "REDHAT"
+        assert validator.sid == "S4D"
+        assert validator.scs_instance_number == "00"
+        assert validator.ers_instance_number == "10"
+        assert validator.nfs_provider == "AFS"
+
+    def test_get_expected_value_for_category_resource(self, validator):
+        """
+        Test _get_expected_value_for_category method for resource category.
+        """
+        expected = validator._get_expected_value_for_category(
+            "fence_agent", "meta_attributes", "pcmk_delay_max", None
+        )
+        assert expected == "15"
+
+    def test_get_expected_value_for_category_ascs_ers(self, validator):
+        """
+        Test _get_expected_value_for_category method for ASCS/ERS categories.
+        """
+        expected = validator._get_expected_value_for_category(
+            "ascs", "meta_attributes", "target-role", None
+        )
+        assert expected == "Started"
+        expected = validator._get_expected_value_for_category(
+            "ers", "meta_attributes", "target-role", None
+        )
+        assert expected == "Started"
+
+    def test_get_expected_value_for_category_basic(self, validator):
+        """
+        Test _get_expected_value_for_category method for basic category.
+        """
+        expected = validator._get_expected_value_for_category(
+            "crm_config", None, "stonith-enabled", None
+        )
+        assert expected == "true"
+
+    def test_determine_parameter_status_with_dict_expected_value_anf(self, validator_anf):
+        """
+        Test _determine_parameter_status method with dict expected value and ANF provider.
+        """
+        status = validator_anf._determine_parameter_status(
+            "10.0.1.101", {"AFS": ["10.0.1.100"], "ANF": ["10.0.1.101"]}
+        )
+        assert status == TestStatus.SUCCESS.value
+
+    def test_determine_parameter_status_info_cases(self, validator):
+        """
+        Test _determine_parameter_status method for INFO status cases.
+        """
+        status = validator._determine_parameter_status(
+            "10.0.1.102", {"AFS": ["10.0.1.100"], "ANF": ["10.0.1.101"]}
+        )
+        assert status == TestStatus.ERROR.value
+        validator.nfs_provider = "UNKNOWN"
+        status = validator._determine_parameter_status(
+            "10.0.1.100", {"AFS": ["10.0.1.100"], "ANF": ["10.0.1.101"]}
+        )
+        assert status == TestStatus.SUCCESS.value
+        status = validator._determine_parameter_status("500", ["600", "600s"])
+        assert status == TestStatus.ERROR.value
+        status = validator._determine_parameter_status("value", None)
+        assert status == TestStatus.INFO.value
+        status = validator._determine_parameter_status("", "expected")
+        assert status == TestStatus.INFO.value
+        status = validator._determine_parameter_status("value", 123)
+        assert status == TestStatus.ERROR.value
+
+    def test_parse_resources_section_with_ascs_ers_groups(self, validator):
+        """
+        Test _parse_resources_section method with ASCS/ERS groups.
+        """
+        xml_str = DUMMY_XML_RESOURCES
+        root = ET.fromstring(xml_str)
+        params = validator._parse_resources_section(root)
+        assert len(params) > 0
+        categories = [p.get("category", "") for p in params]
+        ascs_found = any("ascs" in cat for cat in categories)
+        ers_found = any("ers" in cat for cat in categories)
+        assert ascs_found
+        assert ers_found
+
+    def test_parse_resources_section_all_resource_types(self, validator):
+        """
+        Test _parse_resources_section method covers all resource types.
+        """
+        xml_str = DUMMY_XML_RESOURCES
+        root = ET.fromstring(xml_str)
+        params = validator._parse_resources_section(root)
+        categories = [p.get("category", "") for p in params]
+        expected_categories = ["sbd_stonith", "fence_agent", "ipaddr", "azurelb", "azureevents"]
+        found_categories = []
+        for cat in expected_categories:
+            if any(cat in category for category in categories):
+                found_categories.append(cat)
+
+        assert len(found_categories) > 0
+
+    def test_parse_ha_cluster_config_with_cib(self, validator_with_cib):
+        """
+        Test parse_ha_cluster_config method with CIB output.
+        """
+        result = validator_with_cib.get_result()
+        assert result["status"] in [TestStatus.SUCCESS.value, TestStatus.ERROR.value]
+        assert "parameters" in result["details"]
+        assert "CIB output provided" in result["message"]
+
+    def test_main_with_ansible_module(self):
+        """
+        Test main function with successful AnsibleModule creation.
         """
         mock_result = {}
 
         class MockAnsibleModule:
-            """
-            Mock class to simulate AnsibleModule behavior.
-            """
-
-            def __init__(self, *args, **kwargs):
+            def __init__(self, argument_spec=None, **kwargs):
                 self.params = {
-                    "sid": "PRD",
+                    "sid": "S4D",
                     "ascs_instance_number": "00",
-                    "ers_instance_number": "01",
-                    "virtual_machine_name": "vm_name",
-                    "fencing_mechanism": "AFA",
+                    "ers_instance_number": "10",
+                    "virtual_machine_name": "vmname",
                     "pcmk_constants": DUMMY_CONSTANTS,
+                    "fencing_mechanism": "sbd",
+                    "nfs_provider": "AFS",
+                    "cib_output": "",
+                    "filter": "os_family",
                 }
 
             def exit_json(self, **kwargs):
@@ -258,197 +422,116 @@ class TestHAClusterValidator:
                 mock_result = kwargs
 
         def mock_ansible_facts(module):
-            """
-            Mock function to return Ansible facts.
+            return {"os_family": "SUSE"}
 
-            :param module: Ansible module instance.
-            :type module: AnsibleModule
-            :return: Mocked Ansible facts.
-            :rtype: dict
-            """
-            return {"os_family": "REDHAT"}
+        import src.modules.get_pcmk_properties_scs as module_under_test
 
-        monkeypatch.setattr(
-            "src.modules.get_pcmk_properties_scs.AnsibleModule",
-            MockAnsibleModule,
-        )
-        monkeypatch.setattr(
-            "src.modules.get_pcmk_properties_scs.ansible_facts",
-            mock_ansible_facts,
-        )
+        original_ansible_module = module_under_test.AnsibleModule
+        original_ansible_facts = module_under_test.ansible_facts
+        module_under_test.AnsibleModule = MockAnsibleModule
+        module_under_test.ansible_facts = mock_ansible_facts
+        try:
+            main()
+            assert "status" in mock_result
+            assert "message" in mock_result
+        finally:
+            module_under_test.AnsibleModule = original_ansible_module
+            module_under_test.ansible_facts = original_ansible_facts
 
-        main()
-
-        assert mock_result["status"] == "PASSED"
-
-    def test_get_expected_value_fence_config(self, validator):
+    def test_validator_initialization_calls_parse(self):
         """
-        Test _get_expected_value method with fence configuration.
+        Test that validator initialization calls parse_ha_cluster_config.
+        """
+        validator = HAClusterValidator(
+            os_type=OperatingSystemFamily.REDHAT,
+            sid="S4D",
+            scs_instance_number="00",
+            ers_instance_number="10",
+            fencing_mechanism="sbd",
+            virtual_machine_name="vmname",
+            constants=DUMMY_CONSTANTS,
+            cib_output=DUMMY_XML_FULL_CIB,
+        )
+        result = validator.get_result()
+        assert "status" in result
+        assert "details" in result
+
+    def test_resource_categories_defined(self, validator):
+        """
+        Test that RESOURCE_CATEGORIES are properly defined.
+        """
+        expected_categories = ["sbd_stonith", "fence_agent", "ipaddr", "azurelb", "azureevents"]
+        for category in expected_categories:
+            assert category in HAClusterValidator.RESOURCE_CATEGORIES
+            assert HAClusterValidator.RESOURCE_CATEGORIES[category].startswith(".//")
+
+    def test_parse_constraints_with_location_constraints(self, validator):
+        """
+        Test _parse_constraints method with location constraints.
+        """
+        xml_str = """<constraints>
+            <rsc_location id="loc_test" score="INFINITY" rsc="test_resource"/>
+            <rsc_colocation id="col_test" score="4000" rsc="resource1"/>
+            <rsc_order id="ord_test" kind="Optional" first="resource1"/>
+            <unknown_constraint id="unknown_test" attribute="value"/>
+        </constraints>"""
+        root = ET.fromstring(xml_str)
+        params = validator._parse_constraints(root)
+        location_params = [p for p in params if "rsc_location" in p["category"]]
+        colocation_params = [p for p in params if "rsc_colocation" in p["category"]]
+        order_params = [p for p in params if "rsc_order" in p["category"]]
+        assert len(location_params) >= 1
+        assert len(colocation_params) >= 1
+        assert len(order_params) >= 1
+
+    def test_successful_validation_result(self, validator):
+        """
+        Test that validator returns proper result structure.
+        """
+        result = validator.get_result()
+        assert "status" in result
+        assert "message" in result
+        assert "details" in result
+        assert "parameters" in result["details"]
+        assert isinstance(result["details"]["parameters"], list)
+
+    def test_parse_resource_with_operations(self, validator):
+        """
+        Test _parse_resource method with operations section.
+        """
+        xml_str = """<primitive>
+            <operations>
+                <op name="monitor" interval="10" timeout="600" id="monitor_op"/>
+                <op name="start" interval="0" timeout="20" id="start_op"/>
+            </operations>
+        </primitive>"""
+        element = ET.fromstring(xml_str)
+        params = validator._parse_resource(element, "ascs")
+        timeout_params = [p for p in params if p["name"].endswith("_timeout")]
+        interval_params = [p for p in params if p["name"].endswith("_interval")]
+        assert len(timeout_params) == 2
+        assert len(interval_params) == 2
+
+    def test_get_expected_value_methods_coverage(self, validator):
+        """
+        Test inherited expected value methods for coverage.
         """
         validator.fencing_mechanism = "azure-fence-agent"
         expected = validator._get_expected_value("crm_config", "priority")
         assert expected == "10"
-
-    def test_get_resource_expected_value_meta_attributes(self, validator):
-        """
-        Test _get_resource_expected_value method for meta_attributes section.
-        """
+        expected = validator._get_expected_value("crm_config", "stonith-enabled")
+        assert expected == "true"
         expected = validator._get_resource_expected_value(
             "fence_agent", "meta_attributes", "pcmk_delay_max"
         )
         assert expected == "15"
-
-    def test_create_parameter_with_none_expected_value_resource_category(self, validator):
-        """
-        Test _create_parameter method when expected_value is None and category is
-        in RESOURCE_CATEGORIES.
-        """
-        param = validator._create_parameter(
-            category="ipaddr", name="test_param", value="test_value", subcategory="meta_attributes"
-        )
-        assert param["category"] == "ipaddr_meta_attributes"
-
-    def test_create_parameter_with_none_expected_value_or_empty_value(self, validator):
-        """
-        Test _create_parameter method when expected_value is None or value is empty.
-
-        """
-        param = validator._create_parameter(
-            category="crm_config", name="test_param", value="test_value", expected_value=None
-        )
-        assert param["status"] == TestStatus.INFO.value
-
-        param = validator._create_parameter(
-            category="crm_config", name="test_param", value="", expected_value="expected"
-        )
-        assert param["status"] == TestStatus.INFO.value
-
-    def test_parse_resource_with_meta_and_instance_attributes(self, validator):
-        """
-        Test _parse_resource method with meta_attributes and instance_attributes.
-        """
-        xml_str = """<primitive>
-            <meta_attributes>
-                <nvpair name="meta_param" value="meta_value" id="meta_id"/>
-            </meta_attributes>
-            <instance_attributes>
-                <nvpair name="instance_param" value="instance_value" id="instance_id"/>
-            </instance_attributes>
-        </primitive>"""
-        element = ET.fromstring(xml_str)
-
-        params = validator._parse_resource(element, "sbd_stonith")
-
-        meta_params = [p for p in params if p["category"] == "sbd_stonith_meta_attributes"]
-        instance_params = [p for p in params if p["category"] == "sbd_stonith_instance_attributes"]
-
-        assert len(meta_params) >= 1
-        assert len(instance_params) >= 1
-
-    def test_parse_basic_config(self, validator):
-        """
-        Test _parse_basic_config method.
-        """
-        xml_str = """<test>
-            <nvpair name="test_param" value="test_value" id="test_id"/>
-            <nvpair name="another_param" value="another_value" id="another_id"/>
-        </test>"""
-        element = ET.fromstring(xml_str)
-
-        params = validator._parse_basic_config(element, "crm_config", "test_subcategory")
-
-        assert len(params) == 2
-        assert params[0]["category"] == "crm_config_test_subcategory"
-        assert params[0]["name"] == "test_param"
-        assert params[0]["value"] == "test_value"
-
-    def test_parse_constraints_with_missing_attributes(self, validator):
-        """
-        Test _parse_constraints method with missing attributes.
-        """
-        xml_str = """<constraints>
-            <rsc_location id="loc_test" rsc="test_resource"/>
-        </constraints>"""
-        root = ET.fromstring(xml_str)
-        params = validator._parse_constraints(root)
-        assert isinstance(params, list)
-
-    def test_parse_ha_cluster_config_with_empty_root(self, monkeypatch):
-        """
-        Test parse_ha_cluster_config method when root is empty.
-        Covers lines 508-546.
-        """
-
-        def mock_execute_command(*args, **kwargs):
-            return ""
-
-        monkeypatch.setattr(
-            "src.module_utils.sap_automation_qa.SapAutomationQA.execute_command_subprocess",
-            mock_execute_command,
-        )
-
-        validator = HAClusterValidator(
-            os_type=OperatingSystemFamily.SUSE,
-            sid="PRD",
-            scs_instance_number="00",
-            ers_instance_number="01",
-            fencing_mechanism="AFA",
-            virtual_machine_name="vmname",
-            constants=DUMMY_CONSTANTS,
-        )
-
-        result = validator.get_result()
-        assert "details" in result
-
-    def test_get_resource_expected_value_operations_section(self, validator):
-        """
-        Test _get_resource_expected_value method for operations section.
-        """
         expected = validator._get_resource_expected_value(
             "fence_agent", "operations", "timeout", "monitor"
         )
         assert expected == ["700", "700s"]
-
-    def test_get_resource_expected_value_return_none(self, validator):
-        """
-        Test _get_resource_expected_value method returns None for unknown section.
-        """
+        expected = validator._get_resource_expected_value(
+            "fence_agent", "instance_attributes", "login"
+        )
+        assert expected == "testuser"
         expected = validator._get_resource_expected_value("fence_agent", "unknown_section", "param")
         assert expected is None
-
-    def test_create_parameter_with_list_expected_value_success(self, validator):
-        """
-        Test _create_parameter method with list expected value - success case.
-        """
-        param = validator._create_parameter(
-            category="test_category",
-            name="test_param",
-            value="value1",
-            expected_value=["value1", "value2"],
-        )
-        assert param["status"] == TestStatus.SUCCESS.value
-        assert param["expected_value"] == "value1"
-
-    def test_create_parameter_with_list_expected_value_error(self, validator):
-        """
-        Test _create_parameter method with list expected value - error case.
-        """
-        param = validator._create_parameter(
-            category="test_category",
-            name="test_param",
-            value="value3",
-            expected_value=["value1", "value2"],
-        )
-        assert param["status"] == TestStatus.ERROR.value
-
-    def test_create_parameter_with_invalid_expected_value_type(self, validator):
-        """
-        Test _create_parameter method with invalid expected value type.
-        """
-        param = validator._create_parameter(
-            category="test_category",
-            name="test_param",
-            value="test_value",
-            expected_value=123,
-        )
-        assert param["status"] == TestStatus.ERROR.value

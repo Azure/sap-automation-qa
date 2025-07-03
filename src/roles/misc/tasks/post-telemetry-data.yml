@@ -26,7 +26,7 @@
                                           "TestGroupInvocationId": "{{ group_invocation_id | default('') }}",
                                           "TestGroupStartTime": "{{ group_start_time | default('') }}",
                                           "TestGroupName": "{{ group_name | default('') }}",
-                                          "OsVersion": "{{ ansible_distribution }} {{ ansible_distribution_version }}",
+                                          "OsVersion": "{{ target_os_family | default(ansible_distribution | default('') ~ ' ' ~ ansible_distribution_version | default('')) }}",
                                           "TestCaseMessage": "{{ test_case_message | default('') }}",
                                           "TestCaseDetails": "{{ test_case_details | default('') }}",
                                           "DurationSeconds": "{{
