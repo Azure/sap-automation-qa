@@ -301,7 +301,9 @@ run_ansible_playbook() {
         local filtered_config
         filtered_config=$(get_filtered_test_config)
         if [[ -n "$filtered_config" ]]; then
-            extra_vars="--extra-vars '$filtered_config'"
+            local temp_config_file=$(mktemp)
+            echo "$filtered_config" > "$temp_config_file"
+            extra_vars="--extra-vars @$temp_config_file"
         fi
     fi
 
@@ -384,14 +386,14 @@ run_ansible_playbook() {
                 check_file_exists "$temp_file" \
                     "Temporary password file not found. Please check the Key Vault secret ID."
                 command="ansible-playbook ${cmd_dir}/../src/$playbook_name.yml -i $system_hosts \
-                    --extra-vars \"ansible_ssh_pass=$(cat $temp_file)\" --extra-vars @$VARS_FILE -e @$system_params \
+                    --extra-vars 'ansible_ssh_pass=$(cat $temp_file)' --extra-vars @$VARS_FILE -e @$system_params \
                     -e '_workspace_directory=$system_config_folder' $extra_vars"
             else
                 local password_file="${cmd_dir}/../WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME/password"
                 check_file_exists "$password_file" \
                     "password file not found in WORKSPACES/SYSTEM/$SYSTEM_CONFIG_NAME directory."
                 command="ansible-playbook ${cmd_dir}/../src/$playbook_name.yml -i $system_hosts \
-                    --extra-vars \"ansible_ssh_pass=$(cat $password_file)\" --extra-vars @$VARS_FILE -e @$system_params \
+                    --extra-vars 'ansible_ssh_pass=$(cat $password_file)' --extra-vars @$VARS_FILE -e @$system_params \
                     -e '_workspace_directory=$system_config_folder' $extra_vars"
             fi
 
@@ -411,10 +413,15 @@ run_ansible_playbook() {
     return_code=$?
     log "INFO" "Ansible playbook execution completed with return code: $return_code"
 
-    # Clean up temporary file if it exists
+    # Clean up temporary files if they exist
     if [[ -n "$temp_file" && -f "$temp_file" ]]; then
         rm -f "$temp_file"
         log "INFO" "Temporary file deleted: $temp_file"
+    fi
+    
+    if [[ -n "$temp_config_file" && -f "$temp_config_file" ]]; then
+        rm -f "$temp_config_file"
+        log "INFO" "Temporary config file deleted: $temp_config_file"
     fi
 
     exit $return_code

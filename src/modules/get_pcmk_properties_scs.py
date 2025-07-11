@@ -324,7 +324,7 @@ def main() -> None:
         sid=module.params["sid"],
         scs_instance_number=module.params["ascs_instance_number"],
         ers_instance_number=module.params["ers_instance_number"],
-        os_type=OperatingSystemFamily(os_family),
+        os_type=OperatingSystemFamily(os_family.upper()),
         virtual_machine_name=module.params["virtual_machine_name"],
         constants=module.params["pcmk_constants"],
         fencing_mechanism=module.params["fencing_mechanism"],

@@ -165,6 +165,8 @@ class BaseHAClusterValidator(SapAutomationQA, ABC):
 
         if isinstance(expected_value, list):
             expected_value = expected_value[0] if expected_value else ""
+        elif isinstance(expected_value, dict):
+            expected_value = list(expected_value.values())[0] if expected_value else ""
 
         return Parameters(
             category=f"{category}_{subcategory}" if subcategory else category,
