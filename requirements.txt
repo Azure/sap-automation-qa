@@ -6,7 +6,7 @@
 #
 ansible-compat==25.6.0
     # via ansible-lint
-ansible-core==2.17.12
+ansible-core==2.17.13
     # via
     #   -r requirements.in
     #   ansible-compat
@@ -15,7 +15,7 @@ ansible-lint==25.6.1
     # via -r requirements.in
 ansible-runner==2.4.1
     # via -r requirements.in
-astroid==3.3.10
+astroid==3.3.11
     # via pylint
 attrs==25.3.0
     # via
@@ -30,15 +30,15 @@ azure-core==1.35.0
     #   azure-mgmt-core
     #   azure-storage-blob
     #   azure-storage-queue
-azure-identity==1.23.0
+azure-identity==1.23.1
     # via
     #   -r requirements.in
     #   azure-kusto-data
-azure-kusto-data==5.0.4
+azure-kusto-data==5.0.5
     # via
     #   -r requirements.in
     #   azure-kusto-ingest
-azure-kusto-ingest==5.0.4
+azure-kusto-ingest==5.0.5
     # via -r requirements.in
 azure-mgmt-core==1.6.0
     # via azure-mgmt-network
@@ -58,7 +58,7 @@ black==25.1.0
     #   ansible-lint
 bracex==2.6
     # via wcmatch
-certifi==2025.7.9
+certifi==2025.7.14
     # via requests
 cffi==1.17.1
     # via cryptography
@@ -68,7 +68,7 @@ click==8.2.1
     # via
     #   -r requirements.in
     #   black
-coverage[toml]==7.9.2
+coverage[toml]==7.10.0
     # via
     #   -r requirements.in
     #   pytest-cov
@@ -107,7 +107,7 @@ jinja2==3.1.6
     #   ansible-core
 jmespath==1.0.1
     # via -r requirements.in
-jsonschema==4.24.0
+jsonschema==4.25.0
     # via
     #   ansible-compat
     #   ansible-lint
@@ -123,7 +123,7 @@ mccabe==0.7.0
     # via pylint
 mdurl==0.1.2
     # via markdown-it-py
-msal==1.32.3
+msal==1.33.0
     # via
     #   azure-identity
     #   azure-kusto-data
