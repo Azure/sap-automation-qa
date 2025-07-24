@@ -84,7 +84,11 @@ Options:
   --test_groups=GROUP       Specify test group to run (e.g., HA_DB_HANA, HA_SCS)
   --test_cases=[case1,case2] Specify specific test cases to run (comma-separated, in brackets)
   --extra-vars=VAR          Specify additional Ansible extra variables (e.g., --extra-vars='{"key":"value"}')
-  --offline                 Run offline test cases using previously collected CIB data
+  --offline                 Run offline test cases using previously collected CIB data.
+				While running offline tests, the script will look for CIB data in
+				WORKSPACES/SYSTEM/<SYSTEM_CONFIG_NAME>/offline_validation directory.
+				Extra vars "ansible_os_family" required for offline mode
+				(e.g., --extra-vars='{"ansible_os_family":"SUSE"}')
   -h, --help                Show this help message
 
 Examples:
@@ -93,6 +97,34 @@ Examples:
   $0 --test_groups=HA_DB_HANA --test_cases=[ha-config,primary-node-crash] -vv
   $0 --test_groups=HA_DB_HANA --test_cases=[ha-config,primary-node-crash] --extra-vars='{"key":"value"}'
   $0 --test_groups=HA_DB_HANA --test_cases=[ha-config] --offline
+
+Available Test Cases for groups:
+	$0 --test_groups=HA_DB_HANA
+				ha-config => High Availability configuration
+				azure-lb => Azure Load Balancer
+				resource-migration => Resource Migration
+				primary-node-crash => Primary Node Crash
+				block-network => Block Network
+				primary-crash-index => Primary Crash Index
+				primary-node-kill => Primary Node Kill
+				primary-echo-b => Primary Echo B
+				secondary-node-kill => Secondary Node Kill
+				secondary-echo-b => Secondary Echo B
+				fs-freeze => FS Freeze
+				sbd-fencing => SBD Fencing
+				secondary-crash-index => Secondary Crash Index
+	$0 --test_groups=HA_SCS
+				ha-config => High Availability configuration
+				azure-lb => Azure Load Balancer
+				sapcontrol-config => SAP Control Configuration
+				ascs-migration => ASCS Migration
+				block-network => Block Network
+				kill-message-server => Kill Message Server
+				kill-enqueue-server => Kill Enqueue Server
+				kill-enqueue-replication => Kill Enqueue Replication
+				kill-sapstartsrv-process => Kill SAP Start Service Process
+				manual-restart => Manual Restart
+				ha-failover-to-node => HA Failover to Node B
 
 Configuration is read from vars.yaml file.
 EOF
