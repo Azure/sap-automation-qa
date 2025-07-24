@@ -124,7 +124,7 @@ Available Test Cases for groups:
 				kill-enqueue-replication => Kill Enqueue Replication
 				kill-sapstartsrv-process => Kill SAP Start Service Process
 				manual-restart => Manual Restart
-				ha-failover-to-node => HA Failover to Node B
+				ha-failover-to-node => HA Failover to Secondary Node
 
 Configuration is read from vars.yaml file.
 EOF
