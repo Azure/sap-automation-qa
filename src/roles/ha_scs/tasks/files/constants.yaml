@@ -58,7 +58,7 @@ VALID_CONFIGS:
     stonith-timeout:                  ["900", "900s"]
   ISCSI:
     have-watchdog:                    "true"
-    stonith-timeout:                  ["144", "144s"]
+    stonith-timeout:                  ["210", "210s"]
 
 # === Resource Defaults ===
 # cibadmin --query --scope resources

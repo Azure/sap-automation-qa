@@ -50,7 +50,7 @@ VALID_CONFIGS:
     stonith-timeout:                  ["900s", "900"]
   ISCSI:
     have-watchdog:                    "true"
-    stonith-timeout:                  ["144", "144s"]
+    stonith-timeout:                  ["210", "210s"]
 
 
 # === Resource Defaults ===
