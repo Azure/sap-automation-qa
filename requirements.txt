@@ -175,7 +175,7 @@ pyjwt[crypto]==2.10.1
     #   pyjwt
 pylint==3.3.7
     # via -r requirements.in
-pytest==8.4.1
+pytest==8.4.2
     # via
     #   -r requirements.in
     #   pytest-cov
