@@ -205,7 +205,7 @@ referencing==0.36.2
     #   ansible-lint
     #   jsonschema
     #   jsonschema-specifications
-requests==2.32.4
+requests==2.32.5
     # via
     #   -r requirements.in
     #   azure-core
