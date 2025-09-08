@@ -6,7 +6,7 @@
 #
 ansible-compat==25.6.0
     # via ansible-lint
-ansible-core==2.17.13
+ansible-core==2.17.14
     # via
     #   -r requirements.in
     #   ansible-compat
