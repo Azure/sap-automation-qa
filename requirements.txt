@@ -68,7 +68,7 @@ click==8.2.1
     # via
     #   -r requirements.in
     #   black
-coverage[toml]==7.10.0
+coverage[toml]==7.10.6
     # via
     #   -r requirements.in
     #   pytest-cov
@@ -180,7 +180,7 @@ pytest==8.4.1
     #   -r requirements.in
     #   pytest-cov
     #   pytest-mock
-pytest-cov==6.2.1
+pytest-cov==7.0.0
     # via -r requirements.in
 pytest-mock==3.14.1
     # via -r requirements.in
