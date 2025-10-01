@@ -18,9 +18,11 @@ from ansible.module_utils.facts.compat import ansible_facts
 try:
     from ansible.module_utils.get_pcmk_properties import BaseHAClusterValidator
     from ansible.module_utils.enums import OperatingSystemFamily, HanaSRProvider
+    from ansible.module_utils.commands import CIB_ADMIN
 except ImportError:
     from src.module_utils.get_pcmk_properties import BaseHAClusterValidator
     from src.module_utils.enums import OperatingSystemFamily, HanaSRProvider
+    from src.module_utils.commands import CIB_ADMIN
 
 DOCUMENTATION = r"""
 ---
@@ -194,7 +196,7 @@ class HAClusterValidator(BaseHAClusterValidator):
         )
         self.instance_number = instance_number
         self.saphanasr_provider = saphanasr_provider
-        self.parse_ha_cluster_config()
+        self.validate_from_constants()
 
     def _parse_resources_section(self, root):
         """
@@ -211,11 +213,38 @@ class HAClusterValidator(BaseHAClusterValidator):
             resource_categories.pop("topology", None)
         else:
             resource_categories.pop("angi_topology", None)
+            resource_categories.pop("angi_filesystem", None)
+            resource_categories.pop("angi_hana", None)
 
         for sub_category, xpath in resource_categories.items():
             elements = root.findall(xpath)
             for element in elements:
                 parameters.extend(self._parse_resource(element, sub_category))
+
+        return parameters
+
+    def _validate_resource_constants(self):
+        """
+        Resource validation with HANA-specific logic and offline validation support.
+        Validates resource constants by iterating through expected parameters.
+
+        :return: A list of parameter dictionaries
+        :rtype: list
+        """
+        parameters = []
+
+        try:
+            if self.cib_output:
+                resource_scope = self._get_scope_from_cib("resources")
+            else:
+                resource_scope = self.parse_xml_output(
+                    self.execute_command_subprocess(CIB_ADMIN(scope="resources"))
+                )
+            if resource_scope is not None:
+                parameters.extend(self._parse_resources_section(resource_scope))
+
+        except Exception as ex:
+            self.result["message"] += f"Error validating resource constants: {str(ex)} "
 
         return parameters
 
@@ -255,22 +284,29 @@ class HAClusterValidator(BaseHAClusterValidator):
                 if sep
             }
 
-            for param_name, expected_value in global_ini_defaults.items():
+            for param_name, expected_config in global_ini_defaults.items():
                 value = global_ini_properties.get(param_name, "")
-                if isinstance(expected_value, list):
-                    if value in expected_value:
-                        expected_value = value
+                if isinstance(expected_config, dict):
+                    expected_value = expected_config.get("value")
+                    is_required = expected_config.get("required", False)
+                else:
+                    expected_value = expected_config
+                    is_required = False
 
                 self.log(
                     logging.INFO,
-                    f"param_name: {param_name}, value: {value}, expected_value: {expected_value}",
+                    f"param_name: {param_name}, value: {value}, expected_value: {expected_config}",
                 )
                 parameters.append(
                     self._create_parameter(
                         category="global_ini",
                         name=param_name,
                         value=value,
-                        expected_value=expected_value,
+                        expected_value=(
+                            expected_config.get("value")
+                            if isinstance(expected_config, dict)
+                            else expected_value
+                        ),
                     )
                 )
         except Exception as ex:

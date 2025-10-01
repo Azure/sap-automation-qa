@@ -88,53 +88,74 @@ DUMMY_OS_COMMAND = """kernel.numa_balancing = 0"""
 
 DUMMY_CONSTANTS = {
     "VALID_CONFIGS": {
-        "REDHAT": {"stonith-enabled": "true", "cluster-name": "hdb_HDB"},
-        "azure-fence-agent": {"priority": "10"},
-        "sbd": {"pcmk_delay_max": "30"},
+        "REDHAT": {
+            "stonith-enabled": {"value": "true", "required": False},
+            "cluster-name": {"value": "hdb_HDB", "required": False},
+        },
+        "azure-fence-agent": {"priority": {"value": "10", "required": False}},
+        "sbd": {"pcmk_delay_max": {"value": "30", "required": False}},
     },
     "RSC_DEFAULTS": {
-        "resource-stickiness": "1000",
-        "migration-threshold": "5000",
+        "resource-stickiness": {"value": "1000", "required": False},
+        "migration-threshold": {"value": "5000", "required": False},
     },
     "OP_DEFAULTS": {
-        "timeout": "600",
-        "record-pending": "true",
+        "timeout": {"value": "600", "required": False},
+        "record-pending": {"value": "true", "required": False},
     },
     "CRM_CONFIG_DEFAULTS": {
-        "stonith-enabled": "true",
-        "maintenance-mode": "false",
+        "stonith-enabled": {"value": "true", "required": False},
+        "maintenance-mode": {"value": "false", "required": False},
     },
     "RESOURCE_DEFAULTS": {
         "REDHAT": {
             "fence_agent": {
-                "meta_attributes": {"pcmk_delay_max": "15", "target-role": "Started"},
-                "operations": {
-                    "monitor": {"timeout": ["700", "700s"], "interval": "10"},
-                    "start": {"timeout": "20"},
+                "meta_attributes": {
+                    "pcmk_delay_max": {"value": "15", "required": False},
+                    "target-role": {"value": "Started", "required": False},
                 },
-                "instance_attributes": {"login": "testuser"},
+                "operations": {
+                    "monitor": {
+                        "timeout": {"value": ["700", "700s"], "required": False},
+                        "interval": {"value": "10", "required": False},
+                    },
+                    "start": {"timeout": {"value": "20", "required": False}},
+                },
+                "instance_attributes": {"login": {"value": "testuser", "required": False}},
             },
             "sbd_stonith": {
-                "meta_attributes": {"pcmk_delay_max": "30", "target-role": "Started"},
+                "meta_attributes": {
+                    "pcmk_delay_max": {"value": "30", "required": False},
+                    "target-role": {"value": "Started", "required": False},
+                },
                 "operations": {
-                    "monitor": {"timeout": ["30", "30s"], "interval": "10"},
-                    "start": {"timeout": "20"},
+                    "monitor": {
+                        "timeout": {"value": ["30", "30s"], "required": False},
+                        "interval": {"value": "10", "required": False},
+                    },
+                    "start": {"timeout": {"value": "20", "required": False}},
                 },
             },
             "test_resource": {
-                "meta_attributes": {"clone-max": "2"},
-                "operations": {"monitor": {"timeout": ["600", "600s"]}},
-                "instance_attributes": {"SID": "HDB"},
+                "meta_attributes": {"clone-max": {"value": "2", "required": False}},
+                "operations": {
+                    "monitor": {"timeout": {"value": ["600", "600s"], "required": False}}
+                },
+                "instance_attributes": {"SID": {"value": "HDB", "required": False}},
             },
         }
     },
     "OS_PARAMETERS": {
-        "DEFAULTS": {"sysctl": {"kernel.numa_balancing": "kernel.numa_balancing = 0"}}
+        "DEFAULTS": {
+            "sysctl": {
+                "kernel.numa_balancing": {"value": "kernel.numa_balancing = 0", "required": False}
+            }
+        }
     },
     "CONSTRAINTS": {
-        "rsc_location": {"score": "INFINITY"},
-        "rsc_colocation": {"score": "4000"},
-        "rsc_order": {"kind": "Optional"},
+        "rsc_location": {"score": {"value": "INFINITY", "required": False}},
+        "rsc_colocation": {"score": {"value": "4000", "required": False}},
+        "rsc_order": {"kind": {"value": "Optional", "required": False}},
     },
 }
 
@@ -254,7 +275,7 @@ class TestBaseHAClusterValidator:
         """
         validator.fencing_mechanism = "azure-fence-agent"
         expected = validator._get_expected_value("crm_config", "priority")
-        assert expected == "10"
+        assert expected == ("10", False)
 
     def test_get_resource_expected_value_instance_attributes(self, validator):
         """
@@ -263,7 +284,7 @@ class TestBaseHAClusterValidator:
         expected = validator._get_resource_expected_value(
             "fence_agent", "instance_attributes", "login"
         )
-        assert expected == "testuser"
+        assert expected == ("testuser", False)
 
     def test_get_resource_expected_value_invalid_section(self, validator):
         """
@@ -307,29 +328,15 @@ class TestBaseHAClusterValidator:
         """
         Test _determine_parameter_status method with matching string values.
         """
-        status = validator._determine_parameter_status("true", "true")
+        status = validator._determine_parameter_status("true", ("true", False))
         assert status == TestStatus.SUCCESS.value
 
     def test_determine_parameter_status_error_string(self, validator):
         """
         Test _determine_parameter_status method with non-matching string values.
         """
-        status = validator._determine_parameter_status("true", "false")
+        status = validator._determine_parameter_status("true", ("false", False))
         assert status == TestStatus.ERROR.value
-
-    def test_parse_basic_config(self, validator):
-        """
-        Test _parse_basic_config method.
-        """
-        xml_str = """<test>
-            <nvpair name="test_param" value="test_value" id="test_id"/>
-            <nvpair name="another_param" value="another_value" id="another_id"/>
-        </test>"""
-        params = validator._parse_basic_config(
-            ET.fromstring(xml_str), "crm_config", "test_subcategory"
-        )
-        assert len(params) == 2
-        assert params[0]["category"] == "crm_config_test_subcategory"
 
     def test_parse_resource_with_operations(self, validator):
         """
@@ -346,25 +353,6 @@ class TestBaseHAClusterValidator:
         interval_params = [p for p in params if p["name"].endswith("_interval")]
         assert len(timeout_params) == 2
         assert len(interval_params) == 2
-
-    def test_parse_constraints(self, validator):
-        """
-        Test _parse_constraints method.
-        """
-        xml_str = """<constraints>
-            <rsc_location id="loc_test" score="INFINITY" rsc="test_resource"/>
-            <rsc_colocation id="col_test" score="4000" rsc="resource1"/>
-            <rsc_order id="ord_test" kind="Optional" first="resource1"/>
-            <unknown_constraint id="unknown_test" attribute="value"/>
-        </constraints>"""
-        root = ET.fromstring(xml_str)
-        params = validator._parse_constraints(root)
-        location_params = [p for p in params if "rsc_location" in p["category"]]
-        colocation_params = [p for p in params if "rsc_colocation" in p["category"]]
-        order_params = [p for p in params if "rsc_order" in p["category"]]
-        assert len(location_params) >= 1
-        assert len(colocation_params) >= 1
-        assert len(order_params) >= 1
 
     def test_parse_resources_section(self, validator):
         """
@@ -410,15 +398,6 @@ class TestBaseHAClusterValidator:
         scope_element = validator._get_scope_from_cib("resources")
         assert scope_element is None
 
-    def test_parse_ha_cluster_config_with_cib(self, validator_with_cib):
-        """
-        Test parse_ha_cluster_config method with CIB output.
-        """
-        validator_with_cib.parse_ha_cluster_config()
-        result = validator_with_cib.get_result()
-        assert result["status"] in [TestStatus.SUCCESS.value, TestStatus.ERROR.value]
-        assert "parameters" in result["details"]
-
     def test_get_expected_value_for_category_resource(self, validator):
         """
         Test _get_expected_value_for_category method for resource category.
@@ -426,7 +405,7 @@ class TestBaseHAClusterValidator:
         expected = validator._get_expected_value_for_category(
             "fence_agent", "meta_attributes", "pcmk_delay_max", None
         )
-        assert expected == "15"
+        assert expected == ("15", False)
 
     def test_get_expected_value_for_category_basic(self, validator):
         """
@@ -435,26 +414,14 @@ class TestBaseHAClusterValidator:
         expected = validator._get_expected_value_for_category(
             "crm_config", None, "stonith-enabled", None
         )
-        assert expected == "true"
+        assert expected == ("true", False)
 
-    def test_determine_parameter_status_error_invalid_expected(self, validator):
+    def test_determine_parameter_status_with_required_parameter(self, validator):
         """
-        Test _determine_parameter_status method with invalid expected value type.
+        Test _determine_parameter_status method with required parameter.
         """
-        status = validator._determine_parameter_status("value", {"invalid": "dict"})
-        assert status == TestStatus.ERROR.value
-
-    def test_parse_constraints_skip_missing_attributes(self, validator):
-        """
-        Test _parse_constraints method skips elements with missing attributes.
-        """
-        xml_str = """<constraints>
-            <rsc_location id="loc_test" rsc="test_resource"/>
-        </constraints>"""
-        root = ET.fromstring(xml_str)
-        params = validator._parse_constraints(root)
-        score_params = [p for p in params if p["name"] == "score"]
-        assert len(score_params) == 0
+        status = validator._determine_parameter_status("", ("expected_value", True))
+        assert status == TestStatus.WARNING.value
 
     def test_get_scope_from_cib_invalid_scope(self, validator_with_cib):
         """

@@ -7,7 +7,7 @@ from abc import ABC
 import sys
 import logging
 import subprocess
-from typing import Optional, Dict, Any
+from typing import Dict, Any
 import xml.etree.ElementTree as ET
 
 try:

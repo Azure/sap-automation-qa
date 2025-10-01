@@ -125,61 +125,96 @@ DUMMY_OS_COMMAND = """kernel.numa_balancing = 0"""
 
 DUMMY_CONSTANTS = {
     "VALID_CONFIGS": {
-        "REDHAT": {"stonith-enabled": "true", "cluster-name": "scs_S4D"},
-        "azure-fence-agent": {"priority": "10"},
-        "sbd": {"pcmk_delay_max": "30"},
+        "REDHAT": {
+            "stonith-enabled": {"value": "true", "required": False},
+            "cluster-name": {"value": "scs_S4D", "required": False},
+        },
+        "azure-fence-agent": {"priority": {"value": "10", "required": False}},
+        "sbd": {"pcmk_delay_max": {"value": "30", "required": False}},
     },
     "RSC_DEFAULTS": {
-        "resource-stickiness": "1000",
-        "migration-threshold": "5000",
+        "resource-stickiness": {"value": "1000", "required": False},
+        "migration-threshold": {"value": "5000", "required": False},
     },
     "OP_DEFAULTS": {
-        "timeout": "600",
-        "record-pending": "true",
+        "timeout": {"value": "600", "required": False},
+        "record-pending": {"value": "true", "required": False},
     },
     "CRM_CONFIG_DEFAULTS": {
-        "stonith-enabled": "true",
-        "maintenance-mode": "false",
+        "stonith-enabled": {"value": "true", "required": False},
+        "maintenance-mode": {"value": "false", "required": False},
     },
     "RESOURCE_DEFAULTS": {
         "REDHAT": {
             "fence_agent": {
-                "meta_attributes": {"pcmk_delay_max": "15", "target-role": "Started"},
-                "operations": {
-                    "monitor": {"timeout": ["700", "700s"], "interval": "10"},
-                    "start": {"timeout": "20"},
+                "meta_attributes": {
+                    "pcmk_delay_max": {"value": "15", "required": False},
+                    "target-role": {"value": "Started", "required": False},
                 },
-                "instance_attributes": {"login": "testuser", "resourceGroup": "test-rg"},
+                "operations": {
+                    "monitor": {
+                        "timeout": {"value": ["700", "700s"], "required": False},
+                        "interval": {"value": "10", "required": False},
+                    },
+                    "start": {"timeout": {"value": "20", "required": False}},
+                },
+                "instance_attributes": {
+                    "login": {"value": "testuser", "required": False},
+                    "resourceGroup": {"value": "test-rg", "required": False},
+                },
             },
             "sbd_stonith": {
-                "meta_attributes": {"pcmk_delay_max": "30", "target-role": "Started"},
+                "meta_attributes": {
+                    "pcmk_delay_max": {"value": "30", "required": False},
+                    "target-role": {"value": "Started", "required": False},
+                },
                 "operations": {
-                    "monitor": {"timeout": ["30", "30s"], "interval": "10"},
-                    "start": {"timeout": "20"},
+                    "monitor": {
+                        "timeout": {"value": ["30", "30s"], "required": False},
+                        "interval": {"value": "10", "required": False},
+                    },
+                    "start": {"timeout": {"value": "20", "required": False}},
                 },
             },
             "ascs": {
-                "meta_attributes": {"target-role": "Started"},
-                "operations": {"monitor": {"timeout": ["600", "600s"]}},
-                "instance_attributes": {"InstanceName": "S4D_ASCS00_sapascs"},
+                "meta_attributes": {"target-role": {"value": "Started", "required": False}},
+                "operations": {
+                    "monitor": {"timeout": {"value": ["600", "600s"], "required": False}}
+                },
+                "instance_attributes": {
+                    "InstanceName": {"value": "S4D_ASCS00_sapascs", "required": False}
+                },
             },
             "ers": {
-                "meta_attributes": {"target-role": "Started"},
-                "operations": {"monitor": {"timeout": ["600", "600s"]}},
-                "instance_attributes": {"InstanceName": "S4D_ERS10_sapers"},
+                "meta_attributes": {"target-role": {"value": "Started", "required": False}},
+                "operations": {
+                    "monitor": {"timeout": {"value": ["600", "600s"], "required": False}}
+                },
+                "instance_attributes": {
+                    "InstanceName": {"value": "S4D_ERS10_sapers", "required": False}
+                },
             },
             "ipaddr": {
-                "instance_attributes": {"ip": {"AFS": ["10.0.1.100"], "ANF": ["10.0.1.101"]}}
+                "instance_attributes": {
+                    "ip": {
+                        "value": {"AFS": ["10.0.1.100"], "ANF": ["10.0.1.101"]},
+                        "required": False,
+                    }
+                }
             },
         }
     },
     "OS_PARAMETERS": {
-        "DEFAULTS": {"sysctl": {"kernel.numa_balancing": "kernel.numa_balancing = 0"}}
+        "DEFAULTS": {
+            "sysctl": {
+                "kernel.numa_balancing": {"value": "kernel.numa_balancing = 0", "required": False}
+            }
+        }
     },
     "CONSTRAINTS": {
-        "rsc_location": {"score": "INFINITY"},
-        "rsc_colocation": {"score": "4000"},
-        "rsc_order": {"kind": "Optional"},
+        "rsc_location": {"score": {"value": "INFINITY", "required": False}},
+        "rsc_colocation": {"score": {"value": "4000", "required": False}},
+        "rsc_order": {"kind": {"value": "Optional", "required": False}},
     },
 }
 
@@ -303,7 +338,7 @@ class TestHAClusterValidator:
         expected = validator._get_expected_value_for_category(
             "fence_agent", "meta_attributes", "pcmk_delay_max", None
         )
-        assert expected == "15"
+        assert expected == ("15", False)
 
     def test_get_expected_value_for_category_ascs_ers(self, validator):
         """
@@ -312,11 +347,11 @@ class TestHAClusterValidator:
         expected = validator._get_expected_value_for_category(
             "ascs", "meta_attributes", "target-role", None
         )
-        assert expected == "Started"
+        assert expected == ("Started", False)
         expected = validator._get_expected_value_for_category(
             "ers", "meta_attributes", "target-role", None
         )
-        assert expected == "Started"
+        assert expected == ("Started", False)
 
     def test_get_expected_value_for_category_basic(self, validator):
         """
@@ -325,15 +360,16 @@ class TestHAClusterValidator:
         expected = validator._get_expected_value_for_category(
             "crm_config", None, "stonith-enabled", None
         )
-        assert expected == "true"
+        assert expected == ("true", False)
 
-    def test_determine_parameter_status_with_dict_expected_value_anf(self, validator_anf):
+    def test_determine_parameter_status_with_list_expected_value(self, validator):
         """
-        Test _determine_parameter_status method with dict expected value and ANF provider.
+        Test _determine_parameter_status method with list expected value.
         """
-        status = validator_anf._determine_parameter_status(
-            "10.0.1.101", {"AFS": ["10.0.1.100"], "ANF": ["10.0.1.101"]}
+        status = validator._determine_parameter_status(
+            "10.0.1.101", (["10.0.1.100", "10.0.1.101"], False)
         )
+        print(f"Actual status: {status}, Expected: {TestStatus.SUCCESS.value}")
         assert status == TestStatus.SUCCESS.value
 
     def test_determine_parameter_status_info_cases(self, validator):
@@ -465,25 +501,6 @@ class TestHAClusterValidator:
             assert category in HAClusterValidator.RESOURCE_CATEGORIES
             assert HAClusterValidator.RESOURCE_CATEGORIES[category].startswith(".//")
 
-    def test_parse_constraints_with_location_constraints(self, validator):
-        """
-        Test _parse_constraints method with location constraints.
-        """
-        xml_str = """<constraints>
-            <rsc_location id="loc_test" score="INFINITY" rsc="test_resource"/>
-            <rsc_colocation id="col_test" score="4000" rsc="resource1"/>
-            <rsc_order id="ord_test" kind="Optional" first="resource1"/>
-            <unknown_constraint id="unknown_test" attribute="value"/>
-        </constraints>"""
-        root = ET.fromstring(xml_str)
-        params = validator._parse_constraints(root)
-        location_params = [p for p in params if "rsc_location" in p["category"]]
-        colocation_params = [p for p in params if "rsc_colocation" in p["category"]]
-        order_params = [p for p in params if "rsc_order" in p["category"]]
-        assert len(location_params) >= 1
-        assert len(colocation_params) >= 1
-        assert len(order_params) >= 1
-
     def test_successful_validation_result(self, validator):
         """
         Test that validator returns proper result structure.
@@ -518,20 +535,20 @@ class TestHAClusterValidator:
         """
         validator.fencing_mechanism = "azure-fence-agent"
         expected = validator._get_expected_value("crm_config", "priority")
-        assert expected == "10"
+        assert expected == ("10", False)
         expected = validator._get_expected_value("crm_config", "stonith-enabled")
-        assert expected == "true"
+        assert expected == ("true", False)
         expected = validator._get_resource_expected_value(
             "fence_agent", "meta_attributes", "pcmk_delay_max"
         )
-        assert expected == "15"
+        assert expected == ("15", False)
         expected = validator._get_resource_expected_value(
             "fence_agent", "operations", "timeout", "monitor"
         )
-        assert expected == ["700", "700s"]
+        assert expected == (["700", "700s"], False)
         expected = validator._get_resource_expected_value(
             "fence_agent", "instance_attributes", "login"
         )
-        assert expected == "testuser"
+        assert expected == ("testuser", False)
         expected = validator._get_resource_expected_value("fence_agent", "unknown_section", "param")
         assert expected is None

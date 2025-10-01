@@ -146,47 +146,90 @@ execution_order = 1
 
 DUMMY_CONSTANTS = {
     "VALID_CONFIGS": {
-        "REDHAT": {"stonith-enabled": "true"},
-        "azure-fence-agent": {"priority": "10"},
+        "REDHAT": {
+            "stonith-enabled": {"value": "true", "required": False},
+            "cluster-name": {"value": "hdb_HDB", "required": False},
+        },
+        "azure-fence-agent": {"priority": {"value": "10", "required": False}},
+        "sbd": {"pcmk_delay_max": {"value": "30", "required": False}},
     },
     "RSC_DEFAULTS": {
-        "resource-stickiness": "1000",
-        "migration-threshold": "5000",
+        "resource-stickiness": {"value": "1000", "required": False},
+        "migration-threshold": {"value": "5000", "required": False},
     },
     "OP_DEFAULTS": {
-        "timeout": "600",
-        "record-pending": "true",
+        "timeout": {"value": "600", "required": False},
+        "record-pending": {"value": "true", "required": False},
     },
-    "CRM_CONFIG_DEFAULTS": {"stonith-enabled": "true"},
+    "CRM_CONFIG_DEFAULTS": {
+        "stonith-enabled": {"value": "true", "required": False},
+        "maintenance-mode": {"value": "false", "required": False},
+    },
     "RESOURCE_DEFAULTS": {
         "REDHAT": {
             "fence_agent": {
-                "meta_attributes": {"pcmk_delay_max": "15"},
-                "operations": {"monitor": {"timeout": ["700", "700s"]}},
+                "meta_attributes": {
+                    "pcmk_delay_max": {"value": "15", "required": False},
+                    "target-role": {"value": "Started", "required": False},
+                },
+                "operations": {
+                    "monitor": {
+                        "timeout": {"value": ["700", "700s"], "required": False},
+                        "interval": {"value": "10", "required": False},
+                    },
+                    "start": {"timeout": {"value": "20", "required": False}},
+                },
+                "instance_attributes": {"login": {"value": "testuser", "required": False}},
             },
             "sbd_stonith": {
-                "meta_attributes": {"pcmk_delay_max": "15"},
-                "operations": {"monitor": {"timeout": ["30", "30s"]}},
+                "meta_attributes": {
+                    "pcmk_delay_max": {"value": "30", "required": False},
+                    "target-role": {"value": "Started", "required": False},
+                },
+                "operations": {
+                    "monitor": {
+                        "timeout": {"value": ["30", "30s"], "required": False},
+                        "interval": {"value": "10", "required": False},
+                    },
+                    "start": {"timeout": {"value": "20", "required": False}},
+                },
             },
-            "hana": {"meta_attributes": {"clone-max": "2"}},
+            "hana": {
+                "meta_attributes": {"clone-max": {"value": "2", "required": False}},
+                "operations": {
+                    "monitor": {"timeout": {"value": ["600", "600s"], "required": False}}
+                },
+                "instance_attributes": {"SID": {"value": "HDB", "required": False}},
+            },
         }
     },
     "OS_PARAMETERS": {
-        "DEFAULTS": {"sysctl": {"kernel.numa_balancing": "kernel.numa_balancing = 0"}}
+        "DEFAULTS": {
+            "sysctl": {
+                "kernel.numa_balancing": {"value": "kernel.numa_balancing = 0", "required": False}
+            }
+        }
     },
     "GLOBAL_INI": {
         "REDHAT": {
             "SAPHanaSR": {
-                "provider": "SAPHanaSR",
-                "path": "/usr/share/SAPHanaSR",
-                "execution_order": ["1", "2"],
+                "provider": {"value": "SAPHanaSR", "required": False},
+                "path": {"value": "/usr/share/SAPHanaSR", "required": False},
+                "execution_order": {"value": ["1", "2"], "required": False},
             }
         },
         "SUSE": {
-            "SAPHanaSR-angi": {"provider": "SAPHanaSR-angi", "path": "/usr/share/SAPHanaSR-angi"}
+            "SAPHanaSR-angi": {
+                "provider": {"value": "SAPHanaSR-angi", "required": False},
+                "path": {"value": "/usr/share/SAPHanaSR-angi", "required": False},
+            }
         },
     },
-    "CONSTRAINTS": {"rsc_location": {"score": "INFINITY"}},
+    "CONSTRAINTS": {
+        "rsc_location": {"score": {"value": "INFINITY", "required": False}},
+        "rsc_colocation": {"score": {"value": "4000", "required": False}},
+        "rsc_order": {"kind": {"value": "Optional", "required": False}},
+    },
 }
 
 
@@ -552,26 +595,13 @@ class TestHAClusterValidator:
         """
         validator.fencing_mechanism = "azure-fence-agent"
         expected = validator._get_expected_value("crm_config", "priority")
-        assert expected == "10"
+        assert expected == ("10", False)
         expected = validator._get_expected_value("crm_config", "stonith-enabled")
-        assert expected == "true"
+        assert expected == ("true", False)
         expected = validator._get_resource_expected_value(
             "fence_agent", "meta_attributes", "pcmk_delay_max"
         )
-        assert expected == "15"
-
-    def test_parse_constraints_with_valid_constraints(self, validator):
-        """
-        Test _parse_constraints method with valid constraints.
-        """
-        xml_str = """<constraints>
-            <rsc_location id="loc_test" score="INFINITY" rsc="test_resource"/>
-            <rsc_colocation id="col_test" score="4000" rsc="resource1"/>
-            <rsc_order id="ord_test" kind="Optional" first="resource1"/>
-        </constraints>"""
-        root = ET.fromstring(xml_str)
-        params = validator._parse_constraints(root)
-        assert len(params) > 0
+        assert expected == ("15", False)
 
     def test_successful_validation_result(self, validator):
         """

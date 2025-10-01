@@ -17,9 +17,11 @@ from ansible.module_utils.facts.compat import ansible_facts
 try:
     from ansible.module_utils.get_pcmk_properties import BaseHAClusterValidator
     from ansible.module_utils.enums import OperatingSystemFamily, TestStatus
+    from ansible.module_utils.commands import CIB_ADMIN
 except ImportError:
     from src.module_utils.get_pcmk_properties import BaseHAClusterValidator
     from src.module_utils.enums import OperatingSystemFamily, TestStatus
+    from src.module_utils.commands import CIB_ADMIN
 
 
 DOCUMENTATION = r"""
@@ -191,7 +193,7 @@ class HAClusterValidator(BaseHAClusterValidator):
         self.scs_instance_number = scs_instance_number
         self.ers_instance_number = ers_instance_number
         self.nfs_provider = nfs_provider
-        self.parse_ha_cluster_config()
+        self.validate_from_constants()
 
     def _get_expected_value_for_category(self, category, subcategory, name, op_name):
         """
@@ -218,17 +220,49 @@ class HAClusterValidator(BaseHAClusterValidator):
         else:
             return self._get_expected_value(category, name)
 
+    def _validate_resource_constants(self):
+        """
+        Resource validation with SCS-specific logic and offline validation support.
+        Validates resource constants by iterating through expected parameters.
+
+        :return: A list of parameter dictionaries
+        :rtype: list
+        """
+        parameters = []
+
+        try:
+            if self.cib_output:
+                resource_scope = self._get_scope_from_cib("resources")
+            else:
+                resource_scope = self.parse_xml_output(
+                    self.execute_command_subprocess(CIB_ADMIN(scope="resources"))
+                )
+
+            if resource_scope is not None:
+                parameters.extend(self._parse_resources_section(resource_scope))
+
+        except Exception as ex:
+            self.result["message"] += f"Error validating resource constants: {str(ex)} "
+
+        return parameters
+
     def _determine_parameter_status(self, value, expected_value):
         """
         Determine the status of a parameter with SCS-specific logic for NFS provider.
 
         :param value: The actual value of the parameter.
         :type value: str
-        :param expected_value: The expected value of the parameter.
-        :type expected_value: str or list or dict
+        :param expected_value: The expected value tuple (value, required) or legacy format.
+        :type expected_value: tuple or str or list or dict
         :return: The status of the parameter.
         :rtype: str
         """
+        if isinstance(expected_value, tuple):
+            expected_val, required = expected_value
+            if not required and (expected_val is None or value == ""):
+                return TestStatus.INFO.value
+            expected_value = expected_val
+
         if expected_value is None or value == "":
             return TestStatus.INFO.value
         elif isinstance(expected_value, (str, list)):
@@ -245,12 +279,38 @@ class HAClusterValidator(BaseHAClusterValidator):
                     else TestStatus.ERROR.value
                 )
         elif isinstance(expected_value, dict):
-            provider_values = expected_value.get(self.nfs_provider, expected_value.get("AFS", []))
-            return (
-                TestStatus.SUCCESS.value
-                if str(value) in provider_values
-                else TestStatus.ERROR.value
-            )
+            provider_values = []
+            if self.nfs_provider and self.nfs_provider in expected_value:
+                provider_config = expected_value[self.nfs_provider]
+                if isinstance(provider_config, dict) and "value" in provider_config:
+                    provider_values = provider_config["value"]
+                else:
+                    provider_values = provider_config
+            else:
+                # If provider is unknown/not set, collect all provider values
+                for provider_key, provider_config in expected_value.items():
+                    if isinstance(provider_config, dict) and "value" in provider_config:
+                        if isinstance(provider_config["value"], list):
+                            provider_values.extend(provider_config["value"])
+                        else:
+                            provider_values.append(provider_config["value"])
+                    elif isinstance(provider_config, list):
+                        provider_values.extend(provider_config)
+                    else:
+                        provider_values.append(provider_config)
+
+            if isinstance(provider_values, list):
+                return (
+                    TestStatus.SUCCESS.value
+                    if str(value) in provider_values
+                    else TestStatus.ERROR.value
+                )
+            else:
+                return (
+                    TestStatus.SUCCESS.value
+                    if str(value) == str(provider_values)
+                    else TestStatus.ERROR.value
+                )
         else:
             return TestStatus.ERROR.value
 

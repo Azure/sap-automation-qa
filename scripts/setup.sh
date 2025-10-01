@@ -13,8 +13,20 @@ set_output_context
 # Ensure we're in the project root directory
 cd "$(dirname "$script_dir")"
 
-packages=("python3-pip" "ansible" "sshpass" "python3-venv")
+packages=("python3-pip" "sshpass" "python3-venv")
 install_packages "${packages[@]}"
+
+# Install az cli if not present
+if ! command_exists az; then
+		log "INFO" "Azure CLI not found. Installing Azure CLI..."
+		curl -L https://aka.ms/InstallAzureCli | bash
+		if command_exists az; then
+				log "INFO" "Azure CLI installed successfully."
+		else
+				log "ERROR" "Failed to install Azure CLI. Please install it manually."
+				exit 1
+		fi
+fi
 
 # Verify Python3 is available
 if ! command_exists python3; then
@@ -47,7 +59,7 @@ log "INFO" "Installing Python packages..."
 if ! pip install --upgrade pip; then
 		log "ERROR" "Failed to upgrade pip."
 fi
-if pip install pyyaml requests azure-identity azure-kusto-data azure-kusto-ingest azure-mgmt-network azure-storage-blob azure-storage-queue; then
+if pip install -r requirements.in; then
     log "INFO" "Python packages installed successfully."
 else
     log "ERROR" "Failed to install Python packages."

@@ -409,3 +409,6 @@ VMWPASSWORD
 .coverage.*
 *.ini
 .ansible/
+
+# GitHub Copilot configuration files
+copilot-instructions.md

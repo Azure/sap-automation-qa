@@ -89,14 +89,35 @@ class BaseHAClusterValidator(SapAutomationQA, ABC):
         :param name: The name of the configuration parameter.
         :type name: str
         :return: The expected value for the configuration parameter.
-        :rtype: str
+        :rtype: tuple(str, bool)
         """
         _, defaults_key = self.BASIC_CATEGORIES[category]
 
         fence_config = self.constants["VALID_CONFIGS"].get(self.fencing_mechanism, {})
         os_config = self.constants["VALID_CONFIGS"].get(self.os_type, {})
 
-        return fence_config.get(name) or os_config.get(name, self.constants[defaults_key].get(name))
+        fence_param = fence_config.get(name, {})
+        if fence_param:
+            if isinstance(fence_param, dict) and fence_param.get("value"):
+                return (fence_param.get("value", ""), fence_param.get("required", False))
+            elif isinstance(fence_param, (str, list)):
+                return (fence_param, False)
+
+        os_param = os_config.get(name, {})
+        if os_param:
+            if isinstance(os_param, dict) and os_param.get("value"):
+                return (os_param.get("value", ""), os_param.get("required", False))
+            elif isinstance(os_param, (str, list)):
+                return (os_param, False)
+
+        default_param = self.constants[defaults_key].get(name, {})
+        if default_param:
+            if isinstance(default_param, dict) and default_param.get("value"):
+                return (default_param.get("value", ""), default_param.get("required", False))
+            elif isinstance(default_param, (str, list)):
+                return (default_param, False)
+
+        return None
 
     def _get_resource_expected_value(self, resource_type, section, param_name, op_name=None):
         """
@@ -111,20 +132,21 @@ class BaseHAClusterValidator(SapAutomationQA, ABC):
         :param op_name: The name of the operation (if applicable), defaults to None
         :type op_name: str, optional
         :return: The expected value for the resource configuration parameter.
-        :rtype: str
+        :rtype: tuple(str, bool)
         """
         resource_defaults = (
             self.constants["RESOURCE_DEFAULTS"].get(self.os_type, {}).get(resource_type, {})
         )
-
+        attr = None
         if section == "meta_attributes":
-            return resource_defaults.get("meta_attributes", {}).get(param_name)
+            attr = resource_defaults.get("meta_attributes", {}).get(param_name)
         elif section == "operations":
             ops = resource_defaults.get("operations", {}).get(op_name, {})
-            return ops.get(param_name)
+            attr = ops.get(param_name)
         elif section == "instance_attributes":
-            return resource_defaults.get("instance_attributes", {}).get(param_name)
-        return None
+            attr = resource_defaults.get("instance_attributes", {}).get(param_name)
+
+        return (attr.get("value"), attr.get("required", False)) if attr else None
 
     def _create_parameter(
         self,
@@ -157,22 +179,36 @@ class BaseHAClusterValidator(SapAutomationQA, ABC):
         :rtype: dict
         """
         if expected_value is None:
-            expected_value = self._get_expected_value_for_category(
+            expected_config = self._get_expected_value_for_category(
                 category, subcategory, name, op_name
             )
+        else:
+            if isinstance(expected_value, tuple) and len(expected_value) == 2:
+                expected_config = expected_value  # Already in correct format
+            else:
+                expected_config = (expected_value, False)
 
-        status = self._determine_parameter_status(value, expected_value)
+        status = self._determine_parameter_status(value, expected_config)
 
-        if isinstance(expected_value, list):
-            expected_value = expected_value[0] if expected_value else ""
-        elif isinstance(expected_value, dict):
-            expected_value = (
+        display_expected_value = None
+        if expected_config is None:
+            display_expected_value = ""
+        else:
+            if isinstance(expected_config, tuple):
+                display_expected_value = expected_config[0]
+            else:
+                display_expected_value = expected_config
+
+        if isinstance(display_expected_value, list):
+            display_expected_value = display_expected_value[0] if display_expected_value else ""
+        elif isinstance(display_expected_value, dict):
+            display_expected_value = (
                 [
                     item
-                    for val in expected_value.values()
+                    for val in display_expected_value.values()
                     for item in (val if isinstance(val, list) else [val])
                 ]
-                if expected_value
+                if display_expected_value
                 else ""
             )
 
@@ -181,7 +217,7 @@ class BaseHAClusterValidator(SapAutomationQA, ABC):
             id=id if id else "",
             name=name if not op_name else f"{op_name}_{name}",
             value=value,
-            expected_value=expected_value if expected_value is not None else "",
+            expected_value=display_expected_value if display_expected_value is not None else "",
             status=status if status else TestStatus.ERROR.value,
         ).to_dict()
 
@@ -211,34 +247,47 @@ class BaseHAClusterValidator(SapAutomationQA, ABC):
         else:
             return self._get_expected_value(category, name)
 
-    def _determine_parameter_status(self, value, expected_value):
+    def _determine_parameter_status(self, value, expected_config):
         """
         Determine the status of a parameter based on its value and expected value.
 
         :param value: The actual value of the parameter.
         :type value: str
-        :param expected_value: The expected value of the parameter.
-        :type expected_value: str or list or dict
+        :param expected_config: The expected value of the parameter and bool indicating if required.
+        :type expected_config: tuple(str, bool)
         :return: The status of the parameter.
         :rtype: str
         """
-        if expected_value is None or value == "":
+        if expected_config is None:
             return TestStatus.INFO.value
-        elif isinstance(expected_value, (str, list)):
-            if isinstance(expected_value, list):
-                return (
-                    TestStatus.SUCCESS.value
-                    if str(value) in expected_value
-                    else TestStatus.ERROR.value
-                )
-            else:
-                return (
-                    TestStatus.SUCCESS.value
-                    if str(value) == str(expected_value)
-                    else TestStatus.ERROR.value
-                )
+
+        if isinstance(expected_config, tuple):
+            expected_value, is_required = expected_config
+        elif isinstance(expected_config, dict):
+            expected_value = expected_config.get("value")
+            is_required = expected_config.get("required", False)
         else:
-            return TestStatus.ERROR.value
+            expected_value = expected_config
+            is_required = False
+
+        if not value or value == "":
+            if is_required:
+                return TestStatus.WARNING.value
+            else:
+                return TestStatus.INFO.value
+
+        if expected_value is None or expected_value == "":
+            return TestStatus.INFO.value
+        elif isinstance(expected_value, list):
+            return (
+                TestStatus.SUCCESS.value if str(value) in expected_value else TestStatus.ERROR.value
+            )
+        else:
+            return (
+                TestStatus.SUCCESS.value
+                if str(value) == str(expected_value)
+                else TestStatus.ERROR.value
+            )
 
     def _parse_nvpair_elements(self, elements, category, subcategory=None, op_name=None):
         """
@@ -297,36 +346,10 @@ class BaseHAClusterValidator(SapAutomationQA, ABC):
                         id=section,
                         name=param_name,
                         value=value,
-                        expected_value=expected_value,
+                        expected_value=expected_value.get("value", "") if expected_value else None,
                     )
                 )
 
-        return parameters
-
-    def _parse_basic_config(self, element, category, subcategory=None):
-        """
-        Parse basic configuration parameters
-
-        :param element: The XML element to parse.
-        :type element: xml.etree.ElementTree.Element
-        :param category: The category of the configuration parameter.
-        :type category: str
-        :param subcategory: The subcategory of the configuration parameter, defaults to None
-        :type subcategory: str, optional
-        :return: A list of parameter dictionaries.
-        :rtype: list
-        """
-        parameters = []
-        for nvpair in element.findall(".//nvpair"):
-            parameters.append(
-                self._create_parameter(
-                    category=category,
-                    subcategory=subcategory,
-                    name=nvpair.get("name", ""),
-                    value=nvpair.get("value", ""),
-                    id=nvpair.get("id", ""),
-                )
-            )
         return parameters
 
     def _parse_resource(self, element, category):
@@ -374,37 +397,6 @@ class BaseHAClusterValidator(SapAutomationQA, ABC):
                             value=operation.get(op_type, ""),
                         )
                     )
-        return parameters
-
-    def _parse_constraints(self, root):
-        """
-        Parse constraints configuration parameters
-
-        :param root: The XML root element to parse.
-        :type root: xml.etree.ElementTree.Element
-        :return: A list of parameter dictionaries.
-        :rtype: list
-        """
-        parameters = []
-        for element in root:
-            tag = element.tag
-            if tag in self.constants["CONSTRAINTS"]:
-                for attr, expected in self.constants["CONSTRAINTS"][tag].items():
-                    if element.get(attr) is not None:
-                        parameters.append(
-                            self._create_parameter(
-                                category="constraints",
-                                subcategory=tag,
-                                id=element.get("id", ""),
-                                name=attr,
-                                value=element.get(attr),
-                                expected_value=expected,
-                            )
-                        )
-                    else:
-                        continue
-            else:
-                continue
         return parameters
 
     def _parse_resources_section(self, root):
@@ -476,57 +468,26 @@ class BaseHAClusterValidator(SapAutomationQA, ABC):
             return self.cib_output.find(xpath)
         return None
 
-    def parse_ha_cluster_config(self):
+    def validate_from_constants(self):
         """
-        Parse HA cluster configuration XML and return a list of properties.
-        This is the main orchestration method that coordinates all parsing activities.
+        Constants-first validation approach: iterate through constants and validate against CIB.
+        This ensures all expected parameters are checked, with offline validation support.
         """
         parameters = []
 
-        scopes = [
-            "rsc_defaults",
-            "crm_config",
-            "op_defaults",
-            "constraints",
-            "resources",
-        ]
-
-        for scope in scopes:
-            if self._should_skip_scope(scope):
-                continue
-
-            self.category = scope
-            if self.cib_output:
-                root = self._get_scope_from_cib(scope)
-            else:
-                root = self.parse_xml_output(
-                    self.execute_command_subprocess(CIB_ADMIN(scope=scope))
-                )
-            if not root:
-                continue
-
-            try:
-                if self.category in self.BASIC_CATEGORIES:
-                    xpath = self.BASIC_CATEGORIES[self.category][0]
-                    for element in root.findall(xpath):
-                        parameters.extend(self._parse_basic_config(element, self.category))
-
-                elif self.category == "resources":
-                    parameters.extend(self._parse_resources_section(root))
-
-                elif self.category == "constraints":
-                    parameters.extend(self._parse_constraints(root))
-
-            except Exception as ex:
-                self.result["message"] += f"Failed to get {self.category} configuration: {str(ex)}"
-                continue
+        for category in ["crm_config", "rsc_defaults", "op_defaults"]:
+            if not self._should_skip_scope(category):
+                parameters.extend(self._validate_basic_constants(category))
+        parameters.extend(self._validate_resource_constants())
+        parameters.extend(self._validate_constraint_constants())
         try:
             if not self.cib_output:
                 parameters.extend(self._parse_os_parameters())
             else:
                 self.result["message"] += "CIB output provided, skipping OS parameters parsing. "
         except Exception as ex:
-            self.result["message"] += f"Failed to get OS parameters: {str(ex)} \n"
+            self.result["message"] += f"Failed to get OS parameters: {str(ex)} "
+
         try:
             if not self.cib_output:
                 parameters.extend(self._get_additional_parameters())
@@ -535,18 +496,174 @@ class BaseHAClusterValidator(SapAutomationQA, ABC):
                     "message"
                 ] += "CIB output provided, skipping additional parameters parsing. "
         except Exception as ex:
-            self.result["message"] += f"Failed to get additional parameters: {str(ex)} \n"
+            self.result["message"] += f"Failed to get additional parameters: {str(ex)} "
+
         failed_parameters = [
             param
             for param in parameters
             if param.get("status", TestStatus.ERROR.value) == TestStatus.ERROR.value
         ]
+        warning_parameters = [
+            param for param in parameters if param.get("status", "") == TestStatus.WARNING.value
+        ]
+
+        if failed_parameters:
+            overall_status = TestStatus.ERROR.value
+        elif warning_parameters:
+            overall_status = TestStatus.WARNING.value
+        else:
+            overall_status = TestStatus.SUCCESS.value
+
         self.result.update(
             {
                 "details": {"parameters": parameters},
-                "status": (
-                    TestStatus.ERROR.value if failed_parameters else TestStatus.SUCCESS.value
-                ),
+                "status": overall_status,
             }
         )
         self.result["message"] += "HA Parameter Validation completed successfully. "
+
+    def _validate_basic_constants(self, category):
+        """
+        Validate basic configuration constants with offline validation support.
+        Uses existing CIB parsing logic but focuses on constants-first approach.
+        Creates dynamic subcategories based on element IDs found in CIB.
+
+        :param category: The category to validate (crm_config, rsc_defaults, op_defaults)
+        :type category: str
+        :return: A list of parameter dictionaries
+        :rtype: list
+        """
+        parameters = []
+
+        if category not in self.BASIC_CATEGORIES:
+            return parameters
+
+        _, constants_key = self.BASIC_CATEGORIES[category]
+        category_constants = self.constants.get(constants_key, {})
+
+        for param_name, expected_config in category_constants.items():
+            param_value, param_id = self._find_param_with_element_info(category, param_name)
+            expected_result = self._get_expected_value(category, param_name)
+            if expected_result:
+                expected_value, is_required = expected_result
+                expected_config_tuple = (expected_value, is_required)
+            else:
+                if isinstance(expected_config, dict):
+                    expected_value = expected_config.get("value", "")
+                    is_required = expected_config.get("required", False)
+                    expected_config_tuple = (expected_value, is_required)
+                else:
+                    expected_value = str(expected_config)
+                    expected_config_tuple = (expected_value, False)
+
+            parameters.append(
+                self._create_parameter(
+                    category=category,
+                    name=param_name,
+                    value=param_value,
+                    expected_value=expected_config_tuple,
+                    subcategory=param_id if param_id else "",
+                    id=param_id,
+                )
+            )
+
+        return parameters
+
+    def _find_param_with_element_info(self, category, param_name):
+        """
+        Find a parameter value and its own unique ID in CIB XML.
+        Returns both the parameter value and the parameter's own ID (not container ID).
+
+        :param category: The category scope to search in (crm_config, rsc_defaults, op_defaults)
+        :type category: str
+        :param param_name: The parameter name to find
+        :type param_name: str
+        :return: Tuple of (parameter_value, parameter_id) or ("", "") if not found
+        :rtype: tuple(str, str)
+        """
+        param_value, param_id = "", ""
+        try:
+            if self.cib_output:
+                root = self._get_scope_from_cib(category)
+            else:
+                root = self.parse_xml_output(
+                    self.execute_command_subprocess(CIB_ADMIN(scope=category))
+                )
+
+            if not root:
+                return param_value, param_id
+
+            if category in self.BASIC_CATEGORIES:
+                for element in root.findall(self.BASIC_CATEGORIES[category][0]):
+                    for nvpair in element.findall(".//nvpair"):
+                        if nvpair.get("name") == param_name:
+                            param_id = nvpair.get("id", "")
+                            param_value = nvpair.get("value", "")
+                            return param_value, param_id
+
+        except Exception as ex:
+            self.result[
+                "message"
+            ] += f"Error finding parameter {param_name} in {category}: {str(ex)} "
+
+        return param_value, param_id
+
+    def _validate_resource_constants(self):
+        """
+        Resource validation - to be overridden by subclasses.
+        Base implementation returns empty list.
+
+        :return: A list of parameter dictionaries
+        :rtype: list
+        """
+        return []
+
+    def _validate_constraint_constants(self):
+        """
+        Validate constraint constants with offline validation support.
+        Uses constants-first approach to validate constraints against CIB.
+
+        :return: A list of parameter dictionaries
+        :rtype: list
+        """
+        parameters = []
+
+        if "CONSTRAINTS" not in self.constants:
+            return parameters
+
+        try:
+            if self.cib_output:
+                constraints_scope = self._get_scope_from_cib("constraints")
+            else:
+                constraints_scope = self.parse_xml_output(
+                    self.execute_command_subprocess(CIB_ADMIN(scope="constraints"))
+                )
+
+            if constraints_scope is not None:
+                for constraint_type, constraint_config in self.constants["CONSTRAINTS"].items():
+                    elements = constraints_scope.findall(f".//{constraint_type}")
+
+                    for element in elements:
+                        for attr_name, expected_config in constraint_config.items():
+                            actual_value = element.get(attr_name, "")
+                            expected_value = (
+                                expected_config.get("value")
+                                if isinstance(expected_config, dict)
+                                else expected_config
+                            )
+
+                            parameters.append(
+                                self._create_parameter(
+                                    category="constraints",
+                                    subcategory=constraint_type,
+                                    id=element.get("id", ""),
+                                    name=attr_name,
+                                    value=actual_value,
+                                    expected_value=expected_value,
+                                )
+                            )
+
+        except Exception as ex:
+            self.result["message"] += f"Error validating constraint constants: {str(ex)} "
+
+        return parameters

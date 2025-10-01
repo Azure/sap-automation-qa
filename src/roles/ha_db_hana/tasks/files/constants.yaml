@@ -7,330 +7,706 @@
 # === CRM Configuration Defaults ===
 # cibadmin --query --scope crm_config
 CRM_CONFIG_DEFAULTS:
-  cluster-infrastructure:             corosync
-  priority-fencing-delay:             ['30', '30s']
-  stonith-action:                     reboot
-  stonith-enabled:                    'true'
-  concurrent-fencing:                 'true'
-  maintenance-mode:                   'false'
-  node-health-strategy:               'custom'
-  azure-events-az_globalPullState:    'IDLE'
+  cluster-infrastructure:
+    value:                          corosync
+    required:                       false
+  priority-fencing-delay:
+    value:                          ["30", "30s"]
+    required:                       true
+  stonith-action:
+    value:                          reboot
+    required:                       false
+  stonith-enabled:
+    value:                          "true"
+    required:                       false
+  concurrent-fencing:
+    value:                          "true"
+    required:                       false
+  maintenance-mode:
+    value:                          "false"
+    required:                       false
+  node-health-strategy:
+    value:                          "custom"
+    required:                       false
+  azure-events-az_globalPullState:
+    value:                          "IDLE"
+    required:                       false
 
 # === Operation Defaults ===
 # cibadmin --query --scope op_defaults
 OP_DEFAULTS:
-  record-pending:                     'true'
-  timeout:                            ['600', '600s']
+  record-pending:
+    value:                          "true"
+    required:                       false
+  timeout:
+    value:                          ["600", "600s"]
+    required:                       false
 
 # === Resource Defaults ===
 # cibadmin --query --scope rsc_defaults
 RSC_DEFAULTS:
-  migration-threshold:                '5000'
-  priority:                           '1'
-  resource-stickiness:                '1000'
+  migration-threshold:
+    value:                          "5000"
+    required:                       false
+  priority:
+    value:                          "1"
+    required:                       false
+  resource-stickiness:
+    value:                          "1000"
+    required:                       false
 
 # === Constraints ===
 # cibadmin --query --scope constraints
 CONSTRAINTS:
   rsc_colocation:
-    score:                            "4000"
-    rsc-role:                         "Started"
+    score:
+      value:                        "4000"
+      required:                     false
+    rsc-role:
+      value:                        "Started"
+      required:                     false
 
   rsc_order:
-    kind:                             "Optional"
+    kind:
+      value:                        "Optional"
+      required:                     false
 
 # === Valid Configurations for different OS versions ===
 # Specify the properties that are different for different OS versions
 VALID_CONFIGS:
   REDHAT:
-    priority-fencing-delay:           ['15', '15s']
+    priority-fencing-delay:
+      value:                        ["15", "15s"]
+      required:                     true
   SUSE: {}
   AFA:
-    have-watchdog:                    "false"
-    stonith-timeout:                  ["900s", "900"]
+    have-watchdog:
+      value:                        "false"
+      required:                     true
+    stonith-timeout:
+      value:                        ["900s", "900"]
+      required:                     true
   ISCSI:
-    have-watchdog:                    "true"
-    stonith-timeout:                  ["210", "210s"]
-
+    have-watchdog:
+      value:                        "true"
+      required:                     true
+    stonith-timeout:
+      value:                        ["210", "210s"]
+      required:                     true
+  ASD:
+    have-watchdog:
+      value:                        "true"
+      required:                     true
+    stonith-timeout:
+      value:                        ["210", "210s"]
+      required:                     true
 
 # === Resource Defaults ===
 # cibadmin --query --scope resources
 RESOURCE_DEFAULTS:
   SUSE:
     fence_agent:
+      required:                     false
       instance_attributes:
-        pcmk_delay_max:                 "15"
-        pcmk_monitor_retries:           "4"
-        pcmk_action_limit:              "3"
-        pcmk_reboot_timeout:            ["900", "900s"]
-        power_timeout:                  ["240", "240s"]
-        pcmk_monitor_timeout:           ["120", "120s"]
+        pcmk_delay_max:
+          value:                    "15"
+          required:                 false
+        pcmk_monitor_retries:
+          value:                    "4"
+          required:                 false
+        pcmk_action_limit:
+          value:                    "3"
+          required:                 false
+        pcmk_reboot_timeout:
+          value:                    ["900", "900s"]
+          required:                 false
+        power_timeout:
+          value:                    ["240", "240s"]
+          required:                 false
+        pcmk_monitor_timeout:
+          value:                    ["120", "120s"]
+          required:                 false
       operations:
         monitor:
-          interval:                     ["3600", "3600s"]
-          timeout:                      ["120", "120s"]
+          interval:
+            value:                  ["3600", "3600s"]
+            required:               false
+          timeout:
+            value:                  ["120", "120s"]
+            required:               false
 
     sbd_stonith:
+      required:                     false
       instance_attributes:
-        pcmk_delay_max:                 "15"
-        pcmk_monitor_retries:           "4"
-        pcmk_action_limit:              "3"
-        pcmk_reboot_timeout:            ["900", "900s"]
-        power_timeout:                  ["240", "240s"]
-        pcmk_monitor_timeout:           ["120", "120s"]
+        pcmk_delay_max:
+          value:                    "15"
+          required:                 false
+        pcmk_monitor_retries:
+          value:                    "4"
+          required:                 false
+        pcmk_action_limit:
+          value:                    "3"
+          required:                 false
+        pcmk_reboot_timeout:
+          value:                    ["900", "900s"]
+          required:                 false
+        power_timeout:
+          value:                    ["240", "240s"]
+          required:                 false
+        pcmk_monitor_timeout:
+          value:                    ["120", "120s"]
+          required:                 false
       operations:
         monitor:
-          interval:                     ["600", "600s"]
-          timeout:                      ["15", "15s"]
+          interval:
+            value:                  ["600", "600s"]
+            required:               false
+          timeout:
+            value:                  ["15", "15s"]
+            required:               false
 
     topology:
+      required:                     false
       meta_attributes:
-        clone-node-max:                   "1"
-        target-role:                      "Started"
-        interleave:                       "true"
+        clone-node-max:
+          value:                    "1"
+          required:                 false
+        target-role:
+          value:                    "Started"
+          required:                 false
+        interleave:
+          value:                    "true"
+          required:                 false
       operations:
         monitor:
-          interval:                       ["10", "10s"]
-          timeout:                        ["600", "600s"]
+          interval:
+            value:                  ["10", "10s"]
+            required:               false
+          timeout:
+            value:                  ["600", "600s"]
+            required:               false
         start:
-          interval:                       ["0", "0s"]
-          timeout:                        ["600", "600s"]
+          interval:
+            value:                  ["0", "0s"]
+            required:               false
+          timeout:
+            value:                  ["600", "600s"]
+            required:               false
         stop:
-          interval:                       ["0", "0s"]
-          timeout:                        ["300", "300s"]
+          interval:
+            value:                  ["0", "0s"]
+            required:               false
+          timeout:
+            value:                  ["300", "300s"]
+            required:               false
 
     angi_topology:
+      required:                     false
       meta_attributes:
-        clone-node-max:                   "1"
-        target-role:                      "Started"
-        interleave:                       "true"
+        clone-node-max:
+          value:                    "1"
+          required:                 false
+        target-role:
+          value:                    "Started"
+          required:                 false
+        interleave:
+          value:                    "true"
+          required:                 false
       operations:
         monitor:
-          interval:                       ["50", "50s"]
-          timeout:                        ["600", "600s"]
+          interval:
+            value:                  ["50", "50s"]
+            required:               false
+          timeout:
+            value:                  ["600", "600s"]
+            required:               false
         start:
-          interval:                       ["0", "0s"]
-          timeout:                        ["600", "600s"]
+          interval:
+            value:                  ["0", "0s"]
+            required:               false
+          timeout:
+            value:                  ["600", "600s"]
+            required:               false
         stop:
-          interval:                       ["0", "0s"]
-          timeout:                        ["300", "300s"]
+          interval:
+            value:                  ["0", "0s"]
+            required:               false
+          timeout:
+            value:                  ["300", "300s"]
+            required:               false
 
     hana:
+      required:                     false
       meta_attributes:
-        notify:                           "true"
-        clone-max:                        "2"
-        clone-node-max:                   "1"
-        target-role:                      "Started"
-        interleave:                       "true"
-        priority:                         "100"
+        notify:
+          value:                    "true"
+          required:                 false
+        clone-max:
+          value:                    "2"
+          required:                 false
+        clone-node-max:
+          value:                    "1"
+          required:                 false
+        target-role:
+          value:                    "Started"
+          required:                 false
+        interleave:
+          value:                    "true"
+          required:                 false
+        priority:
+          value:                    "100"
+          required:                 false
       instance_attributes:
-        PREFER_SITE_TAKEOVER:             "true"
-        DUPLICATE_PRIMARY_TIMEOUT:        "7200"
-        AUTOMATED_REGISTER:               "true"
+        PREFER_SITE_TAKEOVER:
+          value:                    "true"
+          required:                 false
+        DUPLICATE_PRIMARY_TIMEOUT:
+          value:                    "7200"
+          required:                 false
+        AUTOMATED_REGISTER:
+          value:                    "true"
+          required:                 false
       operations:
         start:
-          interval:                       ["0", "0s"]
-          timeout:                        ["3600", "3600s"]
+          interval:
+            value:                  ["0", "0s"]
+            required:               false
+          timeout:
+            value:                  ["3600", "3600s"]
+            required:               false
         stop:
-          interval:                       ["0", "0s"]
-          timeout:                        ["3600", "3600s"]
+          interval:
+            value:                  ["0", "0s"]
+            required:               false
+          timeout:
+            value:                  ["3600", "3600s"]
+            required:               false
         promote:
-          interval:                       ["0", "0s"]
-          timeout:                        ["3600", "3600s"]
+          interval:
+            value:                  ["0", "0s"]
+            required:               false
+          timeout:
+            value:                  ["3600", "3600s"]
+            required:               false
         monitor:
-          timeout:                        ["700", "700s"]
+          timeout:
+            value:                  ["700", "700s"]
+            required:               false
 
     angi_hana:
+      required:                     false
       meta_attributes:
-        notify:                           "true"
-        clone-max:                        "2"
-        clone-node-max:                   "1"
-        target-role:                      "Started"
-        interleave:                       "true"
-        priority:                         "100"
+        notify:
+          value:                    "true"
+          required:                 false
+        clone-max:
+          value:                    "2"
+          required:                 false
+        clone-node-max:
+          value:                    "1"
+          required:                 false
+        target-role:
+          value:                    "Started"
+          required:                 false
+        interleave:
+          value:                    "true"
+          required:                 false
+        priority:
+          value:                    "100"
+          required:                 false
       instance_attributes:
-        PREFER_SITE_TAKEOVER:             "true"
-        DUPLICATE_PRIMARY_TIMEOUT:        "7200"
-        AUTOMATED_REGISTER:               "true"
+        PREFER_SITE_TAKEOVER:
+          value:                    "true"
+          required:                 false
+        DUPLICATE_PRIMARY_TIMEOUT:
+          value:                    "7200"
+          required:                 false
+        AUTOMATED_REGISTER:
+          value:                    "true"
+          required:                 false
       operations:
         start:
-          interval:                       ["0", "0s"]
-          timeout:                        ["3600", "3600s"]
+          interval:
+            value:                  ["0", "0s"]
+            required:               false
+          timeout:
+            value:                  ["3600", "3600s"]
+            required:               false
         stop:
-          interval:                       ["0", "0s"]
-          timeout:                        ["3600", "3600s"]
+          interval:
+            value:                  ["0", "0s"]
+            required:               false
+          timeout:
+            value:                  ["3600", "3600s"]
+            required:               false
         promote:
-          interval:                       ["0", "0s"]
-          timeout:                        ["3600", "3600s"]
+          interval:
+            value:                  ["0", "0s"]
+            required:               false
+          timeout:
+            value:                  ["3600", "3600s"]
+            required:               false
         demote:
-          interval:                       ["0", "0s"]
-          timeout:                        ["320", "320s"]
+          interval:
+            value:                  ["0", "0s"]
+            required:               false
+          timeout:
+            value:                  ["320", "320s"]
+            required:               false
         monitor:
-          timeout:                        ["700", "700s"]
+          timeout:
+            value:                  ["700", "700s"]
+            required:               false
 
     ipaddr:
+      required:                     false
       meta_attributes:
-        target-role:                      "Started"
+        target-role:
+          value:                    "Started"
+          required:                 false
       operations:
         monitor:
-          interval:                       ["10", "10s"]
-          timeout:                        ["20", "20s"]
+          interval:
+            value:                  ["10", "10s"]
+            required:               false
+          timeout:
+            value:                  ["20", "20s"]
+            required:               false
 
     filesystem:
+      required:                     false
       meta_attributes:
-        clone-node-max:                   "1"
-        interleave:                       "true"
+        clone-node-max:
+          value:                    "1"
+          required:                 false
+        interleave:
+          value:                    "true"
+          required:                 false
       operations:
         monitor:
-          interval:                       ["120", "120s"]
-          timeout:                        ["120", "120s"]
+          interval:
+            value:                  ["120", "120s"]
+            required:               false
+          timeout:
+            value:                  ["120", "120s"]
+            required:               false
         start:
-          interval:                       ["0", "0s"]
-          timeout:                        ["120", "120s"]
+          interval:
+            value:                  ["0", "0s"]
+            required:               false
+          timeout:
+            value:                  ["120", "120s"]
+            required:               false
         stop:
-          interval:                       ["0", "0s"]
-          timeout:                        ["120", "120s"]
+          interval:
+            value:                  ["0", "0s"]
+            required:               false
+          timeout:
+            value:                  ["120", "120s"]
+            required:               false
 
     angi_filesystem:
+      required:                     false
       meta_attributes:
-        clone-node-max:                   "1"
-        interleave:                       "true"
+        clone-node-max:
+          value:                    "1"
+          required:                 true
+        interleave:
+          value:                    "true"
+          required:                 false
       operations:
         monitor:
-          interval:                       ["120", "120s"]
-          timeout:                        ["120", "120s"]
+          interval:
+            value:                  ["120", "120s"]
+            required:               false
+          timeout:
+            value:                  ["120", "120s"]
+            required:               false
         start:
-          interval:                       ["0", "0s"]
-          timeout:                        ["10", "10s"]
+          interval:
+            value:                  ["0", "0s"]
+            required:               false
+          timeout:
+            value:                  ["10", "10s"]
+            required:               false
         stop:
-          interval:                       ["0", "0s"]
-          timeout:                        ["20", "20s"]
+          interval:
+            value:                  ["0", "0s"]
+            required:               false
+          timeout:
+            value:                  ["20", "20s"]
+            required:               false
 
     azurelb:
+      required:                     false
       meta_attributes:
-        resource-stickiness:              "0"
+        resource-stickiness:
+          value:                    "0"
+          required:                 false
       operations:
         monitor:
-          interval:                       ["10", "10s"]
-          timeout:                        ["20", "20s"]
-
+          interval:
+            value:                  ["10", "10s"]
+            required:               false
+          timeout:
+            value:                  ["20", "20s"]
+            required:               false
   REDHAT:
     fence_agent:
+      required:                     false
       instance_attributes:
-        pcmk_delay_max:                 "15"
-        pcmk_monitor_retries:           "4"
-        pcmk_action_limit:              "3"
-        pcmk_reboot_timeout:            "900"
-        power_timeout:                  "240"
-        pcmk_monitor_timeout:           "120"
+        pcmk_delay_max:
+          value:                    "15"
+          required:                 false
+        pcmk_monitor_retries:
+          value:                    "4"
+          required:                 false
+        pcmk_action_limit:
+          value:                    "3"
+          required:                 false
+        pcmk_reboot_timeout:
+          value:                    "900"
+          required:                 false
+        power_timeout:
+          value:                    "240"
+          required:                 false
+        pcmk_monitor_timeout:
+          value:                    "120"
+          required:                 false
       operations:
         monitor:
-          interval:                     ["3600", "3600s"]
+          interval:
+            value:                  ["3600", "3600s"]
+            required:               false
 
     sbd_stonith:
+      required:                     false
       instance_attributes:
-        pcmk_monitor_retries:           "4"
-        pcmk_action_limit:              "3"
-        pcmk_reboot_timeout:            ["900", "900s"]
-        power_timeout:                  ["240", "240s"]
-        pcmk_monitor_timeout:           ["120", "120s"]
+        pcmk_monitor_retries:
+          value:                    "4"
+          required:                 false
+        pcmk_action_limit:
+          value:                    "3"
+          required:                 false
+        pcmk_reboot_timeout:
+          value:                    ["900", "900s"]
+          required:                 false
+        power_timeout:
+          value:                    ["240", "240s"]
+          required:                 false
+        pcmk_monitor_timeout:
+          value:                    ["120", "120s"]
+          required:                 false
       operations:
         monitor:
-          interval:                     ["600", "600s"]
-          timeout:                      ["15", "15s"]
+          interval:
+            value:                  ["600", "600s"]
+            required:               false
+          timeout:
+            value:                  ["15", "15s"]
+            required:               false
 
     topology:
+      required:                     false
       meta_attributes:
-        clone-node-max:                   "1"
-        clone-max:                        "2"
-        target-role:                      "Started"
-        interleave:                       "true"
-        failure-timeout:                  "120s"
+        clone-node-max:
+          value:                    "1"
+          required:                 false
+        clone-max:
+          value:                    "2"
+          required:                 false
+        target-role:
+          value:                    "Started"
+          required:                 false
+        interleave:
+          value:                    "true"
+          required:                 false
+        failure-timeout:
+          value:                    "120s"
+          required:                 false
       operations:
         monitor:
-          interval:                       ["10", "10s"]
-          timeout:                        ["600", "600s"]
+          interval:
+            value:                  ["10", "10s"]
+            required:               false
+          timeout:
+            value:                  ["600", "600s"]
+            required:               false
         start:
-          interval:                       ["0", "0s"]
-          timeout:                        ["600", "600s"]
+          interval:
+            value:                  ["0", "0s"]
+            required:               false
+          timeout:
+            value:                  ["600", "600s"]
+            required:               false
         stop:
-          interval:                       ["0", "0s"]
-          timeout:                        ["300", "300s"]
+          interval:
+            value:                  ["0", "0s"]
+            required:               false
+          timeout:
+            value:                  ["300", "300s"]
+            required:               false
         methods:
-          timeout:                        ["5", "5s"]
-          interval:                       ["0", "0s"]
+          timeout:
+            value:                  ["5", "5s"]
+            required:               false
+          interval:
+            value:                  ["0", "0s"]
+            required:               false
         reload:
-          timeout:                        ["5", "5s"]
-          interval:                       ["0", "0s"]
+          timeout:
+            value:                  ["5", "5s"]
+            required:               false
+          interval:
+            value:                  ["0", "0s"]
+            required:               false
 
     hana:
+      required:                     false
       meta_attributes:
-        notify:                           "true"
-        clone-max:                        "2"
-        clone-node-max:                   "1"
-        target-role:                      "Started"
-        interleave:                       "true"
-        priority:                         "100"
+        notify:
+          value:                    "true"
+          required:                 false
+        clone-max:
+          value:                    "2"
+          required:                 false
+        clone-node-max:
+          value:                    "1"
+          required:                 false
+        target-role:
+          value:                    "Started"
+          required:                 false
+        interleave:
+          value:                    "true"
+          required:                 false
+        priority:
+          value:                    "100"
+          required:                 true
       instance_attributes:
-        PREFER_SITE_TAKEOVER:             "true"
-        DUPLICATE_PRIMARY_TIMEOUT:        "7200"
-        AUTOMATED_REGISTER:               "true"
+        PREFER_SITE_TAKEOVER:
+          value:                    "true"
+          required:                 false
+        DUPLICATE_PRIMARY_TIMEOUT:
+          value:                    "7200"
+          required:                 false
+        AUTOMATED_REGISTER:
+          value:                    "true"
+          required:                 false
       operations:
         start:
-          interval:                       ["0", "0s"]
-          timeout:                        ["3600", "3600s"]
+          interval:
+            value:                  ["0", "0s"]
+            required:               false
+          timeout:
+            value:                  ["3600", "3600s"]
+            required:               false
         stop:
-          interval:                       ["0", "0s"]
-          timeout:                        ["3600", "3600s"]
+          interval:
+            value:                  ["0", "0s"]
+            required:               false
+          timeout:
+            value:                  ["3600", "3600s"]
+            required:               false
         promote:
-          interval:                       ["0", "0s"]
-          timeout:                        ["3600", "3600s"]
+          interval:
+            value:                  ["0", "0s"]
+            required:               false
+          timeout:
+            value:                  ["3600", "3600s"]
+            required:               false
         monitor:
-          timeout:                        ["700", "700s"]
+          timeout:
+            value:                  ["700", "700s"]
+            required:               false
 
     ipaddr:
       meta_attributes:
-        target-role:                      "Started"
+        target-role:
+          value:                    "Started"
+          required:                 false
       operations:
         monitor:
-          interval:                       ["10", "10s"]
-          timeout:                        ["20", "20s"]
+          interval:
+            value:                  ["10", "10s"]
+            required:               false
+          timeout:
+            value:                  ["20", "20s"]
+            required:               false
         start:
-          interval:                       ["0", "0s"]
-          timeout:                        ["20", "20s"]
+          interval:
+            value:                  ["0", "0s"]
+            required:               false
+          timeout:
+            value:                  ["20", "20s"]
+            required:               false
         stop:
-          interval:                       ["0", "0s"]
-          timeout:                        ["20", "20s"]
+          interval:
+            value:                  ["0", "0s"]
+            required:               false
+          timeout:
+            value:                  ["20", "20s"]
+            required:               false
 
     filesystem:
+      required:                     false
       meta_attributes:
-        clone-node-max:                   "1"
-        interleave:                       "true"
+        clone-node-max:
+          value:                    "1"
+          required:                 false
+        interleave:
+          value:                    "true"
+          required:                 false
       operations:
         monitor:
-          interval:                       ["20", "20s"]
-          timeout:                        ["120", "120s"]
+          interval:
+            value:                  ["20", "20s"]
+            required:               false
+          timeout:
+            value:                  ["120", "120s"]
+            required:               false
         start:
-          interval:                       ["0", "0s"]
-          timeout:                        ["60", "60s"]
+          interval:
+            value:                  ["0", "0s"]
+            required:               false
+          timeout:
+            value:                  ["60", "60s"]
+            required:               false
         stop:
-          interval:                       ["0", "0s"]
-          timeout:                        ["60", "60s"]
+          interval:
+            value:                  ["0", "0s"]
+            required:               false
+          timeout:
+            value:                  ["60", "60s"]
+            required:               false
 
     azurelb:
+      required:                     false
       meta_attributes:
-        resource-stickiness:              "0"
+        resource-stickiness:
+          value:                    "0"
+          required:                 false
       operations:
         monitor:
-          interval:                       ["10", "10s"]
-          timeout:                        ["20", "20s"]
+          interval:
+            value:                  ["10", "10s"]
+            required:               false
+          timeout:
+            value:                  ["20", "20s"]
+            required:               false
         start:
-          interval:                       ["0", "0s"]
-          timeout:                        ["20", "20s"]
+          interval:
+            value:                  ["0", "0s"]
+            required:               false
+          timeout:
+            value:                  ["20", "20s"]
+            required:               false
         stop:
-          interval:                       ["0", "0s"]
-          timeout:                        ["20", "20s"]
-
+          interval:
+            value:                  ["0", "0s"]
+            required:               false
+          timeout:
+            value:                  ["20", "20s"]
+            required:               false
 
 # === OS Parameters ===
 # Run command as root. Format of command is: "parent_key child_key"
@@ -338,39 +714,74 @@ RESOURCE_DEFAULTS:
 OS_PARAMETERS:
   DEFAULTS:
     sysctl:
-      net.ipv4.tcp_timestamps:          "net.ipv4.tcp_timestamps = 0"
-      vm.swappiness:                    "vm.swappiness = 10"
+      net.ipv4.tcp_timestamps:
+        value:                      "net.ipv4.tcp_timestamps = 0"
+        required:                   true
+      vm.swappiness:
+        value:                      "vm.swappiness = 10"
+        required:                   true
     corosync-cmapctl:
-      runtime.config.totem.token:       "runtime.config.totem.token (u32) = 30000"
-      runtime.config.totem.consensus:   "runtime.config.totem.consensus (u32) = 36000"
+      runtime.config.totem.token:
+        value:                       "runtime.config.totem.token (u32) = 30000"
+        required:                    true
+      runtime.config.totem.consensus:
+        value:                       "runtime.config.totem.consensus (u32) = 36000"
+        required:                    true
 
 # === Global INI ===
 # Reading the global.ini file to get the provider and path for the SAPHanaSR resource agent
 GLOBAL_INI:
+  GLOBAL_INI:
   SUSE:
     SAPHanaSR:
-      provider:                           "SAPHanaSR"
-      path:                               ["/usr/share/SAPHanaSR", "/hana/shared/myHooks"]
-      execution_order:                    "1"
+      provider:
+        value:                      "SAPHanaSR"
+        required:                   true
+      path:
+        value:                      ["/usr/share/SAPHanaSR", "/hana/shared/myHooks"]
+        required:                   true
+      execution_order:
+        value:                      "1"
+        required:                   true
     SAPHanaSR-angi:
-      provider:                           "susHanaSR"
-      path:                               ["/usr/share/SAPHanaSR", "/hana/shared/myHooks"]
-      execution_order:                    "1"
+      provider:
+        value:                      "susHanaSR"
+        required:                   true
+      path:
+        value:                      ["/usr/share/SAPHanaSR", "/hana/shared/myHooks"]
+        required:                   true
+      execution_order:
+        value:                      "1"
+        required:                   true
   REDHAT:
     SAPHanaSR:
-      provider:                           "SAPHanaSR"
-      path:                               ["/usr/share/SAPHanaSR/srHook", "/hana/shared/myHooks"]
-      execution_order:                    "1"
-
+      provider:
+        value:                      "SAPHanaSR"
+        required:                   true
+      path:
+        value:                      ["/usr/share/SAPHanaSR/srHook", "/hana/shared/myHooks"]
+        required:                   true
+      execution_order:
+        value:                      "1"
+        required:                   true
 
 # === Azure Load Balancer ===
 # Azure Load Balancer configuration
 AZURE_LOADBALANCER:
   PROBES:
-    probe_threshold:                    2
-    interval_in_seconds:                5
-
+    probe_threshold:
+      value:                        2
+      required:                     true
+    interval_in_seconds:
+      value:                        5
+      required:                     true
   RULES:
-    idle_timeout_in_minutes:            30
-    enable_floating_ip:                 true
-    enable_tcp_reset:                   false
+    idle_timeout_in_minutes:
+      value:                        30
+      required:                     true
+    enable_floating_ip:
+      value:                        true
+      required:                     true
+    enable_tcp_reset:
+      value:                        false
+      required:                     false

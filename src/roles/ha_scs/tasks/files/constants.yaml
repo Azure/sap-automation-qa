@@ -7,324 +7,675 @@
 # === CRM Configuration Defaults ===
 # cibadmin --query --scope crm_config
 CRM_CONFIG_DEFAULTS:
-  cluster-infrastructure:             corosync
-  priority-fencing-delay:             ["30", "30s"]
-  stonith-action:                     reboot
-  stonith-enabled:                    "true"
-  concurrent-fencing:                 "true"
-  maintenance-mode:                   "false"
-  node-health-strategy:               "custom"
-  azure-events-az_globalPullState:    "IDLE"
+  cluster-infrastructure:
+    value:                          corosync
+    required:                       false
+  priority-fencing-delay:
+    value:                          ["30", "30s"]
+    required:                       true
+  stonith-action:
+    value:                          reboot
+    required:                       false
+  stonith-enabled:
+    value:                          "true"
+    required:                       false
+  concurrent-fencing:
+    value:                          "true"
+    required:                       false
+  maintenance-mode:
+    value:                          "false"
+    required:                       false
+  node-health-strategy:
+    value:                          "custom"
+    required:                       false
+  azure-events-az_globalPullState:
+    value:                          "IDLE"
+    required:                       false
 
 # === Operation Defaults ===
 # cibadmin --query --scope op_defaults
 OP_DEFAULTS:
-  record-pending:                     "true"
-  timeout:                            ["600", "600s"]
+  record-pending:
+    value:                          "true"
+    required:                       false
+  timeout:
+    value:                          ["600", "600s"]
+    required:                       false
 
 # === Resource Defaults ===
 # cibadmin --query --scope rsc_defaults
 RSC_DEFAULTS:
-  migration-threshold:                "3"
-  priority:                           "1"
-  resource-stickiness:                "1"
+  migration-threshold:
+    value:                          "3"
+    required:                       false
+  priority:
+    value:                          "1"
+    required:                       false
+  resource-stickiness:
+    value:                          "1"
+    required:                       false
 
 # === Constraints ===
 # cibadmin --query --scope constraints
 CONSTRAINTS:
   rsc_colocation:
-    score:                            "-5000"
-    rsc-role:                         "Started"
-    with-rsc-role:                    "Started"
+    score:
+      value:                        "-5000"
+      required:                     false
+    rsc-role:
+      value:                        "Started"
+      required:                     false
+    with-rsc-role:
+      value:                        "Started"
+      required:                     false
 
   rsc_order:
-    first-action:                     "start"
-    then-action:                      "stop"
-    symmetrical:                      "false"
+    first-action:
+      value:                        "start"
+      required:                     false
+    then-action:
+      value:                        "stop"
+      required:                     false
+    symmetrical:
+      value:                        "false"
+      required:                     false
 
   rsc_location:
-    score-attribute:                  "#health-azure"
-    operation:                        "defined"
-    attribute:                        "#uname"
+    score-attribute:
+      value:                        "#health-azure"
+      required:                     false
+    operation:
+      value:                        "defined"
+      required:                     false
+    attribute:
+      value:                        "#uname"
+      required:                     false
 
 # === Valid Configurations for different OS versions ===
 # Specify the properties that are different for different OS versions
 VALID_CONFIGS:
   REDHAT:
-    priority-fencing-delay:           "15s"
+    priority-fencing-delay:
+      value:                        ["15", "15s"]
+      required:                     false
   SUSE: {}
   AFA:
-    have-watchdog:                    "false"
-    stonith-timeout:                  ["900", "900s"]
+    have-watchdog:
+      value:                        "false"
+      required:                     false
+    stonith-timeout:
+      value:                        ["900", "900s"]
+      required:                     false
   ISCSI:
-    have-watchdog:                    "true"
-    stonith-timeout:                  ["210", "210s"]
+    have-watchdog:
+      value:                        "true"
+      required:                     false
+    stonith-timeout:
+      value:                        ["210", "210s"]
+      required:                     false
+  ASD:
+    have-watchdog:
+      value:                        "true"
+      required:                     false
+    stonith-timeout:
+      value:                        ["210", "210s"]
+      required:                     false
 
 # === Resource Defaults ===
 # cibadmin --query --scope resources
 RESOURCE_DEFAULTS:
   SUSE:
     fence_agent:
+      required:                     false
       instance_attributes:
-        pcmk_delay_max:                   "15"
-        pcmk_monitor_retries:             "4"
-        pcmk_action_limit:                "3"
-        pcmk_reboot_timeout:              ["900", "900s"]
-        power_timeout:                    ["240", "240s"]
+        pcmk_delay_max:
+          value:                    "15"
+          required:                 false
+        pcmk_monitor_retries:
+          value:                    "4"
+          required:                 false
+        pcmk_action_limit:
+          value:                    "3"
+          required:                 false
+        pcmk_reboot_timeout:
+          value:                    ["900", "900s"]
+          required:                 false
+        power_timeout:
+          value:                    ["240", "240s"]
+          required:                 false
       operations:
         monitor:
-          interval:                         ["3600", "3600s"]
-          timeout:                          ["120", "120s"]
+          interval:
+            value:                  ["3600", "3600s"]
+            required:               false
+          timeout:
+            value:                  ["120", "120s"]
+            required:               false
         start:
-          interval:                         ["0", "0s"]
-          timeout:                          ["20", "20s"]
+          interval:
+            value:                  ["0", "0s"]
+            required:               false
+          timeout:
+            value:                  ["20", "20s"]
+            required:               false
         stop:
-          interval:                         ["0", "0s"]
-          timeout:                          ["20", "20s"]
+          interval:
+            value:                  ["0", "0s"]
+            required:               false
+          timeout:
+            value:                  ["20", "20s"]
+            required:               false
 
     sbd_stonith:
       instance_attributes:
-        pcmk_delay_max:                 "15"
-        pcmk_monitor_retries:           "4"
-        pcmk_action_limit:              "3"
-        pcmk_reboot_timeout:            ["900", "900s"]
-        power_timeout:                  ["240", "240s"]
-        pcmk_monitor_timeout:           ["120", "120s"]
+        pcmk_delay_max:
+          value:                    "15"
+          required:                 false
+        pcmk_monitor_retries:
+          value:                    "4"
+          required:                 false
+        pcmk_action_limit:
+          value:                    "3"
+          required:                 false
+        pcmk_reboot_timeout:
+          value:                    ["900", "900s"]
+          required:                 false
+        power_timeout:
+          value:                    ["240", "240s"]
+          required:                 false
+        pcmk_monitor_timeout:
+          value:                    ["120", "120s"]
+          required:                 false
       operations:
         monitor:
-          interval:                     ["600", "600s"]
-          timeout:                      ["15", "15s"]
+          interval:
+            value:                  ["600", "600s"]
+            required:               false
+          timeout:
+            value:                  ["15", "15s"]
+            required:               false
 
     ascs:
       instance_attributes:
-        AUTOMATIC_RECOVER:                "false"
-        MINIMAL_PROBE:                    "true"
+        AUTOMATIC_RECOVER:
+          value:                    "false"
+          required:                 false
+        MINIMAL_PROBE:
+          value:                    "true"
+          required:                 false
       meta_attributes:
-        resource-stickiness:              "5000"
-        priority:                         "100"
+        resource-stickiness:
+          value:                    "5000"
+          required:                 false
+        priority:
+          value:                    "100"
+          required:                 true
       operations:
         monitor:
-          interval:                       ["11", "11s"]
+          interval:
+            value:                  ["11", "11s"]
+            required:               false
           timeout:
-            ANF:                          ["105", "105s"]
-            AFS:                          ["60", "60s"]
+            ANF:
+              value:                ["105", "105s"]
+              required:             false
+            AFS:
+              value:                ["60", "60s"]
+              required:             false
         start:
-          interval:                       ["0", "0s"]
-          timeout:                        ["180", "180s"]
+          interval:
+            value:                  ["0", "0s"]
+            required:               false
+          timeout:
+            value:                  ["180", "180s"]
+            required:               false
         stop:
-          interval:                       ["0", "0s"]
-          timeout:                        ["240", "240s"]
+          interval:
+            value:                  ["0", "0s"]
+            required:               false
+          timeout:
+            value:                  ["240", "240s"]
+            required:               false
         promote:
-          interval:                       ["0", "0s"]
-          timeout:                        ["320", "320s"]
+          interval:
+            value:                  ["0", "0s"]
+            required:               false
+          timeout:
+            value:                  ["320", "320s"]
+            required:               false
         demote:
-          interval:                       ["0", "0s"]
-          timeout:                        ["320", "320s"]
+          interval:
+            value:                  ["0", "0s"]
+            required:               false
+          timeout:
+            value:                  ["320", "320s"]
+            required:               false
 
     ers:
       instance_attributes:
-        AUTOMATIC_RECOVER:                "false"
-        MINIMAL_PROBE:                    "true"
-        IS_ERS:                           "true"
+        AUTOMATIC_RECOVER:
+          value:                    "false"
+          required:                 false
+        MINIMAL_PROBE:
+          value:                    "true"
+          required:                 false
+        IS_ERS:
+          value:                    "true"
+          required:                 false
       meta_attributes:
-        resource-stickiness:              "5000"
-        priority:                         "100"
+        resource-stickiness:
+          value:                    "5000"
+          required:                 false
+        priority:
+          value:                    "100"
+          required:                 false
       operations:
         monitor:
-          interval:                       ["11", "11s"]
+          interval:
+            value:                  ["11", "11s"]
+            required:               false
           timeout:
-            ANF:                          ["105", "105s"]
-            AFS:                          ["60", "60s"]
+            ANF:
+              value:                ["105", "105s"]
+              required:             false
+            AFS:
+              value:                ["60", "60s"]
+              required:             false
         start:
-          interval:                       ["0", "0s"]
-          timeout:                        ["180", "180s"]
+          interval:
+            value:                  ["0", "0s"]
+            required:               false
+          timeout:
+            value:                  ["180", "180s"]
+            required:               false
         stop:
-          interval:                       ["0", "0s"]
-          timeout:                        ["240", "240s"]
+          interval:
+            value:                  ["0", "0s"]
+            required:               false
+          timeout:
+            value:                  ["240", "240s"]
+            required:               false
         promote:
-          interval:                       ["0", "0s"]
-          timeout:                        ["320", "320s"]
+          interval:
+            value:                  ["0", "0s"]
+            required:               false
+          timeout:
+            value:                  ["320", "320s"]
+            required:             false
         demote:
-          interval:                       ["0", "0s"]
-          timeout:                        ["320", "320s"]
+          interval:
+            value:                  ["0", "0s"]
+            required:               false
+          timeout:
+            value:                  ["320", "320s"]
+            required:               false
 
     ipaddr:
       meta_attributes:
-        target-role:                      "Started"
+        target-role:
+          value:                    "Started"
+          required:                 false
       operations:
         monitor:
-          interval:                       ["10", "10s"]
-          timeout:                        ["20", "20s"]
+          interval:
+            value:                  ["10", "10s"]
+            required:               false
+          timeout:
+            value:                  ["20", "20s"]
+            required:               false
         start:
-          interval:                       ["0", "0s"]
-          timeout:                        ["20", "20s"]
+          interval:
+            value:                  ["0", "0s"]
+            required:               false
+          timeout:
+            value:                  ["20", "20s"]
+            required:               false
         stop:
-          interval:                       ["0", "0s"]
-          timeout:                        ["20", "20s"]
+          interval:
+            value:                  ["0", "0s"]
+            required:               false
+          timeout:
+            value:                  ["20", "20s"]
+            required:               false
 
     azurelb:
       meta_attributes:
-        resource-stickiness:              "0"
+        resource-stickiness:
+          value:                    "0"
+          required:                 false
       operations:
         monitor:
-          interval:                       ["10", "10s"]
-          timeout:                        ["20", "20s"]
+          interval:
+            value:                  ["10", "10s"]
+            required:               false
+          timeout:
+            value:                  ["20", "20s"]
+            required:               false
         start:
-          interval:                       ["0", "0s"]
-          timeout:                        ["20", "20s"]
+          interval:
+            value:                  ["0", "0s"]
+            required:               false
+          timeout:
+            value:                  ["20", "20s"]
+            required:               false
         stop:
-          interval:                       ["0", "0s"]
-          timeout:                        ["20", "20s"]
+          interval:
+            value:                  ["0", "0s"]
+            required:               false
+          timeout:
+            value:                  ["20", "20s"]
+            required:               false
 
     azureevents:
       meta_attributes:
-        allow-unhealthy-nodes:            "true"
-        failure-timeout:                  "120s"
+        allow-unhealthy-nodes:
+          value:                    "true"
+          required:                 false
+        failure-timeout:
+          value:                    "120s"
+          required:                 false
       operations:
         monitor:
-          interval:                       ["10", "10s"]
+          interval:
+            value:                  ["10", "10s"]
+            required:               false
         start:
-          interval:                       ["0", "0s"]
+          interval:
+            value:                  ["0", "0s"]
+            required:               false
 
   REDHAT:
     fence_agent:
       instance_attributes:
-        pcmk_delay_max:                   "15"
-        pcmk_monitor_retries:             "4"
-        pcmk_action_limit:                "3"
-        pcmk_reboot_timeout:              ["900", "900s"]
-        power_timeout:                    ["240", "240s"]
+        pcmk_delay_max:
+          value:                    "15"
+          required:                 false
+        pcmk_monitor_retries:
+          value:                    "4"
+          required:                 false
+        pcmk_action_limit:
+          value:                    "3"
+          required:                 false
+        pcmk_reboot_timeout:
+          value:                    ["900", "900s"]
+          required:                 false
+        power_timeout:
+          value:                    ["240", "240s"]
+          required:                 false
       operations:
         monitor:
-          interval:                         "3600"
-          timeout:                          ["120", "120s"]
+          interval:
+            value:                  "3600"
+            required:               false
+          timeout:
+            value:                  ["120", "120s"]
+            required:               false
         start:
-          interval:                         ["0", "0s"]
-          timeout:                          ["20", "20s"]
+          interval:
+            value:                  ["0", "0s"]
+            required:               false
+          timeout:
+            value:                  ["20", "20s"]
+            required:               false
         stop:
-          interval:                         ["0", "0s"]
-          timeout:                          ["20", "20s"]
+          interval:
+            value:                  ["0", "0s"]
+            required:               false
+          timeout:
+            value:                  ["20", "20s"]
+            required:               false
 
     sbd_stonith:
       instance_attributes:
-        pcmk_delay_max:                 "15"
-        pcmk_monitor_retries:           "4"
-        pcmk_action_limit:              "3"
-        pcmk_reboot_timeout:            ["900", "900s"]
-        power_timeout:                  ["240", "240s"]
-        pcmk_monitor_timeout:           ["120", "120s"]
+        pcmk_delay_max:
+          value:                    "15"
+          required:                 false
+        pcmk_monitor_retries:
+          value:                    "4"
+          required:                 false
+        pcmk_action_limit:
+          value:                    "3"
+          required:                 false
+        pcmk_reboot_timeout:
+          value:                    ["900", "900s"]
+          required:                 false
+        power_timeout:
+          value:                    ["240", "240s"]
+          required:                 false
+        pcmk_monitor_timeout:
+          value:                    ["120", "120s"]
+          required:                 false
       operations:
         monitor:
-          interval:                     "600"
-          timeout:                      ["15", "15s"]
+          interval:
+            value:                  "600"
+            required:               false
+          timeout:
+            value:                  ["15", "15s"]
+            required:               false
 
     ascs:
       instance_attributes:
-        AUTOMATIC_RECOVER:                "false"
-        MINIMAL_PROBE:                    "true"
-      meta_attributes:
-        resource-stickiness:              "5000"
-        priority:                         "10"
+        AUTOMATIC_RECOVER:
+          value:                    "false"
+          required:                 false
+        MINIMAL_PROBE:
+          value:                    "true"
+          required:                 false
       operations:
-        monitor:
-          interval:                       ["20", "20s"]
-          timeout:
-            ANF:                          ["105", "105s"]
-            AFS:                          ["60", "60s"]
         start:
-          interval:                       ["0", "0s"]
-          timeout:                        ["600", "600s"]
+          interval:
+            value:                  ["0", "0s"]
+            required:               false
+          timeout:
+            value:                  ["600", "600s"]
+            required:               false
         stop:
-          interval:                       ["0", "0s"]
-          timeout:                        ["600", "600s"]
-        promote:
-          interval:                       ["0", "0s"]
-          timeout:                        ["320", "320s"]
-        demote:
-          interval:                       ["0", "0s"]
-          timeout:                        ["320", "320s"]
+          interval:
+            value:                  ["0", "0s"]
+            required:               false
+          timeout:
+            value:                  ["600", "600s"]
+            required:               false
+        monitor:
+          interval:
+            value:                  ["20", "20s"]
+            required:               false
+          timeout:
+            ANF:
+              value:                ["105", "105s"]
+              required:             false
+            AFS:
+              value:                ["60", "60s"]
+              required:             false
         methods:
-          timeout:                        ["5", "5s"]
-          interval:                       ["0", "0s"]
+          timeout:
+            value:                  ["5", "5s"]
+            required:               false
+          interval:
+            value:                  ["0", "0s"]
+            required:               false
         reload:
-          timeout:                        ["320", "320s"]
-          interval:                       ["0", "0s"]
+          timeout:
+            value:                  ["320", "320s"]
+            required:               false
+          interval:
+            value:                  ["0", "0s"]
+            required:               false
+        promote:
+          interval:
+            value:                  ["0", "0s"]
+            required:               false
+          timeout:
+            value:                  ["320", "320s"]
+            required:               false
+        demote:
+          interval:
+            value:                  ["0", "0s"]
+            required:               false
+          timeout:
+            value:                  ["320", "320s"]
+            required:               false
 
     ers:
       instance_attributes:
-        AUTOMATIC_RECOVER:                "false"
-        MINIMAL_PROBE:                    "true"
-        IS_ERS:                           "true"
+        AUTOMATIC_RECOVER:
+          value:                    "false"
+          required:                 false
+        MINIMAL_PROBE:
+          value:                    "true"
+          required:                 false
+        IS_ERS:
+          value:                    "true"
+          required:                 false
       meta_attributes:
-        resource-stickiness:              "3000"
-        priority:                         "100"
+        resource-stickiness:
+          value:                    "3000"
+          required:                 false
+        priority:
+          value:                    "100"
+          required:                 false
       operations:
         monitor:
-          interval:                       ["20", "20s"]
+          interval:
+            value:                  ["20", "20s"]
+            required:               false
           timeout:
-            ANF:                          ["105", "105s"]
-            AFS:                          ["60", "60s"]
+            ANF:
+              value:                ["105", "105s"]
+              required:             false
+            AFS:
+              value:                ["60", "60s"]
+              required:             false
         start:
-          interval:                       ["0", "0s"]
-          timeout:                        ["600", "600s"]
+          interval:
+            value:                  ["0", "0s"]
+            required:               false
+          timeout:
+            value:                  ["600", "600s"]
+            required:               false
         stop:
-          interval:                       ["0", "0s"]
-          timeout:                        ["600", "600s"]
+          interval:
+            value:                  ["0", "0s"]
+            required:               false
+          timeout:
+            value:                  ["600", "600s"]
+            required:               false
         promote:
-          interval:                       ["0", "0s"]
-          timeout:                        ["320", "320s"]
+          interval:
+            value:                  ["0", "0s"]
+            required:               false
+          timeout:
+            value:                  ["320", "320s"]
+            required:               false
         demote:
-          interval:                       ["0", "0s"]
-          timeout:                        ["320", "320s"]
+          interval:
+            value:                  ["0", "0s"]
+            required:               false
+          timeout:
+            value:                  ["320", "320s"]
+            required:               false
         methods:
-          timeout:                        ["5", "5s"]
-          interval:                       ["0", "0s"]
+          timeout:
+            value:                  ["5", "5s"]
+            required:               false
+          interval:
+            value:                  ["0", "0s"]
+            required:               false
         reload:
-          timeout:                        ["320", "320s"]
-          interval:                       ["0", "0s"]
+          timeout:
+            value:                  ["320", "320s"]
+            required:               false
+          interval:
+            value:                  ["0", "0s"]
+            required:               false
 
     ipaddr:
       meta_attributes:
-        target-role:                      "Started"
+        target-role:
+          value:                    "Started"
+          required:                 false
       operations:
         monitor:
-          interval:                       ["10", "10s"]
-          timeout:                        ["20", "20s"]
+          interval:
+            value:                  ["10", "10s"]
+            required:               false
+          timeout:
+            value:                  ["20", "20s"]
+            required:               false
         start:
-          interval:                       ["0", "0s"]
-          timeout:                        ["20", "20s"]
+          interval:
+            value:                  ["0", "0s"]
+            required:               false
+          timeout:
+            value:                  ["20", "20s"]
+            required:               false
         stop:
-          interval:                       ["0", "0s"]
-          timeout:                        ["20", "20s"]
+          interval:
+            value:                  ["0", "0s"]
+            required:               false
+          timeout:
+            value:                  ["20", "20s"]
+            required:               false
 
     azurelb:
       meta_attributes:
-        resource-stickiness:              "0"
+        resource-stickiness:
+          value:                    "0"
+          required:                 false
       operations:
         monitor:
-          interval:                       ["10", "10s"]
-          timeout:                        ["20", "20s"]
+          interval:
+            value:                  ["10", "10s"]
+            required:               false
+          timeout:
+            value:                  ["20", "20s"]
+            required:               false
         start:
-          interval:                       ["0", "0s"]
-          timeout:                        ["20", "20s"]
+          interval:
+            value:                  ["0", "0s"]
+            required:               false
+          timeout:
+            value:                  ["20", "20s"]
+            required:               false
         stop:
-          interval:                       ["0", "0s"]
-          timeout:                        ["20", "20s"]
+          interval:
+            value:                  ["0", "0s"]
+            required:               false
+          timeout:
+            value:                  ["20", "20s"]
+            required:               false
 
     azureevents:
       meta_attributes:
-        allow-unhealthy-nodes:            "true"
-        failure-timeout:                  ["120", "120s"]
+        allow-unhealthy-nodes:
+          value:                    "true"
+          required:                 false
+        failure-timeout:
+          value:                    ["120", "120s"]
+          required:                 false
       operations:
         monitor:
-          interval:                       ["10", "10s"]
-          timeout:                        ["240", "240s"]
+          interval:
+            value:                  ["10", "10s"]
+            required:               false
+          timeout:
+            value:                  ["240", "240s"]
+            required:               false
         start:
-          interval:                       ["0", "0s"]
-          timeout:                        ["10", "10s"]
+          interval:
+            value:                  ["0", "0s"]
+            required:               false
+          timeout:
+            value:                  ["10", "10s"]
+            required:               false
         stop:
-          interval:                       ["0", "0s"]
-          timeout:                        ["10", "10s"]
+          interval:
+            value:                  ["0", "0s"]
+            required:               false
+          timeout:
+            value:                  ["10", "10s"]
+            required:               false
 
 
 # === OS Parameters ===
@@ -333,20 +684,38 @@ RESOURCE_DEFAULTS:
 OS_PARAMETERS:
   DEFAULTS:
     sysctl:
-      net.ipv4.tcp_timestamps:          "net.ipv4.tcp_timestamps = 0"
-      vm.swappiness:                    "vm.swappiness = 10"
+      net.ipv4.tcp_timestamps:
+        value:                      "net.ipv4.tcp_timestamps = 0"
+        required:                   false
+      vm.swappiness:
+        value:                      "vm.swappiness = 10"
+        required:                   false
     corosync-cmapctl:
-      runtime.config.totem.token:       "runtime.config.totem.token (u32) = 30000"
-      runtime.config.totem.consensus:   "runtime.config.totem.consensus (u32) = 36000"
+      runtime.config.totem.token:
+        value:                      "runtime.config.totem.token (u32) = 30000"
+        required:                   false
+      runtime.config.totem.consensus:
+        value:                      "runtime.config.totem.consensus (u32) = 36000"
+        required:                   false
 
 # === Azure Load Balancer ===
 # Azure Load Balancer configuration
 AZURE_LOADBALANCER:
   PROBES:
-    probe_threshold:                    2
-    interval_in_seconds:                5
+    probe_threshold:
+      value:                        2
+      required:                     false
+    interval_in_seconds:
+      value:                        5
+      required:                     false
 
   RULES:
-    idle_timeout_in_minutes:            30
-    enable_floating_ip:                 true
-    enable_tcp_reset:                   false
+    idle_timeout_in_minutes:
+      value:                        30
+      required:                     false
+    enable_floating_ip:
+      value:                        true
+      required:                     false
+    enable_tcp_reset:
+      value:                        false
+      required:                     false
