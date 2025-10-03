@@ -246,6 +246,82 @@ class HAClusterValidator(BaseHAClusterValidator):
 
         return parameters
 
+    def _resolve_provider_values(self, expected_value: dict) -> list:
+        """
+        Resolve provider-specific values from a configuration dictionary.
+
+        This method handles the complex logic of extracting appropriate values
+        based on the NFS provider configuration. It supports both provider-specific
+        configurations and fallback to all available providers.
+
+        :param expected_value: Dictionary containing provider configurations
+        :type expected_value: dict
+        :return: List of resolved values for validation
+        :rtype: list
+        :raises TypeError: If expected_value is not a dictionary
+        """
+        if not isinstance(expected_value, dict):
+            raise TypeError("Expected value must be a dictionary for provider resolution")
+
+        provider_values = []
+        if self.nfs_provider and self.nfs_provider in expected_value:
+            provider_config = expected_value[self.nfs_provider]
+            provider_values = self._extract_values_from_config(provider_config)
+        else:
+            for _, provider_config in expected_value.items():
+                extracted_values = self._extract_values_from_config(provider_config)
+                if isinstance(extracted_values, list):
+                    provider_values.extend(extracted_values)
+                else:
+                    provider_values.append(extracted_values)
+
+        return provider_values if isinstance(provider_values, list) else [provider_values]
+
+    def _extract_values_from_config(self, provider_config):
+        """
+        Extract values from a provider configuration structure.
+
+        Handles various configuration formats:
+        - {"value": [list]} or {"value": "single"}
+        - [list] directly
+        - "single" value directly
+
+        :param provider_config: Configuration object to extract values from
+        :type provider_config: dict or list or str
+        :return: Extracted value(s)
+        :rtype: list or str
+        """
+        if isinstance(provider_config, dict) and "value" in provider_config:
+            return provider_config["value"]
+        elif isinstance(provider_config, (list, str)):
+            return provider_config
+        else:
+            return provider_config
+
+    def _compare_value_with_expectations(self, value: str, expected_values) -> str:
+        """
+        Compare a value against expected values and return test status.
+
+        :param value: The actual value to compare
+        :type value: str
+        :param expected_values: Expected value(s) for comparison
+        :type expected_values: str or list
+        :return: Test status (SUCCESS or ERROR)
+        :rtype: str
+        """
+        if isinstance(expected_values, list):
+            return (
+                TestStatus.SUCCESS.value
+                if str(value) in [str(v) for v in expected_values]
+                else TestStatus.ERROR.value
+            )
+        else:
+            return (
+                TestStatus.SUCCESS.value
+                if str(value) == str(expected_values)
+                else TestStatus.ERROR.value
+            )
+
     def _determine_parameter_status(self, value, expected_value):
         """
         Determine the status of a parameter with SCS-specific logic for NFS provider.
@@ -257,60 +333,31 @@ class HAClusterValidator(BaseHAClusterValidator):
         :return: The status of the parameter.
         :rtype: str
         """
+        # Handle tuple format (value, required)
         if isinstance(expected_value, tuple):
             expected_val, required = expected_value
             if not required and (expected_val is None or value == ""):
                 return TestStatus.INFO.value
             expected_value = expected_val
 
+        # Handle empty/null cases
         if expected_value is None or value == "":
             return TestStatus.INFO.value
-        elif isinstance(expected_value, (str, list)):
-            if isinstance(expected_value, list):
-                return (
-                    TestStatus.SUCCESS.value
-                    if str(value) in expected_value
-                    else TestStatus.ERROR.value
-                )
-            else:
-                return (
-                    TestStatus.SUCCESS.value
-                    if str(value) == str(expected_value)
-                    else TestStatus.ERROR.value
-                )
-        elif isinstance(expected_value, dict):
-            provider_values = []
-            if self.nfs_provider and self.nfs_provider in expected_value:
-                provider_config = expected_value[self.nfs_provider]
-                if isinstance(provider_config, dict) and "value" in provider_config:
-                    provider_values = provider_config["value"]
-                else:
-                    provider_values = provider_config
-            else:
-                # If provider is unknown/not set, collect all provider values
-                for provider_key, provider_config in expected_value.items():
-                    if isinstance(provider_config, dict) and "value" in provider_config:
-                        if isinstance(provider_config["value"], list):
-                            provider_values.extend(provider_config["value"])
-                        else:
-                            provider_values.append(provider_config["value"])
-                    elif isinstance(provider_config, list):
-                        provider_values.extend(provider_config)
-                    else:
-                        provider_values.append(provider_config)
 
-            if isinstance(provider_values, list):
-                return (
-                    TestStatus.SUCCESS.value
-                    if str(value) in provider_values
-                    else TestStatus.ERROR.value
-                )
-            else:
-                return (
-                    TestStatus.SUCCESS.value
-                    if str(value) == str(provider_values)
-                    else TestStatus.ERROR.value
-                )
+        # Handle simple string/list cases
+        elif isinstance(expected_value, (str, list)):
+            return self._compare_value_with_expectations(value, expected_value)
+
+        # Handle complex provider-based dictionary cases
+        elif isinstance(expected_value, dict):
+            try:
+                provider_values = self._resolve_provider_values(expected_value)
+                return self._compare_value_with_expectations(value, provider_values)
+            except (TypeError, KeyError) as ex:
+                self.result["message"] += f"Error resolving provider values: {str(ex)} "
+                return TestStatus.ERROR.value
+
+        # Handle unexpected types
         else:
             return TestStatus.ERROR.value
 

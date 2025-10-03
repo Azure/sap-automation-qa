@@ -32,7 +32,8 @@ class TestHanaClusterStatusChecker:
             ansible_os_family=OperatingSystemFamily.REDHAT,
             saphanasr_provider=HanaSRProvider.SAPHANASR,
             db_instance_number="00",
-            hana_resource_name="rsc_SAPHanaCon_TEST_HDB00",
+            hana_clone_resource_name="rsc_SAPHanaCon_TEST_HDB00",
+            hana_primitive_resource_name="rsc_SAPHanaPrm_TEST_HDB00",
         )
 
     @pytest.fixture
@@ -48,12 +49,13 @@ class TestHanaClusterStatusChecker:
             ansible_os_family=OperatingSystemFamily.SUSE,
             saphanasr_provider=HanaSRProvider.ANGI,
             db_instance_number="00",
-            hana_resource_name="rsc_SAPHanaCon_TEST_HDB00",
+            hana_clone_resource_name="rsc_SAPHanaCon_TEST_HDB00",
+            hana_primitive_resource_name="rsc_SAPHanaCon_TEST_HDB00",
         )
 
-    def test_get_automation_register(self, mocker, hana_checker_classic):
+    def test_get_cluster_pramaeters(self, mocker, hana_checker_classic):
         """
-        Test the _get_automation_register method.
+        Test the _get_cluster_parameters method.
 
         :param mocker: Mocking library for Python.
         :type mocker: _mocker.MagicMock
@@ -63,17 +65,16 @@ class TestHanaClusterStatusChecker:
         mocker.patch.object(
             hana_checker_classic,
             "execute_command_subprocess",
-            return_value='<nvpair id="cib-bootstrap-options-AUTOMATED_REGISTER" '
-            + 'name="AUTOMATED_REGISTER" value="true"/>',
+            return_value="true",
         )
 
-        hana_checker_classic._get_automation_register()
+        hana_checker_classic._get_cluster_parameters()
 
         assert hana_checker_classic.result["AUTOMATED_REGISTER"] == "true"
 
-    def test_get_automation_register_exception(self, mocker, hana_checker_classic):
+    def test_get_cluster_parameters_exception(self, mocker, hana_checker_classic):
         """
-        Test the _get_automation_register method when an exception occurs.
+        Test the _get_cluster_parameters method when an exception occurs.
 
         :param mocker: Mocking library for Python.
         :type mocker: _mocker.MagicMock
@@ -84,7 +85,7 @@ class TestHanaClusterStatusChecker:
             hana_checker_classic, "execute_command_subprocess", side_effect=Exception("Test error")
         )
 
-        hana_checker_classic._get_automation_register()
+        hana_checker_classic._get_cluster_parameters()
 
         assert hana_checker_classic.result["AUTOMATED_REGISTER"] == "unknown"
 
@@ -257,7 +258,7 @@ class TestHanaClusterStatusChecker:
             return_value={"status": "PASSED"},
         )
 
-        mock_get_automation = mocker.patch.object(hana_checker_classic, "_get_automation_register")
+        mock_get_automation = mocker.patch.object(hana_checker_classic, "_get_cluster_parameters")
 
         result = hana_checker_classic.run()
 

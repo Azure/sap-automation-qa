@@ -53,11 +53,15 @@ class TestDbResourceMigration(RolesTestingBaseDB):
         commands = [
             {
                 "name": "resource_migration_cmd",
-                "SUSE": "crm resource move {{ hana_resource_name | default('msl_SAPHana_' ~ "
+                "SUSE": "crm resource move {{ hana_clone_resource_name | default('msl_SAPHana_' ~ "
                 "(db_sid | upper) ~ '_HDB' ~ db_instance_number) }} db02 force",
             },
             {
-                "name": "get_hana_resource_id",
+                "name": "get_hana_clone_resource_id",
+                "SUSE": "cibadmin --query --scope resources",
+            },
+            {
+                "name": "get_hana_primitive_resource_id",
                 "SUSE": "cibadmin --query --scope resources",
             },
             {

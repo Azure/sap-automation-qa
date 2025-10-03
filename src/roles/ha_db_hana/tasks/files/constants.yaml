@@ -731,7 +731,6 @@ OS_PARAMETERS:
 # === Global INI ===
 # Reading the global.ini file to get the provider and path for the SAPHanaSR resource agent
 GLOBAL_INI:
-  GLOBAL_INI:
   SUSE:
     SAPHanaSR:
       provider:

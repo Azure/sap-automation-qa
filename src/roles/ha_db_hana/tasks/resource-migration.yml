@@ -44,12 +44,12 @@
               args:
                 executable:             /bin/bash
               changed_when:             false
-              register:                 hana_resource_id
-              failed_when:              hana_resource_id.rc != 0
+              register:                 hana_clone_resource_id
+              failed_when:              hana_clone_resource_id.rc != 0
 
-            - name:                     "Test Execution: Set fact the hana_resource_name"
+            - name:                     "Test Execution: Set fact the hana_clone_resource_name"
               ansible.builtin.set_fact:
-                hana_resource_name:     "{{ hana_resource_id.stdout }}"
+                hana_clone_resource_name:     "{{ hana_clone_resource_id.stdout }}"
 
         - name:                         "Test Execution: Get HANA resource id"
           when:                         saphanasr_provider | default('SAPHanaSR') == "SAPHanaSR"
@@ -57,38 +57,38 @@
             - name:                     "Try master resource ID"
               ansible.builtin.shell: >-
                                         set -o pipefail && {{ commands
-                                          | selectattr('name','equalto','get_hana_resource_id')
+                                          | selectattr('name','equalto','get_hana_clone_resource_id')
                                           | map(attribute=(ansible_os_family|upper))
                                           | first
                                         }}
               args:
                 executable:             /bin/bash
               changed_when:             false
-              register:                 hana_resource_id
-              failed_when:              hana_resource_id.rc != 0
+              register:                 hana_clone_resource_id
+              failed_when:              hana_clone_resource_id.rc != 0
           rescue:
             - name:                     "Try clone resource ID"
               ansible.builtin.shell: >-
                                         set -o pipefail && {{ commands
-                                          | selectattr('name','equalto','get_hana_resource_id')
+                                          | selectattr('name','equalto','get_hana_clone_resource_id')
                                           | map(attribute='REDHAT')
                                           | first
                                         }}
               args:
                 executable:             /bin/bash
               changed_when:             false
-              register:                 hana_resource_id
-              failed_when:              hana_resource_id.rc != 0
+              register:                 hana_clone_resource_id
+              failed_when:              hana_clone_resource_id.rc != 0
               ignore_errors:            true
           always:
             - name:                     "Test Execution: Set the resource name"
               when:
-                                        - hana_resource_id.rc == 0
-                                        - hana_resource_id.stdout is defined
-                                        - hana_resource_id.stdout | type_debug != 'NoneType'
-                                        - hana_resource_id.stdout | trim | length > 1
+                                        - hana_clone_resource_id.rc == 0
+                                        - hana_clone_resource_id.stdout is defined
+                                        - hana_clone_resource_id.stdout | type_debug != 'NoneType'
+                                        - hana_clone_resource_id.stdout | trim | length > 1
               ansible.builtin.set_fact:
-                hana_resource_name:     "{{ hana_resource_id.stdout }}"
+                hana_clone_resource_name: "{{ hana_clone_resource_id.stdout }}"
 
         - name:                         "Test Execution: Move the resource to the targeted node"
           ansible.builtin.command:      "{{ commands | selectattr(
@@ -104,7 +104,8 @@
             operation_step:             "test_execution"
             database_sid:               "{{ db_sid | lower }}"
             saphanasr_provider:         "{{ saphanasr_provider | default('SAPHanaSR') }}"
-            hana_resource_name:         "{{ hana_resource_name | default('') }}"
+            hana_clone_resource_name:   "{{ hana_clone_resource_name | default('') }}"
+            hana_primitive_resource_name: "{{ hana_primitive_resource_name | default('') }}"
           register:                     cluster_status_test_execution
           retries:                      "{{ default_retries }}"
           delay:                        "{{ default_delay }}"
@@ -160,7 +161,8 @@
             operation_step:             "test_execution"
             database_sid:               "{{ db_sid | lower }}"
             saphanasr_provider:         "{{ saphanasr_provider | default('SAPHanaSR') }}"
-            hana_resource_name:         "{{ hana_resource_name | default('') }}"
+            hana_clone_resource_name:   "{{ hana_clone_resource_name | default('') }}"
+            hana_primitive_resource_name: "{{ hana_primitive_resource_name | default('') }}"
           register:                     cluster_status_test_execution_1
           retries:                      "{{ default_retries }}"
           delay:                        "{{ default_delay }}"

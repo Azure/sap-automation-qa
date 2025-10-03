@@ -11,7 +11,8 @@ def main():
             database_sid=dict(type="str", required=True),
             saphanasr_provider=dict(type="str", required=True),
             db_instance_number=dict(type="str", required=True),
-            hana_resource_name=dict(type="str", default="")
+            hana_clone_resource_name=dict(type="str", default=""),
+            hana_primitive_resource_name=dict(type="str", default="")
         )
     )
 
@@ -40,7 +41,8 @@ def main():
             "replication_mode": "sync",
             "primary_site_name": "db01",
             "operation_mode": "active",
-            "stonith_action": "reboot"
+            "stonith_action": "reboot",
+            "PRIORITY_FENCING_DELAY": "15s"
         }
     elif counter == 1 or counter == 2:
         result = {
@@ -53,7 +55,8 @@ def main():
             "replication_mode": "sync",
             "primary_site_name": "db01",
             "operation_mode": "active",
-            "stonith_action": "reboot"
+            "stonith_action": "reboot",
+            "PRIORITY_FENCING_DELAY": "15s"
         }
     else:
         result = {
@@ -66,7 +69,8 @@ def main():
             "replication_mode": "sync",
             "primary_site_name": "db01",
             "operation_mode": "active",
-            "stonith_action": "reboot"
+            "stonith_action": "reboot",
+            "PRIORITY_FENCING_DELAY": "15s"
         }
 
     module.exit_json(**result)

@@ -23,6 +23,9 @@
                                             - node_tier == "hana"
                                             - pre_validations_status == "PASSED"
                                             - cluster_status_pre.stonith_action == "reboot"
+                                            - cluster_status_pre.PRIORITY_FENCING_DELAY is defined
+                                            - cluster_status_pre.PRIORITY_FENCING_DELAY != ""
+                                            - cluster_status_pre.PRIORITY_FENCING_DELAY != "unknown"
   block:
     - name:                                 "Test Execution: Block Network Communication"
       when:                                 ansible_hostname == cluster_status_pre.primary_node
@@ -93,7 +96,8 @@
             operation_step:                 "test_execution"
             database_sid:                   "{{ db_sid | lower }}"
             saphanasr_provider:             "{{ saphanasr_provider | default('SAPHanaSR') }}"
-            hana_resource_name:             "{{ hana_resource_name | default('') }}"
+            hana_clone_resource_name:       "{{ hana_clone_resource_name | default('') }}"
+            hana_primitive_resource_name:   "{{ hana_primitive_resource_name | default('') }}"
           register:                         cluster_status_test_execution_primary
           retries:                          "{{ default_retries }}"
           delay:                            "{{ default_delay }}"
@@ -120,7 +124,8 @@
             operation_step:                 "test_execution"
             database_sid:                   "{{ db_sid | lower }}"
             saphanasr_provider:             "{{ saphanasr_provider | default('SAPHanaSR') }}"
-            hana_resource_name:             "{{ hana_resource_name | default('') }}"
+            hana_clone_resource_name:       "{{ hana_clone_resource_name | default('') }}"
+            hana_primitive_resource_name:   "{{ hana_primitive_resource_name | default('') }}"
           register:                         cluster_status_post_primary
           retries:                          "{{ default_retries }}"
           delay:                            "{{ default_delay }}"
@@ -140,7 +145,8 @@
             operation_step:                 "test_execution"
             database_sid:                   "{{ db_sid | lower }}"
             saphanasr_provider:             "{{ saphanasr_provider | default('SAPHanaSR') }}"
-            hana_resource_name:             "{{ hana_resource_name | default('') }}"
+            hana_clone_resource_name:       "{{ hana_clone_resource_name | default('') }}"
+            hana_primitive_resource_name:   "{{ hana_primitive_resource_name | default('') }}"
           register:                         cluster_status_test_execution_secondary
           retries:                          "{{ default_retries }}"
           delay:                            "{{ default_delay }}"
@@ -158,7 +164,8 @@
             operation_step:                 "test_execution"
             database_sid:                   "{{ db_sid | lower }}"
             saphanasr_provider:             "{{ saphanasr_provider | default('SAPHanaSR') }}"
-            hana_resource_name:             "{{ hana_resource_name | default('') }}"
+            hana_clone_resource_name:       "{{ hana_clone_resource_name | default('') }}"
+            hana_primitive_resource_name:   "{{ hana_primitive_resource_name | default('') }}"
           register:                         cluster_status_post_secondary
           retries:                          "{{ default_retries }}"
           delay:                            "{{ default_delay }}"
@@ -227,6 +234,7 @@
         test_case_details_from_test_case:   {
                                             "Pre Validations: Remove any location_constraints": "{{ location_constraints_results }}",
                                             "Pre Validations: Validate HANA DB cluster status": "{{ cluster_status_pre }}",
+                                            "Pre Validations: priority-fencing-delay": "{{ cluster_status_pre.PRIORITY_FENCING_DELAY | default('Not Configured') }}",
                                             "Pre Validations: CleanUp any failed resource": "{{ cleanup_failed_resource_pre }}",
                                             "Cluster Status": "{{ cluster_status_pre }}",
                                             }

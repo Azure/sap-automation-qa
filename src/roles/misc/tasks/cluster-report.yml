@@ -12,7 +12,8 @@
     operation_step:                     "cluster_report_collection"
     database_sid:                       "{{ db_sid | lower | default('') }}"
     saphanasr_provider:                 "{{ saphanasr_provider | default('SAPHanaSR') }}"
-    hana_resource_name:                 "{{ hana_resource_name | default('') }}"
+    hana_clone_resource_name:           "{{ hana_clone_resource_name | default('') }}"
+    hana_primitive_resource_name:       "{{ hana_primitive_resource_name | default('') }}"
   register:                             cluster_status
   failed_when:                          cluster_status.primary_node == ""
 

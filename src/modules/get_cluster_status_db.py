@@ -14,10 +14,10 @@ from ansible.module_utils.facts.compat import ansible_facts
 try:
     from ansible.module_utils.get_cluster_status import BaseClusterStatusChecker
     from ansible.module_utils.enums import OperatingSystemFamily, HanaSRProvider
-    from ansible.module_utils.commands import AUTOMATED_REGISTER
+    from ansible.module_utils.commands import AUTOMATED_REGISTER, PRIORITY_FENCING_DELAY
 except ImportError:
     from src.module_utils.get_cluster_status import BaseClusterStatusChecker
-    from src.module_utils.commands import AUTOMATED_REGISTER
+    from src.module_utils.commands import AUTOMATED_REGISTER, PRIORITY_FENCING_DELAY
     from src.module_utils.enums import OperatingSystemFamily, HanaSRProvider
 
 
@@ -146,13 +146,15 @@ class HanaClusterStatusChecker(BaseClusterStatusChecker):
         db_instance_number: str,
         saphanasr_provider: HanaSRProvider,
         ansible_os_family: OperatingSystemFamily,
-        hana_resource_name: str = "",
+        hana_clone_resource_name: str = "",
+        hana_primitive_resource_name: str = "",
     ):
         super().__init__(ansible_os_family)
         self.database_sid = database_sid
         self.saphanasr_provider = saphanasr_provider
         self.db_instance_number = db_instance_number
-        self.hana_resource_name = hana_resource_name
+        self.hana_clone_resource_name = hana_clone_resource_name
+        self.hana_primitive_resource_name = hana_primitive_resource_name
         self.result.update(
             {
                 "primary_node": "",
@@ -161,18 +163,28 @@ class HanaClusterStatusChecker(BaseClusterStatusChecker):
                 "replication_mode": "",
                 "primary_site_name": "",
                 "AUTOMATED_REGISTER": "false",
+                "PRIORITY_FENCING_DELAY": "",
             }
         )
 
-    def _get_automation_register(self) -> None:
+    def _get_cluster_parameters(self) -> None:
         """
-        Retrieves the value of the AUTOMATED_REGISTER attribute.
+        Retrieves the values of the AUTOMATED_REGISTER and PRIORITY_FENCING_DELAY attributes.
         """
-        try:
-            cmd_output = self.execute_command_subprocess(AUTOMATED_REGISTER).strip()
-            self.result["AUTOMATED_REGISTER"] = ET.fromstring(cmd_output).get("value")
-        except Exception:
-            self.result["AUTOMATED_REGISTER"] = "unknown"
+        param_commands = {
+            "AUTOMATED_REGISTER": (
+                AUTOMATED_REGISTER(self.hana_primitive_resource_name)
+                if self.hana_primitive_resource_name
+                else AUTOMATED_REGISTER(self.hana_clone_resource_name)
+            ),
+            "PRIORITY_FENCING_DELAY": PRIORITY_FENCING_DELAY,
+        }
+
+        for param_name, command in param_commands.items():
+            try:
+                self.result[param_name] = self.execute_command_subprocess(command).strip()
+            except Exception:
+                self.result[param_name] = "unknown"
 
     def _process_node_attributes(self, cluster_status_xml: ET.Element) -> Dict[str, Any]:
         """
@@ -209,8 +221,8 @@ class HanaClusterStatusChecker(BaseClusterStatusChecker):
             HanaSRProvider.ANGI: {
                 "clone_attr": f"hana_{self.database_sid}_clone_state",
                 "sync_attr": (
-                    f"master-{self.hana_resource_name}"
-                    if self.hana_resource_name
+                    f"master-{self.hana_clone_resource_name}"
+                    if self.hana_clone_resource_name
                     else f"master-rsc_SAPHanaCon_{self.database_sid.upper()}"
                     + f"_HDB{self.db_instance_number}"
                 ),
@@ -281,7 +293,7 @@ class HanaClusterStatusChecker(BaseClusterStatusChecker):
         :rtype: Dict[str, str]
         """
         result = super().run()
-        self._get_automation_register()
+        self._get_cluster_parameters()
         return result
 
 
@@ -294,7 +306,8 @@ def run_module() -> None:
         database_sid=dict(type="str", required=True),
         saphanasr_provider=dict(type="str", required=True),
         db_instance_number=dict(type="str", required=True),
-        hana_resource_name=dict(type="str", required=False),
+        hana_clone_resource_name=dict(type="str", required=False),
+        hana_primitive_resource_name=dict(type="str", required=False),
         filter=dict(type="str", required=False, default="os_family"),
     )
 
@@ -307,7 +320,8 @@ def run_module() -> None:
             str(ansible_facts(module).get("os_family", "UNKNOWN")).upper()
         ),
         db_instance_number=module.params["db_instance_number"],
-        hana_resource_name=module.params.get("hana_resource_name", ""),
+        hana_clone_resource_name=module.params.get("hana_clone_resource_name", ""),
+        hana_primitive_resource_name=module.params.get("hana_primitive_resource_name", ""),
     )
     checker.run()
 

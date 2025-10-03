@@ -100,7 +100,11 @@ class TestDbHDBOperations(RolesTestingBaseDB):
 
         commands = [
             {
-                "name": "get_hana_resource_id",
+                "name": "get_hana_clone_resource_id",
+                "SUSE": "cibadmin --query --scope resources",
+            },
+            {
+                "name": "get_hana_primitive_resource_id",
                 "SUSE": "cibadmin --query --scope resources",
             },
             {

@@ -369,7 +369,6 @@ class TestHAClusterValidator:
         status = validator._determine_parameter_status(
             "10.0.1.101", (["10.0.1.100", "10.0.1.101"], False)
         )
-        print(f"Actual status: {status}, Expected: {TestStatus.SUCCESS.value}")
         assert status == TestStatus.SUCCESS.value
 
     def test_determine_parameter_status_info_cases(self, validator):
