@@ -173,7 +173,7 @@ pyjwt[crypto]==2.10.1
     # via
     #   msal
     #   pyjwt
-pylint==3.3.8
+pylint==3.3.9
     # via -r requirements.in
 pytest==8.4.2
     # via
