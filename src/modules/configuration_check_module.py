@@ -438,8 +438,8 @@ class ConfigurationCheckModule(SapAutomationQA):
 
         if check.validator_args.get("strip_whitespace", True):
             expected = str(expected).strip()
-            expected = re.sub(r'\s+', ' ', expected)
-            collected = re.sub(r'\s+', ' ', collected)
+            expected = re.sub(r"\s+", " ", expected)
+            collected = re.sub(r"\s+", " ", collected)
 
         if check.validator_args.get("case_insensitive", False):
             expected = expected.lower()
@@ -794,8 +794,33 @@ class ConfigurationCheckModule(SapAutomationQA):
 
     def format_results_for_html_report(self):
         """
-        Reformat results for HTML report
+        Reformat results for HTML report.
+        Removes CONTEXT template placeholders to prevent Ansible template evaluation errors.
         """
+
+        def remove_context_templates(value):
+            """
+            Recursively remove or neutralize CONTEXT template placeholders.
+            Replaces {{ CONTEXT.* }} with a safe placeholder to prevent Ansible templating issues.
+
+            :param value: Value to process (str, dict, list, or other)
+            :type value: Any
+            :return: Value with CONTEXT templates removed
+            :rtype: Any
+            """
+            if isinstance(value, str):
+                # Replace {{ CONTEXT.property }} with <CONTEXT.property> to neutralize templates
+                return re.sub(
+                    r"\{\{\s*CONTEXT\.[^}]+\s*\}\}",
+                    lambda m: m.group(0).replace("{{", "<").replace("}}", ">"),
+                    value,
+                )
+            if isinstance(value, dict):
+                return {k: remove_context_templates(v) for k, v in value.items()}
+            if isinstance(value, list):
+                return [remove_context_templates(item) for item in value]
+            return value
+
         serialized_results = []
         for check_result in self.result["check_results"]:
             result_dict = {
@@ -811,9 +836,9 @@ class ConfigurationCheckModule(SapAutomationQA):
                         else str(check_result.check.severity)
                     ),
                     "collector_type": check_result.check.collector_type,
-                    "collector_args": check_result.check.collector_args,
+                    "collector_args": remove_context_templates(check_result.check.collector_args),
                     "validator_type": check_result.check.validator_type,
-                    "validator_args": check_result.check.validator_args,
+                    "validator_args": remove_context_templates(check_result.check.validator_args),
                     "tags": check_result.check.tags,
                     "references": check_result.check.references,
                     "report": check_result.check.report,

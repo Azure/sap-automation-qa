@@ -4,7 +4,6 @@ This module defines various enumerations and data classes used throughout the sa
 
 from enum import Enum
 from typing import Dict, Any, List, Optional
-from dataclasses import dataclass, field
 from datetime import datetime
 
 
@@ -154,7 +153,6 @@ class Result:
         }
 
 
-@dataclass
 class ApplicabilityRule:
     """
     Represents a rule to determine if a check is applicable based on context properties
@@ -165,8 +163,9 @@ class ApplicabilityRule:
     :type value: Any
     """
 
-    property: str
-    value: Any
+    def __init__(self, property: str, value: Any):
+        self.property = property
+        self.value = value
 
     def is_applicable(self, context_value: Any) -> bool:
         """
@@ -202,7 +201,6 @@ class ApplicabilityRule:
         return context_value == self.value
 
 
-@dataclass
 class Check:
     """
     Represents a configuration check
@@ -217,8 +215,8 @@ class Check:
     :type category: str
     :param workload: Workload type (e.g., SAP, Non-SAP)
     :type workload: str
-    :param TestSeverity: TestSeverity level of the check
-    :type TestSeverity: TestSeverity
+    :param severity: Severity level of the check
+    :type severity: TestSeverity
     :param collector_type: Type of collector to use (e.g., command, azure)
     :type collector_type: str
     :param collector_args: Arguments for the collector
@@ -237,20 +235,37 @@ class Check:
     :type report: Optional[str]
     """
 
-    id: str
-    name: str
-    description: str
-    category: str
-    workload: str
-    severity: TestSeverity = TestSeverity.WARNING
-    collector_type: str = "command"
-    collector_args: Dict[str, Any] = field(default_factory=dict)
-    validator_type: str = "string"
-    validator_args: Dict[str, Any] = field(default_factory=dict)
-    tags: List[str] = field(default_factory=list)
-    applicability: List[ApplicabilityRule] = field(default_factory=list)
-    references: Dict[str, str] = field(default_factory=dict)
-    report: Optional[str] = "check"
+    def __init__(
+        self,
+        id: str,
+        name: str,
+        description: str,
+        category: str,
+        workload: str,
+        severity: TestSeverity = TestSeverity.WARNING,
+        collector_type: str = "command",
+        collector_args: Optional[Dict[str, Any]] = None,
+        validator_type: str = "string",
+        validator_args: Optional[Dict[str, Any]] = None,
+        tags: Optional[List[str]] = None,
+        applicability: Optional[List[ApplicabilityRule]] = None,
+        references: Optional[Dict[str, str]] = None,
+        report: Optional[str] = "check",
+    ):
+        self.id = id
+        self.name = name
+        self.description = description
+        self.category = category
+        self.workload = workload
+        self.severity = severity
+        self.collector_type = collector_type
+        self.collector_args = collector_args if collector_args is not None else {}
+        self.validator_type = validator_type
+        self.validator_args = validator_args if validator_args is not None else {}
+        self.tags = tags if tags is not None else []
+        self.applicability = applicability if applicability is not None else []
+        self.references = references if references is not None else {}
+        self.report = report
 
     def is_applicable(self, context: Dict[str, Any]) -> bool:
         """
@@ -270,7 +285,6 @@ class Check:
         return True
 
 
-@dataclass
 class CheckResult:
     """
     Represents the result of a check execution
@@ -293,11 +307,22 @@ class CheckResult:
     :type details: Optional[str]
     """
 
-    check: Check
-    status: TestStatus
-    hostname: str
-    expected_value: Any
-    actual_value: Any
-    execution_time: float
-    timestamp: datetime = field(default_factory=datetime.now)
-    details: Optional[str] = None
+    def __init__(
+        self,
+        check: Check,
+        status: TestStatus,
+        hostname: str,
+        expected_value: Any,
+        actual_value: Any,
+        execution_time: float,
+        timestamp: Optional[datetime] = None,
+        details: Optional[str] = None,
+    ):
+        self.check = check
+        self.status = status
+        self.hostname = hostname
+        self.expected_value = expected_value
+        self.actual_value = actual_value
+        self.execution_time = execution_time
+        self.timestamp = timestamp if timestamp is not None else datetime.now()
+        self.details = details
