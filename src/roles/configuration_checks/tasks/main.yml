@@ -149,13 +149,12 @@
       ansible.builtin.debug:
         msg:                        "Command-based configuration checks failed {{ command_check_results.msg }}"
 
-- name:                             "{{ check_type.name }} - Debug the logs from configuration check python module"
+- name:                             "{{ check_type.name }} - Debug the logs from command-based configuration check"
   when:
                                     - command_check_results is defined
                                     - command_check_results.log is defined
   ansible.builtin.debug:
     msg:                            "{{ command_check_results.log }}"
-    verbosity:                      1
 
 - name:                             "{{ check_type.name }} - Execute Azure-based configuration checks"
   when:
@@ -183,13 +182,12 @@
       ansible.builtin.debug:
         msg:                        "Azure-based configuration checks failed but continuing {{ azure_check_results.msg }}"
 
-- name:                             "{{ check_type.name }} - Debug the formatted filesystem info from configuration check python module"
+- name:                             "{{ check_type.name }} - Debug the logs from Azure-based configuration check"
   when:
                                     - azure_check_results is defined
-                                    - azure_check_results.formatted_filesystem_info is defined
+                                    - azure_check_results.log is defined
   ansible.builtin.debug:
-    msg:                            "{{ azure_check_results.formatted_filesystem_info }}"
-    verbosity:                      1
+    msg:                            "{{ azure_check_results.log }}"
 
 - name:                             "{{ check_type.name }} - Execute module-based configuration checks"
   when:
@@ -216,13 +214,12 @@
       ansible.builtin.debug:
         msg:                        "Module-based configuration checks failed but continuing {{ module_check_results.msg }}"
 
-- name:                             "{{ check_type.name }} - Debug the module check results"
+- name:                             "{{ check_type.name }} - Debug the logs from module-based configuration check"
   when:
                                     - module_check_results is defined
-                                    - module_check_results.check_results is defined
+                                    - module_check_results.log is defined
   ansible.builtin.debug:
-    msg:                            "Module checks: {{ module_check_results.check_results | length }} results"
-    verbosity:                      1
+    msg:                            "{{ module_check_results.log }}"
 
 - name:                             "{{ check_type.name }} - Merge check results with error handling"
   ansible.builtin.set_fact:

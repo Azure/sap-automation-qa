@@ -25,6 +25,13 @@
         saphanasr_provider:             "{{ saphanasr_provider | default('SAPHanaSR') }}"
       register:                         ha_db_module_result
 
+    - name:                             Debug logs from get_pcmk_properties_db
+      when:
+                                        - ha_db_module_result is defined
+                                        - ha_db_module_result.log is defined
+      ansible.builtin.debug:
+        msg:                            "{{ ha_db_module_result.log }}"
+
     - name:                             "Store HA DB configuration result"
       when:                             >-
                                         role == 'DB' and
@@ -43,6 +50,13 @@
         nfs_provider:                   "{{ NFS_provider }}"
         pcmk_constants:                 "{{ lookup('file', 'roles/ha_scs/tasks/files/constants.yaml') | from_yaml }}"
       register:                         ha_scs_module_result
+
+    - name:                             Debug logs from get_pcmk_properties_scs
+      when:
+                                        - ha_scs_module_result is defined
+                                        - ha_scs_module_result.log is defined
+      ansible.builtin.debug:
+        msg:                            "{{ ha_scs_module_result.log }}"
 
     - name:                             "Store HA SCS configuration result"
       when:                             >-
@@ -70,10 +84,11 @@
       register:                         ha_loadbalancer_module_result
 
     - name:                             "Debug HA Load Balancer configuration result"
-      when:                             ha_loadbalancer_module_result is defined
+      when:
+                                        - ha_loadbalancer_module_result is defined
+                                        - ha_loadbalancer_module_result.log is defined
       ansible.builtin.debug:
-        var:                            ha_loadbalancer_module_result
-        verbosity:                      1
+        msg:                            "{{ ha_loadbalancer_module_result.log }}"
 
     - name:                             "Store HA Load Balancer configuration result"
       when:                             >-
