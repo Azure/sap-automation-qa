@@ -348,11 +348,17 @@ class AzureDataParser(Collector):
                     logging.WARNING, f"Mount point {mount_point} not found in filesystem data"
                 )
                 return value
-            if property in fs_entry and fs_entry.get(property) is not None:
-                value = str(fs_entry[property])
+
+            fs_property = property
+            if property in ["mbps", "iops"] and property not in fs_entry:
+                fs_property = f"max_{property}"
+
+            if fs_property in fs_entry and fs_entry.get(fs_property) is not None:
+                value = str(fs_entry[fs_property])
                 self.parent.log(
                     logging.INFO,
-                    f"Found {property}='{value}' for {mount_point} from filesystem data",
+                    f"Found {property}='{value}' for {mount_point} "
+                    + f"from filesystem data (via {fs_property})",
                 )
                 return value
             if not parsed_disks:
