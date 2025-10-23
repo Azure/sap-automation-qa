@@ -438,8 +438,8 @@
       ansible.builtin.include_tasks:   "./roles/misc/tasks/render-html-report.yml"
       vars:
         html_template_name:            "./templates/config_checks_report.html"
-        report_file_name:              "CONFIG_{{ sap_sid | upper }}_{{ platform | upper }}_{{ test_group_invocation_id }}"
+        report_file_name:              "CONFIG_{{ sap_sid | upper }}_{{ platform | upper }}"
 
     - name:                             "Debug the file name of the report generated"
       ansible.builtin.debug:
-        msg:                            "Report file CONFIG_{{ sap_sid | upper }}_{{ platform | upper }}_{{ test_group_invocation_id }} generated."
+        msg:                            "Report file CONFIG_{{ sap_sid | upper }}_{{ platform | upper }} generated."
