@@ -152,9 +152,9 @@
 - name:                             "{{ check_type.name }} - Debug the logs from command-based configuration check"
   when:
                                     - command_check_results is defined
-                                    - command_check_results.log is defined
+                                    - command_check_results.logs is defined
   ansible.builtin.debug:
-    msg:                            "{{ command_check_results.log }}"
+    msg:                            "{{ command_check_results.logs }}"
 
 - name:                             "{{ check_type.name }} - Execute Azure-based configuration checks"
   when:
@@ -185,9 +185,9 @@
 - name:                             "{{ check_type.name }} - Debug the logs from Azure-based configuration check"
   when:
                                     - azure_check_results is defined
-                                    - azure_check_results.log is defined
+                                    - azure_check_results.logs is defined
   ansible.builtin.debug:
-    msg:                            "{{ azure_check_results.log }}"
+    msg:                            "{{ azure_check_results.logs }}"
 
 - name:                             "{{ check_type.name }} - Execute module-based configuration checks"
   when:
@@ -217,9 +217,9 @@
 - name:                             "{{ check_type.name }} - Debug the logs from module-based configuration check"
   when:
                                     - module_check_results is defined
-                                    - module_check_results.log is defined
+                                    - module_check_results.logs is defined
   ansible.builtin.debug:
-    msg:                            "{{ module_check_results.log }}"
+    msg:                            "{{ module_check_results.logs }}"
 
 - name:                             "{{ check_type.name }} - Merge check results with error handling"
   ansible.builtin.set_fact:
