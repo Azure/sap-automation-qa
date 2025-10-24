@@ -127,7 +127,7 @@ After the test execution completes, a detailed HTML report is generated. The rep
    all_{DISTRO}_{INVOCATION_ID}.html
    ```
 
-   - `DISRO`: Linux distribution (SLES or RHEL)
+   - `DISTRO`: Linux distribution (SLES or RHEL)
 
    - `INVOCATION_ID`: A unique identifier (Group invocation ID) for the test run which is logged at the end of test execution. Find example screenshot below:
 
