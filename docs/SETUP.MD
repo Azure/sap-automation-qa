@@ -50,7 +50,7 @@ The framework requires a managed identity to securely access Azure resources (li
     **Method 1: Assign roles from the managed identity.**
     
     1. Navigate to the user-assigned identity resource in the Azure Portal.
-    2. Go to Azure role assignments to grant it the necessary permissions on other resources. The scope available here is limited to **Subscription**, **Resource group**, and few other option. But if you want to assign roles per-resource like Azure load balancer, Azure NetApp Files etc., then follow method 2. 
+    2. Go to Azure role assignments to grant it the necessary permissions on other resources. The scope available here is limited to **Subscription**, **Resource group**, and a few other options. But if you want to assign roles per-resource like Azure load balancer, Azure NetApp Files etc., then follow method 2. 
     
     **Method 2: Assign roles from the target resource.**
     
