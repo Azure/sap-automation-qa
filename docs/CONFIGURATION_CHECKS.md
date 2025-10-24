@@ -17,33 +17,32 @@ Configuration validation serves as a critical quality gate in the SAP deployment
 
 ## Configuration Check Categories
 
-**Azure Compute**
-- VM SKU appropriateness for SAP workloads
-- Accelerated Networking enablement
-- Availability Set/Zone configuration
-- Proximity Placement Group setup
+The configuration checks are organized into logical groups that can be executed independently or all at once. The main categories are:
 
-**Storage Configuration**
-- Premium SSD/Ultra Disk usage for critical paths
-- Write Accelerator for log volumes
-- Storage account redundancy settings
-- Disk caching policies
+1. **Infrastructure**
 
-**SAP Database Configuration**
-- SAP HANA: Memory allocation, system replication parameters
-- IBM DB2: Hardware requirements, system language, OS tuning parameters
+      - While not a separate execution category, infrastructure checks are performed as part of the other categories.
+      - **Azure Compute**: VM SKU, Accelerated Networking, Availability Set/Zone, Proximity Placement Group.
+      - **Storage**: Use of Premium SSD/Ultra Disk, Write Accelerator, disk caching policies, and redundancy settings.
 
-**Pacemaker Cluster (HANA only)**
-- Resource agent versions and parameters
-- Fencing (STONITH) configuration
-- Resource constraints and colocation rules
-- Cluster communication settings
+2. **Database**
 
-**SAP HA Resources (HANA only)**
-- Virtual hostname configuration
-- File system mount options
-- Service startup ordering
-- Failover timeout values
+   - Validates SAP HANA or IBM DB2 specific settings.
+   - **SAP HANA**: Checks memory allocation, system replication parameters, and Pacemaker cluster configurations (resource agents, fencing, constraints).
+   - **IBM DB2**: Verifies hardware requirements, system language, and OS tuning parameters.
+
+3. **Central Services**
+
+      - Validates the configuration of ASCS (ABAP SAP Central Services) and ERS (Enqueue Replication Server) instances.
+
+      - Checks for virtual hostname configuration, file system mount options, and service startup ordering.
+
+
+3. **Application Servers**
+      - Validates the configuration of the application server instances.
+
+
+> **Note**: High Availability (HA) configuration checks and functional tests are currently supported only for SAP HANA databases. For IBM DB2 databases, only non-HA configuration checks are available.
 
 
 ### 1. Setup Configuration
@@ -58,18 +57,18 @@ Follow the steps (2.1 - 2.2) in [Setup Guide for SAP Testing Automation Framewor
 
 > **Note**: High Availability (HA) configuration checks and functional tests are currently supported only for SAP HANA databases. For IBM DB2 databases, only non-HA configuration checks are available.
 
-### 3. Required Access and Permissions
+### 3. Required Access and Permissions (required)
 
-Ensure that the managed identity or service principal used by the controller virtual machine has the necessary permissions to access Azure resources and SAP systems for configuration validation.
-1. "Reader" role to the user-assigned managed identity on the resource group containing the SAP VMs and the Azure Load Balancer.
-1. "Reader" role to the user-assigned managed identity on the resource group containing the Azure NetApp Files account (if using Azure NetApp Files as shared storage).
-1. "Reader" role to the user-assigned managed identity on the resource group containing the storage account (if using Azure File Share as shared storage).
-1. "Reader" role to the user-assigned managed identity on the resource group containing the managed disks (if using Azure Managed Disks for SAP HANA data and log volumes).
-1. "Reader" role to the user-assigned managed identity on the resource group containing the shared disks (if using Azure Shared Disks for SBD devices).
+Effective configuration validation requires that the management server's managed identity (system or user assigned) has read permissions on all target Azure resources. This allows the framework to inspect the settings of services including, but not limited to, Azure Load Balancers, storage solutions (Managed Disks, Azure Files, Azure NetApp Files), and network infrastructure. Lacking the necessary access will prevent the configuration checks from identifying potential misconfigurations in the environment. For more details on configuring system assigned managed identity vs user assigned managed identity, see 
+
+1. Depending on the type of managed identity method you want to use, configure managed identity on management server
+   - [Configuring access using system-assigned managed identity](./SETUP.MD#configuring-access-using-system-assigned-managed-identity).
+   - [Configuring access using user-assigned managed identity](SETUP.MD#configuring-access-using-user-assigned-managed-identity).
+2. Grant the managed identity (system- or user-assigned) the built‑in **Reader** role on every resource group that contains SAP system components (VMs, managed disks, load balancers, virtual network, shared storage such as Azure NetApp Files or Azure Files). If everything resides in a single resource group, one assignment there is sufficient; if components are split across multiple resource groups, add a **Reader** role assignment on each resource group to allow the configuration checks to read and validate all infrastructure settings.
 
 ### 4. Azure Login (required)
 
-Ensure that you are logged into Azure CLI on the controller VM with the appropriate subscription context:
+Ensure that you are logged into Azure CLI on the management server VM with the appropriate subscription context:
 
 ```bash
 # Login to Azure using System Assigned Managed Identity
@@ -108,7 +107,7 @@ To execute the script, run following command:
 
 ### 6. Viewing Test Results
 
-After the test execution completes, a detailed HTML report is generated that summarizes the PASS/FAIL status of each test case and includes detailed execution logs for every step of the automation run.
+After the test execution completes, a detailed HTML report is generated. The report provide the summary of each test cases that got executed for each VM.
 
 **To locate and view your test report:**
 
@@ -119,16 +118,17 @@ After the test execution completes, a detailed HTML report is generated that sum
    ```bash
    cd WORKSPACES/SYSTEM/<SYSTEM_CONFIG_NAME>/quality_assurance/
    ```
+   
 2. **Find your report file:**
 
    The report file is named using the following format:
 
    ```
-   CONFIG_{SAP_SID}_{DATABASE_TYPE}_{INVOCATION_ID}.html
+   all_{DISTRO}_{INVOCATION_ID}.html
    ```
 
-   - `SAP_SID`: The SAP system ID (e.g., HN1, NWP)
-   - `DATABASE_TYPE`: The database type (e.g., HANA)
+   - `DISRO`: Linux distribution (SLES or RHEL)
+
    - `INVOCATION_ID`: A unique identifier (Group invocation ID) for the test run which is logged at the end of test execution. Find example screenshot below:
 
       ![Test Execution Completion Screenshot](./images/execution_screenshot.png)

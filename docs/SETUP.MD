@@ -1,58 +1,106 @@
 
 # Setup Guide for SAP Testing Automation Framework
 
-## Technical Requirements for running Automation Framework
+The SAP Testing Automation Framework allows you to execute:
 
-To run the SAP Testing Automation Framework, you must meet certain prerequisites and follow technical requirements.
+1. High Availability (HA) functional test suites (HANA database, Central Services).
+2. Configuration / compliance checks against an SAP on Azure deployment.
 
-### SAP System Deployment on Microsoft Azure
+Execution is driven by Ansible-based playbooks and Python helpers, using metadata defined in YAML files under a per‑system workspace.
+
+## Pre-requisites
+
+### 1. SAP System Deployment on Microsoft Azure
 
 - The SAP system must be hosted on Microsoft Azure Infrastructure-as-a-Service (IaaS).
 - The SAP system deployed should follow SAP on Azure best practices as outlined in:
   - [SAP HANA high availability on Azure Virtual Machine](https://learn.microsoft.com/azure/sap/workloads/sap-high-availability-guide-start).
   - [SAP Netweaver high availability on Azure Virtual Machine](https://learn.microsoft.com/azure/sap/workloads/sap-high-availability-guide-start)
 
-### Management server
+### 2. Management (Jump) server
 
-The SAP Testing Automation Framework requires a jumpbox or management server with the following setup:
+The SAP Testing Automation Framework requires a management server, which must run one of the supported operating system versions listed in [Supported distributions for the management server](https://learn.microsoft.com/en-us/azure/sap/automation/testing-framework-supportability#supported-distributions-for-management-server). 
 
-- **Operating System**: Supported (Ubuntu 22.04 LTS, SLES 15 SP4, 15 SP6, REDHAT 9.4).
-- **Location**: Must be deployed on Azure.
+### 3. Network Connectivity
 
-### Azure RBAC
+The management server must have network connectivity to the SAP system to perform tests and validations. If your management server is in separate network than you SAP system, you must establish the connection by peering the networks as outlined in [manage a virtual network peering](https://learn.microsoft.com/azure/virtual-network/virtual-network-manage-peering?tabs=peering-portal).
 
-For the framework to access the properties of the Azure Load Balancer in a high availability SAP system on Azure, the management server must have a Reader role assigned to the Load Balancer. This can be done using either a system-assigned or user-assigned managed identity.
+### 4. Identity and authorization
 
-#### Configuring access using system-assigned managed identity
+The framework requires a managed identity to securely access Azure resources (like Load Balancers, Storage). You must configure **one** of the following two options.
 
-1. Enable system managed identity on the management server by following the steps in [Configure managed identities on Azure VMs](https://learn.microsoft.com/entra/identity/managed-identities-azure-resources/how-to-configure-managed-identities?pivots=qs-configure-portal-windows-vm#system-assigned-managed-identity).
-1. Open the Azure Load Balancer used for the high availability deployment of your SAP system on Azure.
-1. In the Azure Load Balancer panel, go to Access control (IAM).
-1. Follow steps from [Use managed identity to access Azure Resource](https://learn.microsoft.com/en-us/azure/role-based-access-control/role-assignments-portal) to complete the configuration.
+#### Option 1: User-Assigned Managed Identity
 
-#### Configuring access using user-assigned managed identity
+1.  **Create a User-Assigned Managed Identity**:
+    
+    *   Follow the guide to [manage user-assigned managed identities](https://learn.microsoft.com/entra/identity/managed-identities-azure-resources/how-manage-user-assigned-managed-identities).
+    *   After creation, navigate to the identity's **Overview** page and copy the **Client ID**. You will need this for `sap-parameters.yaml`.
+    
+2.  **Assign the Identity to the Management VM**:
+    *   Navigate to your management server VM in the Azure Portal.
+    *   Under **Settings**, select **Identity**.
+    *   Go to the **User assigned** tab and click **+ Add**.
+    *   Select the user-assigned identity you created.
+    *   For detailed steps, see [configure managed identities on Azure VMs](https://learn.microsoft.com/entra/identity/managed-identities-azure-resources/how-to-manage-ua-identity-vm).
 
-1. Create user-assigned managed identity as described in [manage user-assigned managed identities](https://learn.microsoft.com/entra/identity/managed-identities-azure-resources/how-manage-user-assigned-managed-identities?pivots=identity-mi-methods-azp#create-a-user-assigned-managed-identity)
-1. Assign user-assigned managed identity to management server as described in [configure managed identities on Azure VMs](https://learn.microsoft.com/entra/identity/managed-identities-azure-resources/how-to-configure-managed-identities?pivots=qs-configure-portal-windows-vm#assign-a-user-assigned-managed-identity-to-an-existing-vm)
+3.  **Assign Roles to the User-Assigned Identity**:
+    
+    This is a critical step to grant the identity permissions. We recommend to grant permission at the resource group level. 
+    
+    **Method 1: Assign roles from the managed identity.**
+    
+    1. Navigate to the user-assigned identity resource in the Azure Portal.
+    2. Go to Azure role assignments to grant it the necessary permissions on other resources. The scope available here is limited to **Subscription**, **Resource group**, and few other option. But if you want to assign roles per-resource like Azure load balancer, Azure NetApp Files etc., then follow method 2. 
+    
+    **Method 2: Assign roles from the target resource.**
+    
+    1. Navigate to the specific resource you want the identity to access (e.g., the Azure Load Balancer, Azure NetApp Files).
+    2. Go to its **Access control (IAM)** blade.
+    3. Click **Add > Add role assignment**.
+    4. Select the required role (e.g., `Reader`\).
+    5. For **Assign access to**, choose **Managed identity**.
+    6. Click **+ Select members**, choose your subscription, and under **Managed identity**, select the user-assigned identity you created.
+    7. Click **Review + assign**.
+    8. Repeat this for every resource listed in the permissions table below. For detailed guidance, see [Assign Azure roles using the Azure portal](https://learn.microsoft.com/azure/role-based-access-control/role-assignments-portal).
+    
+4.  **Configure `sap-parameters.yaml`**:
+    
+    *   Paste the **Client ID** you copied in step 1 into the `user_assigned_identity_client_id` field.
 
-**Permissions required for High Availability tests:**
-1. Open the Azure Load Balancer used for the high availability deployment of your SAP system on Azure.
-1. In the Azure Load Balancer panel, go to Access control (IAM).
-1. Assign the required role to the user-assigned managed identity by following the steps in [assign roles using Azure portal](https://learn.microsoft.com/azure/role-based-access-control/role-assignments-portal).
-1. Assign the "Reader" role to the user-assigned managed identity on the resource group containing the SAP VMs and the Azure Load Balancer.
+#### Option 2: System-Assigned Managed Identity
 
-**Permissions required for Configuration Checks:**
-1. "Reader" role to the user-assigned managed identity on the resource group containing the SAP VMs and the Azure Load Balancer.
-1. "Reader" role to the user-assigned managed identity on the resource group containing the Azure NetApp Files account (if using Azure NetApp Files as shared storage).
-1. "Reader" role to the user-assigned managed identity on the resource group containing the storage account (if using Azure File Share as shared storage).
-1. "Reader" role to the user-assigned managed identity on the resource group containing the managed disks (if using Azure Managed Disks for SAP HANA data and log volumes).
-1. "Reader" role to the user-assigned managed identity on the resource group containing the shared disks (if using Azure Shared Disks for SBD devices).
+A system-assigned identity is tied directly to the management server VM. It is created and deleted with the VM.
 
-### Network Connectivity
+1.  **Enable System-Assigned Identity on the Management VM**:
+    *   Navigate to your management server VM in the Azure Portal.
+    *   Under **Settings**, select **Identity**.
+    *   Under the **System assigned** tab, switch the **Status** to **On** and click **Save**.
+    *   For detailed steps, follow the guide: [Configure managed identities on Azure VMs](https://learn.microsoft.com/entra/identity/managed-identities-azure-resources/how-to-manage-ua-identity-vm).
 
-The management server must have network connectivity to the SAP system to perform tests and validations. You can establish this connection by peering the networks as outlined in [manage a virtual network peering](https://learn.microsoft.com/azure/virtual-network/virtual-network-manage-peering?tabs=peering-portal).
+2. **Assign Roles to the Management VM's Identity**:
 
-### Analytics Integration (optional)
+   This is a critical step to grant the management server VM permissions. We recommend to grant permission at the resource group level. 
+
+   **Method 1: Assign roles from management server VM identity.**
+
+   1. Navigate to the management server VM, select **identity** in the Azure Portal.
+   2. Go to Azure role assignments to grant it the necessary permissions on other resources. The scope available here is limited to **Subscription**, **Resource group**, and few other option. But if you want to assign roles per-resource like Azure load balancer, Azure NetApp Files etc., then follow method 2. 
+
+   **Method 2: Assign roles from the target resource.**
+
+   1. Navigate to the specific resource you want the identity to access (e.g., the Azure Load Balancer, Azure NetApp Files).
+   2. Go to its **Access control (IAM)** blade.
+   3. Click **Add > Add role assignment**.
+   4. Select the required role (e.g., `Reader`\).
+   5. For **Assign access to**, choose **Managed identity**.
+   6. Click **+ Select members**, choose your subscription, and under **Managed identity**, select the system-assigned identity of management server.
+   7. Click **Review + assign**.
+   8. Repeat this for every resource listed in the permissions table below. For detailed guidance, see [Assign Azure roles using the Azure portal](https://learn.microsoft.com/azure/role-based-access-control/role-assignments-portal).
+
+3.  **Configure `sap-parameters.yaml`**:
+    *   When using a system-assigned identity, the `user_assigned_identity_client_id` parameter in `sap-parameters.yaml` must be left blank or set to an empty string (`""`).
+
+### 5. Analytics Integration (optional)
 
 - **Analytics Integration** [Telemetry Setup Information](./TELEMETRY_SETUP.md)
   - Azure Log Analytics
@@ -252,7 +300,7 @@ platform: "HANA"
 # The NFS provider used for shared storage. Supported values are:
 # - ANF (for Azure NetApp Files)
 # - AFS (for Azure File Share)
-NFS_provider: "ANF"  # or "AFS"
+NFS_provider: "AFS"  # or "ANF"
 
 # If you're using a user-assigned managed identity (as explained in "Azure RBAC" section above):
 #  - Enter the client ID of that identity here
@@ -283,28 +331,34 @@ ANF_account_name:              "ANF-ACCOUNT-NAME"
 The required credential files depend on the authentication method used to connect to the SAP system:
 
 1. **SSH Key Authentication**: If connecting via SSH key, place the private key inside `WORKSPACE/SYSTEM/<DIRECTORY>` and name the file "ssh_key.ppk".
+
 1. **Password Authentication**: If connecting using a username and password, create a password file by running the following command. It takes the username from hosts.yaml file. 
 
-  ```bash
-  echo "password" > WORKSPACES/SYSTEM/<DIRECTORY>/password
-  ```
+   ```bash
+   echo "password" > WORKSPACES/SYSTEM/<DIRECTORY>/password
+   chmod 600 WORKSPACES/SYSTEM/<DIRECTORY>/password
+   ```
+
+> [!NOTE]
+>
+> If you are using credential file locally, then you need to comment `key_vault_id` and `secret_id` in `sap-parameters.yaml`
 
 2.2.4. **Credential Files** (From Azure Key Vault)
 
 When using Azure Key Vault to store credentials, the framework retrieves authentication details directly from the key vault using the configured managed identity.
 
-  **Authentication Methods:**
+**Authentication Methods:**
 
-  1. **SSH Key Authentication**: Store the private SSH key content in Azure Key Vault as a secret.
-  2. **Password Authentication**: Store the password in Azure Key Vault as a secret. The username is taken from the `hosts.yaml` file.
+    1. **SSH Key Authentication**: Store the private SSH key content in Azure Key Vault as a secret.
+    2. **Password Authentication**: Store the password in Azure Key Vault as a secret. The username is taken from the `hosts.yaml` file. 
 
-  **Setup:**
+**Setup:**
 
   1. Ensure the managed identity has "Key Vault Secrets User" role on the key vault.
 
   2. Configure `key_vault_id` and `secret_id` parameters in `sap-parameters.yaml` as shown in section 2.2.2.
 
-  **Important**: When using Key Vault authentication, do NOT create local credential files (`ssh_key.ppk` or `password` files).
+**Important**: When using Key Vault authentication, do NOT create local credential files (`ssh_key.ppk` or `password` files).
 
 ## Update the framework
 
