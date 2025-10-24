@@ -64,7 +64,7 @@ Effective configuration validation requires that the management server's managed
 1. Depending on the type of managed identity method you want to use, configure managed identity on management server
    - [Configuring access using system-assigned managed identity](./SETUP.MD#configuring-access-using-system-assigned-managed-identity).
    - [Configuring access using user-assigned managed identity](SETUP.MD#configuring-access-using-user-assigned-managed-identity).
-2. Grant the managed identity (system- or user-assigned) the built‑in **Reader** role on every resource group that contains SAP system components (VMs, managed disks, load balancers, virtual network, shared storage such as Azure NetApp Files or Azure Files). If everything resides in a single resource group, one assignment there is sufficient; if components are split across multiple resource groups, add a **Reader** role assignment on each resource group to allow the configuration checks to read and validate all infrastructure settings.
+2. Grant the managed identity (system- or user-assigned) the built-in **Reader** role on every resource group that contains SAP system components (VMs, managed disks, load balancers, virtual network, shared storage such as Azure NetApp Files or Azure Files). If everything resides in a single resource group, one assignment there is sufficient; if components are split across multiple resource groups, add a **Reader** role assignment on each resource group to allow the configuration checks to read and validate all infrastructure settings.
 
 ### 4. Azure Login (required)
 
