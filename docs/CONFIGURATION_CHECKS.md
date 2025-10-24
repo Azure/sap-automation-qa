@@ -59,7 +59,7 @@ Follow the steps (2.1 - 2.2) in [Setup Guide for SAP Testing Automation Framewor
 
 ### 3. Required Access and Permissions (required)
 
-Effective configuration validation requires that the management server's managed identity (system or user assigned) has read permissions on all target Azure resources. This allows the framework to inspect the settings of services including, but not limited to, Azure Load Balancers, storage solutions (Managed Disks, Azure Files, Azure NetApp Files), and network infrastructure. Lacking the necessary access will prevent the configuration checks from identifying potential misconfigurations in the environment. For more details on configuring system assigned managed identity vs user assigned managed identity, see 
+Effective configuration validation requires that the management server's managed identity (system or user assigned) has read permissions on all target Azure resources. This allows the framework to inspect the settings of services including, but not limited to, Azure Load Balancers, storage solutions (Managed Disks, Azure Files, Azure NetApp Files), and network infrastructure. Lacking the necessary access will prevent the configuration checks from identifying potential misconfigurations in the environment. For more details on configuring system assigned managed identity vs user assigned managed identity, see [Setup Guide for SAP Testing Automation Framework](./SETUP.MD#configuring-access-using-managed-identity).
 
 1. Depending on the type of managed identity method you want to use, configure managed identity on management server
    - [Configuring access using system-assigned managed identity](./SETUP.MD#configuring-access-using-system-assigned-managed-identity).
