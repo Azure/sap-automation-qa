@@ -341,7 +341,7 @@ The required credential files depend on the authentication method used to connec
 
 > [!NOTE]
 >
-> If you are using credential file locally, then you need to comment `key_vault_id` and `secret_id` in `sap-parameters.yaml`
+> If you are using a credential file locally, then you need to comment `key_vault_id` and `secret_id` in `sap-parameters.yaml`
 
 2.2.4. **Credential Files** (From Azure Key Vault)
 
