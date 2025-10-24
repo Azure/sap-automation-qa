@@ -84,7 +84,7 @@ A system-assigned identity is tied directly to the management server VM. It is c
    **Method 1: Assign roles from management server VM identity.**
 
    1. Navigate to the management server VM, select **identity** in the Azure Portal.
-   2. Go to Azure role assignments to grant it the necessary permissions on other resources. The scope available here is limited to **Subscription**, **Resource group**, and few other option. But if you want to assign roles per-resource like Azure load balancer, Azure NetApp Files etc., then follow method 2. 
+   2. Go to Azure role assignments to grant it the necessary permissions on other resources. The scope available here is limited to **Subscription**, **Resource group**, and a few other options. But if you want to assign roles per-resource like Azure load balancer, Azure NetApp Files etc., then follow method 2. 
 
    **Method 2: Assign roles from the target resource.**
 
