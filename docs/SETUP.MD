@@ -23,7 +23,7 @@ The SAP Testing Automation Framework requires a management server, which must ru
 
 ### 3. Network Connectivity
 
-The management server must have network connectivity to the SAP system to perform tests and validations. If your management server is in separate network than you SAP system, you must establish the connection by peering the networks as outlined in [manage a virtual network peering](https://learn.microsoft.com/azure/virtual-network/virtual-network-manage-peering?tabs=peering-portal).
+The management server must have network connectivity to the SAP system to perform tests and validations. If your management server is in a separate network from your SAP system, you must establish the connection by peering the networks as outlined in [manage a virtual network peering](https://learn.microsoft.com/azure/virtual-network/virtual-network-manage-peering?tabs=peering-portal).
 
 ### 4. Identity and authorization
 
