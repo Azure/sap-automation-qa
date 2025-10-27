@@ -120,8 +120,7 @@ checks:
       os_version:                       *all_versions
       hardware_type:                    *vm
       storage_type:                     *all_storage
-      role:                             [*db_role]
-      database_type:                    [*hana]
+      role:                             [*ascs_role, *ers_role]
     collector_type:                     *azure
     collector_args:
       resource_type:                    "filesystem"
@@ -141,8 +140,7 @@ checks:
       os_version:                       *all_versions
       hardware_type:                    *vm
       storage_type:                     *all_storage
-      role:                             [*db_role]
-      database_type:                    [*hana]
+      role:                             [*ascs_role, *ers_role]
     collector_type:                     *azure
     collector_args:
       resource_type:                    "azure_disks"
