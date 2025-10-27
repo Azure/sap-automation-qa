@@ -110,8 +110,11 @@ class FileSystemCollector(Collector):
 
                     if not matched:
                         for nfs_share in afs_storage_data:
+                            storage_account_name = nfs_share.get("Pool", "")
                             share_address = nfs_share.get("NFSAddress", "")
-                            if ":" in share_address and share_address.split(":")[0] == nfs_address:
+                            if (
+                                ":" in share_address and share_address.split(":")[0] == nfs_address
+                            ) or storage_account_name in nfs_address:
                                 filesystem_entry["max_mbps"] = nfs_share.get("ThroughputMibps", 0)
                                 filesystem_entry["max_iops"] = nfs_share.get("IOPS", 0)
                                 filesystem_entry["nfs_type"] = "AFS"
