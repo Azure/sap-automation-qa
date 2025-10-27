@@ -200,22 +200,29 @@
                                         - afs_storage_accounts | length > 0
       register:                         afs_storage_metadata_results
       delegate_to:                      localhost
+      vars:
+        accounts_list:                  "{{ afs_storage_accounts | join(' ') }}"
       ansible.builtin.shell:
         executable:                     /bin/bash
         cmd: |
                                         #!/bin/bash
                                         set -o pipefail
-                                        for acc in "${afs_storage_accounts[@]}"; do
-                                          sa_info=$(az storage account show --name "$acc" --query "{rg:resourceGroup,name:name,id:id}" -o tsv)
+                                        for acc in {{ accounts_list }}; do
+                                          sa_info=$(az storage account show --name "$acc" --query "{rg:resourceGroup,name:name,id:id}" -o tsv 2>&1)
                                           if [ $? -ne 0 ] || [ -z "$sa_info" ]; then
-                                            echo "Error: Failed to retrieve storage account info for $acc" >&2
+                                            echo "Error: Failed to retrieve storage account info for $acc: $sa_info" >&2
                                             continue
                                           fi
                                           rg=$(echo "$sa_info" | awk '{print $1}')
                                           sid=$(echo "$sa_info" | awk '{print $3}')
                                           dns="$acc.file.core.windows.net"
-                                          az storage share-rm list --resource-group "$rg" --storage-account "$acc" \
-                                            --query "[?enabledProtocols=='NFS'].[name,accessTier,shareQuota]" -o tsv | \
+                                          share_list=$(az storage share-rm list --resource-group "$rg" --storage-account "$acc" \
+                                            --query "[?enabledProtocols=='NFS'].[name,accessTier,shareQuota]" -o tsv 2>&1)
+                                          if [ $? -ne 0 ]; then
+                                            echo "Error: Failed to list shares for storage account $acc: $share_list" >&2
+                                            continue
+                                          fi
+                                          echo "$share_list" | \
                                           while IFS=$'\t' read -r name tier quota; do
                                             if [ -z "$name" ]; then
                                               continue
