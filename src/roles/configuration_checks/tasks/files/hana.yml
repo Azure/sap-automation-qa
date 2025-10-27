@@ -1289,7 +1289,7 @@ checks:
 
   - id:                                 "DB-HANA-0050"
     name:                               "Disk performance for /hana/data (MBPS)"
-    description:                        "The disk performance for /hana/data should be >= 400 MByte/s"
+    description:                        "The disk performance for /hana/data should be >= 64 MByte/s"
     category:                           *sap_check
     severity:                           *high
     workload:                           *sap
@@ -1314,8 +1314,8 @@ checks:
       microsoft:                        "https://docs.microsoft.com/en-us/azure/virtual-machines/workloads/sap/hana-vm-operations-storage"
 
   - id:                                 "DB-HANA-0051"
-    name:                               "Disk performance for /hana/data (MBPS)"
-    description:                        "The disk performance for /hana/data should be >= 400 MByte/s"
+    name:                               "Disk performance for /hana/log (MBPS)"
+    description:                        "The disk performance for /hana/log should be >= 64 MByte/s"
     category:                           *sap_check
     severity:                           *high
     workload:                           *sap
