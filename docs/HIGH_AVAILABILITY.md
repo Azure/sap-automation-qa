@@ -30,9 +30,21 @@ Follow the steps in the [Setup Guide for SAP Testing Automation Framework](./SET
 
 ### 3. Configure the System for HA Testing
 
-1.  Update the `TEST_TYPE` parameter in the `vars.yaml` file to `SAPFunctionalTests` to enable the High Availability test scenarios.
-2.  Follow the steps in the [System Configuration section of the Setup Guide](./SETUP.MD#2-system-configuration) to provide the details of your SAP system.
+1. Update the `TEST_TYPE` parameter in the `vars.yaml` file to `SAPFunctionalTests` to enable the High Availability test scenarios.
+2. Follow the steps in the [System Configuration section of the Setup Guide](./SETUP.MD#2-system-configuration) to provide the details of your SAP system.
 
+### 4. Required Access and Permission (required for Load Balancer)
+
+In the High Availability testing scenario, one of the test cases validates the configuration of the Azure Load Balancer used in the SAP high availability setup. To retrieve the properties of the Azure Load Balancer, the management server VM must have read access to it.
+
+Access can be granted by configuring a managed identity for the management server. For more information on setting up system-assigned or user-assigned managed identities, see [Setup Guide for SAP Testing Automation Framework](./SETUP.MD#4-identity-and-authorization).
+
+1. Depending on the type of managed identity method you want to use, configure managed identity on management server.
+
+   - [Configuring access using user-assigned managed identity](./SETUP.MD#option-1-user-assigned-managed-identity).
+   - [Configuring access using system-assigned managed identity](./SETUP.MD#option-2-system-assigned-managed-identity).
+
+1. Grant the managed identity (system- or user-assigned) the built-in **Reader** role on the Azure load balancer used in the SAP high availability cluster configuration.
 
 ## Test Execution
 
@@ -56,26 +68,26 @@ Execute the tests using the `sap_automation_qa.sh` script from the `scripts` dir
 
 Upon completion, the framework generates a detailed HTML report that summarizes the PASS/FAIL status of each test case and provides detailed execution logs.
 
-1.  **Navigate to the workspace directory for your SAP system.**
+1. **Navigate to the workspace directory for your SAP system.**
 
-    Replace `<SYSTEM_CONFIG_NAME>` with the name of your SAP system configuration (e.g., `DEV-WEEU-SAP01-X00`).
+   Replace `<SYSTEM_CONFIG_NAME>` with the name of your SAP system configuration (e.g., `DEV-WEEU-SAP01-X00`).
 
-    ```bash
-    cd WORKSPACES/SYSTEM/<SYSTEM_CONFIG_NAME>/quality_assurance/
-    ```
+   ```bash
+   cd WORKSPACES/SYSTEM/<SYSTEM_CONFIG_NAME>/quality_assurance/
+   ```
 
-2.  **Identify the report file.**
+2. **Identify the report file.**
 
-    The report file name follows this format:
-    `HA_{SAP_TIER}_{DATABASE_TYPE}_{OS_DISTRO_NAME}_{INVOCATION_ID}.html`
+   The report file name follows this format:
+   `HA_{SAP_TIER}_{DATABASE_TYPE}_{OS_DISTRO_NAME}_{INVOCATION_ID}.html`
 
-    *   `SAP_TIER`: The SAP tier tested (e.g., DB, SCS).
-    *   `DATABASE_TYPE`: The database type (e.g., HANA).
-    *   `OS_DISTRO_NAME`: The operating system (e.g., SLES15SP4).
-    *   `INVOCATION_ID`: A unique identifier for the test run, which is logged at the end of the test execution.
+   - `SAP_TIER`: The SAP tier tested (e.g., DB, SCS).
+   - `DATABASE_TYPE`: The database type (e.g., HANA).
+   - `OS_DISTRO_NAME`: The operating system (e.g., SLES15SP4).
+   - `INVOCATION_ID`: A unique identifier for the test run, which is logged at the end of the test execution.
 
-    ![Test Execution Completion Screenshot](./images/execution_screenshot.png)
+   ![Test Execution Completion Screenshot](./images/execution_screenshot.png)
 
-3.  **View the report.**
+3. **View the report.**
 
-    Open the HTML file in any web browser to review the test results and logs.
+   Open the HTML file in any web browser to review the test results and logs.

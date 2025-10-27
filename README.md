@@ -23,7 +23,7 @@ SAP Testing Automation is designed as a scalable framework to orchestrate and va
 >
 > The High Availability testing scenario in the SAP Testing Framework is **generally available (GA)**, while the Configuration Checks scenario is currently in **public preview**.
 
-### High Availability Testing 
+### High Availability Testing
 
 In the SAP Testing Automation Framework, thorough validation of high availability SAP HANA scale-up and SAP Central Services failover mechanism in a two node pacemaker cluster can be performed, ensuring the system operates correctly across different situations.
 
