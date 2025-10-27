@@ -7,7 +7,7 @@
 # |                                                                            |
 # +------------------------------------4--------------------------------------*/
 
-name:                                  SAP Quality Assurance $(sap_system_configuration_name)
+name:                                  SAP Quality Assurance
 
 parameters:
   - name:                              sap_system_configuration_name
@@ -25,18 +25,17 @@ parameters:
     type:                              string
     default:                           ''
 
-  - name:                              sap_on_azure_quality_checks
-    displayName:                       SAP on Azure Quality Checks
+  - name:                              sap_configuration_checks
+    displayName:                       SAP Configuration Checks (v2 of SAP on Azure Quality Checks)
     type:                              boolean
     default:                           true
-
 
   - name:                              sap_functional_tests
     displayName:                       SAP Functional Tests
     type:                              boolean
     default:                           true
 
-  - name:                              sap_functional_test_type
+  - name:                              SAP_FUNCTIONAL_TEST_TYPE
     displayName:                       SAP Functional Tests Type
     type:                              string
     default:                           "DatabaseHighAvailability"
@@ -70,14 +69,14 @@ extends:
   template:                                ./resources.yml
   parameters:
     stages:
-      - template:                          deploy\pipelines\13-sap-quality-assurance.yaml@sap-automation
+      - template:                          deploy\pipelines\13-sap-automation-qa.yaml@sap-automation
         parameters:
           sap_system_configuration_name:   ${{ parameters.sap_system_configuration_name }}
           environment:                     ${{ parameters.environment }}
-          sap_on_azure_quality_checks:     ${{ parameters.sap_on_azure_quality_checks }}
           sap_automation_repo_path:        $(Build.SourcesDirectory)/sap-automation
           config_repo_path:                $(Build.SourcesDirectory)/config
           extra_params:                    ${{ parameters.extra_params }}
           sap_functional_tests:            ${{ parameters.sap_functional_tests }}
-          sap_functional_test_type:        ${{ parameters.sap_functional_test_type }}
+          SAP_FUNCTIONAL_TEST_TYPE:        ${{ parameters.SAP_FUNCTIONAL_TEST_TYPE }}
           telemetry_data_destination:      ${{ parameters.telemetry_data_destination }}
+          sap_configuration_checks:        ${{ parameters.sap_configuration_checks }}

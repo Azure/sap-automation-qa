@@ -281,7 +281,7 @@ class ConfigurationCheckModule(SapAutomationQA):
         """
         self.log(
             logging.DEBUG,
-            f"Checking applicability for check {check.applicability} with context: {self.context}",
+            f"Checking applicability for check {check.applicability}",
         )
         for rule in check.applicability:
             context_value = self.context.get(rule.property)

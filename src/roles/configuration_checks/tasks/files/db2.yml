@@ -142,7 +142,7 @@ checks:
     severity:                           *high
     workload:                           *sap
     applicability:
-      os_type:                          [*suse, *redhat]
+      os_type:                          [*redhat]
       os_version:                       *all_versions
       hardware_type:                    *vm
       storage_type:                     *all_storage
@@ -150,16 +150,18 @@ checks:
       database_type:                    [*db2]
     collector_type:                     *command
     collector_args:
-      command:                          "grep '^SELINUX=' /etc/selinux/config | awk -F= '{print $2}'"
+      command:                          "[ -f /etc/selinux/config ] && grep '^SELINUX=' /etc/selinux/config | awk -F= '{print $2}' || echo 'disabled'"
       user:                             *root
-    validator_type:                     *string
+    validator_type:                     *list
     validator_args:
-      expected_output:                  "enforcing"
+      valid_list:                       ["permissive", "disabled"]
     report:                             *check
+    references:
+      sap:                              "2936683"
 
   - id:                                 "DB-Db2-0004"
-    name:                               "vm.max_map_count setting"
-    description:                        "vm.max_map_count setting"
+    name:                               "vm.max_map_count should be MemTotal/4096"
+    description:                        "vm.max_map_count setting should be set to MemTotal/4096"
     category:                           *sap_check
     severity:                           *high
     workload:                           *sap
@@ -371,7 +373,7 @@ checks:
 
   - id:                                 "DB-Db2-0013"
     name:                               "HADR TIMEOUT"
-    description:                        "HADR TIMEOUT"
+    description:                        "HADR TIMEOUT should be 45 seconds for RHEL"
     category:                           *sap_check
     severity:                           *high
     workload:                           *sap
@@ -379,7 +381,7 @@ checks:
       os_type:                          [*redhat]
       os_version:                       *all_versions
       hardware_type:                    *vm
-      storage_type:                     [*premium_storage]
+      storage_type:                     *premium_storage
       role:                             [*db_role]
       database_type:                    [*db2]
     collector_type:                     *command
@@ -395,7 +397,7 @@ checks:
 
   - id:                                 "DB-Db2-0014"
     name:                               "HADR TIMEOUT"
-    description:                        "HADR TIMEOUT"
+    description:                        "HADR TIMEOUT should be 60 seconds for SUSE"
     category:                           *sap_check
     severity:                           *high
     workload:                           *sap
@@ -403,13 +405,13 @@ checks:
       os_type:                          [*suse]
       os_version:                       *all_versions
       hardware_type:                    *vm
-      storage_type:                     [*premium_storage]
+      storage_type:                     *premium_storage
       role:                             [*db_role]
       database_type:                    [*db2]
     collector_type:                     *command
     collector_args:
-      command:                          "db2pd -alldbs -hadr | grep -i 'HADR_TIMEOUT' | awk '{print $NF}'"
-      user:                             *root
+      command:                          ". ~/sqllib/db2profile && db2pd -alldbs -hadr | grep -i 'HADR_TIMEOUT' | awk '{print $NF}'"
+      user:                             *db2sid
     validator_type:                     *string
     validator_args:
       expected_output:                  "60"
@@ -419,7 +421,7 @@ checks:
 
   - id:                                 "DB-Db2-0015"
     name:                               "PEER WINDOW (seconds)"
-    description:                        "PEER WINDOW (seconds) RedHat"
+    description:                        "PEER WINDOW should be 240 seconds for RHEL"
     category:                           *sap_check
     severity:                           *high
     workload:                           *sap
@@ -427,7 +429,7 @@ checks:
       os_type:                          [*redhat]
       os_version:                       *all_versions
       hardware_type:                    *vm
-      storage_type:                     [*premium_storage]
+      storage_type:                     *premium_storage
       role:                             [*db_role]
       database_type:                    [*db2]
     collector_type:                     *command
@@ -443,7 +445,7 @@ checks:
 
   - id:                                 "DB-Db2-0016"
     name:                               "PEER WINDOW (seconds)"
-    description:                        "PEER WINDOW (seconds) SUSE SBD"
+    description:                        "PEER WINDOW should be 300 seconds for SUSE with SBD"
     category:                           *sap_check
     severity:                           *high
     workload:                           *sap
@@ -451,7 +453,7 @@ checks:
       os_type:                          [*suse]
       os_version:                       *all_versions
       hardware_type:                    *vm
-      storage_type:                     [*premium_storage]
+      storage_type:                     *premium_storage
       role:                             [*db_role]
       database_type:                    [*db2]
       high_availability_agent:          *sbd
@@ -468,7 +470,7 @@ checks:
 
   - id:                                 "DB-Db2-0017"
     name:                               "PEER WINDOW (seconds)"
-    description:                        "PEER WINDOW (seconds) SUSE Fencing Agent"
+    description:                        "PEER WINDOW should be 900 seconds for SUSE with Fencing Agent"
     category:                           *sap_check
     severity:                           *high
     workload:                           *sap
@@ -476,7 +478,7 @@ checks:
       os_type:                          [*suse]
       os_version:                       *all_versions
       hardware_type:                    *vm
-      storage_type:                     [*premium_storage]
+      storage_type:                     *premium_storage
       role:                             [*db_role]
       database_type:                    [*db2]
       high_availability_agent:          *fencing_agent
@@ -493,7 +495,7 @@ checks:
 
   - id:                                 "DB-Db2-0018"
     name:                               "Maximum shared memory segments"
-    description:                        "Maximum shared memory segments"
+    description:                        "Maximum shared memory segments should be at least 256 times the total physical memory in GB"
     category:                           *sap_check
     severity:                           *high
     workload:                           *sap
@@ -506,7 +508,7 @@ checks:
       database_type:                    [*db2]
     collector_type:                     *command
     collector_args:
-      command:                          "[ $((256 * $(free -g | grep Mem: | awk '{print $2}'))) -ge $(/sbin/sysctl kernel.shmmni -n) ] && echo OK || echo $(/sbin/sysctl kernel.shmmni -n)"
+      command:                          "shmmni=$(/sbin/sysctl kernel.shmmni -n); mem_gb=$(free -g | grep Mem: | awk '{print $2}'); min_required=$((256 * mem_gb)); [ $shmmni -ge $min_required ] && echo OK || echo \"kernel.shmmni=$shmmni (required: >= $min_required, memory: ${mem_gb}GB)\""
       user:                             *root
     validator_type:                     *string
     validator_args:
@@ -518,7 +520,7 @@ checks:
 
   - id:                                 "DB-Db2-0019"
     name:                               "Instance Memory size"
-    description:                        "Instance Memory size"
+    description:                        "Instance Memory size should be at least 64 GB"
     category:                           *sap_check
     severity:                           *high
     workload:                           *sap
@@ -526,12 +528,12 @@ checks:
       os_type:                          [*suse, *redhat]
       os_version:                       *all_versions
       hardware_type:                    *vm
-      storage_type:                     [*premium_storage]
+      storage_type:                     *premium_storage
       role:                             [*db_role]
       database_type:                    [*db2]
     collector_type:                     *command
     collector_args:
-      command:                          ". ~/sqllib/db2profile && output=$(db2pd -dbmcfg | grep INSTANCE_MEMORY | awk '{print $NF}'); [[ $output -le 100 ]] && echo $output || echo $(awk -v output=$output 'BEGIN {print output * 4096 / 1024 / 1024 / 1024}')"
+      command:                          ". ~/sqllib/db2profile && db2pd -dbmcfg | grep INSTANCE_MEMORY | awk \"{if(\\$NF<=100) print \\$NF; else print \\$NF*4096/1024/1024/1024}\""
       user:                             *db2sid
     validator_type:                     *range
     validator_args:
