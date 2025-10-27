@@ -934,7 +934,12 @@ class ConfigurationCheckModule(SapAutomationQA):
                 context["hostname"] = custom_hostname
 
             self.set_context(context)
-            if self.context.get("check_type", {}).get("file_name") in ["hana", "db2"]:
+            if self.context.get("check_type", {}).get("file_name") in [
+                "hana",
+                "db2",
+                "ascs",
+                "app",
+            ]:
                 temp_context = FileSystemCollector(parent=self).collect(
                     check=None, context=self.context
                 )

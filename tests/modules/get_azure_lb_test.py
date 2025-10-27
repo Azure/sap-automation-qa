@@ -246,9 +246,7 @@ class TestAzureLoadBalancer:
             def __init__(self):
                 self.name = "nested-lb"
                 self.location = "test"
-                self.frontend_ip_configurations = [
-                     {"private_ip_address": "10.0.0.5"}
-                ]
+                self.frontend_ip_configurations = [{"private_ip_address": "10.0.0.5"}]
                 self.load_balancing_rules = []
                 self.probes = []
 

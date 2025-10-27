@@ -243,10 +243,7 @@ class AzureLoadBalancer(SapAutomationQA):
             Extract private IP from frontend config, handling different key variations.
             Azure SDK might return different structures based on authentication context.
             """
-            private_ip = (
-                config.get("private_ip_address")
-                or config.get("privateIpAddress")
-            )
+            private_ip = config.get("private_ip_address") or config.get("privateIpAddress")
             return private_ip
 
         found_load_balancer = next(
