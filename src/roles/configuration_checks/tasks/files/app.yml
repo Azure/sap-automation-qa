@@ -79,6 +79,7 @@ enums:
   report:
     - check:                          &check "check"
     - section:                        &section "section"
+    - table:                          &table "table"
 
 # Checks for APP roles
 
