@@ -230,5 +230,4 @@
     - name:                             Debug AFS storage data collected
       when:                             afs_storage_metadata_results is defined
       ansible.builtin.debug:
-        verbosity:                      1
         var:                            afs_storage_metadata_results
