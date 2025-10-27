@@ -110,6 +110,48 @@ checks:
     report:                             *check
 
   - id:                                 "ASCS-0002"
+    name:                               "Filesystem Mount Points"
+    description:                        "Lists all mounted filesystems and their types to ensure SAP HANA directories are configured with supported filesystems."
+    category:                           *sap_check
+    severity:                           *info
+    workload:                           *sap
+    applicability:
+      os_type:                          [*suse, *redhat]
+      os_version:                       *all_versions
+      hardware_type:                    *vm
+      storage_type:                     *all_storage
+      role:                             [*db_role]
+      database_type:                    [*hana]
+    collector_type:                     *azure
+    collector_args:
+      resource_type:                    "filesystem"
+    report:                             *table
+    references:
+      sap:                              "2972496"
+      microsoft:                        "https://docs.microsoft.com/en-us/azure/virtual-machines/workloads/sap/hana-vm-operations-storage"
+
+  - id:                                 "ASCS-0003"
+    name:                               "Azure Disks"
+    description:                        "Lists all attached Azure disks to ensure SAP HANA directories are configured with supported disks."
+    category:                           *sap_check
+    severity:                           *info
+    workload:                           *sap
+    applicability:
+      os_type:                          [*suse, *redhat]
+      os_version:                       *all_versions
+      hardware_type:                    *vm
+      storage_type:                     *all_storage
+      role:                             [*db_role]
+      database_type:                    [*hana]
+    collector_type:                     *azure
+    collector_args:
+      resource_type:                    "azure_disks"
+    report:                             *table
+    references:
+      sap:                              "2972496"
+      microsoft:                        "https://docs.microsoft.com/en-us/azure/virtual-machines/workloads/sap/hana-vm-operations-storage"
+
+  - id:                                 "ASCS-0004"
     name:                               "LVM Groups"
     description:                        "Lists all LVM groups to ensure ASCS directories are configured with supported LVM configurations."
     category:                           *sap_check
@@ -129,7 +171,7 @@ checks:
       sap:                              "2972496"
       microsoft:                        "https://docs.microsoft.com/en-us/azure/virtual-machines/workloads/sap/hana-vm-operations-storage"
 
-  - id:                                 "ASCS-0003"
+  - id:                                 "ASCS-0005"
     name:                               "LVM Volumes"
     description:                        "Lists all LVM volumes to ensure ASCS directories are configured with supported LVM configurations."
     category:                           *sap_check
@@ -149,7 +191,7 @@ checks:
       sap:                              "2972496"
       microsoft:                        "https://docs.microsoft.com/en-us/azure/virtual-machines/workloads/sap/hana-vm-operations-storage"
 
-  - id:                                 "ASCS-0004"
+  - id:                                 "ASCS-0006"
     name:                               "ANF Volumes"
     description:                        "Lists all ANF volumes to ensure ASCS directories are configured with supported ANF configurations."
     category:                           *sap_check

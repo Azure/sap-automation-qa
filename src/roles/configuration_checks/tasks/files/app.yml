@@ -264,6 +264,47 @@ checks:
       other:                            "https://www.suse.com/support/kb/doc/?id=000019722"
 
   - id:                                 "APP-0008"
+    name:                               "Filesystem Mount Points"
+    description:                        "Lists all mounted filesystems and their types to ensure APP directories are configured with supported filesystems."
+    category:                           *sap_check
+    severity:                           *info
+    workload:                           *sap
+    applicability:
+      os_type:                          [*suse, *redhat]
+      os_version:                       *all_versions
+      hardware_type:                    *vm
+      storage_type:                     *all_storage
+      role:                             [*app_role, *pas]
+    collector_type:                     *azure
+    collector_args:
+      resource_type:                    "filesystem"
+    report:                             *table
+    references:
+      sap:                              "2972496"
+      microsoft:                        "https://docs.microsoft.com/en-us/azure/virtual-machines/workloads/sap/hana-vm-operations-storage"
+
+  - id:                                 "APP-0009"
+    name:                               "Azure Disks"
+    description:                        "Lists all attached Azure disks to ensure APP directories are configured with supported disks."
+    category:                           *sap_check
+    severity:                           *info
+    workload:                           *sap
+    applicability:
+      os_type:                          [*suse, *redhat]
+      os_version:                       *all_versions
+      hardware_type:                    *vm
+      storage_type:                     *all_storage
+      role:                             [*app_role, *pas]
+    collector_type:                     *azure
+    collector_args:
+      resource_type:                    "azure_disks"
+    report:                             *table
+    references:
+      sap:                              "2972496"
+      microsoft:                        "https://docs.microsoft.com/en-us/azure/virtual-machines/workloads/sap/hana-vm-operations-storage"
+
+
+  - id:                                 "APP-0010"
     name:                               "LVM Groups"
     description:                        "Lists all LVM groups to ensure APP server directories are configured with supported LVM configurations."
     category:                           *sap_check
@@ -283,7 +324,7 @@ checks:
       sap:                              "2972496"
       microsoft:                        "https://docs.microsoft.com/en-us/azure/virtual-machines/workloads/sap/hana-vm-operations-storage"
 
-  - id:                                 "APP-0009"
+  - id:                                 "APP-0011"
     name:                               "LVM Volumes"
     description:                        "Lists all LVM volumes to ensure APP server directories are configured with supported LVM configurations."
     category:                           *sap_check
@@ -303,7 +344,7 @@ checks:
       sap:                              "2972496"
       microsoft:                        "https://docs.microsoft.com/en-us/azure/virtual-machines/workloads/sap/hana-vm-operations-storage"
 
-  - id:                                 "APP-0010"
+  - id:                                 "APP-0012"
     name:                               "ANF Volumes"
     description:                        "Lists all ANF volumes to ensure APP server directories are configured with supported ANF configurations."
     category:                           *sap_check
