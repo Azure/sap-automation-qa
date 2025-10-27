@@ -15,11 +15,13 @@
       become:                          true
       ansible.builtin.pip:
         name:
-          - ansible-runner
+          - azure-identity
           - azure-kusto-data
           - azure-kusto-ingest
-          - azure-identity
+          - azure-mgmt-compute
           - azure-mgmt-network
+          - azure-storage-blob
+          - azure-storage-queue
           - pandas
 
 - hosts:                               "{{ sap_sid | upper }}_DB"
