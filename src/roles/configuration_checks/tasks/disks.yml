@@ -215,7 +215,7 @@
                                           fi
                                           rg=$(echo "$sa_info" | awk '{print $1}')
                                           sid=$(echo "$sa_info" | awk '{print $3}')
-                                          dns="$acc.file.core.windows.net"
+                                          dns="$acc.privatelink.file.core.windows.net"
                                           share_list=$(az storage share-rm list --resource-group "$rg" --storage-account "$acc" \
                                             --query "[?enabledProtocols=='NFS'].[name,accessTier,shareQuota]" -o tsv 2>&1)
                                           if [ $? -ne 0 ]; then
