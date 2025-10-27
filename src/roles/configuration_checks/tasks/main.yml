@@ -155,6 +155,7 @@
                                     - command_check_results.logs is defined
   ansible.builtin.debug:
     msg:                            "{{ command_check_results.logs }}"
+    verbosity:                      1
 
 - name:                             "{{ check_type.name }} - Execute Azure-based configuration checks"
   when:
@@ -188,6 +189,7 @@
                                     - azure_check_results.logs is defined
   ansible.builtin.debug:
     msg:                            "{{ azure_check_results.logs }}"
+    verbosity:                      1
 
 - name:                             "{{ check_type.name }} - Execute module-based configuration checks"
   when:
@@ -220,6 +222,7 @@
                                     - module_check_results.logs is defined
   ansible.builtin.debug:
     msg:                            "{{ module_check_results.logs }}"
+    verbosity:                      1
 
 - name:                             "{{ check_type.name }} - Merge check results with error handling"
   ansible.builtin.set_fact:

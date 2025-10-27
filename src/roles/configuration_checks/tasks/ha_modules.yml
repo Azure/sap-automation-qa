@@ -57,6 +57,7 @@
                                         - ha_scs_module_result.logs is defined
       ansible.builtin.debug:
         msg:                            "{{ ha_scs_module_result.logs }}"
+        verbosity:                      1
 
     - name:                             "Store HA SCS configuration result"
       when:                             >-
@@ -89,6 +90,7 @@
                                         - ha_loadbalancer_module_result.logs is defined
       ansible.builtin.debug:
         msg:                            "{{ ha_loadbalancer_module_result.logs }}"
+        verbosity:                      1
 
     - name:                             "Store HA Load Balancer configuration result"
       when:                             >-
