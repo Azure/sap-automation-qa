@@ -258,12 +258,12 @@
                                           'check_type': 'vm_info',
                                           'metadata': hostvars[item].vm_info_results_metadata
                                           | default({})}] }}"
-      loop:                           "{{ groups[sap_sid | upper + '_SCS']|default([]) +
+      loop:                           "{{ (groups[sap_sid | upper + '_SCS']|default([]) +
                                         groups[sap_sid | upper + '_ERS']|default([]) +
                                         groups[sap_sid | upper + '_DB']|default([]) +
                                         groups[sap_sid | upper + '_APP']|default([]) +
                                         groups[sap_sid | upper + '_WEB']|default([]) +
-                                        groups[sap_sid | upper + '_PAS']|default([]) }}"
+                                        groups[sap_sid | upper + '_PAS']|default([])) | unique }}"
       when:                             hostvars[item].vm_info_results is defined
 
     - name:                             "Collect package info check results"
@@ -275,12 +275,12 @@
                                           'check_type': 'package_info',
                                           'metadata': hostvars[item].package_info_results_metadata
                                           | default({})}] }}"
-      loop:                             "{{ groups[sap_sid | upper + '_SCS']|default([]) +
+      loop:                             "{{ (groups[sap_sid | upper + '_SCS']|default([]) +
                                           groups[sap_sid | upper + '_ERS']|default([]) +
                                           groups[sap_sid | upper + '_DB']|default([]) +
                                           groups[sap_sid | upper + '_APP']|default([]) +
                                           groups[sap_sid | upper + '_WEB']|default([]) +
-                                          groups[sap_sid | upper + '_PAS']|default([]) }}"
+                                          groups[sap_sid | upper + '_PAS']|default([])) | unique }}"
       when:                             hostvars[item].package_info_results is defined
 
     - name:                             "Collect common SAP check results"
@@ -292,12 +292,12 @@
                                           'check_type': 'common_sap',
                                           'metadata': hostvars[item].common_sap_results_metadata
                                           | default({})}] }}"
-      loop:                             "{{ groups[sap_sid | upper + '_SCS']|default([]) +
+      loop:                             "{{ (groups[sap_sid | upper + '_SCS']|default([]) +
                                           groups[sap_sid | upper + '_ERS']|default([]) +
                                           groups[sap_sid | upper + '_DB']|default([]) +
                                           groups[sap_sid | upper + '_APP']|default([]) +
                                           groups[sap_sid | upper + '_WEB']|default([]) +
-                                          groups[sap_sid | upper + '_PAS']|default([]) }}"
+                                          groups[sap_sid | upper + '_PAS']|default([])) | unique }}"
       when:                             hostvars[item].common_sap_results is defined
 
     - name:                             "Collect networking check results"
@@ -309,12 +309,12 @@
                                           'check_type': 'networking',
                                           'metadata': hostvars[item].networking_results_metadata
                                           | default({})}] }}"
-      loop:                             "{{ groups[sap_sid | upper + '_SCS']|default([]) +
+      loop:                             "{{ (groups[sap_sid | upper + '_SCS']|default([]) +
                                           groups[sap_sid | upper + '_ERS']|default([]) +
                                           groups[sap_sid | upper + '_DB']|default([]) +
                                           groups[sap_sid | upper + '_APP']|default([]) +
                                           groups[sap_sid | upper + '_WEB']|default([]) +
-                                          groups[sap_sid | upper + '_PAS']|default([]) }}"
+                                          groups[sap_sid | upper + '_PAS']|default([])) | unique }}"
       when:                             hostvars[item].networking_results is defined
 
     - name:                             "Collect DB (HANA) check results"
@@ -362,8 +362,8 @@
                                           'check_type': 'ascs_scs',
                                           'metadata': hostvars[item].ascs_scs_results_metadata
                                           | default({})}] }}"
-      loop:                             "{{ groups[sap_sid | upper + '_SCS']|default([]) +
-                                          groups[sap_sid | upper + '_ERS']|default([]) }}"
+      loop:                             "{{ (groups[sap_sid | upper + '_SCS']|default([]) +
+                                          groups[sap_sid | upper + '_ERS']|default([])) | unique }}"
       when:                             hostvars[item].ascs_scs_results is defined
 
     - name:                             "Collect SCS/ERS HA configuration check results"
@@ -375,8 +375,8 @@
                                           'check_type': 'scs_ha_config',
                                           'metadata': hostvars[item].scs_ha_config_results_metadata
                                           | default({})}] }}"
-      loop:                             "{{ groups[sap_sid | upper + '_SCS']|default([]) +
-                                          groups[sap_sid | upper + '_ERS']|default([]) }}"
+      loop:                             "{{ (groups[sap_sid | upper + '_SCS']|default([]) +
+                                          groups[sap_sid | upper + '_ERS']|default([])) | unique }}"
       when:                             hostvars[item].scs_ha_config_results is defined
 
     - name:                             "Collect Application Server check results"
@@ -388,9 +388,9 @@
                                           'check_type': 'app_server',
                                           'metadata': hostvars[item].app_server_results_metadata
                                           | default({})}] }}"
-      loop:                             "{{ groups[sap_sid | upper + '_APP']|default([]) +
+      loop:                             "{{ (groups[sap_sid | upper + '_APP']|default([]) +
                                           groups[sap_sid | upper + '_PAS']|default([]) +
-                                          groups[sap_sid | upper + '_WEB']|default([]) }}"
+                                          groups[sap_sid | upper + '_WEB']|default([])) | unique }}"
       when:                             hostvars[item].app_server_results is defined
 
     - name:                             "Debug execution metadata"
@@ -427,12 +427,12 @@
                                         if scs_high_availability
                                         | default(false) | bool
                                         else 'N/A' }}"
-          hostnames:                    "{{ groups[sap_sid | upper + '_SCS']|default([]) +
+          hostnames:                    "{{ (groups[sap_sid | upper + '_SCS']|default([]) +
                                           groups[sap_sid | upper + '_ERS']|default([]) +
                                           groups[sap_sid | upper + '_DB']|default([]) +
                                           groups[sap_sid | upper + '_APP']|default([]) +
                                           groups[sap_sid | upper + '_WEB']|default([]) +
-                                          groups[sap_sid | upper + '_PAS']|default([]) }}"
+                                          groups[sap_sid | upper + '_PAS']|default([])) | unique }}"
           passed_count:                 "{{ all_results | selectattr('status', 'equalto', 'PASSED') | list | length }}"
           error_count:                  "{{ all_results | selectattr('status', 'equalto', 'FAILED') | list | length }}"
           warning_count:                "{{ all_results | selectattr('status', 'equalto', 'WARNING') | list | length }}"
@@ -447,4 +447,4 @@
 
     - name:                             "Debug the file name of the report generated"
       ansible.builtin.debug:
-        msg:                            "Report file CONFIG_{{ sap_sid | upper }}_{{ platform | upper }} generated."
+        msg:                            "Report file CONFIG_{{ sap_sid | upper }}_{{ platform | upper }}_{{ test_group_invocation_id }} generated."

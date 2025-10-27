@@ -339,7 +339,11 @@ class AzureDataParser(Collector):
 
             fs_entry = None
             for fs in filesystem_data:
-                if fs.get("target") == mount_point:
+                if fs.get("target") in (
+                    mount_point,
+                    f"{mount_point}/{context.get('database_sid', '').upper()}",
+                    f"{mount_point}/{context.get('sap_sid', '').upper()}",
+                ):
                     fs_entry = fs
                     break
 
