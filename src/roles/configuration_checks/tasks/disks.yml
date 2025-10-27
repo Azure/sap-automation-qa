@@ -195,7 +195,7 @@
       when:
                                         - has_nfs_mounts | bool
                                         - NFS_provider is defined
-                                        - "'AFS' in NFS_provider"
+                                        - NFS_provider == "AFS"
                                         - afs_storage_accounts is defined
                                         - afs_storage_accounts | length > 0
       register:                         afs_storage_metadata_results
@@ -203,25 +203,27 @@
       ansible.builtin.shell:
         executable:                     /bin/bash
         cmd: |
+                                        #!/bin/bash
                                         set -o pipefail
-                                        for acc in {{ afs_storage_accounts | join(' ') }}; do
+                                        for acc in "${afs_storage_accounts[@]}"; do
                                           sa_info=$(az storage account show --name "$acc" --query "{rg:resourceGroup,name:name,id:id}" -o tsv)
+                                          if [ $? -ne 0 ] || [ -z "$sa_info" ]; then
+                                            echo "Error: Failed to retrieve storage account info for $acc" >&2
+                                            continue
+                                          fi
                                           rg=$(echo "$sa_info" | awk '{print $1}')
                                           sid=$(echo "$sa_info" | awk '{print $3}')
                                           dns="$acc.file.core.windows.net"
-                                          for sh in $(az storage share-rm list --resource-group "$rg" --storage-account "$acc" \
-                                            --query "[?enabledProtocols=='NFS'].[name,accessTier,quotaGiB]" -o tsv); do
-                                            name=$(echo "$sh" | awk '{print $1}')
-                                            tier=$(echo "$sh" | awk '{print $2}')
-                                            quota=$(echo "$sh" | awk '{print $3}')
-                                            peip=$(az network private-endpoint list \
-                                              --query "[?privateLinkServiceConnections[?privateLinkServiceId=='$sid']].customDnsConfigs[].ipAddresses[]" -o tsv)
-                                            for ip in $peip; do
-                                              thr=$((100 + ( (quota*4+99)/100 ) + ( (quota*6+99)/100 ) ))
-                                              iops=$((quota+3000))
-                                              if [ $iops -gt 100000 ]; then iops=100000; fi
-                                              echo "{\"Type\":\"AFS\",\"Name\":\"$name\",\"Pool\":\"$acc\",\"ServiceLevel\":\"$tier\",\"ThroughputMibps\":$thr,\"ProtocolTypes\":\"NFS4.1\",\"NFSAddressDNS\":\"$dns:/$acc/$name\",\"NFSAddress\":\"$ip:/$acc/$name\",\"QoSType\":\"Manual\",\"IOPS\":$iops,\"Id\":\"$sid\"}"
-                                            done
+                                          az storage share-rm list --resource-group "$rg" --storage-account "$acc" \
+                                            --query "[?enabledProtocols=='NFS'].[name,accessTier,shareQuota]" -o tsv | \
+                                          while IFS=$'\t' read -r name tier quota; do
+                                            if [ -z "$name" ]; then
+                                              continue
+                                            fi
+                                            thr=$((100 + ( (quota*4+99)/100 ) + ( (quota*6+99)/100 ) ))
+                                            iops=$((quota+3000))
+                                            if [ $iops -gt 100000 ]; then iops=100000; fi
+                                            echo "{\"Type\":\"AFS\",\"Name\":\"$name\",\"Pool\":\"$acc\",\"ServiceLevel\":\"$tier\",\"Quota\":\"$quota\",\"ThroughputMibps\":$thr,\"ProtocolTypes\":\"NFS4.1\",\"NFSAddressDNS\":\"$dns:/$acc/$name\",\"NFSAddress\":\"$dns:/$acc/$name\",\"QoSType\":\"Manual\",\"IOPS\":$iops,\"Id\":\"$sid\"}"
                                           done
                                         done
 

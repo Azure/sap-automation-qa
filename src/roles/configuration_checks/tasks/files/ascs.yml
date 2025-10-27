@@ -108,3 +108,62 @@ checks:
       expected_output:                  "0"
     report:                             *check
 
+  - id:                                 "ASCS-0002"
+    name:                               "LVM Groups"
+    description:                        "Lists all LVM groups to ensure ASCS directories are configured with supported LVM configurations."
+    category:                           *sap_check
+    severity:                           *info
+    workload:                           *sap
+    applicability:
+      os_type:                          [*suse, *redhat]
+      os_version:                       *all_versions
+      hardware_type:                    *vm
+      storage_type:                     *all_storage
+      role:                             [*ascs_role, *ers_role]
+    collector_type:                     *azure
+    collector_args:
+      resource_type:                    "lvm_groups"
+    report:                             *table
+    references:
+      sap:                              "2972496"
+      microsoft:                        "https://docs.microsoft.com/en-us/azure/virtual-machines/workloads/sap/hana-vm-operations-storage"
+
+  - id:                                 "ASCS-0003"
+    name:                               "LVM Volumes"
+    description:                        "Lists all LVM volumes to ensure ASCS directories are configured with supported LVM configurations."
+    category:                           *sap_check
+    severity:                           *info
+    workload:                           *sap
+    applicability:
+      os_type:                          [*suse, *redhat]
+      os_version:                       *all_versions
+      hardware_type:                    *vm
+      storage_type:                     *all_storage
+      role:                             [*ascs_role, *ers_role]
+    collector_type:                     *azure
+    collector_args:
+      resource_type:                    "lvm_volumes"
+    report:                             *table
+    references:
+      sap:                              "2972496"
+      microsoft:                        "https://docs.microsoft.com/en-us/azure/virtual-machines/workloads/sap/hana-vm-operations-storage"
+
+  - id:                                 "ASCS-0004"
+    name:                               "ANF Volumes"
+    description:                        "Lists all ANF volumes to ensure ASCS directories are configured with supported ANF configurations."
+    category:                           *sap_check
+    severity:                           *info
+    workload:                           *sap
+    applicability:
+      os_type:                          [*suse, *redhat]
+      os_version:                       *all_versions
+      hardware_type:                    *vm
+      storage_type:                     *all_storage
+      role:                             [*ascs_role, *ers_role]
+    collector_type:                     *azure
+    collector_args:
+      resource_type:                    "anf_volumes"
+    report:                             *table
+    references:
+      sap:                              "2972496"
+      microsoft:                        "https://docs.microsoft.com/en-us/azure/virtual-machines/workloads/sap/hana-vm-operations-storage"

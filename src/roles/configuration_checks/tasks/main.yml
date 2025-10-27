@@ -41,7 +41,7 @@
 
 - name:                             "{{ check_type.name }} - Include disks task when HANA or Db2 checks to be run"
   ansible.builtin.include_tasks:    disks.yml
-  when:                             check_type.file_name in ["hana", "db2"]
+  when:                             check_type.file_name in ["hana", "db2", "ascs", "app"]
 
 - name:                             "{{ check_type.name }} - Execute HA and Load Balancer module when high_availability checks to be run"
   ansible.builtin.include_tasks:    ha_modules.yml
