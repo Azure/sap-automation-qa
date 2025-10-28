@@ -112,9 +112,27 @@ class FileSystemCollector(Collector):
                         for nfs_share in afs_storage_data:
                             storage_account_name = nfs_share.get("Pool", "")
                             share_address = nfs_share.get("NFSAddress", "")
-                            if (
+                            ip_match = (
                                 ":" in share_address and share_address.split(":")[0] == nfs_address
-                            ) or storage_account_name in nfs_address:
+                            )
+                            fqdn_match = (
+                                storage_account_name and storage_account_name in nfs_address
+                            )
+                            ip_to_account_match = False
+                            try:
+                                ipaddress.ip_address(nfs_address)
+                            except Exception as ex:
+                                self.parent.log(
+                                    logging.DEBUG,
+                                    f"NFS address {nfs_address} is not a valid IP: {ex}",
+                                )
+                            if ":" in nfs_source and "/" in nfs_source:
+                                mount_path = nfs_source.split(":", 1)[1]
+                                ip_to_account_match = (
+                                    storage_account_name
+                                    and ("/" + storage_account_name + "/") in mount_path
+                                )
+                            if ip_match or fqdn_match or ip_to_account_match:
                                 filesystem_entry["max_mbps"] = nfs_share.get("ThroughputMibps", 0)
                                 filesystem_entry["max_iops"] = nfs_share.get("IOPS", 0)
                                 filesystem_entry["nfs_type"] = "AFS"
@@ -472,16 +490,43 @@ class FileSystemCollector(Collector):
                         if not matched:
                             for nfs_share in afs_storage_data:
                                 share_address = nfs_share.get("NFSAddress", "")
-                                if (
+                                storage_account_name = nfs_share.get("Pool", "")
+                                ip_match = (
                                     ":" in share_address
                                     and share_address.split(":")[0] == nfs_address
-                                ):
+                                )
+                                fqdn_match = (
+                                    storage_account_name and storage_account_name in nfs_address
+                                )
+                                ip_to_account_match = False
+                                try:
+                                    ipaddress.ip_address(nfs_address)
+                                    if ":" in source and "/" in source:
+                                        mount_path = source.split(":", 1)[1]
+                                        share_path = (
+                                            share_address.split(":", 1)[1]
+                                            if ":" in share_address
+                                            else ""
+                                        )
+                                        ip_to_account_match = (
+                                            storage_account_name
+                                            and ("/" + storage_account_name + "/") in mount_path
+                                        )
+                                except ValueError:
+                                    pass
+
+                                if ip_match or fqdn_match or ip_to_account_match:
                                     max_mbps = nfs_share.get("ThroughputMibps", 0)
                                     max_iops = nfs_share.get("IOPS", 0)
+                                    match_type = (
+                                        "IP"
+                                        if ip_match
+                                        else ("FQDN" if fqdn_match else "IP→Account")
+                                    )
                                     self.parent.log(
                                         logging.INFO,
                                         f"Correlated NFS {target} with "
-                                        + f"AFS: MBPS={max_mbps}, IOPS={max_iops}",
+                                        + f"AFS ({match_type}): MBPS={max_mbps}, IOPS={max_iops}, Account={storage_account_name}",
                                     )
                                     break
 
