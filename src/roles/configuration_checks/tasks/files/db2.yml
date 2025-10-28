@@ -129,7 +129,7 @@ checks:
     collector_type:                     *command
     collector_args:
       command:                          "echo $LANG"
-      user:                             *root
+      user:                             *db2sid
     validator_type:                     *string
     validator_args:
       expected_output:                  "en_US.UTF-8"
@@ -274,8 +274,8 @@ checks:
       sap:                              "2936683"
 
   - id:                                 "DB-Db2-0009"
-    name:                               "kernel.sem"
-    description:                        "kernel.sem - SAP minimum required values (actual values can be equal or higher)"
+    name:                               "kernel.sem (SEMMSL)"
+    description:                        "kernel.sem SEMMSL (first value) should be at least 250"
     category:                           *sap_check
     severity:                           *high
     workload:                           *sap
@@ -288,15 +288,86 @@ checks:
       database_type:                    [*db2]
     collector_type:                     *command
     collector_args:
-      command:                          "/sbin/sysctl kernel.sem -n"
+      command:                          "semmsl=$(/sbin/sysctl kernel.sem -n | awk '{print $1}'); [ $semmsl -ge 250 ] && echo OK || echo \"SEMMSL=$semmsl (required: >= 250)\""
       user:                             *root
-    validator_type:                     "min_list"
+    validator_type:                     *string
     validator_args:
-      min_values:                       ["32000", "1024000000", "500", "32000"]
-      separator:                        " "
+      expected_output:                  "OK"
     report:                             *check
     references:
-      sap:                              "2936683"
+      other:                            "https://www.ibm.com/docs/en/db2/11.1?topic=unix-kernel-parameter-requirements-linux"
+
+  - id:                                 "DB-Db2-0009a"
+    name:                               "kernel.sem (SEMMNS)"
+    description:                        "kernel.sem SEMMNS (second value) should be at least SEMMNI or 256000, whichever is greater"
+    category:                           *sap_check
+    severity:                           *high
+    workload:                           *sap
+    applicability:
+      os_type:                          [*suse, *redhat]
+      os_version:                       *all_versions
+      hardware_type:                    *vm
+      storage_type:                     *all_storage
+      role:                             *all_role
+      database_type:                    [*db2]
+    collector_type:                     *command
+    collector_args:
+      command:                          "sem_values=$(/sbin/sysctl kernel.sem -n); semmns=$(echo $sem_values | awk '{print $2}'); semmni=$(echo $sem_values | awk '{print $4}'); min_required=$([ $semmni -gt 256000 ] && echo $semmni || echo 256000); [ $semmns -ge $min_required ] && echo OK || echo \"SEMMNS=$semmns (required: >= $min_required [max of SEMMNI=$semmni or 256000])\""
+      user:                             *root
+    validator_type:                     *string
+    validator_args:
+      expected_output:                  "OK"
+    report:                             *check
+    references:
+      other:                            "https://www.ibm.com/docs/en/db2/11.1?topic=unix-kernel-parameter-requirements-linux"
+
+  - id:                                 "DB-Db2-0009b"
+    name:                               "kernel.sem (SEMOPM)"
+    description:                        "kernel.sem SEMOPM (third value) should be at least 32"
+    category:                           *sap_check
+    severity:                           *high
+    workload:                           *sap
+    applicability:
+      os_type:                          [*suse, *redhat]
+      os_version:                       *all_versions
+      hardware_type:                    *vm
+      storage_type:                     *all_storage
+      role:                             *all_role
+      database_type:                    [*db2]
+    collector_type:                     *command
+    collector_args:
+      command:                          "semopm=$(/sbin/sysctl kernel.sem -n | awk '{print $3}'); [ $semopm -ge 32 ] && echo OK || echo \"SEMOPM=$semopm (required: >= 32)\""
+      user:                             *root
+    validator_type:                     *string
+    validator_args:
+      expected_output:                  "OK"
+    report:                             *check
+    references:
+      other:                            "https://www.ibm.com/docs/en/db2/11.1?topic=unix-kernel-parameter-requirements-linux"
+
+  - id:                                 "DB-Db2-0009c"
+    name:                               "kernel.sem (SEMMNI)"
+    description:                        "kernel.sem SEMMNI (fourth value) should be at least 256 times the total physical memory in GB"
+    category:                           *sap_check
+    severity:                           *high
+    workload:                           *sap
+    applicability:
+      os_type:                          [*suse, *redhat]
+      os_version:                       *all_versions
+      hardware_type:                    *vm
+      storage_type:                     *all_storage
+      role:                             *all_role
+      database_type:                    [*db2]
+    collector_type:                     *command
+    collector_args:
+      command:                          "semmni=$(/sbin/sysctl kernel.sem -n | awk '{print $4}'); mem_gb=$(free -g | grep Mem: | awk '{print $2}'); min_required=$((256 * mem_gb)); [ $semmni -ge $min_required ] && echo OK || echo \"SEMMNI=$semmni (required: >= $min_required [256 * ${mem_gb}GB RAM])\""
+      user:                             *root
+    validator_type:                     *string
+    validator_args:
+      expected_output:                  "OK"
+    report:                             *check
+    references:
+      other:                            "https://www.ibm.com/docs/en/db2/11.1?topic=unix-kernel-parameter-requirements-linux"
 
   - id:                                 "DB-Db2-0010"
     name:                               "Kernel out of process"
@@ -320,7 +391,7 @@ checks:
       expected_output:                  "5"
     report:                             *check
     references:
-      microsoft:                        "https://www.ibm.com/docs/en/db2/11.1?topic=unix-kernel-parameter-requirements-linux"
+      other:                            "https://www.ibm.com/docs/en/db2/11.1?topic=unix-kernel-parameter-requirements-linux"
 
   - id:                                 "DB-Db2-0011"
     name:                               "Max File Handles"
@@ -339,12 +410,12 @@ checks:
     collector_args:
       command:                          "/sbin/sysctl fs.file-max -n"
       user:                             *root
-    validator_type:                     *string
+    validator_type:                     *range
     validator_args:
-      expected_output:                  "16384"
+      min:                              16384
     report:                             *check
     references:
-      microsoft:                        "https://www.ibm.com/docs/en/db2/11.1?topic=unix-kernel-parameter-requirements-linux"
+      other:                            "https://www.ibm.com/docs/en/db2/11.1?topic=unix-kernel-parameter-requirements-linux"
 
   - id:                                 "DB-Db2-0012"
     name:                               "Transparent Huge Pages"
@@ -369,7 +440,7 @@ checks:
     report:                             *check
     references:
       sap:                              "2391706"
-      microsoft:                        "https://www.ibm.com/docs/en/db2/11.1?topic=unix-kernel-parameter-requirements-linux"
+      other:                            "https://www.ibm.com/docs/en/db2/11.1?topic=unix-kernel-parameter-requirements-linux"
 
   - id:                                 "DB-Db2-0013"
     name:                               "HADR TIMEOUT"
@@ -515,7 +586,7 @@ checks:
       expected_output:                  "OK"
     report:                             *check
     references:
-      microsoft:                        "https://www.ibm.com/docs/en/db2/11.1?topic=unix-kernel-parameter-requirements-linux"
+      other:                            "https://www.ibm.com/docs/en/db2/11.1?topic=unix-kernel-parameter-requirements-linux"
       sap:                              "2751102"
 
   - id:                                 "DB-Db2-0019"
