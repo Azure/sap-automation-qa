@@ -50,6 +50,7 @@
                                     - role in ['SCS', 'ERS', 'DB']
 
 - name:                             "{{ check_type.name }} - Prepare system context information"
+  no_log:                           true
   ansible.builtin.set_fact:
     system_context:
       check_type:                   "{{ check_type }}"
@@ -97,7 +98,7 @@
 - name:                             "{{ check_type.name }} - Debug system context prepared"
   ansible.builtin.debug:
     var:                            system_context | default({})
-    verbosity:                      1
+    verbosity:                      2
 
 - name:                             Load checks file for {{ check_type.name }} from {{ check_type.file_name }}.yml
   no_log:                           true
@@ -131,6 +132,7 @@
   block:
     - name:                         "{{ check_type.name }} - Run command-based configuration checks"
       become:                       true
+      no_log:                       true
       configuration_check_module:
         check_file_content:         "{{ command_checks_yaml }}"
         context:                    "{{ system_context }}"
@@ -164,6 +166,7 @@
   block:
     - name:                         Run Azure-based configuration checks
       become:                       true
+      no_log:                       true
       delegate_to:                  localhost
       configuration_check_module:
         check_file_content:         "{{ azure_checks_yaml }}"
@@ -198,6 +201,7 @@
   block:
     - name:                         Run module-based configuration checks
       become:                       true
+      no_log:                           true
       configuration_check_module:
         check_file_content:         "{{ module_checks_yaml }}"
         context:                    "{{ system_context }}"
@@ -244,6 +248,7 @@
       execution_errors:             "{{ execution_errors | default([]) }}"
 
 - name:                             "{{ check_type.name }} - Set dynamic result variable with metadata"
+  no_log:                           true
   ansible.builtin.set_fact:
     "{{ check_type.results_var }}": "{{ combined_results }}"
     "{{ check_type.results_var }}_metadata": "{{ execution_summary }}"

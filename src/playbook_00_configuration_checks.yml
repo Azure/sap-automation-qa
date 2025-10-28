@@ -441,6 +441,7 @@
 
     - name:                            "Render HTML report for configuration checks"
       ansible.builtin.include_tasks:   "./roles/misc/tasks/render-html-report.yml"
+      no_log:                           true
       vars:
         html_template_name:            "./templates/config_checks_report.html"
         report_file_name:              "CONFIG_{{ sap_sid | upper }}_{{ platform | upper }}"
