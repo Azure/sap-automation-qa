@@ -174,7 +174,7 @@ checks:
       database_type:                    [*db2]
     collector_type:                     *command
     collector_args:
-      command:                          "[ $(/sbin/sysctl vm.max_map_count -n) -eq $(($(free -b | grep Mem: | awk '{print $2}') / 4096)) ] && echo OK || echo $(/sbin/sysctl vm.max_map_count -n)"
+      command:                          "max_map_count=$(/sbin/sysctl vm.max_map_count -n); mem_bytes=$(free -b | grep Mem: | awk '{print $2}'); required=$((mem_bytes / 4096)); [ $max_map_count -eq $required ] && echo OK || echo \"vm.max_map_count=$max_map_count (required: $required [MemTotal/4096])\""
       user:                             *root
     validator_type:                     *string
     validator_args:
@@ -386,9 +386,9 @@ checks:
     collector_args:
       command:                          "/sbin/sysctl kernel.panic_on_oops -n"
       user:                             *root
-    validator_type:                     *string
+    validator_type:                     *list
     validator_args:
-      expected_output:                  "5"
+      valid_list:                       ["0", "1", "2"]
     report:                             *check
     references:
       other:                            "https://www.ibm.com/docs/en/db2/11.1?topic=unix-kernel-parameter-requirements-linux"
