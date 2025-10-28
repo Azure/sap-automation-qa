@@ -115,9 +115,7 @@ class FileSystemCollector(Collector):
                             ip_match = (
                                 ":" in share_address and share_address.split(":")[0] == nfs_address
                             )
-                            fqdn_match = (
-                                storage_account_name and storage_account_name in nfs_source
-                            )
+                            fqdn_match = storage_account_name and storage_account_name in nfs_source
                             ip_to_account_match = False
                             try:
                                 ipaddress.ip_address(nfs_address)
@@ -495,19 +493,12 @@ class FileSystemCollector(Collector):
                                     ":" in share_address
                                     and share_address.split(":")[0] == nfs_address
                                 )
-                                fqdn_match = (
-                                    storage_account_name and storage_account_name in source
-                                )
+                                fqdn_match = storage_account_name and storage_account_name in source
                                 ip_to_account_match = False
                                 try:
                                     ipaddress.ip_address(nfs_address)
                                     if ":" in source and "/" in source:
                                         mount_path = source.split(":", 1)[1]
-                                        share_path = (
-                                            share_address.split(":", 1)[1]
-                                            if ":" in share_address
-                                            else ""
-                                        )
                                         ip_to_account_match = (
                                             storage_account_name
                                             and ("/" + storage_account_name + "/") in mount_path
