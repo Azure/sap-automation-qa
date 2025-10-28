@@ -137,13 +137,11 @@
                                         {% for ip in nfs_ip_addresses %}
                                         response=$(curl -s --connect-timeout 5 --max-time 10 http://{{ ip }}/ 2>&1 || true)
                                         if echo "$response" | grep -q "windows.net"; then
-                                          # This is AFS - extract storage account name from the response
                                           storage_account=$(echo "$response" | grep -oP '[a-z0-9]+\.file\.core\.windows\.net' | head -1 | cut -d'.' -f1)
                                           if [ -n "$storage_account" ]; then
                                             echo "AFS:{{ ip }}:$storage_account"
                                           fi
                                         else
-                                          # This is ANF
                                           echo "ANF:{{ ip }}"
                                         fi
                                         {% endfor %}
