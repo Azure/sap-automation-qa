@@ -110,7 +110,7 @@
     - name:                             Check for ANF usage in mount_info, looking for IP addresses
       when:                             has_nfs_mounts | bool
       ansible.builtin.set_fact:
-        anf_ip_addresses:               "{{ mount_info.stdout_lines
+        nfs_ip_addresses:               "{{ mount_info.stdout_lines
                                           | map('split', ' ')
                                           | map('list')
                                           | selectattr('1', 'defined')
@@ -119,15 +119,66 @@
                                           | map('regex_replace', '^((\\d{1,3}\\.){3}\\d{1,3}):.*', '\\1')
                                           | list
                                           | unique }}"
-    - name:                             Debug ANF IP addresses found
-      when:                             anf_ip_addresses is defined
+
+    - name:                             Debug all nfs IP addresses found
+      when:                             nfs_ip_addresses is defined
       ansible.builtin.debug:
-        var:                            anf_ip_addresses
+        var:                            nfs_ip_addresses
+
+    - name:                             Identify AFS vs ANF for NFS IP addresses
+      when:
+                                        - has_nfs_mounts | bool
+                                        - nfs_ip_addresses is defined
+                                        - nfs_ip_addresses | length > 0
+      ansible.builtin.shell:
+        executable:                     /bin/bash
+        cmd: |
+                                        set -o pipefail
+                                        {% for ip in nfs_ip_addresses %}
+                                        response=$(curl -s --connect-timeout 5 --max-time 10 http://{{ ip }}/ 2>&1 || true)
+                                        if echo "$response" | grep -q "windows.net"; then
+                                          # This is AFS - extract storage account name from the response
+                                          storage_account=$(echo "$response" | grep -oP '[a-z0-9]+\.file\.core\.windows\.net' | head -1 | cut -d'.' -f1)
+                                          if [ -n "$storage_account" ]; then
+                                            echo "AFS:{{ ip }}:$storage_account"
+                                          fi
+                                        else
+                                          # This is ANF
+                                          echo "ANF:{{ ip }}"
+                                        fi
+                                        {% endfor %}
+      register:                         nfs_ip_classification
+      changed_when:                     false
+      failed_when:                      false
+
+    - name:                             Parse AFS storage accounts from IP classification
+      when:
+                                        - nfs_ip_classification is defined
+                                        - nfs_ip_classification.stdout_lines is defined
+      ansible.builtin.set_fact:
+        afs_storage_accounts_from_ips:  "{{ nfs_ip_classification.stdout_lines
+                                          | select('match', '^AFS:')
+                                          | map('split', ':')
+                                          | map(attribute='2')
+                                          | list
+                                          | unique }}"
+
+    - name:                             Parse ANF IP addresses from classification
+      when:
+                                        - nfs_ip_classification is defined
+                                        - nfs_ip_classification.stdout_lines is defined
+      ansible.builtin.set_fact:
+        anf_ip_addresses:               "{{ nfs_ip_classification.stdout_lines
+                                          | select('match', '^ANF:')
+                                          | map('split', ':')
+                                          | map(attribute='1')
+                                          | list
+                                          | unique }}"
 
     - name:                             Check for AFS usage in mount_info, looking for storage account names
       when:                             has_nfs_mounts | bool
       ansible.builtin.set_fact:
-        afs_storage_accounts:           "{{ mount_info.stdout_lines
+        afs_storage_accounts_from_fqdn: "{{ mount_info.stdout_lines
                                           | map('split', ' ')
                                           | map(attribute='1')
                                           | select('search', '\\.file\\.core\\.windows\\.net:/')
@@ -135,18 +186,27 @@
                                           | list
                                           | unique }}"
 
+    - name:                             Combine AFS storage accounts from both sources
+      when:                             has_nfs_mounts | bool
+      ansible.builtin.set_fact:
+        afs_storage_accounts:           "{{ (afs_storage_accounts_from_fqdn | default([]) + afs_storage_accounts_from_ips | default([])) | unique }}"
+
     - name:                             Debug AFS storage account names found
       when:                             afs_storage_accounts is defined
       ansible.builtin.debug:
         var:                            afs_storage_accounts
 
+    - name:                             Debug ANF IP addresses found
+      when:                             anf_ip_addresses is defined
+      ansible.builtin.debug:
+        var:                            anf_ip_addresses
+
     - name:                             Collect ANF storage data if NFS is used
       when:
                                         - has_nfs_mounts | bool
-                                        - NFS_provider is defined
-                                        - "'ANF' in NFS_provider"
                                         - ANF_account_rg is defined
                                         - ANF_account_name is defined
+                                        - anf_ip_addresses is defined
       register:                         anf_storage_metadata_results
       delegate_to:                      localhost
       ansible.builtin.shell:
@@ -194,8 +254,6 @@
     - name:                             Collect AFS storage data if NFS is used
       when:
                                         - has_nfs_mounts | bool
-                                        - NFS_provider is defined
-                                        - NFS_provider == "AFS"
                                         - afs_storage_accounts is defined
                                         - afs_storage_accounts | length > 0
       register:                         afs_storage_metadata_results

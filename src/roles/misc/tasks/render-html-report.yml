@@ -10,6 +10,7 @@
   delegate_to:                          localhost
   block:
     - name:                             "Load HTML jinja2 template"
+      no_log:                           true
       ansible.builtin.set_fact:
         html_report_template:           "{{ lookup('file', html_template_name | default('./templates/report.html')) }}"
 

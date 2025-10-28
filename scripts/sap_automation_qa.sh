@@ -102,7 +102,7 @@ Examples:
   # Configuration Checks (requires TEST_TYPE: ConfigurationChecks in vars.yaml)
   $0 --extra-vars='{"configuration_test_type":"all"}'
   $0 --extra-vars='{"configuration_test_type":"high_availability"}'
-  $0 --extra-vars='{"configuration_test_type":"Database"}' -vv
+  $0 --extra-vars='{"configuration_test_type":"Database"}' -v
 
 Available Test Cases for groups:
 	$0 --test_groups=HA_DB_HANA
