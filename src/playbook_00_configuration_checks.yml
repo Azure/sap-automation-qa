@@ -76,6 +76,7 @@
         msg:                            "Host {{ inventory_hostname }} assigned role: {{ role }} from groups: {{ group_names }}"
 
     - name:                             "Load supported VM information"
+      no_log:                           true
       ansible.builtin.include_vars:
         file:                           "./roles/configuration_checks/vars/vm-support.yml"
         name:                           vm_support
