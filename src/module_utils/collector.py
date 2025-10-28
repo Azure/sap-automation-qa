@@ -109,6 +109,11 @@ class CommandCollector(Collector):
             user = check.collector_args.get("user", "")
             if not command:
                 return "ERROR: No command specified"
+            if user:
+                if not re.match(r"^[a-zA-Z0-9_-]+$", user):
+                    self.parent.log(logging.ERROR, f"Invalid user parameter detected: {user}")
+                    return "ERROR: Invalid user parameter"
+
             try:
                 command = self.sanitize_command(command)
             except ValueError as e:
