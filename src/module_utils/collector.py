@@ -9,7 +9,6 @@ from abc import ABC, abstractmethod
 import logging
 import re
 import shlex
-import ipaddress
 from typing import Any
 
 try:

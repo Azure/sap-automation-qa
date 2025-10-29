@@ -5,11 +5,10 @@
 Unit tests for the collector module.
 """
 
+import pytest
 import json
 from typing import Any, Dict
-from unittest.mock import Mock
 
-import pytest
 
 from src.module_utils.collector import (
     AzureDataParser,

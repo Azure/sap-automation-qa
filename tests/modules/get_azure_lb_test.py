@@ -115,8 +115,6 @@ class TestAzureLoadBalancer:
         :type azure_lb: AzureLoadBalancer
         """
         azure_lb.get_load_balancers_details()
-        print(f"\n\nResult: {azure_lb.result}")
-        print(f"Parameters: {azure_lb.result['details']['parameters']}")
         assert azure_lb.result["status"] == "PASSED"
         assert azure_lb.result["details"]["parameters"] is not None
 

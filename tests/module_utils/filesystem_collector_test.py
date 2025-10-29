@@ -9,13 +9,8 @@ LVM volume parsing, Azure disk correlation, and NFS storage (ANF/AFS) integratio
 Tests use pytest with monkeypatch for mocking, avoiding unittest entirely.
 """
 
-import json
-import logging
-from typing import Any, Dict, List
-from unittest.mock import Mock
-
 import pytest
-
+from typing import Any, Dict
 from src.module_utils.filesystem_collector import FileSystemCollector
 
 
@@ -768,7 +763,7 @@ class TestCollectMethod:
             "mount_info": "/data /dev/sdc xfs rw",
             "df_info": "Filesystem 1K-blocks Used Available Use% Mounted\n/dev/sdc 524288000 52428800 471859200 10% /data",
         }
-        result = collector.collect(MockCheck(), context)
+        collector.collect(MockCheck(), context)
         assert any(
             "lvm_fullreport is empty or invalid" in log["message"] for log in mock_parent.logs
         )

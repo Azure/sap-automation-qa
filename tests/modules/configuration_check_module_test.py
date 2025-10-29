@@ -10,10 +10,9 @@ Tests use pytest with monkeypatch for mocking, avoiding unittest entirely.
 """
 
 import json
-import logging
 from datetime import datetime
 from typing import Any, Dict, Optional
-from unittest.mock import Mock, MagicMock, patch
+from unittest.mock import Mock, patch
 
 import pytest
 
@@ -698,7 +697,6 @@ class TestGetResultsSummary:
 
     def test_get_results_summary_with_results(self, config_module, sample_check):
         """Test summary with mixed results"""
-        # Create mock result objects with status as string values for summary
         result1 = Mock()
         result1.status = TestStatus.SUCCESS.value
         result1.check = sample_check

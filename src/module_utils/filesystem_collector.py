@@ -5,11 +5,7 @@
 Collectors for data collection in SAP Automation QA
 """
 import json
-from abc import ABC, abstractmethod
 import logging
-import re
-import shlex
-import ipaddress
 from typing import Any
 
 try:
@@ -434,14 +430,12 @@ class FileSystemCollector(Collector):
                 fstype = fs.get("fstype", "")
                 stripe_size = fs.get("stripe_size", "")
                 stripes = ""
-                lv_size = ""
 
                 if not stripe_size and vg_name and source:
                     for lv_name, lv_info in lvm_volumes.items():
                         if lv_info.get("dm_path") == source:
                             stripe_size = lv_info.get("stripe_size", "")
                             stripes = lv_info.get("stripes", "")
-                            lv_size = lv_info.get("size", "")
                             self.parent.log(
                                 logging.INFO,
                                 f"Found LVM details for {target}: "

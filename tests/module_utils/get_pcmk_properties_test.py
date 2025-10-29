@@ -490,7 +490,5 @@ class TestBaseHAClusterValidator:
             "meta_attributes": {},
         }
         validator.RESOURCE_CATEGORIES["optional_resource"] = ".//primitive[@type='NonExistent']"
-
-        initial_message = validator.result["message"]
         validator._check_required_resources()
         assert "Required resource 'optional_resource'" not in validator.result["message"]
