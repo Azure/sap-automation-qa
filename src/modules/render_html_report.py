@@ -53,6 +53,11 @@ options:
             - Reports will be created in {workspace_directory}/quality_assurance/
         type: str
         required: true
+    framework_version:
+        description:
+            - Version of the SAP Automation QA framework
+        type: str
+        required: false
 author:
     - Microsoft Corporation
 notes:
@@ -71,6 +76,7 @@ EXAMPLES = r"""
     test_group_name: "hana_cluster_validation"
     report_template: "{{ lookup('file', 'templates/report_template.html') }}"
     workspace_directory: "/var/log/sap-automation-qa"
+    framework_version: "1.0.0"
   register: report_result
 
 - name: Show path to generated report
@@ -115,6 +121,7 @@ class HTMLReportRenderer(SapAutomationQA):
         workspace_directory: str,
         test_case_results: List[Dict[str, Any]] = [],
         system_info: Dict[str, Any] = {},
+        framework_version: str = "unknown",
     ):
         super().__init__()
         self.test_group_invocation_id = test_group_invocation_id
@@ -128,6 +135,7 @@ class HTMLReportRenderer(SapAutomationQA):
         )
         self.test_case_results = test_case_results or []
         self.system_info = system_info or {}
+        self.framework_version = framework_version
 
     def read_log_file(self) -> List[Dict[str, Any]]:
         """
@@ -184,6 +192,7 @@ class HTMLReportRenderer(SapAutomationQA):
                                 "%m/%d/%Y, %I:%M:%S %p"
                             ),
                             "system_info": self.system_info,
+                            "framework_version": self.framework_version,
                         }
                     )
                 )
@@ -205,6 +214,7 @@ def run_module() -> None:
         workspace_directory=dict(type="str", required=True),
         test_case_results=dict(type="list", required=False),
         system_info=dict(type="dict", required=False),
+        framework_version=dict(type="str", required=False),
     )
 
     module = AnsibleModule(argument_spec=module_args, supports_check_mode=True)
@@ -216,6 +226,7 @@ def run_module() -> None:
         workspace_directory=module.params["workspace_directory"],
         test_case_results=module.params.get("test_case_results", []),
         system_info=module.params.get("system_info", {}),
+        framework_version=module.params.get("framework_version", "unknown"),
     )
 
     test_case_results = (

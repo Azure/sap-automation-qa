@@ -14,6 +14,11 @@
       ansible.builtin.set_fact:
         html_report_template:           "{{ lookup('file', html_template_name | default('./templates/report.html')) }}"
 
+    - name:                             "Get framework version"
+      no_log:                           true
+      ansible.builtin.set_fact:
+        framework_version:              "{{ lookup('file', '../../../../VERSION') | default('unknown') }}"
+
     - name:                             "Read the log file and create a HTML report"
       render_html_report:
         test_group_invocation_id:       "{{ test_group_invocation_id }}"
@@ -22,4 +27,5 @@
         workspace_directory:            "{{ _workspace_directory }}"
         test_case_results:              "{{ all_results | default([]) }}"
         system_info:                    "{{ system_info | default({}) }}"
+        framework_version:              "{{ framework_version | default('unknown') }}"
       register:                         report_file_path

@@ -27,6 +27,7 @@ class TestHTMLReportRenderer:
             "test_group_name": "test_group",
             "report_template": "report_template.html",
             "workspace_directory": "/tmp",
+            "framework_version": "1.0.0",
         }
 
     @pytest.fixture
@@ -44,6 +45,7 @@ class TestHTMLReportRenderer:
             module_params["test_group_name"],
             module_params["report_template"],
             module_params["workspace_directory"],
+            module_params["framework_version"],
         )
 
     def test_render_report(self, mocker, html_report_renderer):
@@ -115,6 +117,7 @@ class TestHTMLReportRenderer:
                     "test_group_name": "test_group",
                     "report_template": "report_template.html",
                     "workspace_directory": "/tmp",
+                    "framework_version": "1.0.0",
                 }
                 self.check_mode = False
 
