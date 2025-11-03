@@ -1289,7 +1289,7 @@ checks:
 
   - id:                                 "DB-HANA-0050"
     name:                               "Disk performance for /hana/data (MBPS)"
-    description:                        "The disk performance for /hana/data should be >= 64 MByte/s"
+    description:                        "The disk performance for /hana/data should be >= 400 MByte/s"
     category:                           *sap_check
     severity:                           *high
     workload:                           *sap
@@ -1307,7 +1307,7 @@ checks:
       mount_point:                      "/hana/data"
     validator_type:                     *range
     validator_args:
-      min:                              "64"
+      min:                              "400"
     report:                             *check
     references:
       sap:                              "2972496"
@@ -1315,7 +1315,7 @@ checks:
 
   - id:                                 "DB-HANA-0051"
     name:                               "Disk performance for /hana/log (MBPS)"
-    description:                        "The disk performance for /hana/log should be >= 64 MByte/s"
+    description:                        "The disk performance for /hana/log should be >= 250 MByte/s"
     category:                           *sap_check
     severity:                           *high
     workload:                           *sap
@@ -1333,7 +1333,7 @@ checks:
       mount_point:                      "/hana/log"
     validator_type:                     *range
     validator_args:
-      min:                              "64"
+      min:                              "250"
     report:                             *check
     references:
       sap:                              "2972496"
