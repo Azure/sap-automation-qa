@@ -4,6 +4,7 @@
 """
 Collectors for data collection in SAP Automation QA
 """
+import ipaddress
 import json
 import logging
 from typing import Any

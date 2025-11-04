@@ -68,7 +68,10 @@ You first need to make sure that you are logged into Azure CLI on the management
 az login --identity
 
 # Login to Azure using User Assigned Managed Identity
-az login --identity -u <client-id-of-user-assigned-managed-identity>
+# When using management server with SLES or Ubuntu OS
+az login --identity -client-id <client-id-of-user-assigned-managed-identity>
+# When using management server with RHEL OS
+az login --identity --username <client-id-of-user-assigned-managed-identity>
 
 # Set the desired subscription context
 az account set --subscription <subscription-id>
