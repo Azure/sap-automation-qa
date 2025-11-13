@@ -15,7 +15,7 @@ ansible-lint==25.9.2
     # via -r requirements.in
 ansible-runner==2.4.2
     # via -r requirements.in
-astroid==4.0.1
+astroid==4.0.2
     # via pylint
 attrs==25.4.0
     # via
@@ -189,7 +189,7 @@ pyjwt[crypto]==2.10.1
     # via
     #   msal
     #   pyjwt
-pylint==4.0.2
+pylint==4.0.3
     # via -r requirements.in
 pytest==8.4.2
     # via
