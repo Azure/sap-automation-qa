@@ -36,7 +36,7 @@ jobs:
         output: report-fs.sarif
 
     - name: Upload Trivy report (fs) GitHub Security
-      uses: github/codeql-action/upload-sarif@07bb2b932c90fc1ec97637495e4072a0966fa74c # v3.28.20
+      uses: github/codeql-action/upload-sarif@014f16e7ab1402f30e7c3329d33797e7948572db # v4.31.3
       with:
         sarif_file: report-fs.sarif
         category: 'fs'
