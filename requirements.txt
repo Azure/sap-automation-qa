@@ -33,7 +33,7 @@ azure-identity==1.25.1
     # via
     #   -r requirements.in
     #   azure-kusto-data
-azure-kusto-data==5.0.5
+azure-kusto-data==6.0.0
     # via
     #   -r requirements.in
     #   azure-kusto-ingest
@@ -47,11 +47,11 @@ azure-mgmt-core==1.6.0
     #   azure-mgmt-network
 azure-mgmt-network==30.0.0
     # via -r requirements.in
-azure-storage-blob==12.23.0
+azure-storage-blob==12.26.0
     # via
     #   -r requirements.in
     #   azure-kusto-ingest
-azure-storage-queue==12.12.0
+azure-storage-queue==12.13.0
     # via
     #   -r requirements.in
     #   azure-kusto-ingest
