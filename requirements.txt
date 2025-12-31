@@ -33,7 +33,7 @@ azure-identity==1.25.1
     # via
     #   -r requirements.in
     #   azure-kusto-data
-azure-kusto-data==6.0.0
+azure-kusto-data==6.0.1
     # via
     #   -r requirements.in
     #   azure-kusto-ingest
