@@ -37,7 +37,7 @@ azure-kusto-data==6.0.0
     # via
     #   -r requirements.in
     #   azure-kusto-ingest
-azure-kusto-ingest==6.0.0
+azure-kusto-ingest==6.0.1
     # via -r requirements.in
 azure-mgmt-compute==37.1.0
     # via -r requirements.in
