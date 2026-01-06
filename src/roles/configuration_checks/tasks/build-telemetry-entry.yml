@@ -1,0 +1,64 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+
+# /*---------------------------------------------------------------------------8
+# |     Build telemetry entry for a single check (with or without params)     |
+# +------------------------------------4--------------------------------------*/
+
+- name:                             "Add check-level entry (no parameters)"
+  no_log:                           true
+  when:                             "not (check_result.details is defined and check_result.details is not none and check_result.details.parameters is defined and check_result.details.parameters is not none and (check_result.details.parameters | length) > 0)"
+  ansible.builtin.set_fact:
+    _telemetry_batch_all:           "{{ _telemetry_batch_all + [{
+                                      'TestCaseInvocationId': (check_result.id | default(check_result.check.id | default(''))),
+                                      'TestCaseStartTime': (check_result.timestamp | default(now())),
+                                      'TestCaseEndTime': (check_result.timestamp | default(now())),
+                                      'TestCaseStatus': (check_result.status | default('')),
+                                      'TestCaseName': (check_result.name | default(check_result.check.name | default(''))),
+                                      'TestCaseDescription': (check_result.details | default(check_result.check.description | default(''))),
+                                      'TestGroupInvocationId': lookup('vars', 'test_group_invocation_id', default=''),
+                                      'TestGroupStartTime': lookup('vars', 'group_start_time', default=''),
+                                      'TestGroupName': lookup('vars', 'group_name', default='ConfigurationChecks'),
+                                      'OsVersion': (system_context.os_type | default(system_context.os_version | default(''))),
+                                      'TestCaseMessage': ('Actual=' + ((check_result.actual_value | default('')) | string) + ' Expected=' + ((check_result.expected_value | default('')) | string)),
+                                      'TestCaseDetails': (check_result.details | default('')),
+                                      'DurationSeconds': 0,
+                                      'StorageType': (system_context.storage_type | default('unknown')),
+                                      'PackageVersions': lookup('vars', 'package_versions', default=''),
+                                      'Tags': lookup('vars', 'execution_tags', default=''),
+                                      'TestExecutionStartTime': (check_result.timestamp | default(now())),
+                                      'TestExecutionEndTime': (check_result.timestamp | default(now())),
+                                      'TestCaseHostname': (check_result.hostname | default(system_context.hostname | default(''))),
+                                      'TestCaseLogMessagesFromSap': (check_result.details | default(''))
+                                    }] }}"
+
+- name:                             "Add parameter-level entries"
+  no_log:                           true
+  when:                             "(check_result.details is defined and check_result.details is not none and check_result.details.parameters is defined and check_result.details.parameters is not none and (check_result.details.parameters | length) > 0)"
+  loop:                             "{{ check_result.details.parameters | default([]) }}"
+  loop_control:
+    loop_var:                       param
+  when:                             "param.status | default('') not in ['SKIPPED']"
+  ansible.builtin.set_fact:
+    _telemetry_batch_all:           "{{ _telemetry_batch_all + [{
+                                      'TestCaseInvocationId': (param.id | default(param.name | default(''))),
+                                      'TestCaseStartTime': (check_result.timestamp | default(now())),
+                                      'TestCaseEndTime': (check_result.timestamp | default(now())),
+                                      'TestCaseStatus': (param.status | default(check_result.status | default(''))),
+                                      'TestCaseName': (param.name | default(param.id | default(''))),
+                                      'TestCaseDescription': ('Parameter ' + (param.name | default(param.id | default(''))) + ' in category ' + (param.category | default('')) ),
+                                      'TestGroupInvocationId': lookup('vars', 'test_group_invocation_id', default=''),
+                                      'TestGroupStartTime': lookup('vars', 'group_start_time', default=''),
+                                      'TestGroupName': lookup('vars', 'group_name', default='ConfigurationChecks'),
+                                      'OsVersion': (system_context.os_type | default(system_context.os_version | default(''))),
+                                      'TestCaseMessage': ('Actual=' + ((param.value | default('')) | string) + ' Expected=' + ((param.expected_value | default('')) | string)),
+                                      'TestCaseDetails': (param | to_json),
+                                      'DurationSeconds': 0,
+                                      'StorageType': (system_context.storage_type | default('unknown')),
+                                      'PackageVersions': lookup('vars', 'package_versions', default=''),
+                                      'Tags': lookup('vars', 'execution_tags', default=''),
+                                      'TestExecutionStartTime': (check_result.timestamp | default(now())),
+                                      'TestExecutionEndTime': (check_result.timestamp | default(now())),
+                                      'TestCaseHostname': (check_result.hostname | default(system_context.hostname | default(''))),
+                                      'TestCaseLogMessagesFromSap': (check_result.details | default(''))
+                                    }] }}"

@@ -46,8 +46,8 @@ description:
 options:
     test_group_json_data:
         description:
-            - Telemetry data to be sent as a dictionary or a list of dictionaries for batch uploads
-            - Each telemetry record should include TestGroupInvocationId and other test metadata
+            - Dictionary containing the telemetry data to be sent
+            - Should include TestGroupInvocationId and other test metadata
             type: raw
         required: true
     telemetry_data_destination:

@@ -1,0 +1,26 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+
+# /*---------------------------------------------------------------------------8
+# |           Build single telemetry batch from all check results             |
+# +------------------------------------4--------------------------------------*/
+
+- name:                             "Initialize telemetry batch"
+  ansible.builtin.set_fact:
+    _telemetry_batch_all:           []
+
+- name:                             "Build telemetry entries from each check result"
+  no_log:                           true
+  loop:                             "{{ combined_results | selectattr('status', 'ne', 'SKIPPED') | list }}"
+  loop_control:
+    loop_var:                       check_result
+  ansible.builtin.include_tasks:
+    file:                           build-telemetry-entry.yml
+
+- name:                             "Send all telemetry in single call"
+  when:                             "_telemetry_batch_all is defined and (_telemetry_batch_all | length) > 0"
+  include_role:
+    name:                           misc
+    tasks_from:                     post-telemetry-data.yml
+  vars:
+    test_group_json_data:           "{{ _telemetry_batch_all }}"
