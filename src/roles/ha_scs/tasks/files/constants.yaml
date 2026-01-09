@@ -434,7 +434,7 @@ RESOURCE_DEFAULTS:
       operations:
         monitor:
           interval:
-            value:                  "3600"
+            value:                  ["3600", "3600s"]
             required:               false
           timeout:
             value:                  ["120", "120s"]

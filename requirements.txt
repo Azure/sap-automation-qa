@@ -11,7 +11,7 @@ ansible-core==2.17.14
     #   -r requirements.in
     #   ansible-compat
     #   ansible-lint
-ansible-lint==25.12.2
+ansible-lint==26.1.0
     # via -r requirements.in
 ansible-runner==2.4.2
     # via -r requirements.in
@@ -97,7 +97,7 @@ distro==1.9.0
     # via ansible-lint
 exceptiongroup==1.3.1
     # via pytest
-filelock==3.20.2
+filelock==3.20.3
     # via ansible-lint
 idna==3.11
     # via requests
@@ -119,7 +119,7 @@ jinja2==3.1.6
     #   ansible-core
 jmespath==1.0.1
     # via -r requirements.in
-jsonschema==4.25.1
+jsonschema==4.26.0
     # via
     #   ansible-compat
     #   ansible-lint
@@ -135,7 +135,7 @@ mccabe==0.7.0
     # via pylint
 mdurl==0.1.2
     # via markdown-it-py
-msal==1.34.0
+msal==1.35.0b1
     # via
     #   azure-identity
     #   azure-kusto-data
@@ -279,7 +279,7 @@ typing-extensions==4.15.0
     #   referencing
 tzdata==2025.3
     # via pandas
-urllib3==2.6.2
+urllib3==2.6.3
     # via requests
 wcmatch==10.1
     # via ansible-lint
