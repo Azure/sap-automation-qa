@@ -24,6 +24,8 @@ db_instance_number:            "00"
 platform:                      HANA
 database_high_availability:    true
 database_cluster_type:         AFA
+# database scale out
+database_scale_out :           false
 
 #############################################################################
 #                              Storage Profile                              #
@@ -42,3 +44,9 @@ secret_id:                     https://<key-vault-name>.vault.azure.net/secrets/
 # The MSI Client ID is used to authenticate to Azure services
 # and is required if the management server uses user assigned managed identity
 user_assigned_identity_client_id: "00000000-0000-0000-0000-000000000000"
+
+#############################################################################
+#                        ANF Parameters (optional)                           #
+#############################################################################
+ANF_account_rg:                "ANF-RESOURCE-GROUP"
+ANF_account_name:              "ANF-ACCOUNT-NAME"

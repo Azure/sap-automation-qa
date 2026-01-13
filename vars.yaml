@@ -34,6 +34,9 @@ telemetry_table_name:       null
 # Properties for Azure Log Analytics Workspace
 laws_shared_key:            null
 laws_workspace_id:          null
+laws_subscription_id:       null
+laws_resource_group:        null
+laws_workspace_name:        null
 
 # Properties for Azure Data Explorer
 adx_database_name:          null
