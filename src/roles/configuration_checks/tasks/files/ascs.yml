@@ -56,6 +56,12 @@ enums:
     - fencing_agent:                  &fencing_agent "AFA"
     - all_fencing_agent:              &cluster_type [*sbd, *fencing_agent]
 
+  high_availability:
+    - no_ha:                         &no_high_availability "false"
+    - scale_up:                      &scale_up "scale_up"
+    - scale_out:                     &scale_out "scale_out"
+    - all_ha:                        &high_availability [*scale_up, *scale_out]
+
   collector_type:
     - command:                        &command "command"
     - azure:                          &azure "azure"
@@ -99,7 +105,7 @@ checks:
       storage_type:                   *all_storage
       role:                           [*ascs_role, *db_role]
       database_type:                  *db
-      high_availability:              true
+      high_availability:              *scale_up
       high_availability_agent:        *cluster_type
     collector_type:                     *command
     collector_args:

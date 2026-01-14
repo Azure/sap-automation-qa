@@ -74,5 +74,9 @@ This guide outlines the steps to create an Azure Data Explorer (Kusto) cluster a
 
 5. **Parameters**
     - **laws_workspace_id:** Log Analytics Workspace ID [Workspace ID]
-    - **laws_shared_key:** Log Analytics Shared Key [Primary Key]
+    - **laws_shared_key:** Log Analytics Shared Key [Primary Key, if available]
+    - **laws_subscription_id:** Subscription ID where the Log Analytics Workspace is created
+    - **laws_resource_group:** Resource Group name where the Log Analytics Workspace is created
+    - **laws_workspace_name:** Log Analytics Workspace name
     - **telemetry_table_name:** Name of the table in Log Analytics SAP_AUTOMATION_QA
+    - **user_assigned_identity_client_id:** User Assigned Managed Identity Client ID (optional, required if using UAMI for authentication)

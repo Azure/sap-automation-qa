@@ -81,6 +81,12 @@ enums:
     - section:                        &section "section"
     - table:                          &table "table"
 
+  high_availability:
+    - no_ha:                         &no_high_availability "false"
+    - scale_up:                      &scale_up "scale_up"
+    - scale_out:                     &scale_out "scale_out"
+    - all_ha:                        &high_availability [*scale_up, *scale_out]
+
 # Checks for APP roles
 
 checks:
@@ -97,7 +103,7 @@ checks:
       storage_type:                     *all_storage
       role:                             [*pas, *app_role]
       database_type:                    [*hana, *mssql, *oracle, *db2]
-      high_availability:                true
+      high_availability:                *scale_up
       high_availability_agent:          [*sbd, *fencing_agent]
     collector_type:                     *command
     collector_args:
@@ -123,7 +129,7 @@ checks:
       storage_type:                     *all_storage
       role:                             [*pas, *app_role]
       database_type:                    [*hana, *mssql, *oracle, *db2]
-      high_availability:                true
+      high_availability:                *scale_up
       high_availability_agent:          [*sbd, *fencing_agent]
     collector_type:                     *command
     collector_args:
@@ -198,7 +204,7 @@ checks:
       storage_type:                     *all_storage
       role:                             [*pas, *app_role]
       database_type:                    [*hana, *mssql, *oracle, *db2]
-      high_availability:                true
+      high_availability:                *scale_up
       high_availability_agent:          [*sbd, *fencing_agent]
     collector_type:                     *command
     collector_args:
@@ -224,7 +230,7 @@ checks:
       storage_type:                     *all_storage
       role:                             [*app_role, *pas]
       database_type:                    [*hana, *mssql, *oracle, *db2]
-      high_availability:                true
+      high_availability:                *scale_up
       high_availability_agent:          [*sbd, *fencing_agent]
     collector_type:                     *command
     collector_args:
@@ -250,7 +256,7 @@ checks:
       storage_type:                     *all_storage
       role:                             [*pas, *app_role]
       database_type:                    [*hana, *mssql, *oracle, *db2]
-      high_availability:                true
+      high_availability:                *scale_up
       high_availability_agent:          [*sbd, *fencing_agent]
     collector_type:                     *command
     collector_args:
