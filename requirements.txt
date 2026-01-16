@@ -11,7 +11,7 @@ ansible-core==2.17.14
     #   -r requirements.in
     #   ansible-compat
     #   ansible-lint
-ansible-lint==26.1.0
+ansible-lint==26.1.1
     # via -r requirements.in
 ansible-runner==2.4.2
     # via -r requirements.in
@@ -160,7 +160,7 @@ packaging==25.0
     #   pytest
 pandas==2.3.3
     # via -r requirements.in
-pathspec==0.12.1
+pathspec==1.0.3
     # via
     #   ansible-lint
     #   black
@@ -278,5 +278,5 @@ urllib3==2.6.3
     # via requests
 wcmatch==10.1
     # via ansible-lint
-yamllint==1.37.1
+yamllint==1.38.0
     # via ansible-lint
