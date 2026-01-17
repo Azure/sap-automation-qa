@@ -367,6 +367,7 @@ RESOURCE_DEFAULTS:
             required:               false
 
     azureevents:
+      required:                     true
       meta_attributes:
         allow-unhealthy-nodes:
           value:                    "true"
@@ -676,6 +677,7 @@ RESOURCE_DEFAULTS:
             required:               false
 
     azureevents:
+      required:                     true
       meta_attributes:
         allow-unhealthy-nodes:
           value:                    "true"
