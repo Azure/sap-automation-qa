@@ -53,6 +53,13 @@
                                         cluster_status_test_execution.ascs_node == cluster_status_pre.ers_node
                                         and cluster_status_test_execution.ers_node == cluster_status_pre.ascs_node
 
+        - name:                         "Test Execution: Determine test execution status"
+          ansible.builtin.set_fact:
+            test_execution_status:      "{{ 'PASSED' if (
+                                            cluster_status_test_execution.ascs_node == cluster_status_pre.ers_node and
+                                            cluster_status_test_execution.ers_node == cluster_status_pre.ascs_node
+                                          ) else 'FAILED' }}"
+
         - name:                         "Test Execution: Remove location constraints"
           ansible.builtin.command:      "{{ commands | selectattr(
                                         'name', 'equalto', 'ascs_resource_unmigrate_cmd') | map(

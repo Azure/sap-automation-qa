@@ -48,7 +48,7 @@
       ansible.builtin.set_fact:
         test_case_name:                 "{{ item.name }}: {{ test_execution_hostname | default(virtual_host) }}"
         test_case_description:          "{{ item.description }}"
-        test_case_status:               "{{ 'SKIPPED' if pre_validations_status == 'FAILED' else 'PASSED' }}"
+        test_case_status:               "{{ 'SKIPPED' if pre_validations_status == 'FAILED' else (test_execution_status | default('PASSED')) }}"
         test_execution_start_time:      "{{ test_execution_start | default(now(utc=true, fmt='%Y-%m-%d %H:%M:%S')) }}"
         test_case_hostname:             "{{ virtual_host }}"
         test_execution_end_time:        "{{ test_execution_end | default(now(utc=true, fmt='%Y-%m-%d %H:%M:%S')) }}"

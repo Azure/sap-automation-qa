@@ -477,9 +477,10 @@ checks:
       os_type:                          [*suse, *redhat]
       os_version:                       *all_versions
       hardware_type:                    *all_hardware
-      storage_type:                     *premium_storage
+      storage_type:                     *all_storage
       role:                             [*db_role]
       database_type:                    [*hana]
+      high_availability:                true
     collector_type:                     *command
     collector_args:
       command:                          "/sbin/sysctl net.ipv4.tcp_timestamps -n"
@@ -502,8 +503,9 @@ checks:
       os_type:                          [*suse, *redhat]
       os_version:                       *all_versions
       hardware_type:                    *all_hardware
-      storage_type:                     *anf
+      storage_type:                     *all_storage
       role:                             [*db_role]
+      high_availability:                false
       database_type:                    [*hana]
     collector_type:                     *command
     collector_args:

@@ -359,14 +359,14 @@
                 </div>
               {% endfor %}
               <div class="system-info-column">
-                <div class="pie" id="testResults" style="position: relative; z-index: 2;" data-results='{{ test_case_results|map(attribute='TestCaseStatus')|list|tojson|safe }}'>
+                <div class="pie" id="testResults" style="position: relative; z-index: 2;" data-results='{{ test_case_results|map(attribute="TestCaseStatus", default="UNKNOWN")|list|tojson|safe }}'>
                   <span style="position: relative; z-index: 3;">0/0</span>
                 </div>
               </div>
             </div>
           </div>
           {% for test_case_result in test_case_results %}
-            <div class="test-case {{ test_case_result.TestCaseStatus|lower }}">
+            <div class="test-case {{ test_case_result.TestCaseStatus|default('unknown')|lower }}">
               <div class="title" onclick="toggleDetails(this)">
                 <span class="name">{{ test_case_result.TestCaseName }}</span>
                 <span class="duration">&#x1F550; {{ test_case_result.DurationSeconds }}</span>
