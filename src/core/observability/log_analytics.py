@@ -3,10 +3,6 @@
 
 """
 Azure Log Analytics log handler with async background batching.
-
-Buffers logs in memory and sends to Log Analytics Data Collector API
-in batches using a background thread. Uses the existing TelemetryDataSender
-from send_telemetry_data module.
 """
 
 import json
@@ -17,20 +13,12 @@ import threading
 import time
 from datetime import datetime, timezone
 from typing import Any, Dict, List, Optional
-
 from src.modules.send_telemetry_data import TelemetryDataSender
 
 
 class LogAnalyticsHandler(logging.Handler):
     """
     Async logging handler that batches and sends logs to Azure Log Analytics.
-
-    Features:
-    - Buffers logs in memory queue
-    - Background thread sends batches to Log Analytics
-    - Configurable batch size and flush interval
-    - Graceful shutdown with final flush
-
     """
 
     def __init__(
@@ -208,9 +196,6 @@ def add_log_analytics_handler(
     table_name: Optional[str] = None,
 ) -> Optional[LogAnalyticsHandler]:
     """Add a Log Analytics handler to a logger.
-
-    If workspace_id and shared_key are not provided, reads from environment.
-    Returns None if credentials are not available.
 
     :param logger: Logger to add handler to (default: root logger)
     :param workspace_id: Log Analytics workspace ID

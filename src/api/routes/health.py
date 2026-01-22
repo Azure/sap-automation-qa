@@ -9,6 +9,7 @@ from fastapi import APIRouter
 from pydantic import BaseModel
 
 router = APIRouter(tags=["health"])
+_service_status: Dict[str, bool] = {}
 
 
 class HealthResponse(BaseModel):
@@ -18,8 +19,6 @@ class HealthResponse(BaseModel):
     timestamp: str
     version: str
     services: Dict[str, bool] = {}
-
-_service_status: Dict[str, bool] = {}
 
 
 def set_service_status(name: str, running: bool) -> None:

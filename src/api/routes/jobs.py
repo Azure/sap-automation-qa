@@ -16,9 +16,7 @@ from src.core.execution.worker import JobWorker
 from src.core.observability import get_logger
 
 logger = get_logger(__name__)
-
 router = APIRouter(prefix="/jobs", tags=["jobs"])
-
 _job_store: Optional[JobStore] = None
 _job_worker: Optional[JobWorker] = None
 

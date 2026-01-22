@@ -2,13 +2,7 @@
 # Licensed under the MIT License.
 """
 Request context management using ContextVars.
-
 Thread-safe, async-compatible context propagation for observability.
-
-Context fields:
-    correlation_id: Request tracing across services
-    workspace_id: SAP workspace context
-    execution_id: Job execution span
 """
 
 from __future__ import annotations
@@ -23,11 +17,6 @@ from typing import Any, Optional, Protocol
 class ContextData:
     """
     Immutable value object containing observability context fields.
-
-    Phase 1 fields:
-    - correlation_id: Request tracing across services
-    - workspace_id: SAP workspace context
-    - execution_id: Job execution span
     """
 
     correlation_id: Optional[str] = None
@@ -35,7 +24,9 @@ class ContextData:
     execution_id: Optional[str] = None
 
     def with_updates(self, **kwargs: Any) -> "ContextData":
-        """Create new ContextData with updated fields."""
+        """
+        Create new ContextData with updated fields.
+        """
         current = {
             "correlation_id": self.correlation_id,
             "workspace_id": self.workspace_id,
@@ -45,7 +36,9 @@ class ContextData:
         return ContextData(**current)
 
     def to_dict(self) -> dict[str, Optional[str]]:
-        """Convert to dictionary for logging (non-None values only)."""
+        """
+        Convert to dictionary for logging (non-None values only).
+        """
         return {
             k: v
             for k, v in {
@@ -76,11 +69,6 @@ class IContextProvider(Protocol):
 class ContextVarProvider:
     """
     Thread-safe context provider using Python's ContextVar.
-
-    This is the production implementation. ContextVars are:
-    - Thread-safe (each thread gets isolated context)
-    - Async-safe (each coroutine gets isolated context)
-    - Copy-on-write (efficient for nested contexts)
     """
 
     def __init__(self) -> None:
@@ -120,14 +108,8 @@ class ContextVarProvider:
 class ObservabilityContextManager:
     """
     Singleton manager for observability context.
-
     Provides high-level API for context operations while encapsulating
     the underlying ContextVar implementation.
-
-    Usage:
-        ctx = ObservabilityContextManager.instance()
-        ctx.set_correlation_id("abc-123")
-        print(ctx.correlation_id)
     """
 
     _instance: Optional["ObservabilityContextManager"] = None
@@ -225,10 +207,6 @@ class ObservabilityContextManager:
 class ObservabilityScope:
     """
     Context manager for scoped observability context.
-
-    Automatically sets context on entry and restores previous values on exit.
-    Supports nested scopes with proper cleanup.
-
     """
 
     def __init__(
@@ -294,12 +272,6 @@ class ObservabilityScope:
 class ExecutionScope(ObservabilityScope):
     """
     Specialized scope for test/Ansible execution.
-
-    Automatically generates execution_id.
-
-    Example:
-        with ExecutionScope(workspace_id="QA-001"):
-            result = await run_ansible_playbook(...)
     """
 
     def __init__(
@@ -349,6 +321,5 @@ def clear_context() -> None:
     ObservabilityContextManager.instance().clear()
 
 
-# Backward-compatible aliases
 ObservabilityContext = ObservabilityScope
 ExecutionContext = ExecutionScope

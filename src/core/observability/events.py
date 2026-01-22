@@ -2,14 +2,6 @@
 # Licensed under the MIT License.
 """
 Typed event definitions for structured logging.
-
-Events are categorized into three streams:
-- service_logs: HTTP/API layer events
-- execution_logs: Ansible and test execution events
-
-All events share common fields (timestamp, correlation_id, etc.) and have
-stream-specific fields. This enables efficient querying in log backends
-like Loki, Azure Log Analytics, or Elasticsearch.
 """
 
 from __future__ import annotations
@@ -19,10 +11,17 @@ from enum import Enum
 from typing import Any, Literal, Optional
 
 from pydantic import BaseModel, Field
+from src.core.observability.context import (
+    get_correlation_id,
+    get_execution_id,
+    get_workspace_id,
+)
 
 
 class LogStream(str, Enum):
-    """Log stream identifiers (indexed labels in Loki)."""
+    """
+    Log stream identifiers (indexed labels in Loki).
+    """
 
     SERVICE = "service_logs"
     EXECUTION = "execution_logs"
@@ -57,18 +56,14 @@ class ServiceEvent(BaseModel):
     duration_ms: Optional[int] = None
     status: Optional[Literal["success", "failed", "error"]] = None
     error: Optional[str] = None
-    
-    # HTTP context
     http_method: Optional[str] = None
     http_path: Optional[str] = None
     http_status_code: Optional[int] = None
     client_ip: Optional[str] = None
-    
-    # Schedule context
     schedule_id: Optional[str] = None
     schedule_name: Optional[str] = None
     workspace_count: Optional[int] = None
-    
+
     workspace_id: Optional[str] = None
 
     class Config:
@@ -80,13 +75,8 @@ ExecutionEventType = Literal[
     "job_complete",
     "job_fail",
     "job_cancel",
-    "step_start",
-    "step_complete",
-    "step_fail",
     "execution_start",
     "execution_end",
-    "ansible_start",
-    "ansible_end",
     "test_start",
     "test_end",
     "config_check",
@@ -106,42 +96,14 @@ class ExecutionEvent(BaseModel):
     duration_ms: Optional[float] = None
     status: Optional[Literal["success", "failed", "skipped", "error"]] = None
     error: Optional[str] = None
-
-    # Job context
     job_id: Optional[str] = None
     execution_id: Optional[str] = None
     workspace_id: Optional[str] = None
-    
-    # Step context
-    step_index: Optional[int] = None
-    step_name: Optional[str] = None
-
-    # Test context
     test_id: Optional[str] = None
     test_name: Optional[str] = None
     test_group: Optional[str] = None
     tests_passed: Optional[int] = None
     tests_failed: Optional[int] = None
-
-    # Ansible context
-    playbook_path: Optional[str] = None
-    inventory_path: Optional[str] = None
-    role: Optional[str] = None
-    hosts: Optional[str] = None
-    ansible_rc: Optional[int] = None
-    ansible_hosts_ok: Optional[int] = None
-    ansible_hosts_changed: Optional[int] = None
-    ansible_hosts_failed: Optional[int] = None
-    ansible_hosts_unreachable: Optional[int] = None
-
-    command: Optional[str] = None
-    command_validated: Optional[bool] = None
-    exit_code: Optional[int] = None
-    host: Optional[str] = None
-
-    stdout_snippet: Optional[str] = None
-    stderr_snippet: Optional[str] = None
-    output_lines: Optional[int] = None
 
     class Config:
         use_enum_values = True
@@ -179,10 +141,6 @@ def create_service_event(
     :returns: ServiceEvent instance
     :rtype: ServiceEvent
     """
-    from src.core.observability.context import (
-        get_correlation_id,
-        get_workspace_id,
-    )
 
     return ServiceEvent(
         event=event,
@@ -199,11 +157,6 @@ def create_execution_event(
     **kwargs: Any,
 ) -> ExecutionEvent:
     """Create an execution event with context auto-populated."""
-    from src.core.observability.context import (
-        get_correlation_id,
-        get_execution_id,
-        get_workspace_id,
-    )
 
     return ExecutionEvent(
         event=event,

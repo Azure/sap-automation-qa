@@ -4,11 +4,9 @@
 """Schedules API routes."""
 
 from datetime import datetime
-from typing import List, Optional
-
+from typing import Optional
 from apscheduler.triggers.cron import CronTrigger
 from fastapi import APIRouter, HTTPException, Query
-
 from src.core.models.schedule import (
     Schedule,
     CreateScheduleRequest,
@@ -20,9 +18,7 @@ from src.core.services.scheduler import SchedulerService
 from src.core.observability import get_logger
 
 logger = get_logger(__name__)
-
 router = APIRouter(prefix="/schedules", tags=["schedules"])
-
 _schedule_store: Optional[ScheduleStore] = None
 _scheduler_service: Optional[SchedulerService] = None
 

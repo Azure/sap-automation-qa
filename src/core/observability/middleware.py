@@ -2,22 +2,14 @@
 # Licensed under the MIT License.
 """
 FastAPI middleware for observability.
-
-Provides:
-- Automatic correlation_id extraction/generation
-- Request/response logging with timing
-- Context propagation for all downstream operations
 """
 
 from __future__ import annotations
-
 import time
 import uuid
 from typing import Any, Optional
-
 from fastapi import Request, Response
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint
-
 from src.core.observability.context import ObservabilityContext
 from src.core.observability.events import (
     create_service_event,
@@ -36,18 +28,6 @@ logger = get_logger(__name__)
 class ObservabilityMiddleware(BaseHTTPMiddleware):
     """
     FastAPI middleware for request observability.
-
-    Handles:
-    1. Correlation ID extraction from header or generation
-    3. Request timing and logging
-    4. Context propagation to downstream handlers
-
-    Usage:
-        from fastapi import FastAPI
-        from src.core.observability.middleware import ObservabilityMiddleware
-
-        app = FastAPI()
-        app.add_middleware(ObservabilityMiddleware)
     """
 
     async def dispatch(

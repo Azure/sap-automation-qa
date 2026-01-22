@@ -2,20 +2,9 @@
 # Licensed under the MIT License.
 """
 Structured logging with OOP design.
-
-This module provides:
-- LogFormatter: Abstract base for log formatters (JSON, Console)
-- StructuredLogger: Logger wrapper with context injection and event support
-- LoggerFactory: Factory for creating configured loggers
-
-Design patterns used:
-- Factory: LoggerFactory creates configured loggers
-- Strategy: Formatters implement different output strategies
-- Adapter: StructuredLogger adapts stdlib logging
 """
 
 from __future__ import annotations
-
 import json
 import logging
 import os
@@ -25,7 +14,6 @@ from datetime import datetime, timezone
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
 from typing import Any, Optional, Union
-
 from src.core.observability.context import ObservabilityContextManager
 from src.core.observability.events import (
     ServiceEvent,
@@ -37,9 +25,6 @@ from src.core.observability.log_analytics import LogAnalyticsHandler
 class LogFormatter(ABC, logging.Formatter):
     """
     Abstract base class for log formatters.
-
-    Implements Strategy pattern - different formatters provide
-    different output formats while sharing the same interface.
     """
 
     def __init__(self, service_name: str = "sap-qa-service") -> None:
@@ -120,12 +105,6 @@ class LogFormatter(ABC, logging.Formatter):
 class JSONFormatter(LogFormatter):
     """
     JSON log formatter for production use.
-
-    Outputs single-line JSON compatible with:
-    - Loki
-    - Fluentd
-    - Elasticsearch
-    - Azure Log Analytics
     """
 
     def format(self, record: logging.LogRecord) -> str:
@@ -202,15 +181,6 @@ class ConsoleFormatter(LogFormatter):
 class StructuredLogger:
     """
     Structured logger with context injection and event support.
-
-    Wraps stdlib logging.Logger to provide:
-    - Automatic context injection
-    - Typed event logging
-    - Extra field support
-
-    Usage:
-        logger = StructuredLogger("my.module")
-        logger.info("Processing", event="request_start", count=5)
     """
 
     def __init__(self, name: str) -> None:
@@ -330,7 +300,6 @@ class LoggerFactory:
         cls._service_name = service_name
         cls._configure_logger("src.core", level, log_format, service_name)
         cls._configure_logger("src.api", level, log_format, service_name)
-
         cls._initialized = True
 
     @classmethod

@@ -5,16 +5,13 @@
 
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
-
 import yaml
 from fastapi import APIRouter, HTTPException
 from src.core.observability import get_logger
 from src.core.models.workspace import WorkspaceInfo, WorkspaceListResponse
 
 logger = get_logger(__name__)
-
 router = APIRouter(prefix="/workspaces", tags=["workspaces"])
-
 _workspace_loader: Optional[Callable[[str], Dict[str, Any]]] = None
 
 
@@ -30,10 +27,6 @@ def set_workspace_loader(loader: Callable[[str], Dict[str, Any]]) -> None:
 
 def _load_workspaces_from_directory(base_dir: str = "WORKSPACES/SYSTEM") -> List[WorkspaceInfo]:
     """Load workspaces from WORKSPACES/SYSTEM directory structure.
-
-    Each workspace has:
-    - hosts.yaml: Ansible inventory
-    - sap-parameters.yaml: SAP configuration
 
     :param base_dir: Base directory containing workspace subdirectories.
     :type base_dir: str
@@ -120,9 +113,6 @@ async def get_workspace(workspace_id: str) -> WorkspaceInfo:
 
 def default_workspace_loader(workspace_id: str) -> Dict[str, Any]:
     """Default workspace config loader.
-
-    Loads workspace configuration from WORKSPACES/SYSTEM/{id}/ directory.
-    Reads hosts.yaml and sap-parameters.yaml.
 
     :param workspace_id: ID of the workspace to load.
     :type workspace_id: str
