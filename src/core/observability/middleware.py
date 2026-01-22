@@ -20,8 +20,6 @@ from src.core.observability.logger import get_logger
 CORRELATION_ID_HEADER = "X-Correlation-ID"
 WORKSPACE_ID_HEADER = "X-Workspace-ID"
 SKIP_PATHS = {"/healthz", "/favicon.ico", "/metrics"}
-
-
 logger = get_logger(__name__)
 
 

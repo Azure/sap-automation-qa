@@ -6,7 +6,6 @@ Thread-safe, async-compatible context propagation for observability.
 """
 
 from __future__ import annotations
-
 import uuid
 from contextvars import ContextVar, Token
 from dataclasses import dataclass
@@ -230,7 +229,6 @@ class ObservabilityScope:
         self._execution_id = execution_id
         self._auto_correlation_id = auto_correlation_id
         self._auto_execution_id = auto_execution_id
-
         self._token: Optional[Token] = None
         self._manager = ObservabilityContextManager.instance()
 
