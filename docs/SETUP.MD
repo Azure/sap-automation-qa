@@ -198,8 +198,15 @@ telemetry_data_destination: "azureloganalytics"
 telemetry_table_name: "your-telemetry-table-name"
 
 # The workspace id, shared key of the Log Analytics workspace.
+# If laws_shared_key is not provided, it will be auto-fetched from Azure using the parameters below.
 laws_shared_key: "your-log-analytics-shared-key"
 laws_workspace_id: "your-log-analytics-workspace-id"
+
+# Optional: Azure subscription and resource details for auto-fetching Log Analytics shared key.
+# Required when laws_shared_key is not provided.
+laws_subscription_id: "your-laws-subscription-id"
+laws_resource_group: "your-laws-resource-group"
+laws_workspace_name: "your-laws-workspace-name"
 
 # The cluster name, data ingestion URI, and client ID of the Azure Data Explorer.
 adx_cluster_fqdn: "your-adx-cluster-fqdn"
@@ -280,6 +287,7 @@ db_sid: "your-db-sid"
 # Boolean indicating if the SCS and database is configured as highly available.
 scs_high_availability: true
 database_high_availability: true
+database_scale_out : false  # true if database high availability is configured as scale-out
 
 # The high availability configuration of the SCS and DB instance. Supported values are:
 # - AFA (for Azure Fencing Agent)

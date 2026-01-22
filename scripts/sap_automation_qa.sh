@@ -519,7 +519,19 @@ main() {
 
     # Check if the SYSTEM_HOSTS and SYSTEM_PARAMS directory exists inside WORKSPACES/SYSTEM folder
     SYSTEM_CONFIG_FOLDER="${cmd_dir}/../$WORKSPACES_DIR/SYSTEM/$SYSTEM_CONFIG_NAME"
-    SYSTEM_HOSTS="$SYSTEM_CONFIG_FOLDER/hosts.yaml"
+    SID=$(echo "$SYSTEM_CONFIG_NAME" | awk -F'-' '{print $NF}')
+    
+    if [[ -f "$SYSTEM_CONFIG_FOLDER/hosts.yaml" ]]; then
+        SYSTEM_HOSTS="$SYSTEM_CONFIG_FOLDER/hosts.yaml"
+        log "INFO" "Using standard inventory: hosts.yaml"
+    elif [[ -f "$SYSTEM_CONFIG_FOLDER/${SID}_hosts.yaml" ]]; then
+        SYSTEM_HOSTS="$SYSTEM_CONFIG_FOLDER/${SID}_hosts.yaml"
+        log "INFO" "Using SID-specific inventory: ${SID}_hosts.yaml"
+    else
+        log "ERROR" "No inventory file found. Looked for hosts.yaml in $WORKSPACES_DIR/SYSTEM/$SYSTEM_CONFIG_NAME directory."
+        exit 1
+    fi
+
     SYSTEM_PARAMS="$SYSTEM_CONFIG_FOLDER/sap-parameters.yaml"
     TEST_TIER=$(echo "$TEST_TIER" | tr '[:upper:]' '[:lower:]')
 
@@ -527,8 +539,6 @@ main() {
     log "INFO" "Using SAP parameters: $SYSTEM_PARAMS."
     log "INFO" "Using Authentication Type: $AUTHENTICATION_TYPE."
 
-    check_file_exists "$SYSTEM_HOSTS" \
-        "hosts.yaml not found in $WORKSPACES_DIR/SYSTEM/$SYSTEM_CONFIG_NAME directory."
     check_file_exists "$SYSTEM_PARAMS" \
         "sap-parameters.yaml not found in $WORKSPACES_DIR/SYSTEM/$SYSTEM_CONFIG_NAME directory."
 

@@ -415,19 +415,6 @@
           db_sid:                       "{{ db_sid | upper }}"
           db_type:                      "{{ platform | upper }}"
           storage_type:                 "{{ NFS_provider | default(['Premium_LRS']) }}"
-          high_availability:            >-
-                                        "{{ (database_high_availability | default(false) | bool) or
-                                        (scs_high_availability | default(false) | bool) }}"
-          high_availability_agent:      >-
-                                        "{{ database_cluster_type
-                                        | default('AFA')
-                                        if database_high_availability
-                                        | default(false) | bool
-                                        else  scs_cluster_type
-                                        | default('AFA')
-                                        if scs_high_availability
-                                        | default(false) | bool
-                                        else 'N/A' }}"
           hostnames:                    "{{ (groups[sap_sid | upper + '_SCS']|default([]) +
                                           groups[sap_sid | upper + '_ERS']|default([]) +
                                           groups[sap_sid | upper + '_DB']|default([]) +
@@ -450,3 +437,33 @@
     - name:                             "Debug the file name of the report generated"
       ansible.builtin.debug:
         msg:                            "Report file CONFIG_{{ sap_sid | upper }}_{{ platform | upper }}_{{ test_group_invocation_id }} generated."
+
+    - name:                             "Debug system_context map building"
+      ansible.builtin.debug:
+        msg:                            "Building system context map for hosts: {{ all_results | map(attribute='hostname') | unique | list }}"
+      run_once:                         true
+
+    - name:                             "Build system context map for all hosts"
+      ansible.builtin.set_fact:
+        _system_context_map:            "{{ _system_context_map | default({}) | combine({item: hostvars[item].system_context | default({})}) }}"
+      loop:                             "{{ all_results | map(attribute='hostname') | unique | list }}"
+      loop_control:
+        label:                          "{{ item }}"
+      when:                             item in hostvars
+
+    - name:                             "Send check results to Python for batch telemetry processing"
+      no_log:                           true
+      when:                             all_results is defined and all_results | length > 0
+      ansible.builtin.include_role:
+        name:                           misc
+        tasks_from:                     post-telemetry-data.yml
+      vars:
+        test_group_json_data:           "{{ all_results | selectattr('status', 'ne', 'SKIPPED') | list }}"
+        common_vars:
+          test_group_invocation_id:     "{{ test_group_invocation_id }}"
+          group_start_time:             "{{ test_group_start_time }}"
+          group_name:                   "{{ test_group_name }}"
+          NFS_provider:                 "{{ NFS_provider | default('unknown') }}"
+          package_versions:             "{{ package_versions | default('') }}"
+          execution_tags:               "{{ execution_tags | default('') }}"
+        system_context_map:             "{{ _system_context_map }}"

@@ -57,6 +57,12 @@ enums:
     - fencing_agent:                  &fencing_agent "AFA"
     - all_fencing_agent:              &cluster_type [*sbd, *fencing_agent]
 
+  high_availability:
+    - no_ha:                         &no_high_availability "false"
+    - scale_up:                      &scale_up "scale_up"
+    - scale_out:                     &scale_out "scale_out"
+    - all_ha:                        &high_availability [*scale_up, *scale_out]
+
   collector_type:
     - command:                        &command "command"
     - azure:                          &azure "azure"
@@ -430,7 +436,7 @@ checks:
       hardware_type:                  *vm
       role:                           [*db_role, *ascs_role]
       database_type:                  *db
-      high_availability:              true
+      high_availability:              *high_availability
       high_availability_agent:        [*sbd]
     collector_type:                   *command
     collector_args:
@@ -450,7 +456,7 @@ checks:
       hardware_type:                  *vm
       role:                           [*db_role, *ascs_role]
       database_type:                  *db
-      high_availability:              true
+      high_availability:              *high_availability
       high_availability_agent:        [*sbd, *fencing_agent]
     collector_type:                   *command
     collector_args:
@@ -470,7 +476,7 @@ checks:
       hardware_type:                  *vm
       role:                           [*db_role, *ascs_role]
       database_type:                  *db
-      high_availability:              true
+      high_availability:              *high_availability
       high_availability_agent:        [*sbd, *fencing_agent]
     collector_type:                   *command
     collector_args:
@@ -893,7 +899,7 @@ checks:
       hardware_type:                  *vm
       role:                           [*db_role, *ascs_role]
       database_type:                  *db
-      high_availability:              true
+      high_availability:              *high_availability
       high_availability_agent:        [*sbd, *fencing_agent]
     collector_type:                   *command
     collector_args:

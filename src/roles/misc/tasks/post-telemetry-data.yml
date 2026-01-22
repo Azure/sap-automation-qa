@@ -8,55 +8,56 @@
   failed_when:                          false
   delegate_to:                          localhost
   send_telemetry_data:
-    telemetry_data_destination:         "{{ telemetry_data_destination | default('none') | lower }}"
-    laws_workspace_id:                  "{{ laws_workspace_id | default('') }}"
-    laws_shared_key:                    "{{ laws_shared_key | default('') }}"
-    adx_database_name:                  "{{ adx_database_name | default('') }}"
-    adx_cluster_fqdn:                   "{{ adx_cluster_fqdn | default('') }}"
-    adx_client_id:                      "{{ adx_client_id | default('') }}"
-    telemetry_table_name:               "{{ telemetry_table_name | default('') }}"
+    telemetry_data_destination:         "{{ lookup('vars', 'telemetry_data_destination', default='none') | lower }}"
+    laws_workspace_id:                  "{{ lookup('vars', 'laws_workspace_id', default='') }}"
+    laws_shared_key:                    "{{ lookup('vars', 'laws_shared_key', default='') }}"
+    laws_subscription_id:               "{{ lookup('vars', 'laws_subscription_id', default='') }}"
+    laws_resource_group:                "{{ lookup('vars', 'laws_resource_group', default='') }}"
+    laws_workspace_name:                "{{ lookup('vars', 'laws_workspace_name', default='') }}"
+    user_assigned_identity_client_id:   "{{ lookup('vars', 'user_assigned_identity_client_id', default='') }}"
+    adx_database_name:                  "{{ lookup('vars', 'adx_database_name', default='') }}"
+    adx_cluster_fqdn:                   "{{ lookup('vars', 'adx_cluster_fqdn', default='') }}"
+    adx_client_id:                      "{{ lookup('vars', 'adx_client_id', default='') }}"
+    telemetry_table_name:               "{{ lookup('vars', 'telemetry_table_name', default='SAP_AUTOMATION_QA') }}"
     workspace_directory:                "{{ _workspace_directory }}"
-    test_group_json_data:               {
-                                          "TestCaseInvocationId": "{{ test_case_invocation_id | default('') }}",
-                                          "TestCaseStartTime": "{{ test_case_start_time_epoch | default('') }}",
-                                          "TestCaseEndTime": "{{ now(utc=true, fmt='%Y-%m-%d %H:%M:%S') }}",
-                                          "TestCaseStatus": "{{ test_case_status | default('FAILED') }}",
-                                          "TestCaseName": "{{ test_case_name | default('') }}",
-                                          "TestCaseDescription": "{{ test_case_description | default('') }}",
-                                          "TestGroupInvocationId": "{{ group_invocation_id | default('') }}",
-                                          "TestGroupStartTime": "{{ group_start_time | default('') }}",
-                                          "TestGroupName": "{{ group_name | default('') }}",
-                                          "OsVersion": "{{ target_os_family | default(ansible_distribution | default('') ~ ' ' ~ ansible_distribution_version | default('')) }}",
-                                          "TestCaseMessage": "{{ test_case_message | default('') }}",
-                                          "TestCaseDetails": "{{ test_case_details | default('') }}",
-                                            "DurationSeconds": "{{
+    common_vars:                        "{{ common_vars | default({}) }}"
+    system_context_map:                 "{{ system_context_map | default({}) }}"
+    test_group_json_data:               "{{ test_group_json_data if (test_group_json_data is defined and test_group_json_data is iterable and test_group_json_data is not string) else {
+                                          'TestCaseInvocationId': lookup('vars', 'test_case_invocation_id', default=''),
+                                          'TestCaseStartTime': lookup('vars', 'test_case_start_time_epoch', default=''),
+                                          'TestCaseEndTime': now(utc=true, fmt='%Y-%m-%d %H:%M:%S'),
+                                          'TestCaseStatus': lookup('vars', 'test_case_status', default='FAILED'),
+                                          'TestCaseName': lookup('vars', 'test_case_name', default=''),
+                                          'TestCaseDescription': lookup('vars', 'test_case_description', default=''),
+                                          'TestGroupInvocationId': lookup('vars', 'group_invocation_id', default=''),
+                                          'TestGroupStartTime': lookup('vars', 'group_start_time', default=''),
+                                          'TestGroupName': lookup('vars', 'group_name', default=''),
+                                          'OsVersion': lookup('vars', 'target_os_family', default=(ansible_distribution | default('') ~ ' ' ~ ansible_distribution_version | default(''))),
+                                          'TestCaseMessage': lookup('vars', 'test_case_message', default=''),
+                                          'TestCaseDetails': lookup('vars', 'test_case_details', default=''),
+                                          'DurationSeconds': (
+                                            (
                                               (
-                                                (
-                                                  (test_execution_end_time
-                                                   | default(now(utc=true, fmt='%Y-%m-%d %H:%M:%S'))
-                                                  )
-                                                  | to_datetime('%Y-%m-%d %H:%M:%S')
-                                                ).timestamp()
-                                                -
-                                                (
-                                                  (test_execution_start_time
-                                                   | default(test_case_start_time_epoch
-                                                             | default(now(utc=true, fmt='%Y-%m-%d %H:%M:%S')))
-                                                  )
-                                                  | to_datetime('%Y-%m-%d %H:%M:%S')
-                                                ).timestamp()
-                                              ) | int
-                                            }}",
-                                          "DbFencingType": "{{ database_cluster_type if (database_high_availability | default(false)) else 'DB not HA' }}",
-                                          "ScsFencingType": "{{ scs_cluster_type if (scs_high_availability | default(false)) else 'SCS not HA' }}",
-                                          "StorageType": "{{ NFS_provider | default('unknown') }}",
-                                          "DBType": "{{ platform | default('') }}",
-                                          "DbSid": "{{ db_sid | default('') | upper }}",
-                                          "SapSid": "{{ sap_sid | default('') | upper }}",
-                                          "PackageVersions": "{{ package_versions | default('') }}",
-                                          "Tags": "{{ execution_tags | default('') }}",
-                                          "TestExecutionStartTime": "{{ test_execution_start_time | default('') }}",
-                                          "TestExecutionEndTime": "{{ test_execution_end_time | default('') }}",
-                                          "TestCaseHostname": "{{ test_case_hostname | default('') }}",
-                                          "TestCaseLogMessagesFromSap": "{{ test_case_var_log_messages | default('') }}"
-                                        }
+                                                (lookup('vars', 'test_execution_end_time', default=now(utc=true, fmt='%Y-%m-%d %H:%M:%S')))
+                                                | to_datetime('%Y-%m-%d %H:%M:%S')
+                                              ).timestamp()
+                                              -
+                                              (
+                                                (lookup('vars', 'test_execution_start_time', default=lookup('vars', 'test_case_start_time_epoch', default=now(utc=true, fmt='%Y-%m-%d %H:%M:%S'))))
+                                                | to_datetime('%Y-%m-%d %H:%M:%S')
+                                              ).timestamp()
+                                            ) | int
+                                          ),
+                                          'DbFencingType': (lookup('vars', 'database_cluster_type', default='') if (lookup('vars', 'database_high_availability', default=false)) else 'DB not HA'),
+                                          'ScsFencingType': (lookup('vars', 'scs_cluster_type', default='') if (lookup('vars', 'scs_high_availability', default=false)) else 'SCS not HA'),
+                                          'StorageType': lookup('vars', 'NFS_provider', default='unknown'),
+                                          'DBType': lookup('vars', 'platform', default=''),
+                                          'DbSid': (lookup('vars', 'db_sid', default='') | upper),
+                                          'SapSid': (lookup('vars', 'sap_sid', default='') | upper),
+                                          'PackageVersions': lookup('vars', 'package_versions', default=''),
+                                          'Tags': lookup('vars', 'execution_tags', default=''),
+                                          'TestExecutionStartTime': lookup('vars', 'test_execution_start_time', default=''),
+                                          'TestExecutionEndTime': lookup('vars', 'test_execution_end_time', default=''),
+                                          'TestCaseHostname': lookup('vars', 'test_case_hostname', default=''),
+                                          'TestCaseLogMessagesFromSap': lookup('vars', 'test_case_var_log_messages', default='')
+                                        } }}"

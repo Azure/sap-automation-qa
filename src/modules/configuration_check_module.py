@@ -711,7 +711,15 @@ class ConfigurationCheckModule(SapAutomationQA):
             collected_data = collector.collect(check, self.context)
             execution_time = time.time() - start_time
             if check.severity == TestSeverity.INFO:
-                return create_result(TestStatus.INFO.value, actual_value=collected_data)
+                details = None
+                if check.collector_type == "module":
+                    if isinstance(collected_data, dict) and "details" in collected_data:
+                        details = collected_data.get("details")
+                    elif isinstance(collected_data, list):
+                        details = {"parameters": collected_data}
+                return create_result(
+                    TestStatus.INFO.value, actual_value=collected_data, details=details
+                )
             validation_result = self.validate_result(check, collected_data)
             return create_result(
                 status=validation_result["status"],
