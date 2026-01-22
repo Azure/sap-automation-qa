@@ -412,3 +412,6 @@ VMWPASSWORD
 
 # GitHub Copilot configuration files
 copilot-instructions.md
+
+# Scheduler data (jobs, schedules)
+data/

@@ -35,3 +35,9 @@ requests
 # CLI tools
 click
 rich
+# API and Scheduler
+fastapi
+uvicorn
+pydantic
+apscheduler
+python-multipart
