@@ -19,7 +19,7 @@
 
 - name:                             "Send all telemetry in single call"
   when:                             "_telemetry_batch_all is defined and (_telemetry_batch_all | length) > 0"
-  include_role:
+  ansible.builtin.include_role:
     name:                           misc
     tasks_from:                     post-telemetry-data.yml
   vars:
