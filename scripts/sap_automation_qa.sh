@@ -18,8 +18,9 @@ else
     exit 1
 fi
 
-# Source the utils script for logging and utility functions
+# Source the utils script for logging and utility functions and the version check script
 source "$script_dir/utils.sh"
+source "$script_dir/version_check.sh"
 
 # Use more portable command directory detection
 if command -v readlink >/dev/null 2>&1; then
@@ -502,6 +503,7 @@ main() {
     log "INFO" "Activate the virtual environment..."
     set -e
 
+		check_version_update
 		parse_arguments "$@"
 
 		if [[ -n "$TEST_GROUPS" ]]; then
