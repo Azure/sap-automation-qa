@@ -233,3 +233,68 @@ install_packages() {
         log "INFO" "All required packages are already installed."
     fi
 }
+
+
+# Install Docker based on distribution
+install_docker() {
+    log "INFO" "Installing Docker..."
+    
+    detect_distro
+    
+    case "$DISTRO_FAMILY" in
+        debian)
+            # Install prerequisites
+            sudo apt update -y
+            sudo apt install -y ca-certificates curl gnupg lsb-release
+            
+            # Add Docker's official GPG key
+            sudo install -m 0755 -d /etc/apt/keyrings
+            curl -fsSL https://download.docker.com/linux/$DISTRO/gpg | sudo gpg --dearmor -o /etc/apt/keyrings/docker.gpg
+            sudo chmod a+r /etc/apt/keyrings/docker.gpg
+            
+            # Set up the repository
+            echo \
+              "deb [arch=$(dpkg --print-architecture) signed-by=/etc/apt/keyrings/docker.gpg] https://download.docker.com/linux/$DISTRO \
+              $(lsb_release -cs) stable" | sudo tee /etc/apt/sources.list.d/docker.list > /dev/null
+            
+            # Install Docker Engine
+            sudo apt update -y
+            sudo apt install -y docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+            ;;
+        rhel)
+            # Install prerequisites
+            sudo $PKG_INSTALL yum-utils
+            
+            # Add Docker repository
+            sudo yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
+            
+            # Install Docker Engine
+            sudo $PKG_INSTALL docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
+            ;;
+        suse)
+            # Install Docker from SUSE repositories
+            sudo zypper install -y docker docker-compose
+            ;;
+        *)
+            log "ERROR" "Unsupported distribution for Docker installation: $DISTRO_FAMILY"
+            exit 1
+            ;;
+    esac
+    
+    # Start and enable Docker (handle both systemd and SysV init)
+    if command_exists systemctl && systemctl is-system-running &>/dev/null; then
+        sudo systemctl start docker || true
+        sudo systemctl enable docker || true
+    else
+        # Fallback to SysV init (for WSL, containers, etc.)
+        sudo service docker start || true
+    fi
+    
+    # Add current user to docker group
+    if ! groups | grep -q docker; then
+        sudo usermod -aG docker "$USER"
+        log "INFO" "Added $USER to docker group. You may need to log out and back in."
+    fi
+    
+    log "INFO" "Docker installed successfully."
+}

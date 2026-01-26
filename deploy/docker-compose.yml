@@ -1,0 +1,44 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+
+services:
+  sap-qa-service:
+    build:
+      context:            ..
+      dockerfile:         deploy/Dockerfile
+    container_name:       sap-qa-service
+    restart:              unless-stopped
+    ports:
+                          - "8000:8000"
+    environment:
+                          - LOG_FORMAT=${LOG_FORMAT:-json}
+                          - LOG_LEVEL=${LOG_LEVEL:-INFO}
+                          - SCHEDULER_CHECK_INTERVAL=${SCHEDULER_CHECK_INTERVAL:-60}
+                          - PYTHONPATH=/app
+    volumes:
+                          - sap-qa-data:/app/data
+                          - ssh-keys:/root/.ssh:ro
+                          - ../WORKSPACES:/app/WORKSPACES
+    healthcheck:
+      test:               ["CMD", "curl", "-f", "http://localhost:8000/health"]
+      interval:           30s
+      timeout:            10s
+      retries:            3
+      start_period:       10s
+    networks:
+                          - sap-qa-network
+    logging:
+      driver:             "json-file"
+      options:
+        max-size:         "10m"
+        max-file:         "3"
+
+volumes:
+  sap-qa-data:
+    driver:               local
+  ssh-keys:
+    driver:               local
+
+networks:
+  sap-qa-network:
+    driver:               bridge
