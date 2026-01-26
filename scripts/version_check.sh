@@ -19,7 +19,6 @@ compare_versions() {
     local version1=$1
     local version2=$2
 
-    # Remove any whitespace/newlines
     version1=$(echo "$version1" | tr -d '[:space:]')
     version2=$(echo "$version2" | tr -d '[:space:]')
 
@@ -72,7 +71,7 @@ check_version_update() {
     if [[ $result -eq 2 ]]; then
         echo ""
         echo -e "\033[1;31m╔════════════════════════════════════════════════════════════════════════════╗\033[0m"
-        echo -e "\033[1;31m║                         ⚠️  UPDATE AVAILABLE ⚠️                              ║\033[0m"
+        echo -e "\033[1;31m║                            UPDATE AVAILABLE                                ║\033[0m"
         echo -e "\033[1;31m╠════════════════════════════════════════════════════════════════════════════╣\033[0m"
         echo -e "\033[1;31m║  A newer version of SAP Automation QA Framework is available!              ║\033[0m"
         echo -e "\033[1;31m║                                                                            ║\033[0m"
