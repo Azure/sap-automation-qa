@@ -178,13 +178,29 @@ class TestTelemetryDataSender:
 
     def test_write_log_file_with_list_payload(self, mocker, module_params_list):
         """
-        Ensure write_log_file handles list payloads and uses the first element's TestGroupInvocationId.
+        Ensure write_log_file handles list payloads and writes each entry on its own line.
+        This is critical because render_html_report expects newline-delimited JSON.
         """
         sender = TelemetryDataSender(module_params_list)
-        mock_open = mocker.patch("builtins.open", mocker.mock_open())
+        mock_file = mocker.mock_open()
+        mocker.patch("builtins.open", mock_file)
         mocker.patch("os.makedirs")
         sender.write_log_file()
-        mock_open.assert_called_once_with("/tmp/logs/12345.log", "a", encoding="utf-8")
+
+        mock_file.assert_called_once_with("/tmp/logs/12345.log", "a", encoding="utf-8")
+        handle = mock_file()
+        write_calls = handle.write.call_args_list
+        assert (
+            len(write_calls) == 4
+        ), f"Expected 4 write calls (2 entries × 2), got {len(write_calls)}"
+        import json
+
+        json_writes = [call[0][0] for call in write_calls if call[0][0] != "\n"]
+        assert len(json_writes) == 2, "Should have 2 JSON entries"
+        for json_str in json_writes:
+            parsed = json.loads(json_str)
+            assert isinstance(parsed, dict), "Each line should be a dict, not a list"
+            assert "TestGroupInvocationId" in parsed
 
     def test_validate_params_accepts_list_payload(self, module_params_list):
         """

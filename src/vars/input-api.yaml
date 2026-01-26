@@ -283,7 +283,7 @@ ascs_stonith_timeout:               120
 # Commands for HANA DB HA Test Cases based on OS family
 commands:
   - name:                           get_hana_primitive_resource_id
-    SUSE:                           "cibadmin --query --xpath \"//primitive[@type='SAPHana']\" --node-path | grep -oP \"master\\[@id='\\K[^']+\""
+    SUSE:                           "cibadmin --query --xpath \"//primitive[@type='SAPHana']\" --node-path | grep -oP \"primitive\\[@id='\\K[^']+\""
     REDHAT:                         "cibadmin --query --xpath \"//primitive[@type='SAPHana']\" --node-path | grep -oP \"primitive\\[@id='\\K[^']+\""
 
   - name:                           get_hana_clone_resource_id

@@ -38,15 +38,15 @@
                                           'DurationSeconds': (
                                             (
                                               (
-                                                (lookup('vars', 'test_execution_end_time', default=now(utc=true, fmt='%Y-%m-%d %H:%M:%S')))
+                                                (lookup('vars', 'test_execution_end_time', default='') | default(now(utc=true, fmt='%Y-%m-%d %H:%M:%S'), true))
                                                 | to_datetime('%Y-%m-%d %H:%M:%S')
-                                              ).timestamp()
+                                              )
                                               -
                                               (
-                                                (lookup('vars', 'test_execution_start_time', default=lookup('vars', 'test_case_start_time_epoch', default=now(utc=true, fmt='%Y-%m-%d %H:%M:%S'))))
+                                                (lookup('vars', 'test_execution_start_time', default='') | default(lookup('vars', 'test_case_start_time_epoch', default=''), true) | default(now(utc=true, fmt='%Y-%m-%d %H:%M:%S'), true))
                                                 | to_datetime('%Y-%m-%d %H:%M:%S')
-                                              ).timestamp()
-                                            ) | int
+                                              )
+                                            ) | abs | string
                                           ),
                                           'DbFencingType': (lookup('vars', 'database_cluster_type', default='') if (lookup('vars', 'database_high_availability', default=false)) else 'DB not HA'),
                                           'ScsFencingType': (lookup('vars', 'scs_cluster_type', default='') if (lookup('vars', 'scs_high_availability', default=false)) else 'SCS not HA'),

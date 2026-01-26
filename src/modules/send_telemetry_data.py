@@ -238,13 +238,21 @@ class TelemetryDataSender(SapAutomationQA):
         self.module_params = module_params
         raw_data = module_params["test_group_json_data"]
         if self._is_check_results_format(raw_data):
-            telemetry_data = self._build_telemetry_batch_from_results(raw_data, module_params)
+            aggregated_data = self._build_telemetry_batch_from_results(
+                raw_data, module_params, expand_parameters=False
+            )
+            expanded_data = self._build_telemetry_batch_from_results(
+                raw_data, module_params, expand_parameters=True
+            )
         else:
-            telemetry_data = self._expand_parameter_entries(raw_data)
+            aggregated_data = raw_data if isinstance(raw_data, list) else [raw_data]
+            expanded_data = self._expand_parameter_entries(raw_data)
+        self._aggregated_data = aggregated_data
+        self._expanded_data = expanded_data
 
         self.result.update(
             {
-                "telemetry_data": telemetry_data,
+                "telemetry_data": expanded_data,
                 "telemetry_data_destination": module_params["telemetry_data_destination"],
                 "start": datetime.now(),
                 "end": datetime.now(),
@@ -342,7 +350,7 @@ class TelemetryDataSender(SapAutomationQA):
         )
 
     def _build_telemetry_batch_from_results(
-        self, check_results: Any, module_params: Dict[str, Any]
+        self, check_results: Any, module_params: Dict[str, Any], expand_parameters: bool = True
     ) -> list:
         """
         Builds telemetry batch from check results in Python (replaces slow Ansible loops).
@@ -355,6 +363,9 @@ class TelemetryDataSender(SapAutomationQA):
         :type check_results: Any
         :param module_params: Module parameters containing system context
         :type module_params: Dict[str, Any]
+        :param expand_parameters: If True, expand parameter entries for telemetry.
+            If False, keep aggregated entries for HTML report.
+        :type expand_parameters: bool
         :return: List of telemetry entries
         :rtype: list
         """
@@ -416,7 +427,9 @@ class TelemetryDataSender(SapAutomationQA):
             }
 
             telemetry_batch.append(entry)
-        return self._expand_parameter_entries(telemetry_batch)
+        if expand_parameters:
+            return self._expand_parameter_entries(telemetry_batch)
+        return telemetry_batch
 
     def _fetch_laws_shared_key(self) -> str:
         """
@@ -625,13 +638,15 @@ class TelemetryDataSender(SapAutomationQA):
 
     def write_log_file(self) -> None:
         """
-        Writes the telemetry data to a log file.
+        Writes the aggregated telemetry data to a log file for HTML report.
+        Uses aggregated entries (one per test case) not expanded by parameter.
+        Each entry is written as a separate line (newline-delimited JSON).
         """
         try:
             log_folder = os.path.join(self.module_params["workspace_directory"], "logs")
             os.makedirs(log_folder, exist_ok=True)
             tg_id = None
-            td = self.result.get("telemetry_data")
+            td = self._aggregated_data
             if isinstance(td, dict):
                 tg_id = td.get("TestGroupInvocationId")
             elif isinstance(td, list) and len(td) > 0 and isinstance(td[0], dict):
@@ -640,8 +655,13 @@ class TelemetryDataSender(SapAutomationQA):
                 tg_id = datetime.now().strftime("%Y%m%d%H%M%S")
             log_file_path = os.path.join(log_folder, f"{tg_id}.log")
             with open(log_file_path, "a", encoding="utf-8") as log_file:
-                log_file.write(json.dumps(self.result["telemetry_data"]))
-                log_file.write("\n")
+                if isinstance(self._aggregated_data, list):
+                    for entry in self._aggregated_data:
+                        log_file.write(json.dumps(entry))
+                        log_file.write("\n")
+                else:
+                    log_file.write(json.dumps(self._aggregated_data))
+                    log_file.write("\n")
 
             self.result["message"] += f"Telemetry data written to {log_file_path}. "
             self.result.update(
