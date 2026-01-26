@@ -503,16 +503,16 @@ main() {
     log "INFO" "Activate the virtual environment..."
     set -e
 
-		check_version_update
-		parse_arguments "$@"
+    parse_arguments "$@"
 
-		if [[ -n "$TEST_GROUPS" ]]; then
+    check_version_update
+    if [[ -n "$TEST_GROUPS" ]]; then
         log "INFO" "Test group specified: $TEST_GROUPS"
     fi
     if [[ -n "$TEST_CASES" ]]; then
         log "INFO" "Test cases specified: $TEST_CASES"
     fi
-		if [[ "$OFFLINE_MODE" == "true" ]]; then
+    if [[ "$OFFLINE_MODE" == "true" ]]; then
         log "INFO" "Offline mode enabled - using previously collected CIB data"
     fi
 

@@ -56,10 +56,15 @@ check_version_update() {
         log "WARN" "Local VERSION file not found at $LOCAL_VERSION_FILE"
         return
     fi
-    remote_version=$(curl -s --connect-timeout 5 --max-time 10 "$REMOTE_VERSION_URL" 2>/dev/null | tr -d '[:space:]')
+    if ! command -v curl >/dev/null 2>&1; then
+        log "WARN" "curl not found, skipping version check"
+        return 0
+    fi
+
+    remote_version=$(curl -s --connect-timeout 5 --max-time 10 "$REMOTE_VERSION_URL" 2>/dev/null | tr -d '[:space:]') || true
     if [[ -z "$remote_version" ]]; then
-        log "WARN" "Could not fetch remote version from GitHub"
-        return
+        log "WARN" "Could not fetch remote version from GitHub (network unavailable or timeout)"
+        return 0
     fi
 
     log "INFO" "Local version: $local_version"
