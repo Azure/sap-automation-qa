@@ -1,0 +1,116 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+
+name: Docker Build and Push
+
+on:
+  push:
+    branches:
+      - main
+      - scheduler
+    paths:
+      - 'deploy/Dockerfile'
+      - 'src/**'
+      - 'requirements.txt'
+      - '.github/workflows/docker-build-push.yml'
+  pull_request:
+    branches:
+      - main
+    paths:
+      - 'deploy/Dockerfile'
+      - 'src/**'
+      - 'requirements.txt'
+  workflow_dispatch:
+
+env:
+  IMAGE_NAME: sap-automation-qa
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Check ACR configuration
+        id: acr-check
+        run: |
+          if [[ -n "${{ secrets.AZURE_CLIENT_ID }}" && \
+                -n "${{ secrets.AZURE_TENANT_ID }}" && \
+                -n "${{ secrets.AZURE_SUBSCRIPTION_ID }}" && \
+                -n "${{ secrets.ACR_NAME }}" ]]; then
+            echo "acr_configured=true" >> $GITHUB_OUTPUT
+            echo "::notice::ACR credentials configured - will build and push"
+          else
+            echo "acr_configured=false" >> $GITHUB_OUTPUT
+            echo "::notice::ACR credentials not configured - will only validate build"
+          fi
+
+      - name: Azure Login (MSI/OIDC)
+        if: steps.acr-check.outputs.acr_configured == 'true'
+        uses: azure/login@v2
+        with:
+          client-id: ${{ secrets.AZURE_CLIENT_ID }}
+          tenant-id: ${{ secrets.AZURE_TENANT_ID }}
+          subscription-id: ${{ secrets.AZURE_SUBSCRIPTION_ID }}
+
+      - name: Login to Azure Container Registry
+        if: steps.acr-check.outputs.acr_configured == 'true'
+        run: |
+          az acr login --name ${{ secrets.ACR_NAME }}
+
+      - name: Extract metadata for Docker
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ${{ secrets.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}
+          tags: |
+            type=ref,event=branch
+            type=ref,event=pr
+            type=sha,prefix=
+            type=raw,value=latest,enable=${{ github.ref == 'refs/heads/main' }}
+
+      - name: Build Docker image (validation only)
+        if: steps.acr-check.outputs.acr_configured == 'false'
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./deploy/Dockerfile
+          push: false
+          load: true
+          tags: ${{ env.IMAGE_NAME }}:validation
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Validate Docker image
+        if: steps.acr-check.outputs.acr_configured == 'false'
+        run: |
+          echo "Validating Docker image..."
+          docker images ${{ env.IMAGE_NAME }}:validation
+          docker run --rm ${{ env.IMAGE_NAME }}:validation python --version
+          echo "Docker image validation successful"
+
+      - name: Build and push Docker image to ACR
+        if: steps.acr-check.outputs.acr_configured == 'true'
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          file: ./deploy/Dockerfile
+          push: ${{ github.event_name != 'pull_request' }}
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Image digest
+        if: steps.acr-check.outputs.acr_configured == 'true' && github.event_name != 'pull_request'
+        run: |
+          echo "Image pushed to ACR with tags:"
+          echo "${{ steps.meta.outputs.tags }}"
