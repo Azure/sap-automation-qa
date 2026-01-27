@@ -18,8 +18,9 @@ else
     exit 1
 fi
 
-# Source the utils script for logging and utility functions
+# Source the utils script for logging and utility functions and the version check script
 source "$script_dir/utils.sh"
+source "$script_dir/version_check.sh"
 
 # Use more portable command directory detection
 if command -v readlink >/dev/null 2>&1; then
@@ -502,15 +503,16 @@ main() {
     log "INFO" "Activate the virtual environment..."
     set -e
 
-		parse_arguments "$@"
+    parse_arguments "$@"
 
-		if [[ -n "$TEST_GROUPS" ]]; then
+    check_version_update
+    if [[ -n "$TEST_GROUPS" ]]; then
         log "INFO" "Test group specified: $TEST_GROUPS"
     fi
     if [[ -n "$TEST_CASES" ]]; then
         log "INFO" "Test cases specified: $TEST_CASES"
     fi
-		if [[ "$OFFLINE_MODE" == "true" ]]; then
+    if [[ "$OFFLINE_MODE" == "true" ]]; then
         log "INFO" "Offline mode enabled - using previously collected CIB data"
     fi
 
