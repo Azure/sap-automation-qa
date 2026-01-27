@@ -7,11 +7,13 @@ from datetime import datetime
 from typing import List, Optional
 from uuid import uuid4
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 
 
 class Schedule(BaseModel):
     """Schedule configuration for automated test execution."""
+
+    model_config = ConfigDict(use_enum_values=True)
 
     id: str = Field(default_factory=lambda: str(uuid4()))
     name: str
@@ -28,11 +30,6 @@ class Schedule(BaseModel):
     total_runs: int = 0
     created_at: datetime = Field(default_factory=datetime.utcnow)
     updated_at: datetime = Field(default_factory=datetime.utcnow)
-
-    class Config:
-        """Pydantic configuration."""
-
-        use_enum_values = True
 
 
 class CreateScheduleRequest(BaseModel):

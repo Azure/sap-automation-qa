@@ -265,8 +265,6 @@ class ObservabilityScope:
             self._token = None
 
 
-
-
 class ExecutionScope(ObservabilityScope):
     """
     Specialized scope for test/Ansible execution.

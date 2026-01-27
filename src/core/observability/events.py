@@ -10,7 +10,7 @@ from datetime import datetime, timezone
 from enum import Enum
 from typing import Any, Literal, Optional
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, ConfigDict, Field
 from src.core.observability.context import (
     get_correlation_id,
     get_execution_id,
@@ -48,6 +48,8 @@ ServiceEventType = Literal[
 class ServiceEvent(BaseModel):
     """Service-level log event for HTTP/API operations."""
 
+    model_config = ConfigDict(use_enum_values=True)
+
     timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     stream: Literal[LogStream.SERVICE] = LogStream.SERVICE
     correlation_id: Optional[str] = None
@@ -66,9 +68,6 @@ class ServiceEvent(BaseModel):
 
     workspace_id: Optional[str] = None
 
-    class Config:
-        use_enum_values = True
-
 
 ExecutionEventType = Literal[
     "job_start",
@@ -81,12 +80,17 @@ ExecutionEventType = Literal[
     "test_end",
     "config_check",
     "command_exec",
+    "step_start",
+    "step_complete",
+    "step_fail",
     "error",
 ]
 
 
 class ExecutionEvent(BaseModel):
     """Execution-level log event for job and test operations."""
+
+    model_config = ConfigDict(use_enum_values=True)
 
     timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     stream: Literal[LogStream.EXECUTION] = LogStream.EXECUTION
@@ -104,9 +108,6 @@ class ExecutionEvent(BaseModel):
     test_group: Optional[str] = None
     tests_passed: Optional[int] = None
     tests_failed: Optional[int] = None
-
-    class Config:
-        use_enum_values = True
 
 
 def truncate(text: Optional[str], max_length: int = 200) -> Optional[str]:

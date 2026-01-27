@@ -179,12 +179,14 @@ class JobWorker:
                 self.job_store.update(job)
                 await self._emit_event(str(job.id), event)
 
-                logger.event(create_execution_event(
-                    "job_start",
-                    job_id=str(job.id),
-                    workspace_id=job.workspace_id,
-                    test_group=job.test_group,
-                ))
+                logger.event(
+                    create_execution_event(
+                        "job_start",
+                        job_id=str(job.id),
+                        workspace_id=job.workspace_id,
+                        test_group=job.test_group,
+                    )
+                )
 
                 workspace_config = self.workspace_config_loader(job.workspace_id)
                 if not workspace_config:
@@ -195,30 +197,14 @@ class JobWorker:
                     raise ValueError(f"No inventory path for workspace {job.workspace_id}")
 
                 results = []
-                test_ids = job.test_ids or ([""] if job.test_group else [])
+                test_ids = job.test_ids or ([job.test_group] if job.test_group else [])
 
                 if not test_ids:
                     raise ValueError("No tests specified for execution")
 
-                job.total_steps = len(test_ids)
-
-                for idx, test_id in enumerate(test_ids):
+                for test_id in test_ids:
                     if job.status == JobStatus.CANCELLED:
                         break
-
-                    step_name = f"Test: {test_id}" if test_id else f"Group: {job.test_group}"
-                    event = job.step_started(idx, step_name, f"Starting {step_name}...")
-                    self.job_store.update(job)
-                    await self._emit_event(str(job.id), event)
-
-                    logger.event(create_execution_event(
-                        "step_start",
-                        job_id=str(job.id),
-                        step_index=idx,
-                        step_name=step_name,
-                        test_id=test_id,
-                    ))
-                    step_start = time.perf_counter()
 
                     try:
                         result = await asyncio.to_thread(
@@ -229,22 +215,8 @@ class JobWorker:
                             inventory_path=inventory_path,
                             extra_vars=workspace_config.get("extra_vars"),
                         )
-                        step_duration_ms = (time.perf_counter() - step_start) * 1000
 
                         if result.get("status") == "failed":
-                            event = job.step_failed(
-                                idx, step_name, result.get("error", "Unknown error")
-                            )
-                            await self._emit_event(str(job.id), event)
-                            logger.event(create_execution_event(
-                                "step_fail",
-                                job_id=str(job.id),
-                                step_index=idx,
-                                step_name=step_name,
-                                test_id=test_id,
-                                error=result.get("error", "Unknown error"),
-                                duration_ms=step_duration_ms,
-                            ))
                             results.append(
                                 {
                                     "test_id": test_id,
@@ -253,16 +225,6 @@ class JobWorker:
                                 }
                             )
                         else:
-                            event = job.step_completed(idx, step_name, f"{step_name} completed")
-                            await self._emit_event(str(job.id), event)
-                            logger.event(create_execution_event(
-                                "step_complete",
-                                job_id=str(job.id),
-                                step_index=idx,
-                                step_name=step_name,
-                                test_id=test_id,
-                                duration_ms=step_duration_ms,
-                            ))
                             results.append(
                                 {
                                     "test_id": test_id,
@@ -274,18 +236,7 @@ class JobWorker:
                     except asyncio.CancelledError:
                         raise
                     except Exception as e:
-                        event = job.step_failed(idx, step_name, str(e))
-                        await self._emit_event(str(job.id), event)
-                        logger.event(create_execution_event(
-                            "step_fail",
-                            job_id=str(job.id),
-                            step_index=idx,
-                            step_name=step_name,
-                            error=str(e),
-                        ))
                         results.append({"test_id": test_id, "status": "failed", "error": str(e)})
-
-                    self.job_store.update(job)
 
                 if job.status != JobStatus.CANCELLED:
                     all_success = all(r.get("status") == "success" for r in results)
@@ -302,44 +253,52 @@ class JobWorker:
                     else:
                         passed = summary["tests_passed"]
                         failed = summary["tests_failed"]
-                        event = job.complete(summary, f"Completed: {passed} passed, {failed} failed")
+                        event = job.complete(
+                            summary, f"Completed: {passed} passed, {failed} failed"
+                        )
 
                     self.job_store.update(job)
                     await self._emit_event(str(job.id), event)
 
                     duration_ms = (time.perf_counter() - start_time) * 1000
-                    logger.event(create_execution_event(
-                        "job_complete",
-                        job_id=str(job.id),
-                        workspace_id=job.workspace_id,
-                        test_group=job.test_group,
-                        tests_passed=summary["tests_passed"],
-                        tests_failed=summary["tests_failed"],
-                        duration_ms=duration_ms,
-                    ))
+                    logger.event(
+                        create_execution_event(
+                            "job_complete",
+                            job_id=str(job.id),
+                            workspace_id=job.workspace_id,
+                            test_group=job.test_group,
+                            tests_passed=summary["tests_passed"],
+                            tests_failed=summary["tests_failed"],
+                            duration_ms=duration_ms,
+                        )
+                    )
 
             except asyncio.CancelledError:
                 duration_ms = (time.perf_counter() - start_time) * 1000
-                logger.event(create_execution_event(
-                    "job_cancel",
-                    job_id=str(job.id),
-                    workspace_id=job.workspace_id,
-                    reason="User cancelled",
-                    duration_ms=duration_ms,
-                ))
+                logger.event(
+                    create_execution_event(
+                        "job_cancel",
+                        job_id=str(job.id),
+                        workspace_id=job.workspace_id,
+                        reason="User cancelled",
+                        duration_ms=duration_ms,
+                    )
+                )
                 event = job.cancel("Job cancelled")
                 self.job_store.update(job)
                 await self._emit_event(str(job.id), event)
 
             except Exception as e:
                 duration_ms = (time.perf_counter() - start_time) * 1000
-                logger.event(create_execution_event(
-                    "job_fail",
-                    job_id=str(job.id),
-                    workspace_id=job.workspace_id,
-                    error=str(e),
-                    duration_ms=duration_ms,
-                ))
+                logger.event(
+                    create_execution_event(
+                        "job_fail",
+                        job_id=str(job.id),
+                        workspace_id=job.workspace_id,
+                        error=str(e),
+                        duration_ms=duration_ms,
+                    )
+                )
                 event = job.fail(str(e))
                 self.job_store.update(job)
                 await self._emit_event(str(job.id), event)

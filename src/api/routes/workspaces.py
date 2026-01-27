@@ -52,7 +52,6 @@ def _load_workspaces_from_directory(base_dir: str = "WORKSPACES/SYSTEM") -> List
             continue
 
         sap_sid = ""
-        description = ""
 
         if params_file.exists():
             try:
@@ -74,7 +73,7 @@ def _load_workspaces_from_directory(base_dir: str = "WORKSPACES/SYSTEM") -> List
                 id=workspace_id,
                 name=sap_sid or workspace_id,
                 environment=workspace_id.split("-")[0] if "-" in workspace_id else "",
-                inventory_path=str(hosts_file),
+                path=str(workspace_dir),
             )
         )
 

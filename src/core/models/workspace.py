@@ -12,7 +12,7 @@ class WorkspaceInfo(BaseModel):
     id: str
     name: str
     environment: str = ""
-    inventory_path: str = ""
+    path: str = ""
 
 
 class WorkspaceListResponse(BaseModel):

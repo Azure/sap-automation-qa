@@ -34,7 +34,6 @@ class JobEvent(BaseModel):
     """Event emitted during job execution."""
 
     model_config = ConfigDict(use_enum_values=True)
-
     event_type: JobEventType
     timestamp: datetime = Field(default_factory=datetime.utcnow)
     message: str = ""

@@ -87,12 +87,22 @@ async def list_jobs(
     """
     store = get_job_store()
 
+    status_filter = None
+    if status:
+        try:
+            status_filter = JobStatus(status)
+        except ValueError:
+            raise HTTPException(
+                status_code=400,
+                detail=f"Invalid status '{status}'. Valid values: {[s.value for s in JobStatus]}",
+            )
+
     if active_only:
         jobs = store.get_active(workspace_id=workspace_id)
     else:
         jobs = store.get_history(
             workspace_id=workspace_id,
-            status=JobStatus(status) if status else None,
+            status=status_filter,
             limit=limit,
         )
         jobs = store.get_active(workspace_id=workspace_id) + jobs
