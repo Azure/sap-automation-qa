@@ -2,7 +2,7 @@
 # Licensed under the MIT License.
 
 # Stage 1: Build stage
-FROM mcr.microsoft.com/azurelinux/base/python:3.12 as builder
+FROM mcr.microsoft.com/azurelinux/base/python:3.12 AS builder
 WORKDIR /app
 RUN tdnf update -y && tdnf install -y \
     gcc \
@@ -25,8 +25,6 @@ RUN tdnf update -y && tdnf install -y \
 COPY --from=builder /root/.local /root/.local
 ENV PATH=/root/.local/bin:$PATH
 COPY src/ ./src/
-COPY docs/ ./docs/
-COPY WORKSPACES/ ./WORKSPACES/
 RUN mkdir -p /app/data
 ENV PYTHONPATH=/app
 ENV PYTHONUNBUFFERED=1
