@@ -8,6 +8,7 @@ azure-identity
 azure-kusto-data
 azure-kusto-ingest
 azure-mgmt-compute
+azure-mgmt-loganalytics
 azure-mgmt-network
 azure-storage-blob
 azure-storage-queue

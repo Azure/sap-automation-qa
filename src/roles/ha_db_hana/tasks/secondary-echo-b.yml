@@ -77,6 +77,13 @@
                                         cluster_status_post.primary_node == cluster_status_pre.primary_node and
                                         cluster_status_post.secondary_node == cluster_status_pre.secondary_node
 
+        - name:                         "Test Execution: Determine test execution status"
+          ansible.builtin.set_fact:
+            test_execution_status:      "{{ 'PASSED' if (
+                                            cluster_status_post.primary_node == cluster_status_pre.primary_node and
+                                            cluster_status_post.secondary_node == cluster_status_pre.secondary_node
+                                          ) else 'FAILED' }}"
+
         - name:                         "Test Execution: CleanUp any failed resource"
           ansible.builtin.command:      crm_resource --cleanup
           register:                     cleanup_failed_resource_post

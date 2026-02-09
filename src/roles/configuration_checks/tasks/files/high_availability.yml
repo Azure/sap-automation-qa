@@ -40,6 +40,12 @@ enums:
     - fencing_agent:                  &fencing_agent "AFA"
     - all_fencing_agent:              &cluster_type [*sbd, *fencing_agent]
 
+  high_availability:
+    - scale_up:                      &scale_up "scale_up"
+    - scale_out:                     &scale_out "scale_out"
+    - all_ha:                        &high_availability [*scale_up, *scale_out]
+
+
 checks:
   - id:                               "HA-HANA-001"
     name:                             "Database HA Cluster Configuration"
@@ -49,7 +55,7 @@ checks:
     applicability:
       os_type:                        *os_type
       role:                           [*db_role]
-      high_availability:              true
+      high_availability:              *high_availability
       high_availability_agent:        *cluster_type
     collector_type:                   *module
     collector_args:
@@ -65,7 +71,7 @@ checks:
     applicability:
       os_type:                        *os_type
       role:                           [*ascs_role, *ers_role]
-      high_availability:              true
+      high_availability:              *scale_up
       high_availability_agent:        *cluster_type
     collector_type:                   *module
     collector_args:
@@ -80,8 +86,24 @@ checks:
     severity:                         *info
     applicability:
       os_type:                        *os_type
-      role:                           [*ascs_role, *db_role, *ers_role]
-      high_availability:              true
+      role:                           [*ascs_role, *ers_role]
+      high_availability:              *scale_up
+      high_availability_agent:        *cluster_type
+    collector_type:                   *module
+    collector_args:
+      module_name:                    "get_azure_lb"
+      module_args:                    {}
+    report:                           *table
+
+  - id:                               "HA-LB-003"
+    name:                             "Load Balancer Configuration"
+    description:                      "Validates load balancers configuration parameters in SAP VMs' Load Balancer backend address pools"
+    category:                         *ha_check
+    severity:                         *info
+    applicability:
+      os_type:                        *os_type
+      role:                           [*db_role]
+      high_availability:              *high_availability
       high_availability_agent:        *cluster_type
     collector_type:                   *module
     collector_args:
@@ -97,7 +119,7 @@ checks:
     applicability:
       os_type:                        *os_type
       role:                           [*ascs_role, *db_role, *ers_role]
-      high_availability:              true
+      high_availability:              *high_availability
       high_availability_agent:        *cluster_type
     collector_type:                   *azure
     collector_args:

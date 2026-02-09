@@ -89,15 +89,15 @@ class TestASCSNodeCrash(RolesTestingBaseSCS):
             f"Events: {[e.get('event') for e in result.events if 'event' in e]}"
         )
 
-        ok_events, failed_events = [], []
+        ok_events = []
         for event in result.events:
             if event.get("event") == "runner_on_ok":
                 ok_events.append(event)
-            elif event.get("event") == "runner_on_failed":
-                failed_events.append(event)
 
         assert len(ok_events) > 0
-        assert len(failed_events) == 0
+        assert not result.stats.get(
+            "failures"
+        ), f"Unrescued failures detected: {result.stats.get('failures')}"
 
         node_crash_executed = False
         validate_executed = False

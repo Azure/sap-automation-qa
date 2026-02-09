@@ -359,7 +359,7 @@
                 </div>
               {% endfor %}
               <div class="system-info-column">
-                <div class="pie" id="testResults" style="position: relative; z-index: 2;" data-results='{{ test_case_results|map(attribute='TestCaseStatus')|list|tojson|safe }}'>
+                <div class="pie" id="testResults" style="position: relative; z-index: 2;" data-results='{{ test_case_results|selectattr("TestCaseStatus", "defined")|map(attribute="TestCaseStatus")|list|tojson|safe }}'>
                   <span style="position: relative; z-index: 3;">0/0</span>
                 </div>
               </div>

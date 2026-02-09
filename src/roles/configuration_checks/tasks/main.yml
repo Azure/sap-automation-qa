@@ -49,7 +49,7 @@
                                     - check_type.file_name == "high_availability"
                                     - role in ['SCS', 'ERS', 'DB']
 
-- name:                             "{{ check_type.name }} - Prepare system context information"
+- name:                             "{{ check_type.name }} -Prepare system context information"
   no_log:                           true
   ansible.builtin.set_fact:
     system_context:
@@ -67,9 +67,21 @@
       role:                         "{{ role }}"
       high_availability:            >-
                                     {% if role == 'DB' %}
-                                      {{ database_high_availability | default(false) | bool }}
+                                      {% if database_high_availability | default(false) | bool %}
+                                        {% if database_scale_out  | default(database_HANA_use_scaleout_scenario | default(false)) | bool %}
+                                          scale_out
+                                        {% else %}
+                                          scale_up
+                                        {% endif %}
+                                      {% else %}
+                                        false
+                                      {% endif %}
                                     {% elif role in ['SCS', 'ERS', 'PAS', 'APP'] %}
-                                      {{ scs_high_availability | default(false) | bool }}
+                                      {% if scs_high_availability | default(false) | bool %}
+                                        scale_up
+                                      {% else %}
+                                        false
+                                      {% endif %}
                                     {% else %}
                                       false
                                     {% endif %}
@@ -141,7 +153,7 @@
         workspace_directory:        "{{ _workspace_directory }}"
         test_group_invocation_id:   "{{ test_group_invocation_id }}"
         test_group_name:            "ConfigurationChecks"
-        hostname:                   "{{ ansible_hostname }}"
+        hostname:                   "{{ inventory_hostname }}"
         parallel_execution:         true
         max_workers:                1
         enable_retry:               true
@@ -176,7 +188,7 @@
         workspace_directory:        "{{ _workspace_directory }}"
         test_group_invocation_id:   "{{ test_group_invocation_id }}"
         test_group_name:            "ConfigurationChecks"
-        hostname:                   "{{ ansible_hostname }}"
+        hostname:                   "{{ inventory_hostname }}"
         parallel_execution:         true
         max_workers:                1
         enable_retry:               true
@@ -210,7 +222,7 @@
         workspace_directory:        "{{ _workspace_directory }}"
         test_group_invocation_id:   "{{ test_group_invocation_id }}"
         test_group_name:            "ConfigurationChecks"
-        hostname:                   "{{ ansible_hostname }}"
+        hostname:                   "{{ inventory_hostname }}"
         parallel_execution:         true
         max_workers:                1
         enable_retry:               true
