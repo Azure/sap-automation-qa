@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file.
 
+## 1.0.2
+Release Date: 09-01-2026
+1. Enhance telemetry injection for configuration checks and scale out
+2. Improvements to telemetry data handling and reporting
+3. Introduce a version check mechanism
+4. Package updates and dependency management
+
 ## 1.0.1
 Release Date: 12-09-2025
 1. CI/CD Workflow Upgrades:
