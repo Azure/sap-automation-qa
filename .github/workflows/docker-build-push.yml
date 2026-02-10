@@ -7,7 +7,7 @@ on:
   push:
     branches:
       - main
-      - scheduler
+      - 'development/*'
     paths:
       - 'deploy/Dockerfile'
       - 'src/**'
