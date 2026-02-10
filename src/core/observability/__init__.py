@@ -79,7 +79,6 @@ from src.core.observability.middleware import (
     WORKSPACE_ID_HEADER,
 )
 
-
 __all__ = [
     "ContextData",
     "ObservabilityContextManager",

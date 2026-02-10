@@ -36,7 +36,6 @@ from src.api.routes import (
 from src.api.routes.health import set_service_status
 from src.api.routes.workspaces import default_workspace_loader
 
-
 API_V1_PREFIX = "/api/v1"
 LOG_FORMAT = os.environ.get("LOG_FORMAT", "console")
 DATA_DIR = Path(os.environ.get("DATA_DIR", "data"))

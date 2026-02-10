@@ -2,6 +2,7 @@
 # Licensed under the MIT License.
 
 """Workspace models."""
+
 from typing import List
 from pydantic import BaseModel
 
