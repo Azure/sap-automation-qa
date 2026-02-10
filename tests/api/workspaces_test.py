@@ -8,6 +8,7 @@ from pathlib import Path
 from typing import Generator
 import pytest
 from fastapi.testclient import TestClient
+from src.api.routes import workspaces
 from src.api.routes.workspaces import (
     _load_workspaces_from_directory,
     default_workspace_loader,
@@ -163,8 +164,7 @@ class TestWorkspacesApi:
         """
         Default loader returns empty dict for nonexistent workspace.
         """
-        result = default_workspace_loader("DOES-NOT-EXIST")
-        assert result == {}
+        assert default_workspace_loader("DOES-NOT-EXIST") == {}
 
     def test_default_workspace_loader_no_hosts(
         self,
@@ -178,8 +178,7 @@ class TestWorkspacesApi:
         ws.mkdir()
         (ws / "sap-parameters.yaml").write_text("sap_sid: X\n")
         monkeypatch.chdir(workspace_dir.parent.parent)
-        result = default_workspace_loader("NO-HOSTS")
-        assert result == {}
+        assert default_workspace_loader("NO-HOSTS") == {}
 
     def test_default_workspace_loader_with_config(
         self,
@@ -225,8 +224,6 @@ class TestWorkspacesApi:
         """
         set_workspace_loader sets the global loader.
         """
-        from src.api.routes import workspaces
-
         original = workspaces._workspace_loader
         try:
             mock_loader = lambda ws_id: {"id": ws_id}

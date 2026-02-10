@@ -20,6 +20,7 @@ except ImportError:
     from src.module_utils.sap_automation_qa import SapAutomationQA
     from src.module_utils.enums import TestStatus
 
+
 def _sanitize_for_template(obj: Any) -> Any:
     """
     Recursively sanitize data for Jinja2 template rendering.

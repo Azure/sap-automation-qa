@@ -63,16 +63,17 @@ class TestLogAnalyticsHandler:
         Emit does nothing when credentials are missing.
         """
         handler = LogAnalyticsHandler()
-        record = logging.LogRecord(
-            name="test",
-            level=logging.INFO,
-            pathname="",
-            lineno=0,
-            msg="hello",
-            args=(),
-            exc_info=None,
+        handler.emit(
+            logging.LogRecord(
+                name="test",
+                level=logging.INFO,
+                pathname="",
+                lineno=0,
+                msg="hello",
+                args=(),
+                exc_info=None,
+            )
         )
-        handler.emit(record)
         assert handler._queue.empty()
         handler.close()
 
@@ -84,16 +85,17 @@ class TestLogAnalyticsHandler:
             workspace_id="ws",
             shared_key="key",
         )
-        record = logging.LogRecord(
-            name="test.logger",
-            level=logging.WARNING,
-            pathname="",
-            lineno=42,
-            msg="something happened",
-            args=(),
-            exc_info=None,
+        handler.emit(
+            logging.LogRecord(
+                name="test.logger",
+                level=logging.WARNING,
+                pathname="",
+                lineno=42,
+                msg="something happened",
+                args=(),
+                exc_info=None,
+            )
         )
-        handler.emit(record)
         assert not handler._queue.empty()
         entry = handler._queue.get_nowait()
         assert entry["level"] == "WARNING"
@@ -161,8 +163,7 @@ class TestLogAnalyticsHandler:
             workspace_id="ws",
             shared_key="key",
         )
-        result = handler._send_batch([{"msg": "test"}])
-        assert result is True
+        assert handler._send_batch([{"msg": "test"}]) is True
         mock_sender_cls.assert_called_once()
         handler.close()
 
@@ -178,7 +179,6 @@ class TestLogAnalyticsHandler:
             "src.core.observability.log_analytics.TelemetryDataSender",
             return_value=mock_instance,
         )
-
         handler = LogAnalyticsHandler(
             workspace_id="ws",
             shared_key="key",
@@ -219,23 +219,23 @@ class TestLogAnalyticsHandler:
             "src.core.observability.log_analytics.TelemetryDataSender",
             return_value=mock_instance,
         )
-
         handler = LogAnalyticsHandler(
             workspace_id="ws",
             shared_key="key",
             batch_size=1000,
             flush_interval=100.0,
         )
-        record = logging.LogRecord(
-            name="test",
-            level=logging.INFO,
-            pathname="",
-            lineno=0,
-            msg="flush me",
-            args=(),
-            exc_info=None,
+        handler.emit(
+            logging.LogRecord(
+                name="test",
+                level=logging.INFO,
+                pathname="",
+                lineno=0,
+                msg="flush me",
+                args=(),
+                exc_info=None,
+            )
         )
-        handler.emit(record)
         handler.close()
         assert mock_instance.send_telemetry_data_to_azureloganalytics.called
 
@@ -269,8 +269,7 @@ class TestAddLogAnalyticsHandler:
         """
         Returns None when no credentials provided.
         """
-        result = add_log_analytics_handler()
-        assert result is None
+        assert add_log_analytics_handler() is None
 
     def test_returns_handler_with_credentials(self) -> None:
         """

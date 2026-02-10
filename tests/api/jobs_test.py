@@ -9,7 +9,7 @@ from pytest_mock import MockerFixture
 from fastapi import FastAPI
 from fastapi.testclient import TestClient
 from src.api.routes import jobs
-from src.core.models.job import Job, JobStatus
+from src.core.models.job import Job
 from src.core.storage.job_store import JobStore
 
 
