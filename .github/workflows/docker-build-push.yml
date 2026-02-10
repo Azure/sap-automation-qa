@@ -86,7 +86,7 @@ jobs:
         run: |
           echo "Validating Docker image..."
           docker images ${{ env.IMAGE_NAME }}:validation
-          docker run --rm ${{ env.IMAGE_NAME }}:validation python --version
+          docker run --rm ${{ env.IMAGE_NAME }}:validation python3 --version
           echo "Docker image validation successful"
 
       - name: Build and push Docker image to ACR

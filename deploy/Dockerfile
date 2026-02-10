@@ -24,6 +24,7 @@ RUN tdnf update -y && tdnf install -y \
     util-linux \
     shadow-utils \
     && tdnf clean all \
+    && ln -sf /usr/bin/python3 /usr/bin/python \
     && groupadd -g "${APP_GID}" appuser \
     && useradd -u "${APP_UID}" -g appuser -m -s /bin/bash appuser \
     && mkdir -p /app/data /app/logs /home/appuser/.ssh \
