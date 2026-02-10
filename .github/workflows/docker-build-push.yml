@@ -8,18 +8,10 @@ on:
     branches:
       - main
       - 'development/*'
-    paths:
-      - 'deploy/Dockerfile'
-      - 'src/**'
-      - 'requirements.txt'
-      - '.github/workflows/docker-build-push.yml'
   pull_request:
     branches:
       - main
-    paths:
-      - 'deploy/Dockerfile'
-      - 'src/**'
-      - 'requirements.txt'
+      - 'development/*'
   workflow_dispatch:
 
 env:
