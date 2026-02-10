@@ -38,7 +38,7 @@ requests
 # CLI tools
 click
 rich
-# API and Scheduler
+# API 
 fastapi
 uvicorn
 pydantic

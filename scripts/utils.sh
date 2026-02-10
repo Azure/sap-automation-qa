@@ -305,3 +305,45 @@ install_docker() {
     
     log "INFO" "Docker installed successfully."
 }
+
+# Check if workspace has an active job in the scheduler database.
+# :param workspace_id: The workspace/system config name to check.
+# :return: None. Warns user and exits if an active job exists.
+check_workspace_busy() {
+    local workspace_id=$1
+    local db_path="${project_root}/data/scheduler.db"
+
+    if [[ ! -f "$db_path" ]]; then
+        return 0
+    fi
+
+    local active_job
+    active_job=$(python3 -c "
+import sqlite3, sys
+conn = sqlite3.connect('${db_path}')
+conn.row_factory = sqlite3.Row
+cur = conn.execute(
+    \"SELECT id, status, created_at, test_group FROM jobs \"
+    \"WHERE workspace_id = ? AND status NOT IN ('completed','failed','cancelled') \"
+    \"LIMIT 1\",
+    (sys.argv[1],),
+)
+row = cur.fetchone()
+if row:
+    print(f\"{row['id']}|{row['status']}|{row['test_group']}|{row['created_at']}\")
+conn.close()
+" "$workspace_id" 2>/dev/null || true)
+
+    if [[ -n "$active_job" ]]; then
+        IFS='|' read -r job_id job_status job_group job_created <<< "$active_job"
+        log "ERROR" "Workspace '$workspace_id' has an active job in the scheduler."
+        log "ERROR" "  Job ID:     $job_id"
+        log "ERROR" "  Status:     $job_status"
+        log "ERROR" "  Test Group: $job_group"
+        log "ERROR" "  Created:    $job_created"
+        log "ERROR" ""
+        log "ERROR" "Wait for the job to finish or cancel it via the API:"
+        log "ERROR" "  curl -X POST http://localhost:8000/api/v1/jobs/$job_id/cancel -H 'Content-Type: application/json' -d '{\"reason\": \"manual run\"}'"
+        exit 1
+    fi
+}

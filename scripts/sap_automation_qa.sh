@@ -519,6 +519,9 @@ main() {
     # Validate parameters
     validate_params
 
+    # Validate worksapce status for any running  jobs
+    check_workspace_busy $SYSTEM_CONFIG_NAME
+
     # Check if the SYSTEM_HOSTS and SYSTEM_PARAMS directory exists inside WORKSPACES/SYSTEM folder
     SYSTEM_CONFIG_FOLDER="${cmd_dir}/../$WORKSPACES_DIR/SYSTEM/$SYSTEM_CONFIG_NAME"
     SID=$(echo "$SYSTEM_CONFIG_NAME" | awk -F'-' '{print $NF}')
