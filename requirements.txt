@@ -231,7 +231,7 @@ python-dateutil==2.9.0.post0
     # via
     #   azure-kusto-data
     #   pandas
-python-multipart==0.0.21
+python-multipart==0.0.22
     # via -r requirements.in
 pytokens==0.3.0
     # via black

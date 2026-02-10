@@ -3,31 +3,43 @@
 
 # Stage 1: Build stage
 FROM mcr.microsoft.com/azurelinux/base/python:3.12 AS builder
-WORKDIR /app
+WORKDIR /build
 RUN tdnf update -y && tdnf install -y \
     gcc \
     libffi-devel \
     && tdnf clean all
 COPY requirements.txt .
-RUN pip install --no-cache-dir --user -r requirements.txt
+RUN pip install --no-cache-dir --prefix=/build/deps -r requirements.txt
 
 # Stage 2: Startup stage
 FROM mcr.microsoft.com/azurelinux/base/python:3.12
-WORKDIR /app
+
+ARG APP_UID=1000
+ARG APP_GID=1000
+
 RUN tdnf update -y && tdnf install -y \
     openssh-clients \
     git \
     curl \
     util-linux \
+    shadow-utils \
     && tdnf clean all \
-    && mkdir -p /app/data /app/logs /root/.ssh \
-    && chmod 700 /root/.ssh
-COPY --from=builder /root/.local /root/.local
-ENV PATH=/root/.local/bin:$PATH
-COPY src/ ./src/
-RUN mkdir -p /app/data
+    && groupadd -g "${APP_GID}" appuser \
+    && useradd -u "${APP_UID}" -g appuser -m -s /bin/bash appuser \
+    && mkdir -p /app/data /app/logs /home/appuser/.ssh \
+    && chmod 700 /home/appuser/.ssh \
+    && chown -R appuser:appuser /app /home/appuser/.ssh
+
+WORKDIR /app
+
+COPY --from=builder /build/deps /usr/local
+COPY --chown=appuser:appuser src/ ./src/
+
 ENV PYTHONPATH=/app
 ENV PYTHONUNBUFFERED=1
+
+USER appuser
+
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:8000/healthz || exit 1
 EXPOSE 8000

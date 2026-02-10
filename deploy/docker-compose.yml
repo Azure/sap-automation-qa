@@ -17,7 +17,7 @@ services:
                           - PYTHONPATH=/app
     volumes:
                           - sap-qa-data:/app/data
-                          - ssh-keys:/root/.ssh:ro
+                          - ssh-keys:/home/appuser/.ssh:ro
                           - ../WORKSPACES:/app/WORKSPACES
     healthcheck:
       test:               ["CMD", "curl", "-f", "http://localhost:8000/healthz"]
