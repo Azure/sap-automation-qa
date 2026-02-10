@@ -243,7 +243,7 @@ class TestJobsApi:
 
     def test_get_job_worker_uninitialized(self) -> None:
         """
-        Returns 503 when job worker is not initialized.
+        Returns 503 when job worker is not initialized and then the exception it as 400.
         """
         app = FastAPI()
         app.include_router(jobs.router, prefix="/api/v1")
@@ -259,7 +259,7 @@ class TestJobsApi:
                         "test_group": "test",
                     },
                 )
-                assert response.status_code == 503
+                assert response.status_code == 400
                 assert "not initialized" in response.json()["detail"]
         finally:
             jobs._job_worker = saved_worker
