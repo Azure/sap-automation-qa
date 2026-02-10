@@ -68,7 +68,7 @@ azure-storage-queue==12.13.0
     # via
     #   -r requirements.in
     #   azure-kusto-ingest
-backports-asyncio-runner==1.2.0
+backports-asyncio-runner==1.2.0 ; python_version < "3.12"
     # via pytest-asyncio
 black==26.1.0
     # via
