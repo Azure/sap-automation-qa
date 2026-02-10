@@ -21,6 +21,7 @@ coverage
 # Testing packages
 httpx
 pytest
+pytest-asyncio
 pytest-cov
 pytest-mock
 

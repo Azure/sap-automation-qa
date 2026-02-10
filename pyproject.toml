@@ -1,6 +1,9 @@
 [tool.black]
 line_length = 100
 
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+
 [tool.pylint.main]
 load-plugins = ["pylint.extensions.docparams"]
 
