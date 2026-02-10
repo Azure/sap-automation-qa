@@ -87,6 +87,13 @@
                                         cluster_status_test_post.primary_node == cluster_status_pre.secondary_node and
                                         cluster_status_test_post.secondary_node == cluster_status_pre.primary_node
 
+        - name:                         "Test Execution: Determine test execution status"
+          ansible.builtin.set_fact:
+            test_execution_status:      "{{ 'PASSED' if (
+                                            cluster_status_test_post.primary_node == cluster_status_pre.secondary_node and
+                                            cluster_status_test_post.secondary_node == cluster_status_pre.primary_node
+                                          ) else 'FAILED' }}"
+
         - name:                         "Test Execution: Stop timer"
           ansible.builtin.set_fact:
             test_execution_end:         "{{ now(utc=true, fmt='%Y-%m-%d %H:%M:%S') }}"

@@ -87,6 +87,15 @@
           register:                     cleanup_failed_resource_test_execution
           changed_when:                 cleanup_failed_resource_test_execution.rc == 0
 
+        - name:                         "Test Execution: Determine test execution status"
+          ansible.builtin.set_fact:
+            test_execution_status:      "{{ 'PASSED' if (
+                                            (hostvars[cluster_status_pre.ers_node].cluster_status_test_execution.ascs_node == cluster_status_pre.ers_node and
+                                             hostvars[cluster_status_pre.ers_node].cluster_status_test_execution.ers_node == cluster_status_pre.ascs_node) or
+                                            (hostvars[cluster_status_pre.ers_node].cluster_status_test_execution.ascs_node == cluster_status_pre.ascs_node and
+                                             hostvars[cluster_status_pre.ers_node].cluster_status_test_execution.ers_node == cluster_status_pre.ers_node)
+                                          ) else 'FAILED' }}"
+
         - name:                         "Test Execution: Stop timer"
           ansible.builtin.set_fact:
             test_execution_end:         "{{ now(utc=true, fmt='%Y-%m-%d %H:%M:%S') }}"

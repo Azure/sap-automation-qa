@@ -83,6 +83,12 @@ enums:
     - check:                          &check "check"
     - section:                        &section "section"
     - report:                         &report [*check, *section]
+
+  high_availability:
+    - no_ha:                         &no_high_availability "false"
+    - scale_up:                      &scale_up "scale_up"
+    - scale_out:                     &scale_out "scale_out"
+    - all_ha:                        &high_availability [*scale_up, *scale_out]
 ```
 
 ```yaml
@@ -100,7 +106,7 @@ CHECK_DEFINITION:
     - storage_type:                 *premium_storage
     - role:                         *role
     - database_type:                *db
-    - high_availability:            bool
+    - high_availability:            *high_availability
     - high_availability_agent:      *cluster_type
   collector_type:                   *collector_type
   collector_args:

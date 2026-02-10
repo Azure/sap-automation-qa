@@ -18,8 +18,9 @@ else
     exit 1
 fi
 
-# Source the utils script for logging and utility functions
+# Source the utils script for logging and utility functions and the version check script
 source "$script_dir/utils.sh"
+source "$script_dir/version_check.sh"
 
 # Use more portable command directory detection
 if command -v readlink >/dev/null 2>&1; then
@@ -502,15 +503,16 @@ main() {
     log "INFO" "Activate the virtual environment..."
     set -e
 
-		parse_arguments "$@"
+    parse_arguments "$@"
 
-		if [[ -n "$TEST_GROUPS" ]]; then
+    check_version_update
+    if [[ -n "$TEST_GROUPS" ]]; then
         log "INFO" "Test group specified: $TEST_GROUPS"
     fi
     if [[ -n "$TEST_CASES" ]]; then
         log "INFO" "Test cases specified: $TEST_CASES"
     fi
-		if [[ "$OFFLINE_MODE" == "true" ]]; then
+    if [[ "$OFFLINE_MODE" == "true" ]]; then
         log "INFO" "Offline mode enabled - using previously collected CIB data"
     fi
 
@@ -519,7 +521,19 @@ main() {
 
     # Check if the SYSTEM_HOSTS and SYSTEM_PARAMS directory exists inside WORKSPACES/SYSTEM folder
     SYSTEM_CONFIG_FOLDER="${cmd_dir}/../$WORKSPACES_DIR/SYSTEM/$SYSTEM_CONFIG_NAME"
-    SYSTEM_HOSTS="$SYSTEM_CONFIG_FOLDER/hosts.yaml"
+    SID=$(echo "$SYSTEM_CONFIG_NAME" | awk -F'-' '{print $NF}')
+    
+    if [[ -f "$SYSTEM_CONFIG_FOLDER/hosts.yaml" ]]; then
+        SYSTEM_HOSTS="$SYSTEM_CONFIG_FOLDER/hosts.yaml"
+        log "INFO" "Using standard inventory: hosts.yaml"
+    elif [[ -f "$SYSTEM_CONFIG_FOLDER/${SID}_hosts.yaml" ]]; then
+        SYSTEM_HOSTS="$SYSTEM_CONFIG_FOLDER/${SID}_hosts.yaml"
+        log "INFO" "Using SID-specific inventory: ${SID}_hosts.yaml"
+    else
+        log "ERROR" "No inventory file found. Looked for hosts.yaml in $WORKSPACES_DIR/SYSTEM/$SYSTEM_CONFIG_NAME directory."
+        exit 1
+    fi
+
     SYSTEM_PARAMS="$SYSTEM_CONFIG_FOLDER/sap-parameters.yaml"
     TEST_TIER=$(echo "$TEST_TIER" | tr '[:upper:]' '[:lower:]')
 
@@ -527,8 +541,6 @@ main() {
     log "INFO" "Using SAP parameters: $SYSTEM_PARAMS."
     log "INFO" "Using Authentication Type: $AUTHENTICATION_TYPE."
 
-    check_file_exists "$SYSTEM_HOSTS" \
-        "hosts.yaml not found in $WORKSPACES_DIR/SYSTEM/$SYSTEM_CONFIG_NAME directory."
     check_file_exists "$SYSTEM_PARAMS" \
         "sap-parameters.yaml not found in $WORKSPACES_DIR/SYSTEM/$SYSTEM_CONFIG_NAME directory."
 

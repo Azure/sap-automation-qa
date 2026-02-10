@@ -11,17 +11,24 @@ set_output_context() {
 }
 
 # Print logs with color based on severity.
-# :param severity: The severity level of the log (e.g., "INFO", "ERROR").
+# :param severity: The severity level of the log (e.g., "INFO", "WARN", "ERROR").
 # :param message: The message to log.
 log() {
     local severity=$1
     local message=$2
+    local YELLOW='\033[0;33m'
 
-    if [[ "$severity" == "ERROR" ]]; then
-        echo -e "${RED}[ERROR] $message${NC}"
-    else
-        echo -e "${GREEN}[INFO] $message${NC}"
-    fi
+    case "$severity" in
+        ERROR)
+            echo -e "${RED}[ERROR] $message${NC}"
+            ;;
+        WARN)
+            echo -e "${YELLOW}[WARN] $message${NC}"
+            ;;
+        *)
+            echo -e "${GREEN}[INFO] $message${NC}"
+            ;;
+    esac
 }
 
 # Check if a command exists.

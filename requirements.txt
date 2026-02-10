@@ -52,7 +52,10 @@ azure-mgmt-compute==37.1.0
 azure-mgmt-core==1.6.0
     # via
     #   azure-mgmt-compute
+    #   azure-mgmt-loganalytics
     #   azure-mgmt-network
+azure-mgmt-loganalytics==13.1.1
+    # via -r requirements.in
 azure-mgmt-network==30.1.0
     # via -r requirements.in
 azure-storage-blob==12.26.0
@@ -121,6 +124,7 @@ iniconfig==2.3.0
     # via pytest
 isodate==0.7.2
     # via
+    #   azure-mgmt-loganalytics
     #   azure-storage-blob
     #   azure-storage-queue
     #   msrest
@@ -293,6 +297,7 @@ typing-extensions==4.15.0
     #   azure-core
     #   azure-identity
     #   azure-mgmt-compute
+    #   azure-mgmt-loganalytics
     #   azure-mgmt-network
     #   azure-storage-blob
     #   azure-storage-queue
