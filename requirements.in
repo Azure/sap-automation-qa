@@ -19,6 +19,7 @@ pylint
 coverage
 
 # Testing packages
+httpx
 pytest
 pytest-cov
 pytest-mock
