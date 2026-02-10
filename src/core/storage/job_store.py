@@ -1,11 +1,11 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
-"""JSON-based storage for jobs."""
+"""SQLite-based storage for jobs."""
 
 import json
-import fcntl
-from datetime import date
+import sqlite3
+from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import List, Optional
 from uuid import UUID
@@ -15,212 +15,233 @@ from src.core.observability import get_logger
 
 logger = get_logger(__name__)
 
+_JOBS_SCHEMA = """
+CREATE TABLE IF NOT EXISTS jobs (
+    id           TEXT PRIMARY KEY,
+    workspace_id TEXT NOT NULL,
+    schedule_id  TEXT,
+    test_group   TEXT,
+    test_ids     TEXT NOT NULL DEFAULT '[]',
+    status       TEXT NOT NULL DEFAULT 'pending',
+    created_at   TEXT NOT NULL,
+    started_at   TEXT,
+    completed_at TEXT,
+    error        TEXT,
+    result       TEXT,
+    log_file     TEXT,
+    events       TEXT NOT NULL DEFAULT '[]',
+    metadata     TEXT NOT NULL DEFAULT '{}'
+);
+
+CREATE INDEX IF NOT EXISTS idx_jobs_workspace
+    ON jobs(workspace_id);
+CREATE INDEX IF NOT EXISTS idx_jobs_status
+    ON jobs(status);
+CREATE INDEX IF NOT EXISTS idx_jobs_schedule
+    ON jobs(schedule_id);
+CREATE INDEX IF NOT EXISTS idx_jobs_created
+    ON jobs(created_at);
+"""
+
+
+def _dt_to_iso(dt: Optional[datetime]) -> Optional[str]:
+    """Convert datetime to ISO-8601 string for SQLite storage.
+
+    :param dt: Datetime to convert.
+    :returns: ISO string or None.
+    """
+    if dt is None:
+        return None
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt.isoformat()
+
 
 class JobStore:
-    """JSON file-based storage for execution jobs.
+    """SQLite-backed storage for execution jobs.
 
-    Stores active jobs in a single file and archives completed jobs
-    to daily history files.
+    Uses WAL journal mode for crash safety and concurrent
+    read performance. All writes are wrapped in transactions.
     """
 
     def __init__(
         self,
-        data_dir: Path | str = "data/jobs",
+        db_path: Path | str = "data/scheduler.db",
     ) -> None:
         """Initialize the job store.
 
-        :param data_dir: Directory for job storage
+        :param db_path: Path to SQLite database file.
         """
-        self.data_dir = Path(data_dir)
-        self.active_file = self.data_dir / "active.json"
-        self.history_dir = self.data_dir / "history"
+        self.db_path = Path(db_path)
+        self.db_path.parent.mkdir(parents=True, exist_ok=True)
 
-        self.data_dir.mkdir(parents=True, exist_ok=True)
-        self.history_dir.mkdir(parents=True, exist_ok=True)
+        self._conn = sqlite3.connect(
+            str(self.db_path),
+            isolation_level="DEFERRED",
+            check_same_thread=False,
+        )
+        self._conn.execute("PRAGMA journal_mode=WAL")
+        self._conn.execute("PRAGMA foreign_keys=ON")
+        self._conn.execute("PRAGMA busy_timeout=5000")
+        self._conn.executescript(_JOBS_SCHEMA)
 
-        if not self.active_file.exists():
-            self._write_active([])
-            logger.info(f"Initialized job storage at {self.data_dir}")
+        logger.info(f"Initialized job storage at {self.db_path}")
 
-    def _read_active(self) -> List[Job]:
-        """Read active jobs from storage.
+    def close(self) -> None:
+        """Close the database connection."""
+        self._conn.close()
 
-        Loads and deserializes all active jobs from the JSON file
-        with shared file locking for concurrent read safety.
+    @staticmethod
+    def _job_to_row(job: Job) -> dict:
+        """Convert a Job model to a flat dict for SQLite storage."""
+        return {
+            "id": str(job.id),
+            "workspace_id": job.workspace_id,
+            "schedule_id": job.schedule_id,
+            "test_group": job.test_group,
+            "test_ids": json.dumps(job.test_ids),
+            "status": job.status if isinstance(job.status, str) else job.status.value,
+            "created_at": _dt_to_iso(job.created_at),
+            "started_at": _dt_to_iso(job.started_at),
+            "completed_at": _dt_to_iso(job.completed_at),
+            "error": job.error,
+            "result": json.dumps(job.result, default=str) if job.result else None,
+            "log_file": job.log_file,
+            "events": json.dumps(
+                [e.model_dump(mode="json") for e in job.events],
+                default=str,
+            ),
+            "metadata": json.dumps(job.metadata, default=str),
+        }
 
-        :returns: List of active execution jobs.
-        :rtype: List[Job]
-        """
-        try:
-            with open(self.active_file, "r") as f:
-                fcntl.flock(f.fileno(), fcntl.LOCK_SH)
-                try:
-                    data = json.load(f)
-                finally:
-                    fcntl.flock(f.fileno(), fcntl.LOCK_UN)
-
-            return [Job.model_validate(item) for item in data]
-        except FileNotFoundError:
-            return []
-        except Exception as e:
-            logger.error(f"Failed to read active jobs: {e}")
-            return []
-
-    def _write_active(self, jobs: List[Job]) -> None:
-        """Write active jobs to storage.
-
-        Serializes and writes jobs to the JSON file with exclusive
-        file locking to prevent concurrent write corruption.
-
-        :param jobs: List of jobs to persist.
-        :type jobs: List[Job]
-        :raises Exception: If write operation fails.
-        """
-        try:
-            with open(self.active_file, "w") as f:
-                fcntl.flock(f.fileno(), fcntl.LOCK_EX)
-                try:
-                    data = [job.model_dump(mode="json") for job in jobs]
-                    json.dump(data, f, indent=2, default=str)
-                finally:
-                    fcntl.flock(f.fileno(), fcntl.LOCK_UN)
-        except Exception as e:
-            logger.error(f"Failed to write active jobs: {e}")
-            raise
-
-    def _get_history_file(self, dt: date) -> Path:
-        """Get history file path for a given date.
-
-        :param dt: Date for which to get the history file.
-        :type dt: date
-        :returns: Path to the daily history JSON file.
-        :rtype: Path
-        """
-        return self.history_dir / f"{dt.isoformat()}.json"
-
-    def _append_to_history(self, job: Job) -> None:
-        """Append completed job to daily history file.
-
-        Archives a completed job to the appropriate daily history file.
-        Creates the file if it doesn't exist.
-
-        :param job: Completed job to archive.
-        :type job: Job
-        """
-        history_file = self._get_history_file(date.today())
-
-        jobs = []
-        if history_file.exists():
-            try:
-                with open(history_file, "r") as f:
-                    fcntl.flock(f.fileno(), fcntl.LOCK_SH)
-                    try:
-                        jobs = json.load(f)
-                    finally:
-                        fcntl.flock(f.fileno(), fcntl.LOCK_UN)
-            except Exception:
-                jobs = []
-
-        jobs.append(job.model_dump(mode="json"))
-
-        with open(history_file, "w") as f:
-            fcntl.flock(f.fileno(), fcntl.LOCK_EX)
-            try:
-                json.dump(jobs, f, indent=2, default=str)
-            finally:
-                fcntl.flock(f.fileno(), fcntl.LOCK_UN)
-
-        logger.debug(f"Archived job {job.id} to {history_file}")
+    @staticmethod
+    def _row_to_job(row: sqlite3.Row) -> Job:
+        """Reconstruct a Job model from a database row."""
+        data = dict(row)
+        data["test_ids"] = json.loads(data["test_ids"])
+        data["events"] = json.loads(data["events"])
+        data["metadata"] = json.loads(data["metadata"])
+        data["result"] = json.loads(data["result"]) if data["result"] else None
+        for dt_field in ("created_at", "started_at", "completed_at"):
+            if data.get(dt_field):
+                data[dt_field] = datetime.fromisoformat(data[dt_field])
+        return Job.model_validate(data)
 
     def create(self, job: Job) -> Job:
         """Create a new job.
 
-        :param job: Job to create
-        :returns: Created job
+        :param job: Job to create.
+        :returns: Created job.
         """
-        jobs = self._read_active()
-        jobs.append(job)
-        self._write_active(jobs)
+        row = self._job_to_row(job)
+        with self._conn:
+            self._conn.execute(
+                """INSERT INTO jobs
+                   (id, workspace_id, schedule_id, test_group,
+                    test_ids, status, created_at, started_at,
+                    completed_at, error, result, log_file,
+                    events, metadata)
+                   VALUES
+                   (:id, :workspace_id, :schedule_id, :test_group,
+                    :test_ids, :status, :created_at, :started_at,
+                    :completed_at, :error, :result, :log_file,
+                    :events, :metadata)
+                """,
+                row,
+            )
         logger.info(f"Created job {job.id} for workspace {job.workspace_id}")
         return job
 
     def get(self, job_id: UUID | str) -> Optional[Job]:
         """Get a job by ID.
 
-        :param job_id: Job ID
-        :returns: Job if found, None otherwise
+        :param job_id: Job ID.
+        :returns: Job if found, None otherwise.
         """
-        job_id_str = str(job_id)
-
-        for job in self._read_active():
-            if str(job.id) == job_id_str:
-                return job
-
-        for history_file in sorted(self.history_dir.glob("*.json"), reverse=True):
-            try:
-                with open(history_file, "r") as f:
-                    for item in json.load(f):
-                        if str(item.get("id")) == job_id_str:
-                            return Job.model_validate(item)
-            except Exception:
-                continue
-
-        return None
+        self._conn.row_factory = sqlite3.Row
+        row = self._conn.execute("SELECT * FROM jobs WHERE id = ?", (str(job_id),)).fetchone()
+        return self._row_to_job(row) if row else None
 
     def update(self, job: Job) -> None:
         """Update an existing job.
 
-        :param job: Job to update
+        :param job: Job with updated fields.
         """
-        jobs = self._read_active()
-        job_id_str = str(job.id)
-
-        updated = False
-        for i, existing in enumerate(jobs):
-            if str(existing.id) == job_id_str:
-                jobs[i] = job
-                updated = True
-                break
-
-        if updated:
-            if job.is_terminal:
-                jobs = [j for j in jobs if str(j.id) != job_id_str]
-                self._write_active(jobs)
-                self._append_to_history(job)
-            else:
-                self._write_active(jobs)
-
+        row = self._job_to_row(job)
+        with self._conn:
+            cur = self._conn.execute(
+                """UPDATE jobs SET
+                       workspace_id  = :workspace_id,
+                       schedule_id   = :schedule_id,
+                       test_group    = :test_group,
+                       test_ids      = :test_ids,
+                       status        = :status,
+                       created_at    = :created_at,
+                       started_at    = :started_at,
+                       completed_at  = :completed_at,
+                       error         = :error,
+                       result        = :result,
+                       log_file      = :log_file,
+                       events        = :events,
+                       metadata      = :metadata
+                   WHERE id = :id
+                """,
+                row,
+            )
+        if cur.rowcount:
             logger.debug(f"Updated job {job.id} (status={job.status})")
 
     def get_active(self, workspace_id: Optional[str] = None) -> List[Job]:
         """Get active (non-terminal) jobs.
 
-        :param workspace_id: Optional filter by workspace
-        :returns: List of active jobs
+        :param workspace_id: Optional filter by workspace.
+        :returns: List of active jobs.
         """
-        jobs = self._read_active()
-
+        self._conn.row_factory = sqlite3.Row
+        terminal = (
+            JobStatus.COMPLETED.value,
+            JobStatus.FAILED.value,
+            JobStatus.CANCELLED.value,
+        )
         if workspace_id:
-            jobs = [j for j in jobs if j.workspace_id == workspace_id]
-
-        return jobs
+            cur = self._conn.execute(
+                "SELECT * FROM jobs " "WHERE status NOT IN (?, ?, ?) " "AND workspace_id = ?",
+                (*terminal, workspace_id),
+            )
+        else:
+            cur = self._conn.execute(
+                "SELECT * FROM jobs " "WHERE status NOT IN (?, ?, ?)",
+                terminal,
+            )
+        return [self._row_to_job(r) for r in cur.fetchall()]
 
     def get_active_for_workspace(self, workspace_id: str) -> Optional[Job]:
         """Get the active job for a workspace.
 
-        :param workspace_id: Workspace ID
-        :returns: Active job if exists
+        :param workspace_id: Workspace ID.
+        :returns: Active job if one exists.
         """
-        for job in self._read_active():
-            if job.workspace_id == workspace_id and not job.is_terminal:
-                return job
-        return None
+        self._conn.row_factory = sqlite3.Row
+        terminal = (
+            JobStatus.COMPLETED.value,
+            JobStatus.FAILED.value,
+            JobStatus.CANCELLED.value,
+        )
+        cur = self._conn.execute(
+            "SELECT * FROM jobs "
+            "WHERE workspace_id = ? "
+            "AND status NOT IN (?, ?, ?) "
+            "LIMIT 1",
+            (workspace_id, *terminal),
+        )
+        row = cur.fetchone()
+        return self._row_to_job(row) if row else None
 
     def has_active_job(self, workspace_id: str) -> bool:
         """Check if workspace has an active job.
 
-        :param workspace_id: Workspace ID
-        :returns: True if active job exists
+        :param workspace_id: Workspace ID.
+        :returns: True if active job exists.
         """
         return self.get_active_for_workspace(workspace_id) is not None
 
@@ -234,43 +255,45 @@ class JobStore:
     ) -> List[Job]:
         """Get job history.
 
-        :param workspace_id: Optional filter by workspace
-        :param schedule_id: Optional filter by schedule
-        :param status: Optional filter by status
-        :param days: Number of days to look back
-        :param limit: Maximum number of jobs to return
-        :returns: List of historical jobs
+        :param workspace_id: Optional filter by workspace.
+        :param schedule_id: Optional filter by schedule.
+        :param status: Optional filter by status.
+        :param days: Number of days to look back.
+        :param limit: Maximum number of jobs to return.
+        :returns: List of historical jobs.
         """
-        jobs = []
-        today = date.today()
+        self._conn.row_factory = sqlite3.Row
+        terminal = (
+            JobStatus.COMPLETED.value,
+            JobStatus.FAILED.value,
+            JobStatus.CANCELLED.value,
+        )
 
-        for i in range(days):
-            history_date = date.fromordinal(today.toordinal() - i)
-            history_file = self._get_history_file(history_date)
+        clauses = [
+            "status IN (?, ?, ?)",
+            "created_at >= ?",
+        ]
+        params: list = [*terminal, _dt_to_iso(datetime.now(timezone.utc) - timedelta(days=days))]
 
-            if not history_file.exists():
-                continue
+        if workspace_id:
+            clauses.append("workspace_id = ?")
+            params.append(workspace_id)
+        if schedule_id:
+            clauses.append("schedule_id = ?")
+            params.append(schedule_id)
+        if status:
+            status_val = status if isinstance(status, str) else status.value
+            clauses.append("status = ?")
+            params.append(status_val)
 
-            try:
-                with open(history_file, "r") as f:
-                    for item in json.load(f):
-                        job = Job.model_validate(item)
+        where = " AND ".join(clauses)
+        params.append(limit)
 
-                        if workspace_id and job.workspace_id != workspace_id:
-                            continue
-                        if schedule_id and job.schedule_id != schedule_id:
-                            continue
-                        if status and job.status != status:
-                            continue
-
-                        jobs.append(job)
-
-                        if len(jobs) >= limit:
-                            return jobs
-            except Exception as e:
-                logger.warning(f"Failed to read history file {history_file}: {e}")
-
-        return jobs
+        cur = self._conn.execute(
+            f"SELECT * FROM jobs WHERE {where} " "ORDER BY created_at DESC LIMIT ?",
+            params,
+        )
+        return [self._row_to_job(r) for r in cur.fetchall()]
 
     def get_jobs_for_schedule(
         self,
@@ -279,8 +302,8 @@ class JobStore:
     ) -> List[Job]:
         """Get jobs triggered by a specific schedule.
 
-        :param schedule_id: Schedule ID
-        :param limit: Maximum number of jobs
-        :returns: List of jobs
+        :param schedule_id: Schedule ID.
+        :param limit: Maximum number of jobs.
+        :returns: List of jobs.
         """
         return self.get_history(schedule_id=schedule_id, limit=limit)

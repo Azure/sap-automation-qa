@@ -14,17 +14,25 @@ class TestScheduleStore:
     """Unit tests for ScheduleStore CRUD operations."""
 
     def test_creates_storage_file(self, temp_dir: Path) -> None:
-        """Verify ScheduleStore creates storage file on init."""
-        ScheduleStore(storage_path=temp_dir / "schedules.json")
-        assert (temp_dir / "schedules.json").exists()
+        """
+        Verify ScheduleStore creates DB file on init.
+        """
+        store = ScheduleStore(db_path=temp_dir / "sched.db")
+        assert (temp_dir / "sched.db").exists()
+        store.close()
 
     def test_creates_parent_dirs(self, temp_dir: Path) -> None:
-        """Verify ScheduleStore creates nested parent directories."""
-        ScheduleStore(storage_path=temp_dir / "nested" / "dir" / "s.json")
-        assert (temp_dir / "nested" / "dir" / "s.json").exists()
+        """
+        Verify ScheduleStore creates nested parent directories.
+        """
+        store = ScheduleStore(db_path=temp_dir / "nested" / "dir" / "s.db")
+        assert (temp_dir / "nested" / "dir" / "s.db").exists()
+        store.close()
 
     def test_create_and_get(self, schedule_store: ScheduleStore, sample_schedule: Schedule) -> None:
-        """Verify create() persists schedule and get() retrieves it."""
+        """
+        Verify create() persists schedule and get() retrieves it.
+        """
         created = schedule_store.create(sample_schedule)
         assert created.id == sample_schedule.id
         assert schedule_store.get(sample_schedule.id) is not None
@@ -32,7 +40,9 @@ class TestScheduleStore:
     def test_create_duplicate_raises(
         self, schedule_store: ScheduleStore, sample_schedule: Schedule
     ) -> None:
-        """Verify create() raises ValueError for duplicate ID."""
+        """
+        Verify create() raises ValueError for duplicate ID.
+        """
         schedule_store.create(sample_schedule)
         with pytest.raises(ValueError, match="already exists"):
             schedule_store.create(
@@ -45,7 +55,9 @@ class TestScheduleStore:
             )
 
     def test_get_nonexistent(self, schedule_store: ScheduleStore) -> None:
-        """Verify get() returns None for unknown schedule ID."""
+        """
+        Verify get() returns None for unknown schedule ID.
+        """
         assert schedule_store.get("nonexistent") is None
 
     def test_list_all(
@@ -54,7 +66,9 @@ class TestScheduleStore:
         sample_schedule: Schedule,
         sample_disabled_schedule: Schedule,
     ) -> None:
-        """Verify list() returns all schedules."""
+        """
+        Verify list() returns all schedules.
+        """
         schedule_store.create(sample_schedule)
         schedule_store.create(sample_disabled_schedule)
         assert len(schedule_store.list()) == 2
@@ -65,7 +79,9 @@ class TestScheduleStore:
         sample_schedule: Schedule,
         sample_disabled_schedule: Schedule,
     ) -> None:
-        """Verify list(enabled_only=True) filters disabled schedules."""
+        """
+        Verify list(enabled_only=True) filters disabled schedules.
+        """
         schedule_store.create(sample_schedule)
         schedule_store.create(sample_disabled_schedule)
         enabled = schedule_store.list(enabled_only=True)
@@ -73,11 +89,15 @@ class TestScheduleStore:
         assert enabled[0].enabled is True
 
     def test_list_empty(self, schedule_store: ScheduleStore) -> None:
-        """Verify list() returns empty list when no schedules exist."""
+        """
+        Verify list() returns empty list when no schedules exist.
+        """
         assert schedule_store.list() == []
 
     def test_update_name(self, schedule_store: ScheduleStore, sample_schedule: Schedule) -> None:
-        """Verify update() persists schedule changes."""
+        """
+        Verify update() persists schedule changes.
+        """
         schedule_store.create(sample_schedule)
         sample_schedule.name = "Updated"
         updated = schedule_store.update(sample_schedule)
@@ -89,7 +109,9 @@ class TestScheduleStore:
     def test_update_sets_updated_at(
         self, schedule_store: ScheduleStore, sample_schedule: Schedule
     ) -> None:
-        """Verify update() bumps updated_at timestamp."""
+        """
+        Verify update() bumps updated_at timestamp.
+        """
         schedule_store.create(sample_schedule)
         original = sample_schedule.updated_at
         sample_schedule.enabled = False
@@ -99,20 +121,26 @@ class TestScheduleStore:
     def test_update_nonexistent_raises(
         self, schedule_store: ScheduleStore, sample_schedule: Schedule
     ) -> None:
-        """Verify update() raises ValueError for unknown schedule."""
+        """
+        Verify update() raises ValueError for unknown schedule.
+        """
         with pytest.raises(ValueError, match="not found"):
             schedule_store.update(sample_schedule)
 
     def test_delete_existing(
         self, schedule_store: ScheduleStore, sample_schedule: Schedule
     ) -> None:
-        """Verify delete() removes schedule and returns True."""
+        """
+        Verify delete() removes schedule and returns True.
+        """
         schedule_store.create(sample_schedule)
         assert schedule_store.delete(sample_schedule.id) is True
         assert schedule_store.get(sample_schedule.id) is None
 
     def test_delete_nonexistent(self, schedule_store: ScheduleStore) -> None:
-        """Verify delete() returns False for unknown schedule."""
+        """
+        Verify delete() returns False for unknown schedule.
+        """
         assert schedule_store.delete("nonexistent") is False
 
     def test_delete_does_not_affect_others(
@@ -121,7 +149,9 @@ class TestScheduleStore:
         sample_schedule: Schedule,
         sample_disabled_schedule: Schedule,
     ) -> None:
-        """Verify delete() only removes target schedule."""
+        """
+        Verify delete() only removes target schedule.
+        """
         schedule_store.create(sample_schedule)
         schedule_store.create(sample_disabled_schedule)
         schedule_store.delete(sample_schedule.id)
@@ -135,7 +165,9 @@ class TestScheduleStore:
         sample_schedule: Schedule,
         sample_disabled_schedule: Schedule,
     ) -> None:
-        """Verify get_enabled() returns only enabled schedules."""
+        """
+        Verify get_enabled() returns only enabled schedules.
+        """
         schedule_store.create(sample_schedule)
         schedule_store.create(sample_disabled_schedule)
         enabled = schedule_store.get_enabled()
@@ -143,7 +175,9 @@ class TestScheduleStore:
         assert all(s.enabled for s in enabled)
 
     def test_datetime_persistence(self, schedule_store: ScheduleStore) -> None:
-        """Verify datetime fields persist correctly through JSON."""
+        """
+        Verify datetime fields persist correctly through JSON.
+        """
         now = datetime.now(timezone.utc)
         sched = Schedule(
             name="DT",
@@ -159,13 +193,17 @@ class TestScheduleStore:
         assert retrieved.last_run_time is not None
 
     def test_empty_workspace_ids_allowed(self, schedule_store: ScheduleStore) -> None:
-        """Verify schedule can be created with empty workspace_ids list."""
+        """
+        Verify schedule can be created with empty workspace_ids list.
+        """
         sched = Schedule(name="Empty", cron_expression="0 0 * * *", workspace_ids=[])
         created = schedule_store.create(sched)
         assert created.workspace_ids == []
 
     def test_many_workspaces(self, schedule_store: ScheduleStore) -> None:
-        """Verify schedule handles large workspace_ids list."""
+        """
+        Verify schedule handles large workspace_ids list.
+        """
         sched = Schedule(
             name="Many",
             cron_expression="0 0 * * *",
@@ -176,8 +214,10 @@ class TestScheduleStore:
         assert retrieved is not None
         assert len(retrieved.workspace_ids) == 100
 
-    def test_corrupted_file(self, temp_dir: Path) -> None:
-        """Verify corrupted storage file returns empty list gracefully."""
-        path = temp_dir / "corrupted.json"
-        path.write_text("{ invalid }")
-        assert ScheduleStore(storage_path=path).list() == []
+    def test_empty_store(self, temp_dir: Path) -> None:
+        """
+        Verify fresh store returns empty list.
+        """
+        store = ScheduleStore(db_path=temp_dir / "fresh.db")
+        assert store.list() == []
+        store.close()

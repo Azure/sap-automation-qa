@@ -3,7 +3,7 @@
 
 """Execution layer for running tests."""
 
-from src.core.execution.executor import TestExecutor, AnsibleExecutor
+from src.core.execution.executor import ExecutorProtocol, AnsibleExecutor
 from src.core.execution.worker import JobWorker
 from src.core.execution.exceptions import (
     ExecutionError,
@@ -12,7 +12,7 @@ from src.core.execution.exceptions import (
 )
 
 __all__ = [
-    "TestExecutor",
+    "ExecutorProtocol",
     "AnsibleExecutor",
     "JobWorker",
     "ExecutionError",

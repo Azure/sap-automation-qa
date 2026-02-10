@@ -1,11 +1,11 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
-"""JSON-based storage for schedules."""
+"""SQLite-based storage for schedules."""
 
 import json
-import fcntl
-from datetime import datetime
+import sqlite3
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import List, Optional
 
@@ -14,160 +14,226 @@ from src.core.observability import get_logger
 
 logger = get_logger(__name__)
 
+_SCHEDULES_SCHEMA = """
+CREATE TABLE IF NOT EXISTS schedules (
+    id               TEXT PRIMARY KEY,
+    name             TEXT NOT NULL,
+    description      TEXT NOT NULL DEFAULT '',
+    cron_expression  TEXT NOT NULL,
+    timezone         TEXT NOT NULL DEFAULT 'UTC',
+    workspace_ids    TEXT NOT NULL DEFAULT '[]',
+    test_group       TEXT,
+    test_ids         TEXT NOT NULL DEFAULT '[]',
+    enabled          INTEGER NOT NULL DEFAULT 1,
+    next_run_time    TEXT,
+    last_run_time    TEXT,
+    last_run_job_ids TEXT NOT NULL DEFAULT '[]',
+    total_runs       INTEGER NOT NULL DEFAULT 0,
+    created_at       TEXT NOT NULL,
+    updated_at       TEXT NOT NULL
+);
+"""
+
+
+def _dt_to_iso(dt: Optional[datetime]) -> Optional[str]:
+    """Convert datetime to ISO-8601 string for SQLite storage.
+
+    :param dt: Datetime to convert.
+    :returns: ISO string or None.
+    """
+    if dt is None:
+        return None
+    if dt.tzinfo is None:
+        dt = dt.replace(tzinfo=timezone.utc)
+    return dt.isoformat()
+
 
 class ScheduleStore:
-    """JSON file-based storage for schedules."""
+    """SQLite-backed storage for schedules.
 
-    def __init__(self, storage_path: Path | str = "data/schedules.json") -> None:
+    Uses WAL journal mode for crash safety. All writes are
+    wrapped in transactions.
+    """
+
+    def __init__(
+        self,
+        db_path: Path | str = "data/scheduler.db",
+    ) -> None:
         """Initialize the schedule store.
 
-        :param storage_path: Path to JSON storage file
+        :param db_path: Path to SQLite database file.
         """
-        self.storage_path = Path(storage_path)
-        self.storage_path.parent.mkdir(parents=True, exist_ok=True)
+        self.db_path = Path(db_path)
+        self.db_path.parent.mkdir(parents=True, exist_ok=True)
 
-        if not self.storage_path.exists():
-            self._write_schedules([])
-            logger.info(f"Initialized schedule storage at {self.storage_path}")
+        self._conn = sqlite3.connect(
+            str(self.db_path),
+            isolation_level="DEFERRED",
+            check_same_thread=False,
+        )
+        self._conn.execute("PRAGMA journal_mode=WAL")
+        self._conn.execute("PRAGMA foreign_keys=ON")
+        self._conn.execute("PRAGMA busy_timeout=5000")
+        self._conn.executescript(_SCHEDULES_SCHEMA)
 
-    def _read_schedules(self) -> List[Schedule]:
-        """Read all schedules from storage.
+        logger.info(f"Initialized schedule storage at {self.db_path}")
 
-        Loads and deserializes all schedules from the JSON file
-        with shared file locking for concurrent read safety.
+    def close(self) -> None:
+        """Close the database connection."""
+        self._conn.close()
 
-        :returns: List of schedule configurations.
-        :rtype: List[Schedule]
-        """
-        try:
-            with open(self.storage_path, "r") as f:
-                fcntl.flock(f.fileno(), fcntl.LOCK_SH)
-                try:
-                    data = json.load(f)
-                finally:
-                    fcntl.flock(f.fileno(), fcntl.LOCK_UN)
+    @staticmethod
+    def _schedule_to_row(schedule: Schedule) -> dict:
+        """Convert a Schedule model to a flat dict for SQLite."""
+        return {
+            "id": schedule.id,
+            "name": schedule.name,
+            "description": schedule.description,
+            "cron_expression": schedule.cron_expression,
+            "timezone": schedule.timezone,
+            "workspace_ids": json.dumps(schedule.workspace_ids),
+            "test_group": schedule.test_group,
+            "test_ids": json.dumps(schedule.test_ids),
+            "enabled": 1 if schedule.enabled else 0,
+            "next_run_time": _dt_to_iso(schedule.next_run_time),
+            "last_run_time": _dt_to_iso(schedule.last_run_time),
+            "last_run_job_ids": json.dumps(schedule.last_run_job_ids),
+            "total_runs": schedule.total_runs,
+            "created_at": _dt_to_iso(schedule.created_at),
+            "updated_at": _dt_to_iso(schedule.updated_at),
+        }
 
-            schedules = []
-            for item in data:
-                for dt_field in ["next_run_time", "last_run_time", "created_at", "updated_at"]:
-                    if item.get(dt_field):
-                        dt_str = item[dt_field].replace("Z", "+00:00")
-                        item[dt_field] = datetime.fromisoformat(dt_str)
-
-                schedules.append(Schedule(**item))
-
-            return schedules
-        except FileNotFoundError:
-            return []
-        except Exception as e:
-            logger.error(f"Failed to read schedules: {e}")
-            return []
-
-    def _write_schedules(self, schedules: List[Schedule]) -> None:
-        """Write schedules to storage.
-
-        Serializes and writes schedules to the JSON file with exclusive
-        file locking to prevent concurrent write corruption.
-
-        :param schedules: List of schedules to persist.
-        :type schedules: List[Schedule]
-        :raises Exception: If write operation fails.
-        """
-        try:
-            data = [s.model_dump(mode="json") for s in schedules]
-
-            with open(self.storage_path, "w") as f:
-                fcntl.flock(f.fileno(), fcntl.LOCK_EX)
-                try:
-                    json.dump(data, f, indent=2, default=str)
-                finally:
-                    fcntl.flock(f.fileno(), fcntl.LOCK_UN)
-
-            logger.debug(f"Wrote {len(schedules)} schedules to storage")
-        except Exception as e:
-            logger.error(f"Failed to write schedules: {e}")
-            raise
+    @staticmethod
+    def _row_to_schedule(row: sqlite3.Row) -> Schedule:
+        """Reconstruct a Schedule model from a database row."""
+        data = dict(row)
+        data["workspace_ids"] = json.loads(data["workspace_ids"])
+        data["test_ids"] = json.loads(data["test_ids"])
+        data["last_run_job_ids"] = json.loads(data["last_run_job_ids"])
+        data["enabled"] = bool(data["enabled"])
+        for dt_field in (
+            "next_run_time",
+            "last_run_time",
+            "created_at",
+            "updated_at",
+        ):
+            if data.get(dt_field):
+                data[dt_field] = datetime.fromisoformat(data[dt_field])
+        return Schedule(**data)
 
     def create(self, schedule: Schedule) -> Schedule:
         """Create a new schedule.
 
-        :param schedule: Schedule to create
-        :returns: Created schedule
-        :raises ValueError: If schedule with same ID exists
+        :param schedule: Schedule to create.
+        :returns: Created schedule.
+        :raises ValueError: If schedule with same ID exists.
         """
-        schedules = self._read_schedules()
-
-        if any(s.id == schedule.id for s in schedules):
+        row = self._schedule_to_row(schedule)
+        try:
+            with self._conn:
+                self._conn.execute(
+                    """INSERT INTO schedules
+                       (id, name, description, cron_expression,
+                        timezone, workspace_ids, test_group,
+                        test_ids, enabled, next_run_time,
+                        last_run_time, last_run_job_ids,
+                        total_runs, created_at, updated_at)
+                       VALUES
+                       (:id, :name, :description,
+                        :cron_expression, :timezone,
+                        :workspace_ids, :test_group, :test_ids,
+                        :enabled, :next_run_time, :last_run_time,
+                        :last_run_job_ids, :total_runs,
+                        :created_at, :updated_at)
+                    """,
+                    row,
+                )
+        except sqlite3.IntegrityError:
             raise ValueError(f"Schedule with ID {schedule.id} already exists")
 
-        schedules.append(schedule)
-        self._write_schedules(schedules)
-
-        logger.info(f"Created schedule '{schedule.name}' (ID: {schedule.id})")
+        logger.info(f"Created schedule '{schedule.name}' " f"(ID: {schedule.id})")
         return schedule
 
     def get(self, schedule_id: str) -> Optional[Schedule]:
         """Get a schedule by ID.
 
-        :param schedule_id: Schedule ID
-        :returns: Schedule if found
+        :param schedule_id: Schedule ID.
+        :returns: Schedule if found.
         """
-        for schedule in self._read_schedules():
-            if schedule.id == schedule_id:
-                return schedule
-        return None
+        self._conn.row_factory = sqlite3.Row
+        cur = self._conn.execute(
+            "SELECT * FROM schedules WHERE id = ?",
+            (schedule_id,),
+        )
+        row = cur.fetchone()
+        return self._row_to_schedule(row) if row else None
 
     def list(self, enabled_only: bool = False) -> List[Schedule]:
         """List all schedules.
 
-        :param enabled_only: If True, only return enabled schedules
-        :returns: List of schedules
+        :param enabled_only: If True, only return enabled schedules.
+        :returns: List of schedules.
         """
-        schedules = self._read_schedules()
+        self._conn.row_factory = sqlite3.Row
         if enabled_only:
-            schedules = [s for s in schedules if s.enabled]
-        return schedules
+            cur = self._conn.execute("SELECT * FROM schedules WHERE enabled = 1")
+        else:
+            cur = self._conn.execute("SELECT * FROM schedules")
+        return [self._row_to_schedule(r) for r in cur.fetchall()]
 
     def update(self, schedule: Schedule) -> Schedule:
         """Update an existing schedule.
 
-        :param schedule: Schedule to update
-        :returns: Updated schedule
-        :raises ValueError: If schedule not found
+        :param schedule: Schedule to update.
+        :returns: Updated schedule.
+        :raises ValueError: If schedule not found.
         """
-        schedules = self._read_schedules()
-
-        for i, existing in enumerate(schedules):
-            if existing.id == schedule.id:
-                schedule.updated_at = datetime.utcnow()
-                schedules[i] = schedule
-                self._write_schedules(schedules)
-                logger.info(f"Updated schedule '{schedule.name}' (ID: {schedule.id})")
-                return schedule
-
-        raise ValueError(f"Schedule {schedule.id} not found")
+        schedule.updated_at = datetime.utcnow()
+        row = self._schedule_to_row(schedule)
+        with self._conn:
+            cur = self._conn.execute(
+                """UPDATE schedules SET
+                       name             = :name,
+                       description      = :description,
+                       cron_expression  = :cron_expression,
+                       timezone         = :timezone,
+                       workspace_ids    = :workspace_ids,
+                       test_group       = :test_group,
+                       test_ids         = :test_ids,
+                       enabled          = :enabled,
+                       next_run_time    = :next_run_time,
+                       last_run_time    = :last_run_time,
+                       last_run_job_ids = :last_run_job_ids,
+                       total_runs       = :total_runs,
+                       updated_at       = :updated_at
+                   WHERE id = :id
+                """,
+                row,
+            )
+        if cur.rowcount == 0:
+            raise ValueError(f"Schedule {schedule.id} not found")
+        logger.info(f"Updated schedule '{schedule.name}' " f"(ID: {schedule.id})")
+        return schedule
 
     def delete(self, schedule_id: str) -> bool:
         """Delete a schedule.
 
-        :param schedule_id: Schedule ID
-        :returns: True if deleted
+        :param schedule_id: Schedule ID.
+        :returns: True if deleted.
         """
-        schedules = self._read_schedules()
-        original_count = len(schedules)
-
-        schedules = [s for s in schedules if s.id != schedule_id]
-
-        if len(schedules) < original_count:
-            self._write_schedules(schedules)
+        with self._conn:
+            cur = self._conn.execute(
+                "DELETE FROM schedules WHERE id = ?",
+                (schedule_id,),
+            )
+        if cur.rowcount > 0:
             logger.info(f"Deleted schedule {schedule_id}")
             return True
-
         return False
 
     def get_enabled(self) -> List[Schedule]:
         """Get all enabled schedules.
 
-        :returns: List of enabled schedules
+        :returns: List of enabled schedules.
         """
         return self.list(enabled_only=True)

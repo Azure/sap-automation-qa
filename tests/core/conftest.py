@@ -89,12 +89,12 @@ def due_schedule() -> Schedule:
 
 @pytest.fixture
 def job_store(temp_dir: Path) -> JobStore:
-    return JobStore(data_dir=temp_dir / "jobs")
+    return JobStore(db_path=temp_dir / "test.db")
 
 
 @pytest.fixture
 def schedule_store(temp_dir: Path) -> ScheduleStore:
-    return ScheduleStore(storage_path=temp_dir / "schedules.json")
+    return ScheduleStore(db_path=temp_dir / "test.db")
 
 
 @pytest.fixture
@@ -103,6 +103,9 @@ def mock_executor(mocker: MockerFixture) -> Any:
     executor.execute = mocker.AsyncMock(
         return_value={"status": "success", "tests_passed": 3, "tests_failed": 0}
     )
+    executor.terminate_process = mocker.MagicMock(
+        return_value=False,
+    )
     return executor
 
 
@@ -110,6 +113,9 @@ def mock_executor(mocker: MockerFixture) -> Any:
 def failing_executor(mocker: MockerFixture) -> Any:
     executor = mocker.MagicMock()
     executor.execute = mocker.AsyncMock(side_effect=RuntimeError("Executor failure"))
+    executor.terminate_process = mocker.MagicMock(
+        return_value=False,
+    )
     return executor
 
 
@@ -126,11 +132,14 @@ def workspace_loader() -> Callable[[str], dict[str, Any]]:
 
 
 @pytest.fixture
-def job_worker(job_store: JobStore, mock_executor: Any, workspace_loader: Any) -> JobWorker:
+def job_worker(
+    job_store: JobStore, mock_executor: Any, workspace_loader: Any, temp_dir: Path
+) -> JobWorker:
     return JobWorker(
         job_store=job_store,
         executor=mock_executor,
         workspace_config_loader=workspace_loader,
+        log_dir=temp_dir / "logs",
     )
 
 

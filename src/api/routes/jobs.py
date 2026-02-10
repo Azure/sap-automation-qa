@@ -7,9 +7,10 @@ Jobs API routes
 
 import asyncio
 import json
+from pathlib import Path
 from typing import List, Optional
 from fastapi import APIRouter, HTTPException, Query, Request
-from fastapi.responses import StreamingResponse
+from fastapi.responses import PlainTextResponse, StreamingResponse
 from src.core.models.job import Job, JobStatus, CreateJobRequest, CancelJobRequest, JobListResponse
 from src.core.storage.job_store import JobStore
 from src.core.execution.worker import JobWorker
@@ -189,7 +190,57 @@ async def get_job_events(job_id: str) -> dict:
     }
 
 
-@router.get("/{job_id}/stream")
+@router.get("/{job_id}/log")
+async def get_job_log(
+    job_id: str,
+    tail: Optional[int] = Query(
+        None,
+        ge=1,
+        description="Return only the last N lines",
+    ),
+) -> PlainTextResponse:
+    """Return the Ansible process log for a job.
+
+    :param job_id: ID of the job.
+    :param tail: Optional: return only the last N lines.
+    :returns: Plain-text log content.
+    :raises HTTPException: 404 if job or log file not found.
+    """
+    job = get_job_store().get(job_id)
+    if not job:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Job {job_id} not found",
+        )
+
+    if not job.log_file:
+        raise HTTPException(
+            status_code=404,
+            detail=f"No log file recorded for job {job_id}",
+        )
+
+    log_path = Path(job.log_file)
+    if not log_path.exists():
+        raise HTTPException(
+            status_code=404,
+            detail=f"Log file not found on disk: {log_path}",
+        )
+
+    try:
+        content = log_path.read_text(encoding="utf-8")
+    except OSError as exc:
+        raise HTTPException(
+            status_code=500,
+            detail=f"Failed to read log: {exc}",
+        )
+
+    if tail is not None:
+        lines = content.splitlines()
+        content = "\n".join(lines[-tail:])
+
+    return PlainTextResponse(content)
+
+
 async def stream_job_events(job_id: str, request: Request) -> StreamingResponse:
     """Stream job events via Server-Sent Events (SSE).
 

@@ -3,10 +3,11 @@
 
 """Schedules API routes."""
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Optional
 from apscheduler.triggers.cron import CronTrigger
 from fastapi import APIRouter, HTTPException, Query
+from src.api.routes.jobs import get_job_store
 from src.core.models.schedule import (
     Schedule,
     CreateScheduleRequest,
@@ -67,10 +68,8 @@ async def create_schedule(request: CreateScheduleRequest) -> Schedule:
             status_code=400,
             detail=f"Invalid cron expression '{request.cron_expression}': {str(e)}",
         )
-
     if not request.workspace_ids:
         raise HTTPException(status_code=400, detail="At least one workspace_id is required")
-
     schedule = Schedule(
         name=request.name,
         description=request.description,
@@ -84,7 +83,7 @@ async def create_schedule(request: CreateScheduleRequest) -> Schedule:
 
     if schedule.enabled:
         trigger = CronTrigger.from_crontab(schedule.cron_expression)
-        next_run = trigger.get_next_fire_time(None, datetime.utcnow())
+        next_run = trigger.get_next_fire_time(None, datetime.now(timezone.utc))
         schedule.next_run_time = next_run
 
     created = store.create(schedule)
@@ -121,12 +120,9 @@ async def update_schedule(schedule_id: str, request: UpdateScheduleRequest) -> S
     """Update an existing schedule."""
     store = get_schedule_store()
     schedule = store.get(schedule_id)
-
     if not schedule:
         raise HTTPException(status_code=404, detail=f"Schedule {schedule_id} not found")
-
     update_data = request.model_dump(exclude_unset=True)
-
     if "cron_expression" in update_data:
         try:
             CronTrigger.from_crontab(update_data["cron_expression"])
@@ -135,17 +131,23 @@ async def update_schedule(schedule_id: str, request: UpdateScheduleRequest) -> S
                 status_code=400,
                 detail=f"Invalid cron expression: {str(e)}",
             )
-
+    scheduling_changed = any(k in update_data for k in ("cron_expression", "timezone", "enabled"))
     for field, value in update_data.items():
         setattr(schedule, field, value)
 
-    if schedule.enabled:
-        trigger = CronTrigger.from_crontab(schedule.cron_expression)
-        next_run = trigger.get_next_fire_time(None, datetime.utcnow())
-        schedule.next_run_time = next_run
-
+    schedule.updated_at = datetime.now(timezone.utc)
+    if scheduling_changed:
+        if schedule.enabled:
+            trigger = CronTrigger.from_crontab(schedule.cron_expression)
+            schedule.next_run_time = trigger.get_next_fire_time(None, datetime.now(timezone.utc))
+        else:
+            schedule.next_run_time = None
     updated = store.update(schedule)
-    logger.info(f"Updated schedule '{updated.name}' (ID: {updated.id})")
+    logger.info(
+        f"Updated schedule '{updated.name}' "
+        f"(ID: {updated.id}, "
+        f"next_run: {updated.next_run_time})"
+    )
 
     return updated
 
@@ -160,11 +162,8 @@ async def delete_schedule(schedule_id: str) -> dict:
     :rtype: dict
     :raises HTTPException: If schedule not found (404 error).
     """
-    store = get_schedule_store()
-
-    if not store.delete(schedule_id):
+    if not get_schedule_store().delete(schedule_id):
         raise HTTPException(status_code=404, detail=f"Schedule {schedule_id} not found")
-
     logger.info(f"Deleted schedule {schedule_id}")
     return {"status": "deleted", "schedule_id": schedule_id}
 
@@ -211,17 +210,10 @@ async def get_schedule_jobs(
     :rtype: dict
     :raises HTTPException: If schedule not found (404 error).
     """
-    from src.api.routes.jobs import get_job_store
-
-    store = get_schedule_store()
-    schedule = store.get(schedule_id)
-
+    schedule = get_schedule_store().get(schedule_id)
     if not schedule:
         raise HTTPException(status_code=404, detail=f"Schedule {schedule_id} not found")
-
-    job_store = get_job_store()
-    jobs = job_store.get_jobs_for_schedule(schedule_id, limit=limit)
-
+    jobs = get_job_store().get_jobs_for_schedule(schedule_id, limit=limit)
     return {
         "schedule_id": schedule_id,
         "jobs": [j.model_dump(mode="json") for j in jobs],

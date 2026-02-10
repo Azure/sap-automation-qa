@@ -45,13 +45,13 @@ def temp_dir() -> Generator[Path, None, None]:
 @pytest.fixture
 def job_store(temp_dir: Path) -> JobStore:
     """Provide a JobStore instance."""
-    return JobStore(data_dir=temp_dir / "jobs")
+    return JobStore(db_path=temp_dir / "test.db")
 
 
 @pytest.fixture
 def schedule_store(temp_dir: Path) -> ScheduleStore:
     """Provide a ScheduleStore instance."""
-    return ScheduleStore(storage_path=temp_dir / "schedules.json")
+    return ScheduleStore(db_path=temp_dir / "test.db")
 
 
 @pytest.fixture
@@ -70,13 +70,19 @@ def mock_workspace_loader(mocker: MockerFixture) -> Any:
 def mock_executor(mocker: MockerFixture) -> Any:
     """Provide a mock test executor."""
     executor = mocker.MagicMock()
-    executor.run_test = mocker.MagicMock(return_value={"status": "success"})
+    executor.run_test = mocker.MagicMock(
+        return_value={"status": "success"},
+    )
+    executor.terminate_process = mocker.MagicMock(
+        return_value=False,
+    )
     return executor
 
 
 @pytest.fixture
 def job_worker(
     job_store: JobStore,
+    temp_dir: Path,
     mock_executor: Any,
     mock_workspace_loader: Any,
 ) -> JobWorker:
@@ -85,6 +91,7 @@ def job_worker(
         job_store=job_store,
         executor=mock_executor,
         workspace_config_loader=mock_workspace_loader,
+        log_dir=temp_dir / "logs",
     )
 
 

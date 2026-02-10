@@ -5,10 +5,11 @@
 
 import asyncio
 import time
+from pathlib import Path
 from typing import Any, AsyncGenerator, Callable
 from src.core.models.job import Job, JobEvent, JobEventType, JobStatus
 from src.core.storage.job_store import JobStore
-from src.core.execution.executor import TestExecutor
+from src.core.execution.executor import ExecutorProtocol
 from src.core.execution.exceptions import WorkspaceLockError
 from src.core.observability import (
     get_logger,
@@ -25,22 +26,47 @@ class JobWorker:
     def __init__(
         self,
         job_store: JobStore,
-        executor: TestExecutor,
+        executor: ExecutorProtocol,
         workspace_config_loader: Callable[[str], dict[str, Any]],
+        log_dir: Path | str = "data/logs",
     ) -> None:
         """Initialize the job worker.
 
         :param job_store: Job store for persistence
         :param executor: Test executor implementation
         :param workspace_config_loader: Function to load workspace config by ID
+        :param log_dir: Directory for per-job log files
         """
         self.job_store = job_store
         self.executor = executor
         self.workspace_config_loader = workspace_config_loader
+        self.log_dir = Path(log_dir)
+        self.log_dir.mkdir(parents=True, exist_ok=True)
         self._running_jobs: dict[str, asyncio.Task] = {}
         self._event_queues: dict[str, asyncio.Queue[JobEvent]] = {}
 
         logger.info("JobWorker initialized")
+
+    def recover_crashed_jobs(self) -> int:
+        """
+        Recover jobs left in non-terminal state after a crash.
+
+        :returns: Number of recovered jobs.
+        """
+        recovered = 0
+        for job in self.job_store.get_active():
+            if job.status in (
+                JobStatus.RUNNING,
+                JobStatus.PENDING,
+            ):
+                previous_status = job.status
+                job.fail(f"Recovered after restart " f"(was {previous_status})")
+                self.job_store.update(job)
+                recovered += 1
+
+        if recovered:
+            logger.info(f"Startup recovery: {recovered} " f"orphaned job(s) marked as failed")
+        return recovered
 
     async def submit_job(self, job: Job) -> Job:
         """Submit a job for async execution.
@@ -106,6 +132,7 @@ class JobWorker:
         if not task:
             return False
 
+        self.executor.terminate_process(job_id)
         task.cancel()
 
         job = self.job_store.get(job_id)
@@ -127,14 +154,11 @@ class JobWorker:
             return
 
         logger.info(f"JobWorker shutdown: cancelling {len(self._running_jobs)} running jobs")
-
-        # Cancel all running tasks
         for job_id, task in self._running_jobs.items():
             if not task.done():
+                self.executor.terminate_process(job_id)
                 task.cancel()
                 logger.info(f"Cancelled running job {job_id}")
-
-        # Wait for all tasks to complete with timeout
         if self._running_jobs:
             tasks = list(self._running_jobs.values())
             try:
@@ -202,6 +226,10 @@ class JobWorker:
                 if not test_ids:
                     raise ValueError("No tests specified for execution")
 
+                log_path = self.log_dir / f"{job.id}.log"
+                job.log_file = str(log_path)
+                self.job_store.update(job)
+
                 for test_id in test_ids:
                     if job.status == JobStatus.CANCELLED:
                         break
@@ -214,6 +242,8 @@ class JobWorker:
                             test_group=job.test_group or "CONFIG_CHECKS",
                             inventory_path=inventory_path,
                             extra_vars=workspace_config.get("extra_vars"),
+                            log_file=log_path,
+                            job_id=str(job.id),
                         )
 
                         if result.get("status") == "failed":

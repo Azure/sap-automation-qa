@@ -56,6 +56,7 @@ class Job(BaseModel):
     completed_at: Optional[datetime] = None
     error: Optional[str] = None
     result: Optional[dict[str, Any]] = None
+    log_file: Optional[str] = None
     events: list[JobEvent] = Field(default_factory=list)
     metadata: dict[str, Any] = Field(default_factory=dict)
 

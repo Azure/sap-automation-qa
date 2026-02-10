@@ -18,7 +18,9 @@ class TestSchedulerService:
 
     @pytest.mark.asyncio
     async def test_start_stop(self, scheduler_service: SchedulerService) -> None:
-        """Verify start() and stop() lifecycle methods."""
+        """
+        Verify start() and stop() lifecycle methods.
+        """
         await scheduler_service.start()
         assert scheduler_service._running
         await scheduler_service.stop()
@@ -26,7 +28,9 @@ class TestSchedulerService:
 
     @pytest.mark.asyncio
     async def test_multiple_start(self, scheduler_service: SchedulerService) -> None:
-        """Verify multiple start() calls are idempotent."""
+        """
+        Verify multiple start() calls are idempotent.
+        """
         await scheduler_service.start()
         await scheduler_service.start()
         assert scheduler_service._running
@@ -34,7 +38,9 @@ class TestSchedulerService:
 
     @pytest.mark.asyncio
     async def test_stop_without_start(self, scheduler_service: SchedulerService) -> None:
-        """Verify stop() is safe when not started."""
+        """
+        Verify stop() is safe when not started.
+        """
         await scheduler_service.stop()
         assert not scheduler_service._running
 
@@ -42,7 +48,9 @@ class TestSchedulerService:
     async def test_triggers_due_schedule(
         self, schedule_store: ScheduleStore, mock_job_worker: Any
     ) -> None:
-        """Verify scheduler triggers jobs for due schedules."""
+        """
+        Verify scheduler triggers jobs for due schedules.
+        """
         schedule_store.create(
             Schedule(
                 name="Trigger Test",
@@ -67,7 +75,9 @@ class TestSchedulerService:
     async def test_skips_disabled_schedule(
         self, schedule_store: ScheduleStore, mock_job_worker: Any
     ) -> None:
-        """Verify scheduler skips disabled schedules."""
+        """
+        Verify scheduler skips disabled schedules.
+        """
         schedule_store.create(
             Schedule(
                 name="Disabled Test",
@@ -92,7 +102,9 @@ class TestSchedulerService:
     async def test_skips_future_schedule(
         self, schedule_store: ScheduleStore, mock_job_worker: Any
     ) -> None:
-        """Verify scheduler skips schedules with future next_run_time."""
+        """
+        Verify scheduler skips schedules with future next_run_time.
+        """
         schedule_store.create(
             Schedule(
                 name="Future Test",
@@ -117,7 +129,9 @@ class TestSchedulerService:
     async def test_updates_next_run(
         self, schedule_store: ScheduleStore, mock_job_worker: Any
     ) -> None:
-        """Verify scheduler updates next_run_time after trigger."""
+        """
+        Verify scheduler updates next_run_time after trigger.
+        """
         schedule = Schedule(
             name="Update Test",
             workspace_ids=["WS-UPDATE"],
@@ -146,7 +160,9 @@ class TestSchedulerService:
     async def test_handles_submit_failure(
         self, schedule_store: ScheduleStore, mocker: MockerFixture
     ) -> None:
-        """Verify scheduler handles job submission failures gracefully."""
+        """
+        Verify scheduler handles job submission failures gracefully.
+        """
         schedule_store.create(
             Schedule(
                 name="Fail Test",
@@ -172,7 +188,9 @@ class TestSchedulerService:
     async def test_empty_schedules(
         self, schedule_store: ScheduleStore, mock_job_worker: Any
     ) -> None:
-        """Verify scheduler handles empty schedule store."""
+        """
+        Verify scheduler handles empty schedule store.
+        """
         service = SchedulerService(
             schedule_store=schedule_store,
             job_worker=mock_job_worker,
@@ -187,7 +205,9 @@ class TestSchedulerService:
     async def test_check_interval_stored(
         self, schedule_store: ScheduleStore, mock_job_worker: Any
     ) -> None:
-        """Verify check_interval_seconds is stored correctly."""
+        """
+        Verify check_interval_seconds is stored correctly.
+        """
         service = SchedulerService(
             schedule_store=schedule_store,
             job_worker=mock_job_worker,
@@ -197,7 +217,9 @@ class TestSchedulerService:
 
     @pytest.mark.asyncio
     async def test_trigger_now(self, schedule_store: ScheduleStore, mock_job_worker: Any) -> None:
-        """Verify trigger_now() immediately triggers schedule."""
+        """
+        Verify trigger_now() immediately triggers schedule.
+        """
         schedule = Schedule(
             name="Trigger Now Test",
             workspace_ids=["WS-NOW"],
@@ -219,7 +241,9 @@ class TestSchedulerService:
     async def test_trigger_now_not_found(
         self, schedule_store: ScheduleStore, mock_job_worker: Any
     ) -> None:
-        """Verify trigger_now() raises ValueError for unknown schedule."""
+        """
+        Verify trigger_now() raises ValueError for unknown schedule.
+        """
         service = SchedulerService(
             schedule_store=schedule_store,
             job_worker=mock_job_worker,
