@@ -4,8 +4,12 @@
 """Tests for Jobs API routes."""
 
 from pathlib import Path
+import pytest
+from pytest_mock import MockerFixture
+from fastapi import FastAPI
 from fastapi.testclient import TestClient
-from src.core.models.job import Job
+from src.api.routes import jobs
+from src.core.models.job import Job, JobStatus
 from src.core.storage.job_store import JobStore
 
 
@@ -220,3 +224,97 @@ class TestJobsApi:
         assert response.status_code == 200
         assert len(response.text.strip().splitlines()) == 3
         assert "line 19" in response.text.strip().splitlines()[-1]
+
+    def test_get_job_store_uninitialized(self) -> None:
+        """
+        Returns 503 when job store is not initialized.
+        """
+        app = FastAPI()
+        app.include_router(jobs.router, prefix="/api/v1")
+        saved_store = jobs._job_store
+        try:
+            jobs._job_store = None
+            with TestClient(app) as c:
+                response = c.get("/api/v1/jobs")
+                assert response.status_code == 503
+                assert "not initialized" in response.json()["detail"]
+        finally:
+            jobs._job_store = saved_store
+
+    def test_get_job_worker_uninitialized(self) -> None:
+        """
+        Returns 503 when job worker is not initialized.
+        """
+        app = FastAPI()
+        app.include_router(jobs.router, prefix="/api/v1")
+        saved_worker = jobs._job_worker
+        saved_store = jobs._job_store
+        try:
+            jobs._job_worker = None
+            with TestClient(app) as c:
+                response = c.post(
+                    "/api/v1/jobs",
+                    json={
+                        "workspace_id": "WS",
+                        "test_group": "test",
+                    },
+                )
+                assert response.status_code == 503
+                assert "not initialized" in response.json()["detail"]
+        finally:
+            jobs._job_worker = saved_worker
+            jobs._job_store = saved_store
+
+    def test_get_job_events_success(
+        self,
+        client: TestClient,
+        sample_job: Job,
+    ) -> None:
+        """
+        Returns events list for a job.
+        """
+        response = client.get(f"/api/v1/jobs/{sample_job.id}/events")
+        assert response.status_code == 200
+        data = response.json()
+        assert data["job_id"] == str(sample_job.id)
+        assert "events" in data
+
+    def test_get_job_events_not_found(self, client: TestClient) -> None:
+        """
+        Returns 404 when job not found for events.
+        """
+        fake_id = "00000000-0000-0000-0000-000000000000"
+        response = client.get(f"/api/v1/jobs/{fake_id}/events")
+        assert response.status_code == 404
+
+    def test_list_jobs_invalid_status_returns_400(
+        self,
+        client: TestClient,
+    ) -> None:
+        """
+        Returns 400 for invalid status filter value.
+        """
+        response = client.get("/api/v1/jobs?status=BOGUS")
+        assert response.status_code == 400
+        assert "Invalid status" in response.json()["detail"]
+
+    def test_log_read_os_error(
+        self,
+        client: TestClient,
+        job_store: JobStore,
+        temp_dir: Path,
+        mocker: MockerFixture,
+    ) -> None:
+        """
+        Returns 500 when log file read fails with OSError.
+        """
+        log_path = temp_dir / "logs" / "unreadable.log"
+        log_path.parent.mkdir(parents=True, exist_ok=True)
+        log_path.write_text("content")
+        job = Job(workspace_id="WS-OSERR")
+        job.log_file = str(log_path)
+        job_store.create(job)
+        mocker.patch.object(Path, "read_text", side_effect=OSError("perm denied"))
+        response = client.get(f"/api/v1/jobs/{job.id}/log")
+        assert response.status_code == 500
+        assert "Failed to read" in response.json()["detail"]
