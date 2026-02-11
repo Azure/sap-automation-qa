@@ -21,6 +21,7 @@ fi
 # Source the utils script for logging and utility functions and the version check script
 source "$script_dir/utils.sh"
 source "$script_dir/version_check.sh"
+source "$script_dir/api_utils.sh"
 
 # Use more portable command directory detection
 if command -v readlink >/dev/null 2>&1; then
@@ -78,9 +79,17 @@ parse_arguments() {
 
 show_usage() {
     cat << EOF
-Usage: $0 [OPTIONS]
+Usage: $0 <command> [OPTIONS]
 
-Options:
+Commands (SAP QA Service API):
+  health                    Check service health
+  workspace [--id <ID>]     List or get workspaces
+  job <action> [OPTIONS]    Manage jobs  (create, list, get, log, events, cancel)
+  schedule <action> [OPTS]  Manage schedules (create, list, get, update, delete, trigger, jobs)
+
+  Run "$0 job --help" or "$0 schedule --help" for detailed usage.
+
+Direct Playbook Execution:
   -v, -vv, -vvv, etc.       Set Ansible verbosity level
   --test_groups=GROUP       Specify test group to run (e.g., HA_DB_HANA, HA_SCS)
   --test_cases=[case1,case2] Specify specific test cases to run (comma-separated, in brackets)
@@ -93,7 +102,13 @@ Options:
   -h, --help                Show this help message
 
 Examples:
-  # High Availability Tests
+  # SAP QA Service
+  $0 health
+  $0 workspace
+  $0 job create --workspace DEV-WEEU-SAP01-X00 --test-group HA_DB_HANA
+  $0 schedule create --name "Nightly HA" --cron "0 2 * * *" --workspaces DEV-WEEU-SAP01-X00
+
+  # High Availability Tests (direct)
   $0 --test_groups=HA_DB_HANA --test_cases=[ha-config,primary-node-crash]
   $0 --test_groups=HA_SCS
   $0 --test_groups=HA_DB_HANA --test_cases=[ha-config,primary-node-crash] -vv
@@ -570,5 +585,11 @@ main() {
 
 }
 
-# Execute the main function
-main "$@"
+# Route subcommands: API operations vs. direct playbook execution.
+case "${1:-}" in
+    health)     shift; api_health "$@" ;;
+    workspace)  shift; api_workspace "$@" ;;
+    job)        shift; api_job "$@" ;;
+    schedule)   shift; api_schedule "$@" ;;
+    *)          main "$@" ;;
+esac

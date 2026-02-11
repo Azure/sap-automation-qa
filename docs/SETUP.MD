@@ -146,17 +146,65 @@ git clone https://github.com/GITHUB-USERNAME/sap-automation-qa.git
 cd sap-automation-qa
 ```
 
-1.4. **Run the initial setup script**:
+1.4. **Setup**
+
+The framework supports two setup methods. You can set it up locally to run test playbooks from the command line, or deploy it as a Docker container that provides a REST API for automated test execution. Choose the method that best fits your workflow.
+The containerized setup does not require the local setup, as it builds its own isolated environment.
+
+#### 1.4.1. Local Setup
+
+To set up the framework locally on the management server, run the following setup script. This script installs the necessary system packages (`python3-pip`, `sshpass`, `python3-venv`), Azure CLI (if not already installed), and creates a Python virtual environment with all required dependencies.
 
 ```bash
 ./scripts/setup.sh
 ```
 
-1.5. **Activate the python environment**:
+Once the setup completes, activate the Python virtual environment:
 
 ```bash
 source .venv/bin/activate
 ```
+
+#### 1.4.2. Container Setup (Preview)
+
+As an alternative to the local setup, the framework can also run as a Docker container on the management server. The containerized deployment exposes a REST API that allows you to execute tests, schedule recurring test runs, and monitor job status. For detailed information on API usage, scheduling, and troubleshooting, see [SAP QA Service](./SAP_QA_SERVICE.md).
+
+The container builds its own isolated environment, so the local setup (step 1.4.1) is not required when using this approach. However, the system configuration described in section 2 must still be completed, as the container reads workspace configuration files from `WORKSPACES/SYSTEM/`.
+
+To get started, run the following command to build and start the container:
+
+```bash
+./scripts/setup.sh container start
+```
+
+You can verify that the service is running and healthy by executing:
+
+```bash
+curl http://localhost:8000/healthz
+```
+
+Once the service is running, the API is available at `http://localhost:8000` and interactive API documentation can be accessed at `http://localhost:8000/docs`.
+
+**Container Management:**
+
+The following commands are available for managing the container lifecycle:
+
+| Command | Description |
+|---------|-------------|
+| `./scripts/setup.sh container start` | Build and start the service |
+| `./scripts/setup.sh container update` | Rebuild the image and restart the service |
+| `./scripts/setup.sh container stop` | Stop the service |
+| `./scripts/setup.sh container remove` | Remove the container, network, and volumes |
+
+By default, `container start` builds the Docker image locally from source. To skip the local build and pull a pre-built image from an Azure Container Registry (ACR), you can pass the full image reference using the `--image` flag:
+
+```bash
+./scripts/setup.sh container start --image <acr-name>.azurecr.io/sap-automation-qa:latest
+```
+
+> [!NOTE]
+> Using `--image` requires access to the ACR. The script attempts `az acr login` first. If that fails, set the `ACR_USERNAME` and `ACR_PASSWORD` environment variables before running the command.
+
 
 ### 2. System Configuration
 
@@ -416,3 +464,4 @@ This process will update your fork with all the latest features, bug fixes, and 
 ## Additional Resources
 
 - [Azure SAP Documentation](https://docs.microsoft.com/azure/sap)
+- [Container Deployment — SAP QA Service](./SAP_QA_SERVICE.md)
