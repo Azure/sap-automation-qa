@@ -114,7 +114,8 @@ container_start() {
         "docker-compose.yml not found in $_CONTAINER_DEPLOY_DIR"
 
     mkdir -p "$_CONTAINER_PROJECT_ROOT/data/jobs/history"
-    mkdir -p "$_CONTAINER_PROJECT_ROOT/data/logs"
+    mkdir -p "$_CONTAINER_PROJECT_ROOT/data/logs/service"
+    mkdir -p "$_CONTAINER_PROJECT_ROOT/data/logs/jobs"
 
     # Load .env if present
     if [[ -f "$_CONTAINER_ENV_FILE" ]]; then

@@ -11,6 +11,7 @@ from fastapi.testclient import TestClient
 from src.api.routes import jobs
 from src.core.models.job import Job
 from src.core.storage.job_store import JobStore
+from src.core.models.workspace import WorkspaceInfo
 
 
 class TestJobsApi:
@@ -241,10 +242,22 @@ class TestJobsApi:
         finally:
             jobs._job_store = saved_store
 
-    def test_get_job_worker_uninitialized(self) -> None:
+    def test_get_job_worker_uninitialized(self, mocker: MockerFixture) -> None:
         """
         Returns 503 when job worker is not initialized and then the exception it as 400.
         """
+        mock_workspaces = [
+            WorkspaceInfo(id="WS", name="WS", environment="test", path="/test/WS"),
+        ]
+        mocker.patch(
+            "src.api.routes.workspaces._load_workspaces_from_directory",
+            return_value=mock_workspaces,
+        )
+        mocker.patch(
+            "src.api.routes.jobs._load_workspaces_from_directory",
+            return_value=mock_workspaces,
+        )
+
         app = FastAPI()
         app.include_router(jobs.router, prefix="/api/v1")
         saved_worker = jobs._job_worker
@@ -256,7 +269,7 @@ class TestJobsApi:
                     "/api/v1/jobs",
                     json={
                         "workspace_id": "WS",
-                        "test_group": "test",
+                        "test_group": "CONFIG_CHECKS",
                     },
                 )
                 assert response.status_code == 400

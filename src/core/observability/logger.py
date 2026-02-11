@@ -331,7 +331,7 @@ class LoggerFactory:
 
         logger.addHandler(handler)
 
-        log_dir = Path(os.environ.get("LOG_DIR", "data/logs"))
+        log_dir = Path(os.environ.get("LOG_DIR", "data/logs")) / "service"
         log_dir.mkdir(parents=True, exist_ok=True)
         log_file = log_dir / "sap-qa-service.log"
 

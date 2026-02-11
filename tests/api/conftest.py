@@ -16,6 +16,7 @@ from src.core.storage.schedule_store import ScheduleStore
 from src.core.execution.worker import JobWorker
 from src.core.models.job import Job
 from src.core.models.schedule import Schedule
+from src.core.models.workspace import WorkspaceInfo
 
 
 def create_test_app() -> FastAPI:
@@ -101,8 +102,40 @@ def client(
     schedule_store: ScheduleStore,
     job_worker: JobWorker,
     mock_workspace_loader: Any,
+    mocker: MockerFixture,
 ) -> Generator[TestClient, None, None]:
     """Provide a test client with all dependencies configured."""
+    mocker.patch(
+        "src.api.routes.workspaces._load_workspaces_from_directory",
+        return_value=[
+            WorkspaceInfo(id=ws_id, name=ws_id, environment="test", path=f"/test/{ws_id}")
+            for ws_id in (
+                "NEW-WORKSPACE",
+                "EXEC-TEST",
+                "WS",
+                "WS-A",
+                "WS-B",
+                "TEST-WORKSPACE-01",
+                "TEST-WORKSPACE-02",
+            )
+        ],
+    )
+    mocker.patch(
+        "src.api.routes.jobs._load_workspaces_from_directory",
+        return_value=[
+            WorkspaceInfo(id=ws_id, name=ws_id, environment="test", path=f"/test/{ws_id}")
+            for ws_id in (
+                "NEW-WORKSPACE",
+                "EXEC-TEST",
+                "WS",
+                "WS-A",
+                "WS-B",
+                "TEST-WORKSPACE-01",
+                "TEST-WORKSPACE-02",
+            )
+        ],
+    )
+
     app = create_test_app()
     app.state.job_store = job_store
     app.state.schedule_store = schedule_store

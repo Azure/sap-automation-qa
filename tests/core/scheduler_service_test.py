@@ -251,3 +251,26 @@ class TestSchedulerService:
         )
         with pytest.raises(ValueError, match="not found"):
             await service.trigger_now("nonexistent-id")
+
+    @pytest.mark.asyncio
+    async def test_trigger_now_disabled(
+        self, schedule_store: ScheduleStore, mock_job_worker: Any
+    ) -> None:
+        """
+        Verify trigger_now() raises PermissionError for disabled schedule.
+        """
+        schedule = Schedule(
+            name="Disabled Trigger Test",
+            workspace_ids=["WS-DIS"],
+            test_group="test",
+            cron_expression="0 0 * * *",
+            enabled=False,
+        )
+        schedule_store.create(schedule)
+        service = SchedulerService(
+            schedule_store=schedule_store,
+            job_worker=mock_job_worker,
+            check_interval_seconds=60,
+        )
+        with pytest.raises(PermissionError, match="disabled"):
+            await service.trigger_now(schedule.id)

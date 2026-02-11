@@ -28,7 +28,7 @@ class JobWorker:
         job_store: JobStore,
         executor: ExecutorProtocol,
         workspace_config_loader: Callable[[str], dict[str, Any]],
-        log_dir: Path | str = "data/logs",
+        log_dir: Path | str = "data/logs/jobs",
     ) -> None:
         """Initialize the job worker.
 

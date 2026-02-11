@@ -32,7 +32,8 @@ RUN tdnf update -y && tdnf install -y \
     && ln -sf /usr/bin/python3 /usr/bin/python \
     && groupadd -g "${APP_GID}" appuser \
     && useradd -u "${APP_UID}" -g appuser -m -s /bin/bash appuser \
-    && mkdir -p /app/data/logs /app/data/jobs/history /home/appuser/.ssh \
+    && mkdir -p /app/data/logs/service /app/data/logs/jobs \
+    && mkdir -p /app/data/jobs/history /home/appuser/.ssh \
     && chmod 700 /home/appuser/.ssh \
     && chown -R appuser:appuser /app /home/appuser/.ssh
 
@@ -51,4 +52,4 @@ USER appuser
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
     CMD curl -f http://localhost:8000/healthz || exit 1
 EXPOSE 8000
-CMD ["sh", "-c", "mkdir -p /app/data/logs /app/data/jobs/history && exec uvicorn src.api.app:app --host 0.0.0.0 --port 8000"]
+CMD ["sh", "-c", "mkdir -p /app/data/logs/service /app/data/logs/jobs /app/data/jobs/history && exec uvicorn src.api.app:app --host 0.0.0.0 --port 8000"]

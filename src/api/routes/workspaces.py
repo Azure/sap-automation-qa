@@ -43,8 +43,6 @@ def _load_workspaces_from_directory(base_dir: str = "WORKSPACES/SYSTEM") -> List
     for workspace_dir in base_path.iterdir():
         if not workspace_dir.is_dir() or workspace_dir.name.startswith("."):
             continue
-
-        workspace_id = workspace_dir.name
         hosts_file = workspace_dir / "hosts.yaml"
         params_file = workspace_dir / "sap-parameters.yaml"
 
@@ -58,21 +56,14 @@ def _load_workspaces_from_directory(base_dir: str = "WORKSPACES/SYSTEM") -> List
                 with open(params_file) as f:
                     params = yaml.safe_load(f) or {}
                 sap_sid = params.get("sap_sid", "")
-                ha_db = params.get("database_high_availability", False)
-                ha_scs = params.get("scs_high_availability", False)
-                parts = []
-                if ha_db:
-                    parts.append("DB-HA")
-                if ha_scs:
-                    parts.append("SCS-HA")
             except Exception as e:
-                logger.warning(f"Failed to load sap-parameters for {workspace_id}: {e}")
+                logger.warning(f"Failed to load sap-parameters for {workspace_dir.name}: {e}")
 
         workspaces.append(
             WorkspaceInfo(
-                id=workspace_id,
-                name=sap_sid or workspace_id,
-                environment=workspace_id.split("-")[0] if "-" in workspace_id else "",
+                id=workspace_dir.name,
+                name=sap_sid or workspace_dir.name,
+                environment=workspace_dir.name.split("-")[0] if "-" in workspace_dir.name else "",
                 path=str(workspace_dir),
             )
         )

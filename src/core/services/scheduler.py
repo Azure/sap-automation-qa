@@ -139,7 +139,6 @@ class SchedulerService:
 
                     submitted_job = await self._job_worker.submit_job(job)
                     job_ids.append(str(submitted_job.id))
-
                     logger.info(
                         f"Triggered job {submitted_job.id} for workspace {workspace_id} "
                         f"(schedule: {schedule.name})"
@@ -155,14 +154,11 @@ class SchedulerService:
             schedule.last_run_time = datetime.now(timezone.utc)
             schedule.last_run_job_ids = job_ids
             schedule.total_runs += 1
-
             if schedule.enabled:
                 trigger = CronTrigger.from_crontab(schedule.cron_expression)
                 next_run = trigger.get_next_fire_time(None, datetime.now(timezone.utc))
                 schedule.next_run_time = next_run
-
             self._schedule_store.update(schedule)
-
             logger.info(
                 f"Schedule '{schedule.name}' triggered {len(job_ids)} job(s). "
                 f"Next run: {schedule.next_run_time}"
@@ -177,12 +173,17 @@ class SchedulerService:
         :param schedule_id: Schedule ID to trigger
         :returns: List of created job IDs
         :raises ValueError: If schedule not found
+        :raises PermissionError: If schedule is disabled
         """
         schedule = self._schedule_store.get(schedule_id)
         if not schedule:
             raise ValueError(f"Schedule {schedule_id} not found")
 
+        if not schedule.enabled:
+            raise PermissionError(
+                f"Schedule '{schedule.name}' is disabled. "
+                f"Enable it before triggering."
+            )
         await self._trigger_schedule(schedule)
-
         updated = self._schedule_store.get(schedule_id)
         return updated.last_run_job_ids if updated else []

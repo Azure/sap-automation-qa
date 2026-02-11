@@ -5,15 +5,15 @@
 Jobs API routes
 """
 
-import asyncio
-import json
 from pathlib import Path
-from typing import List, Optional
-from fastapi import APIRouter, HTTPException, Query, Request
-from fastapi.responses import PlainTextResponse, StreamingResponse
+from typing import Optional
+from fastapi import APIRouter, HTTPException, Query
+from fastapi.responses import PlainTextResponse
+from src.api.routes.workspaces import _load_workspaces_from_directory
 from src.core.models.job import Job, JobStatus, CreateJobRequest, CancelJobRequest, JobListResponse
 from src.core.storage.job_store import JobStore
 from src.core.execution.worker import JobWorker
+from src.core.execution.executor import TEST_GROUP_PLAYBOOKS
 from src.core.observability import get_logger
 
 logger = get_logger(__name__)
@@ -139,8 +139,22 @@ async def create_job(request: CreateJobRequest) -> Job:
     :type request: CreateJobRequest
     :returns: The created and submitted job.
     :rtype: Job
-    :raises HTTPException: If job creation fails (400 error).
+    :raises HTTPException: 404 if workspace not found, 400 on invalid test_group.
     """
+    if request.workspace_id not in {ws.id for ws in _load_workspaces_from_directory()}:
+        raise HTTPException(
+            status_code=404,
+            detail=f"Workspace '{request.workspace_id}' not found",
+        )
+
+    if request.test_group and request.test_group not in TEST_GROUP_PLAYBOOKS:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"Unknown test_group '{request.test_group}'. "
+                f"Valid values: {sorted(TEST_GROUP_PLAYBOOKS)}"
+            ),
+        )
 
     try:
         submitted = await get_job_worker().submit_job(
@@ -239,82 +253,3 @@ async def get_job_log(
         content = "\n".join(lines[-tail:])
 
     return PlainTextResponse(content)
-
-
-async def stream_job_events(job_id: str, request: Request) -> StreamingResponse:
-    """Stream job events via Server-Sent Events (SSE).
-
-    :param job_id: ID of the job to stream events for.
-    :type job_id: str
-    :param request: FastAPI request object for disconnect detection.
-    :type request: Request
-    :returns: SSE stream of job events.
-    :rtype: StreamingResponse
-    :raises HTTPException: If job not found (404 error).
-    """
-    store = get_job_store()
-    job = store.get(job_id)
-
-    if not job:
-        raise HTTPException(status_code=404, detail=f"Job {job_id} not found")
-
-    async def event_generator():
-        """Generate SSE events for job status updates."""
-        last_event_count = 0
-
-        while True:
-            if await request.is_disconnected():
-                break
-
-            current_job = store.get(job_id)
-            if not current_job:
-                yield f"event: error\ndata: {json.dumps({'error': 'Job not found'})}\n\n"
-                break
-
-            if len(current_job.events) > last_event_count:
-                for event in current_job.events[last_event_count:]:
-                    event_data = {
-                        "event_type": event.event_type,
-                        "timestamp": event.timestamp.isoformat() if event.timestamp else None,
-                        "message": event.message,
-                        "data": event.data,
-                    }
-                    yield f"event: {event.event_type}\ndata: {json.dumps(event_data)}\n\n"
-                last_event_count = len(current_job.events)
-
-            status_data = {
-                "job_id": current_job.id,
-                "status": (
-                    current_job.status.value
-                    if hasattr(current_job.status, "value")
-                    else current_job.status
-                ),
-            }
-            yield f"event: status\ndata: {json.dumps(status_data)}\n\n"
-            if current_job.status in (JobStatus.COMPLETED, JobStatus.FAILED, JobStatus.CANCELLED):
-                result_data = {
-                    "job_id": current_job.id,
-                    "status": (
-                        current_job.status.value
-                        if hasattr(current_job.status, "value")
-                        else current_job.status
-                    ),
-                    "error": current_job.error,
-                    "completed_at": (
-                        current_job.completed_at.isoformat() if current_job.completed_at else None
-                    ),
-                }
-                yield f"event: complete\ndata: {json.dumps(result_data)}\n\n"
-                break
-
-            await asyncio.sleep(1)
-
-    return StreamingResponse(
-        event_generator(),
-        media_type="text/event-stream",
-        headers={
-            "Cache-Control": "no-cache",
-            "Connection": "keep-alive",
-            "X-Accel-Buffering": "no",
-        },
-    )
