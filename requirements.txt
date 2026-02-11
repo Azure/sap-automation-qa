@@ -29,7 +29,7 @@ azure-core==1.38.0
     #   azure-storage-blob
     #   azure-storage-queue
     #   msrest
-azure-identity==1.25.1
+azure-identity==1.25.2
     # via
     #   -r requirements.in
     #   azure-kusto-data
