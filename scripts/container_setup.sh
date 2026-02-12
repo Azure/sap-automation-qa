@@ -13,6 +13,11 @@ _CONTAINER_HEALTH_INTERVAL=2
 
 # Ensure Docker and Docker Compose are available and running.
 _ensure_docker() {
+    if ! command_exists jq; then
+        log "INFO" "Installing jq for CLI output formatting..."
+        install_packages jq
+    fi
+
     if ! command_exists docker; then
         log "INFO" "Docker not found. Installing..."
         install_docker

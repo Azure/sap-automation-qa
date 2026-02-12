@@ -55,9 +55,12 @@ _api_request() {
 }
 
 # Format JSON output for display.
-# Falls back to raw output if python3 is unavailable.
 _format_json() {
-    python3 -m json.tool 2>/dev/null || cat
+    if command -v jq &>/dev/null; then
+        jq .
+    else
+        python3 -m json.tool 2>/dev/null || cat
+    fi
 }
 
 api_health() {

@@ -39,8 +39,7 @@ from src.api.routes.workspaces import default_workspace_loader
 API_V1_PREFIX = "/api/v1"
 LOG_FORMAT = os.environ.get("LOG_FORMAT", "console")
 DATA_DIR = Path(os.environ.get("DATA_DIR", "data"))
-LOG_DIR = DATA_DIR / "logs"
-JOB_LOG_DIR = LOG_DIR / "jobs"
+WORKSPACES_BASE = Path(os.environ.get("WORKSPACES_BASE", "WORKSPACES/SYSTEM"))
 PLAYBOOK_DIR = Path(os.environ.get("PLAYBOOK_DIR", "src"))
 SCHEDULER_CHECK_INTERVAL = int(os.environ.get("SCHEDULER_CHECK_INTERVAL", "60"))
 CORS_ORIGINS = os.environ.get("CORS_ORIGINS", "http://localhost:3000,http://localhost:8000").split(
@@ -79,7 +78,7 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
             job_store=job_store,
             executor=AnsibleExecutor(playbook_dir=PLAYBOOK_DIR),
             workspace_config_loader=workspace_loader,
-            log_dir=JOB_LOG_DIR,
+            workspaces_base=WORKSPACES_BASE,
         )
         job_worker.recover_crashed_jobs()
         scheduler_service = SchedulerService(

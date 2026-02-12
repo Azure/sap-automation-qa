@@ -30,7 +30,7 @@ class JobWorker:
         job_store: JobStore,
         executor: ExecutorProtocol,
         workspace_config_loader: Callable[[str], dict[str, Any]],
-        log_dir: Path | str = "data/logs/jobs",
+        workspaces_base: Path | str = "WORKSPACES/SYSTEM",
         ssh_provider: SshCredentialProvider | None = None,
     ) -> None:
         """Initialize the job worker.
@@ -38,14 +38,13 @@ class JobWorker:
         :param job_store: Job store for persistence
         :param executor: Test executor implementation
         :param workspace_config_loader: Function to load workspace config by ID
-        :param log_dir: Directory for per-job log files
+        :param workspaces_base: Base path for workspace directories
         :param ssh_provider: Optional SSH credential provider for KV
         """
         self.job_store = job_store
         self.executor = executor
         self.workspace_config_loader = workspace_config_loader
-        self.log_dir = Path(log_dir)
-        self.log_dir.mkdir(parents=True, exist_ok=True)
+        self.workspaces_base = Path(workspaces_base)
         self.ssh_provider = ssh_provider or SshCredentialProvider()
         self._running_jobs: dict[str, asyncio.Task] = {}
         self._event_queues: dict[str, asyncio.Queue[JobEvent]] = {}
@@ -249,7 +248,10 @@ class JobWorker:
                 if not test_ids:
                     raise ValueError("No tests specified for execution")
 
-                log_path = self.log_dir / f"{job.id}.log"
+                log_dir = self.workspaces_base / job.workspace_id / "logs"
+                log_dir.mkdir(parents=True, exist_ok=True)
+                log_path = log_dir / f"{job.id}.log"
+                log_path.write_text("", encoding="utf-8")
                 job.log_file = str(log_path)
                 self.job_store.update(job)
 

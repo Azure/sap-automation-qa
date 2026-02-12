@@ -264,7 +264,7 @@ class AnsibleExecutor:
         log_path = Path(log_file)
         log_path.parent.mkdir(parents=True, exist_ok=True)
 
-        with open(log_path, "w", encoding="utf-8") as fh:
+        with open(log_path, "a", encoding="utf-8") as fh:
             proc = subprocess.Popen(
                 cmd,
                 stdout=fh,

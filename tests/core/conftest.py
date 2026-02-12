@@ -139,7 +139,7 @@ def job_worker(
         job_store=job_store,
         executor=mock_executor,
         workspace_config_loader=workspace_loader,
-        log_dir=temp_dir / "logs",
+        workspaces_base=temp_dir,
     )
 
 
