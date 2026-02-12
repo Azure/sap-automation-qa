@@ -189,7 +189,6 @@ class AnsibleExecutor:
         if ssh_password:
             all_vars["ansible_ssh_pass"] = ssh_password
         if test_id:
-            cmd.extend(["--tags", test_id])
             all_vars["test_id"] = test_id
 
         if all_vars:

@@ -243,11 +243,13 @@ class JobWorker:
                     )
 
                 results = []
-                test_ids = job.test_ids or ([job.test_group] if job.test_group else [])
+                test_ids = job.test_ids or []
 
-                if not test_ids:
+                if not job.test_group and not test_ids:
                     raise ValueError("No tests specified for execution")
 
+                if not test_ids:
+                    test_ids = [""]
                 log_dir = self.workspaces_base / job.workspace_id / "logs"
                 log_dir.mkdir(parents=True, exist_ok=True)
                 log_path = log_dir / f"{job.id}.log"
