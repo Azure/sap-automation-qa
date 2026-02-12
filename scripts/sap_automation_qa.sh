@@ -9,7 +9,111 @@ set -eo pipefail
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 project_root="$(cd "$script_dir/.." && pwd)"
 
-# Activate the virtual environment
+# Source shared utilities (logging, etc.)
+source "$script_dir/utils.sh"
+
+show_usage() {
+    cat << EOF
+Usage: $0 <command> [OPTIONS]
+
+Commands (SAP QA Service API):
+  health                    Check service health
+  workspace [--id <ID>]     List or get workspaces
+  job <action> [OPTIONS]    Manage jobs  (create, list, get, log, events, cancel)
+  schedule <action> [OPTS]  Manage schedules (create, list, get, update, delete, trigger, jobs)
+
+  Run "$0 job --help" or "$0 schedule --help" for detailed usage.
+
+Direct Playbook Execution:
+  -v, -vv, -vvv, etc.       Set Ansible verbosity level
+  --test_groups=GROUP       Specify test group to run (e.g., HA_DB_HANA, HA_SCS)
+  --test_cases=[case1,case2] Specify specific test cases to run (comma-separated, in brackets)
+  --extra-vars=VAR          Specify additional Ansible extra variables (e.g., --extra-vars='{"key":"value"}')
+  --offline                 Run offline test cases using previously collected CIB data.
+				While running offline tests, the script will look for CIB data in
+				WORKSPACES/SYSTEM/<SYSTEM_CONFIG_NAME>/offline_validation directory.
+				Extra vars "ansible_os_family" required for offline mode
+				(e.g., --extra-vars='{"ansible_os_family":"SUSE"}')
+  -h, --help                Show this help message
+
+Examples:
+  # SAP QA Service
+  $0 health
+  $0 workspace
+  $0 job create --workspace DEV-WEEU-SAP01-X00 --test-group HA_DB_HANA
+  $0 schedule create --name "Nightly HA" --cron "0 2 * * *" --workspaces DEV-WEEU-SAP01-X00
+
+  # High Availability Tests (direct)
+  $0 --test_groups=HA_DB_HANA --test_cases=[ha-config,primary-node-crash]
+  $0 --test_groups=HA_SCS
+  $0 --test_groups=HA_DB_HANA --test_cases=[ha-config,primary-node-crash] -vv
+  $0 --test_groups=HA_DB_HANA --test_cases=[ha-config,primary-node-crash] --extra-vars='{"key":"value"}'
+  $0 --test_groups=HA_DB_HANA --test_cases=[ha-config] --offline
+
+  # Configuration Checks (requires TEST_TYPE: ConfigurationChecks in vars.yaml)
+  $0 --extra-vars='{"configuration_test_type":"all"}'
+  $0 --extra-vars='{"configuration_test_type":"high_availability"}'
+  $0 --extra-vars='{"configuration_test_type":"Database"}' -v
+
+Available Test Cases for groups:
+	$0 --test_groups=HA_DB_HANA
+				ha-config => High Availability configuration
+				azure-lb => Azure Load Balancer
+				resource-migration => Resource Migration
+				primary-node-crash => Primary Node Crash
+				block-network => Block Network
+				primary-crash-index => Primary Crash Index
+				primary-node-kill => Primary Node Kill
+				primary-echo-b => Primary Echo B
+				secondary-node-kill => Secondary Node Kill
+				secondary-echo-b => Secondary Echo B
+				fs-freeze => FS Freeze
+				sbd-fencing => SBD Fencing
+				secondary-crash-index => Secondary Crash Index
+	$0 --test_groups=HA_SCS
+				ha-config => High Availability configuration
+				azure-lb => Azure Load Balancer
+				sapcontrol-config => SAP Control Configuration
+				ascs-migration => ASCS Migration
+				block-network => Block Network
+				kill-message-server => Kill Message Server
+				kill-enqueue-server => Kill Enqueue Server
+				kill-enqueue-replication => Kill Enqueue Replication
+				kill-sapstartsrv-process => Kill SAP Start Service Process
+				manual-restart => Manual Restart
+				ha-failover-to-node => HA Failover to Secondary Node
+
+Configuration Checks (set TEST_TYPE: ConfigurationChecks in vars.yaml):
+	configuration_test_type options (use with --extra-vars):
+				all => Run all configuration checks
+				Database => Database (HANA) configuration checks only
+				CentralServiceInstances => ASCS/ERS configuration checks only
+				ApplicationInstances => Application server configuration checks only
+
+Configuration is read from vars.yaml file.
+EOF
+}
+
+# Route API subcommands early — they only need curl, not the venv or Ansible.
+case "${1:-}" in
+    health|workspace|workspaces|job|jobs|schedule|schedules)
+        source "$script_dir/api_utils.sh"
+        case "$1" in
+            health)              shift; api_health "$@" ;;
+            workspace|workspaces) shift; api_workspace "$@" ;;
+            job|jobs)            shift; api_job "$@" ;;
+            schedule|schedules)  shift; api_schedule "$@" ;;
+        esac
+        exit $?
+        ;;
+    -h|--help)
+        source "$script_dir/api_utils.sh"
+        show_usage
+        exit 0
+        ;;
+esac
+
+# Activate the virtual environment (required for Ansible playbook execution)
 if [[ -f "$project_root/.venv/bin/activate" ]]; then
     source "$project_root/.venv/bin/activate"
 else
@@ -18,8 +122,7 @@ else
     exit 1
 fi
 
-# Source the utils script for logging and utility functions and the version check script
-source "$script_dir/utils.sh"
+# Source the version check script
 source "$script_dir/version_check.sh"
 
 # Use more portable command directory detection
@@ -74,74 +177,6 @@ parse_arguments() {
                 ;;
         esac
     done
-}
-
-show_usage() {
-    cat << EOF
-Usage: $0 [OPTIONS]
-
-Options:
-  -v, -vv, -vvv, etc.       Set Ansible verbosity level
-  --test_groups=GROUP       Specify test group to run (e.g., HA_DB_HANA, HA_SCS)
-  --test_cases=[case1,case2] Specify specific test cases to run (comma-separated, in brackets)
-  --extra-vars=VAR          Specify additional Ansible extra variables (e.g., --extra-vars='{"key":"value"}')
-  --offline                 Run offline test cases using previously collected CIB data.
-				While running offline tests, the script will look for CIB data in
-				WORKSPACES/SYSTEM/<SYSTEM_CONFIG_NAME>/offline_validation directory.
-				Extra vars "ansible_os_family" required for offline mode
-				(e.g., --extra-vars='{"ansible_os_family":"SUSE"}')
-  -h, --help                Show this help message
-
-Examples:
-  # High Availability Tests
-  $0 --test_groups=HA_DB_HANA --test_cases=[ha-config,primary-node-crash]
-  $0 --test_groups=HA_SCS
-  $0 --test_groups=HA_DB_HANA --test_cases=[ha-config,primary-node-crash] -vv
-  $0 --test_groups=HA_DB_HANA --test_cases=[ha-config,primary-node-crash] --extra-vars='{"key":"value"}'
-  $0 --test_groups=HA_DB_HANA --test_cases=[ha-config] --offline
-
-  # Configuration Checks (requires TEST_TYPE: ConfigurationChecks in vars.yaml)
-  $0 --extra-vars='{"configuration_test_type":"all"}'
-  $0 --extra-vars='{"configuration_test_type":"high_availability"}'
-  $0 --extra-vars='{"configuration_test_type":"Database"}' -v
-
-Available Test Cases for groups:
-	$0 --test_groups=HA_DB_HANA
-				ha-config => High Availability configuration
-				azure-lb => Azure Load Balancer
-				resource-migration => Resource Migration
-				primary-node-crash => Primary Node Crash
-				block-network => Block Network
-				primary-crash-index => Primary Crash Index
-				primary-node-kill => Primary Node Kill
-				primary-echo-b => Primary Echo B
-				secondary-node-kill => Secondary Node Kill
-				secondary-echo-b => Secondary Echo B
-				fs-freeze => FS Freeze
-				sbd-fencing => SBD Fencing
-				secondary-crash-index => Secondary Crash Index
-	$0 --test_groups=HA_SCS
-				ha-config => High Availability configuration
-				azure-lb => Azure Load Balancer
-				sapcontrol-config => SAP Control Configuration
-				ascs-migration => ASCS Migration
-				block-network => Block Network
-				kill-message-server => Kill Message Server
-				kill-enqueue-server => Kill Enqueue Server
-				kill-enqueue-replication => Kill Enqueue Replication
-				kill-sapstartsrv-process => Kill SAP Start Service Process
-				manual-restart => Manual Restart
-				ha-failover-to-node => HA Failover to Secondary Node
-
-Configuration Checks (set TEST_TYPE: ConfigurationChecks in vars.yaml):
-	configuration_test_type options (use with --extra-vars):
-				all => Run all configuration checks
-				Database => Database (HANA) configuration checks only
-				CentralServiceInstances => ASCS/ERS configuration checks only
-				ApplicationInstances => Application server configuration checks only
-
-Configuration is read from vars.yaml file.
-EOF
 }
 
 log "INFO" "ANSIBLE_COLLECTIONS_PATH: $ANSIBLE_COLLECTIONS_PATH"
@@ -518,6 +553,9 @@ main() {
 
     # Validate parameters
     validate_params
+
+    # Validate worksapce status for any running  jobs
+    check_workspace_busy $SYSTEM_CONFIG_NAME
 
     # Check if the SYSTEM_HOSTS and SYSTEM_PARAMS directory exists inside WORKSPACES/SYSTEM folder
     SYSTEM_CONFIG_FOLDER="${cmd_dir}/../$WORKSPACES_DIR/SYSTEM/$SYSTEM_CONFIG_NAME"

@@ -17,7 +17,7 @@
     - name:                             "Get framework version"
       no_log:                           true
       ansible.builtin.set_fact:
-        framework_version:              "{{ lookup('file', '../../../../VERSION') | default('unknown') }}"
+        framework_version:              "{{ lookup('file', playbook_dir + '/../VERSION', errors='ignore') | default('unknown') }}"
 
     - name:                             "Read the log file and create a HTML report"
       render_html_report:

@@ -287,7 +287,7 @@ commands:
     REDHAT:                         "cibadmin --query --xpath \"//primitive[@type='SAPHana']\" --node-path | grep -oP \"primitive\\[@id='\\K[^']+\""
 
   - name:                           get_hana_clone_resource_id
-    SUSE:                           "cibadmin --query --xpath \"//primitive[@type='SAPHana']\" --node-path | grep -oP \"master\\[@id='\\K[^']+\""
+    SUSE:                           "cibadmin --query --xpath \"//primitive[@type='SAPHana']\" --node-path | grep -oP \"primtive\\[@id='\\K[^']+\""
     REDHAT:                         "cibadmin --query --xpath \"//primitive[@type='SAPHana']\" --node-path | grep -oP \"clone\\[@id='\\K[^']+\""
 
   - name:                           get_hana_clone_resource_id_saphanasr_angi

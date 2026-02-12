@@ -7,6 +7,7 @@ Commands module for SAP HANA cluster configuration.
 This module contains all the commands used for cluster validation
 and configuration.
 """
+
 from __future__ import absolute_import, division, print_function
 
 try:

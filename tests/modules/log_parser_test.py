@@ -57,11 +57,9 @@ class TestLogParser:
         """
         mocker.patch(
             "builtins.open",
-            mocker.mock_open(
-                read_data="""Jan 01 23:17:30 nodename LogAction: Action performed
+            mocker.mock_open(read_data="""Jan 01 23:17:30 nodename LogAction: Action performed
                     Jan 01 23:17:30 nodename SAPHana: SAP HANA action
-                    Jan 01 23:17:30 nodename Some other log entry"""
-            ),
+                    Jan 01 23:17:30 nodename Some other log entry"""),
         )
 
         log_parser_redhat.parse_logs()

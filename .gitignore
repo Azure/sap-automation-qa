@@ -412,3 +412,9 @@ VMWPASSWORD
 
 # GitHub Copilot configuration files
 copilot-instructions.md
+
+# Scheduler data (jobs, schedules)
+data/
+
+# Environment configuration (may contain secrets)
+deploy/.env

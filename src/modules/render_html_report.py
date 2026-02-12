@@ -20,6 +20,26 @@ except ImportError:
     from src.module_utils.sap_automation_qa import SapAutomationQA
     from src.module_utils.enums import TestStatus
 
+
+def _sanitize_for_template(obj: Any) -> Any:
+    """
+    Recursively sanitize data for Jinja2 template rendering.
+
+    Replaces None values with empty strings and ensures all nested
+    structures are JSON-serializable.
+
+    :param obj: The object to sanitize (dict, list, or primitive).
+    :return: Sanitized object safe for template rendering.
+    """
+    if obj is None:
+        return ""
+    if isinstance(obj, dict):
+        return {k: _sanitize_for_template(v) for k, v in obj.items()}
+    if isinstance(obj, list):
+        return [_sanitize_for_template(item) for item in obj]
+    return obj
+
+
 DOCUMENTATION = r"""
 ---
 module: render_html_report
@@ -183,15 +203,17 @@ class HTMLReportRenderer(SapAutomationQA):
             )
             os.makedirs(os.path.dirname(report_path), exist_ok=True)
             template = jinja2.Template(self.report_template)
+            sanitized_results = _sanitize_for_template(test_case_results)
+            sanitized_system_info = _sanitize_for_template(self.system_info)
             with open(report_path, "w", encoding="utf-8") as report_file:
                 report_file.write(
                     template.render(
                         {
-                            "test_case_results": test_case_results,
+                            "test_case_results": sanitized_results,
                             "report_generation_time": datetime.now().strftime(
                                 "%m/%d/%Y, %I:%M:%S %p"
                             ),
-                            "system_info": self.system_info,
+                            "system_info": sanitized_system_info,
                             "framework_version": self.framework_version,
                         }
                     )
