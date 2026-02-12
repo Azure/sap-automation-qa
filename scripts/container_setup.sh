@@ -11,6 +11,11 @@ _CONTAINER_PORT=8000
 _CONTAINER_HEALTH_RETRIES=15
 _CONTAINER_HEALTH_INTERVAL=2
 
+# Export host user identity so the container runs as the same user
+# that owns the WORKSPACES directory on the host.
+export HOST_UID="${HOST_UID:-$(id -u)}"
+export HOST_GID="${HOST_GID:-$(id -g)}"
+
 # Ensure Docker and Docker Compose are available and running.
 _ensure_docker() {
     if ! command_exists jq; then
@@ -118,9 +123,7 @@ container_start() {
     check_file_exists "$_CONTAINER_DEPLOY_DIR/docker-compose.yml" \
         "docker-compose.yml not found in $_CONTAINER_DEPLOY_DIR"
 
-    mkdir -p "$_CONTAINER_PROJECT_ROOT/data/jobs/history"
-    mkdir -p "$_CONTAINER_PROJECT_ROOT/data/logs/service"
-    mkdir -p "$_CONTAINER_PROJECT_ROOT/data/logs/jobs"
+    mkdir -p "$_CONTAINER_PROJECT_ROOT/data"
 
     # Load .env if present
     if [[ -f "$_CONTAINER_ENV_FILE" ]]; then

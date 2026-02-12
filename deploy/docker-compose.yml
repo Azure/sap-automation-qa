@@ -7,6 +7,7 @@ services:
       context:            ..
       dockerfile:         deploy/Dockerfile
     container_name:       sap-qa-service
+    user:                 "${HOST_UID:-1000}:${HOST_GID:-1000}"
     restart:              unless-stopped
     ports:
                           - "8000:8000"
