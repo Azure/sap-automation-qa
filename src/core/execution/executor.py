@@ -84,6 +84,8 @@ class ExecutorProtocol(Protocol):
         extra_vars: Optional[dict[str, Any]] = None,
         log_file: Optional[Path | str] = None,
         job_id: Optional[str] = None,
+        private_key_path: Optional[str] = None,
+        ssh_password: Optional[str] = None,
     ) -> dict[str, Any]:
         """
         Run a test.
@@ -95,6 +97,8 @@ class ExecutorProtocol(Protocol):
         :param extra_vars: Additional variables to pass
         :param log_file: Path to file for combined stdout/stderr
         :param job_id: Job correlation ID for process tracking
+        :param private_key_path: Path to SSH private key file
+        :param ssh_password: SSH password for VMPASSWORD auth
         :returns: Execution result
         """
         ...
@@ -138,6 +142,8 @@ class AnsibleExecutor:
         extra_vars: Optional[dict[str, Any]] = None,
         log_file: Optional[Path | str] = None,
         job_id: Optional[str] = None,
+        private_key_path: Optional[str] = None,
+        ssh_password: Optional[str] = None,
     ) -> dict[str, Any]:
         """Run a test using ansible-playbook.
 
@@ -148,6 +154,8 @@ class AnsibleExecutor:
         :param extra_vars: Additional variables
         :param log_file: Path to file for combined stdout/stderr
         :param job_id: Job correlation ID for process tracking
+        :param private_key_path: Path to SSH private key file
+        :param ssh_password: SSH password for VMPASSWORD auth
         :returns: Execution result dict
         """
         playbook_name = TEST_GROUP_PLAYBOOKS.get(test_group)
@@ -171,11 +179,15 @@ class AnsibleExecutor:
             inventory_path,
         ]
 
+        if private_key_path:
+            cmd.extend(["--private-key", private_key_path])
         all_vars = extra_vars or {}
         all_vars["workspace_id"] = workspace_id
         if job_id:
             all_vars["job_id"] = job_id
 
+        if ssh_password:
+            all_vars["ansible_ssh_pass"] = ssh_password
         if test_id:
             cmd.extend(["--tags", test_id])
             all_vars["test_id"] = test_id

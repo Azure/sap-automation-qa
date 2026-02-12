@@ -110,17 +110,22 @@ class SchedulerService:
             )
 
     async def _scheduler_loop(self) -> None:
-        """Main scheduler loop that checks schedules periodically.
-
-        Runs continuously while the scheduler is active, checking
-        for due schedules at the configured interval and triggering
-        jobs.
-        """
-        logger.info("Scheduler loop started")
-
+        """Main scheduler loop that checks schedules periodically."""
+        tick = 0
         while self._running:
             try:
+                tick += 1
                 await self._check_and_trigger_schedules()
+                if tick % max(300 // self._check_interval, 1) == 0:
+                    enabled = self._schedule_store.get_enabled()
+                    now = datetime.now(timezone.utc)
+                    summary = ", ".join(f"{s.name}→{s.next_run_time}" for s in enabled) or "none"
+                    logger.info(
+                        f"Scheduler heartbeat: tick={tick}, "
+                        f"now={now.isoformat()}, "
+                        f"enabled_schedules={len(enabled)} "
+                        f"[{summary}]"
+                    )
             except Exception as e:
                 logger.error(
                     f"Error in scheduler loop: {e}",
@@ -135,13 +140,22 @@ class SchedulerService:
         now = datetime.now(timezone.utc)
 
         for schedule in schedules:
-            if schedule.next_run_time and schedule.next_run_time <= now:
+            if not schedule.next_run_time:
+                logger.debug(f"Schedule '{schedule.name}' has no " f"next_run_time — skipping")
+                continue
+
+            if schedule.next_run_time <= now:
                 logger.info(
                     f"Schedule '{schedule.name}' (ID: {schedule.id}) "
                     f"is due (next_run_time={schedule.next_run_time}, "
                     f"now={now})"
                 )
                 await self._trigger_schedule(schedule)
+            else:
+                logger.debug(
+                    f"Schedule '{schedule.name}': not due, "
+                    f"{schedule.next_run_time - now} remaining"
+                )
 
     async def _trigger_schedule(self, schedule: Schedule) -> None:
         """Trigger a schedule - creates one job per workspace.

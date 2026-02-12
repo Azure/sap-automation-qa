@@ -11,6 +11,8 @@ from src.core.models.job import Job, JobEvent, JobEventType, JobStatus
 from src.core.storage.job_store import JobStore
 from src.core.execution.executor import ExecutorProtocol
 from src.core.execution.exceptions import WorkspaceLockError
+from src.core.execution.ssh_provider import SshCredentialProvider
+from src.core.execution.exceptions import CredentialProvisionError
 from src.core.observability import (
     get_logger,
     ExecutionScope,
@@ -29,6 +31,7 @@ class JobWorker:
         executor: ExecutorProtocol,
         workspace_config_loader: Callable[[str], dict[str, Any]],
         log_dir: Path | str = "data/logs/jobs",
+        ssh_provider: SshCredentialProvider | None = None,
     ) -> None:
         """Initialize the job worker.
 
@@ -36,12 +39,14 @@ class JobWorker:
         :param executor: Test executor implementation
         :param workspace_config_loader: Function to load workspace config by ID
         :param log_dir: Directory for per-job log files
+        :param ssh_provider: Optional SSH credential provider for KV
         """
         self.job_store = job_store
         self.executor = executor
         self.workspace_config_loader = workspace_config_loader
         self.log_dir = Path(log_dir)
         self.log_dir.mkdir(parents=True, exist_ok=True)
+        self.ssh_provider = ssh_provider or SshCredentialProvider()
         self._running_jobs: dict[str, asyncio.Task] = {}
         self._event_queues: dict[str, asyncio.Queue[JobEvent]] = {}
 
@@ -193,6 +198,7 @@ class JobWorker:
         :param job: Job to execute
         """
         start_time = time.perf_counter()
+        ssh_credential = None
 
         with ExecutionScope(
             execution_id=str(job.id),
@@ -220,6 +226,23 @@ class JobWorker:
                 if not inventory_path:
                     raise ValueError(f"No inventory path for workspace {job.workspace_id}")
 
+                extra_vars = workspace_config.get("extra_vars") or {}
+                ssh_credential = await asyncio.to_thread(
+                    self._provision_ssh_credential,
+                    workspace_id=job.workspace_id,
+                    extra_vars=extra_vars,
+                )
+                private_key_path = None
+                ssh_password = None
+                if ssh_credential:
+                    private_key_path = ssh_credential.private_key_path
+                    ssh_password = ssh_credential.ssh_password
+                    logger.info(
+                        "SSH credential provisioned for workspace " "%s (type=%s)",
+                        job.workspace_id,
+                        ssh_credential.auth_type.value,
+                    )
+
                 results = []
                 test_ids = job.test_ids or ([job.test_group] if job.test_group else [])
 
@@ -241,9 +264,11 @@ class JobWorker:
                             test_id=test_id,
                             test_group=job.test_group or "CONFIG_CHECKS",
                             inventory_path=inventory_path,
-                            extra_vars=workspace_config.get("extra_vars"),
+                            extra_vars=extra_vars,
                             log_file=log_path,
                             job_id=str(job.id),
+                            private_key_path=private_key_path,
+                            ssh_password=ssh_password,
                         )
 
                         if result.get("status") == "failed":
@@ -334,10 +359,38 @@ class JobWorker:
                 await self._emit_event(str(job.id), event)
 
             finally:
+                if ssh_credential:
+                    ssh_credential.cleanup()
                 if str(job.id) in self._running_jobs:
                     del self._running_jobs[str(job.id)]
                 if str(job.id) in self._event_queues:
                     del self._event_queues[str(job.id)]
+
+    def _provision_ssh_credential(
+        self,
+        workspace_id: str,
+        extra_vars: dict[str, Any],
+    ) -> Any:
+        """Provision SSH credentials for a workspace.
+
+        :param workspace_id: Workspace identifier.
+        :param extra_vars: Variables from sap-parameters.yaml.
+        :returns: An :class:`SshCredential` or ``None``.
+        """
+        try:
+            return self.ssh_provider.provision(
+                workspace_id=workspace_id,
+                extra_vars=extra_vars,
+            )
+        except CredentialProvisionError:
+            logger.warning(
+                "SSH credential provisioning failed for "
+                "workspace %s — Ansible will attempt "
+                "default SSH auth",
+                workspace_id,
+                exc_info=True,
+            )
+            return None
 
     def get_running_job_ids(self) -> list[str]:
         """Get IDs of currently running jobs."""

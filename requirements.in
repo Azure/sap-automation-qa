@@ -5,6 +5,7 @@ ansible-runner
 
 # Azure packages
 azure-identity
+azure-keyvault-secrets
 azure-kusto-data
 azure-kusto-ingest
 azure-mgmt-compute

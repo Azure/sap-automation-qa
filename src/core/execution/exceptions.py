@@ -44,3 +44,7 @@ class JobCancellationError(ExecutionError):
         self.job_id = job_id
         self.reason = reason
         super().__init__(f"Failed to cancel job {job_id}: {reason}")
+
+
+class CredentialProvisionError(ExecutionError):
+    """Raised when SSH credential provisioning fails."""

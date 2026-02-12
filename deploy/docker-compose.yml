@@ -17,7 +17,6 @@ services:
                           - PYTHONPATH=/app
     volumes:
                           - sap-qa-data:/app/data
-                          - ssh-keys:/home/appuser/.ssh:ro
                           - ../WORKSPACES:/app/WORKSPACES
     healthcheck:
       test:               ["CMD", "curl", "-f", "http://localhost:8000/healthz"]
@@ -35,8 +34,6 @@ services:
 
 volumes:
   sap-qa-data:
-    driver:               local
-  ssh-keys:
     driver:               local
 
 networks:
