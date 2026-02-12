@@ -23,6 +23,7 @@ RUN tdnf update -y && tdnf install -y \
     openssh-clients \
     git \
     curl \
+    util-linux \
     && tdnf clean all \
     && ln -sf /usr/bin/python3 /usr/bin/python \
     && mkdir -p /app/.ssh \
