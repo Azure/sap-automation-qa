@@ -9,7 +9,24 @@ set -eo pipefail
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 project_root="$(cd "$script_dir/.." && pwd)"
 
-# Activate the virtual environment
+# Source shared utilities (logging, etc.)
+source "$script_dir/utils.sh"
+
+# Route API subcommands early — they only need curl, not the venv or Ansible.
+case "${1:-}" in
+    health|workspace|job|schedule)
+        source "$script_dir/api_utils.sh"
+        case "$1" in
+            health)     shift; api_health "$@" ;;
+            workspace)  shift; api_workspace "$@" ;;
+            job)        shift; api_job "$@" ;;
+            schedule)   shift; api_schedule "$@" ;;
+        esac
+        exit $?
+        ;;
+esac
+
+# Activate the virtual environment (required for Ansible playbook execution)
 if [[ -f "$project_root/.venv/bin/activate" ]]; then
     source "$project_root/.venv/bin/activate"
 else
@@ -18,10 +35,8 @@ else
     exit 1
 fi
 
-# Source the utils script for logging and utility functions and the version check script
-source "$script_dir/utils.sh"
+# Source the version check script
 source "$script_dir/version_check.sh"
-source "$script_dir/api_utils.sh"
 
 # Use more portable command directory detection
 if command -v readlink >/dev/null 2>&1; then
@@ -585,11 +600,5 @@ main() {
 
 }
 
-# Route subcommands: API operations vs. direct playbook execution.
-case "${1:-}" in
-    health)     shift; api_health "$@" ;;
-    workspace)  shift; api_workspace "$@" ;;
-    job)        shift; api_job "$@" ;;
-    schedule)   shift; api_schedule "$@" ;;
-    *)          main "$@" ;;
-esac
+# Execute the main function
+main "$@"
