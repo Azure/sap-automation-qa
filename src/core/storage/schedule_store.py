@@ -188,7 +188,7 @@ class ScheduleStore:
         :returns: Updated schedule.
         :raises ValueError: If schedule not found.
         """
-        schedule.updated_at = datetime.utcnow()
+        schedule.updated_at = datetime.now(timezone.utc)
         row = self._schedule_to_row(schedule)
         with self._conn:
             cur = self._conn.execute(

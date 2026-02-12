@@ -12,86 +12,6 @@ project_root="$(cd "$script_dir/.." && pwd)"
 # Source shared utilities (logging, etc.)
 source "$script_dir/utils.sh"
 
-# Route API subcommands early — they only need curl, not the venv or Ansible.
-case "${1:-}" in
-    health|workspace|job|schedule)
-        source "$script_dir/api_utils.sh"
-        case "$1" in
-            health)     shift; api_health "$@" ;;
-            workspace)  shift; api_workspace "$@" ;;
-            job)        shift; api_job "$@" ;;
-            schedule)   shift; api_schedule "$@" ;;
-        esac
-        exit $?
-        ;;
-esac
-
-# Activate the virtual environment (required for Ansible playbook execution)
-if [[ -f "$project_root/.venv/bin/activate" ]]; then
-    source "$project_root/.venv/bin/activate"
-else
-    echo "ERROR: Virtual environment not found at $project_root/.venv"
-    echo "Please run setup.sh first to create the virtual environment."
-    exit 1
-fi
-
-# Source the version check script
-source "$script_dir/version_check.sh"
-
-# Use more portable command directory detection
-if command -v readlink >/dev/null 2>&1; then
-    cmd_dir="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")"
-else
-    # Fallback for systems without readlink -f (like some macOS versions)
-    cmd_dir="$script_dir"
-fi
-
-# Set the environment variables
-export ANSIBLE_COLLECTIONS_PATH=/opt/ansible/collections:${ANSIBLE_COLLECTIONS_PATH:+${ANSIBLE_COLLECTIONS_PATH}}
-export ANSIBLE_CONFIG="${cmd_dir}/../src/ansible.cfg"
-export ANSIBLE_MODULE_UTILS="${cmd_dir}/../src/module_utils:${ANSIBLE_MODULE_UTILS:+${ANSIBLE_MODULE_UTILS}}"
-export ANSIBLE_HOST_KEY_CHECKING=False
-set_output_context
-
-# Global variable to store the path of the temporary file.
-temp_file=""
-
-# Parse command line arguments and extract verbose flags
-# Sets global ANSIBLE_VERBOSE variable
-parse_arguments() {
-    ANSIBLE_VERBOSE=""
-    OFFLINE_MODE=""
-    TEST_GROUPS=""
-    TEST_CASES=""
-    EXTRA_VARS=""
-
-    for arg in "$@"; do
-        case "$arg" in
-            -v|-vv|-vvv|-vvvv|-vvvvv|-vvvvvv)
-                ANSIBLE_VERBOSE="$arg"
-                ;;
-            --test_groups=*)
-                TEST_GROUPS="${arg#*=}"
-                ;;
-            --test_cases=*)
-                TEST_CASES="${arg#*=}"
-                TEST_CASES="${TEST_CASES#[}"
-                TEST_CASES="${TEST_CASES%]}"
-                ;;
-            --extra-vars=*)
-                EXTRA_VARS="${arg#*=}"
-                ;;
-            --offline)
-                OFFLINE_MODE="true"
-                ;;
-            -h|--help)
-                show_usage
-                exit 0
-                ;;
-        esac
-    done
-}
-
 show_usage() {
     cat << EOF
 Usage: $0 <command> [OPTIONS]
@@ -172,6 +92,91 @@ Configuration Checks (set TEST_TYPE: ConfigurationChecks in vars.yaml):
 
 Configuration is read from vars.yaml file.
 EOF
+}
+
+# Route API subcommands early — they only need curl, not the venv or Ansible.
+case "${1:-}" in
+    health|workspace|workspaces|job|jobs|schedule|schedules)
+        source "$script_dir/api_utils.sh"
+        case "$1" in
+            health)              shift; api_health "$@" ;;
+            workspace|workspaces) shift; api_workspace "$@" ;;
+            job|jobs)            shift; api_job "$@" ;;
+            schedule|schedules)  shift; api_schedule "$@" ;;
+        esac
+        exit $?
+        ;;
+    -h|--help)
+        source "$script_dir/api_utils.sh"
+        show_usage
+        exit 0
+        ;;
+esac
+
+# Activate the virtual environment (required for Ansible playbook execution)
+if [[ -f "$project_root/.venv/bin/activate" ]]; then
+    source "$project_root/.venv/bin/activate"
+else
+    echo "ERROR: Virtual environment not found at $project_root/.venv"
+    echo "Please run setup.sh first to create the virtual environment."
+    exit 1
+fi
+
+# Source the version check script
+source "$script_dir/version_check.sh"
+
+# Use more portable command directory detection
+if command -v readlink >/dev/null 2>&1; then
+    cmd_dir="$(dirname "$(readlink -f "${BASH_SOURCE[0]}")")"
+else
+    # Fallback for systems without readlink -f (like some macOS versions)
+    cmd_dir="$script_dir"
+fi
+
+# Set the environment variables
+export ANSIBLE_COLLECTIONS_PATH=/opt/ansible/collections:${ANSIBLE_COLLECTIONS_PATH:+${ANSIBLE_COLLECTIONS_PATH}}
+export ANSIBLE_CONFIG="${cmd_dir}/../src/ansible.cfg"
+export ANSIBLE_MODULE_UTILS="${cmd_dir}/../src/module_utils:${ANSIBLE_MODULE_UTILS:+${ANSIBLE_MODULE_UTILS}}"
+export ANSIBLE_HOST_KEY_CHECKING=False
+set_output_context
+
+# Global variable to store the path of the temporary file.
+temp_file=""
+
+# Parse command line arguments and extract verbose flags
+# Sets global ANSIBLE_VERBOSE variable
+parse_arguments() {
+    ANSIBLE_VERBOSE=""
+    OFFLINE_MODE=""
+    TEST_GROUPS=""
+    TEST_CASES=""
+    EXTRA_VARS=""
+
+    for arg in "$@"; do
+        case "$arg" in
+            -v|-vv|-vvv|-vvvv|-vvvvv|-vvvvvv)
+                ANSIBLE_VERBOSE="$arg"
+                ;;
+            --test_groups=*)
+                TEST_GROUPS="${arg#*=}"
+                ;;
+            --test_cases=*)
+                TEST_CASES="${arg#*=}"
+                TEST_CASES="${TEST_CASES#[}"
+                TEST_CASES="${TEST_CASES%]}"
+                ;;
+            --extra-vars=*)
+                EXTRA_VARS="${arg#*=}"
+                ;;
+            --offline)
+                OFFLINE_MODE="true"
+                ;;
+            -h|--help)
+                show_usage
+                exit 0
+                ;;
+        esac
+    done
 }
 
 log "INFO" "ANSIBLE_COLLECTIONS_PATH: $ANSIBLE_COLLECTIONS_PATH"

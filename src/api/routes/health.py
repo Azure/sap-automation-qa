@@ -3,7 +3,7 @@
 
 """Health check endpoints."""
 
-from datetime import datetime
+from datetime import datetime, timezone
 from typing import Dict
 from fastapi import APIRouter
 from pydantic import BaseModel
@@ -39,7 +39,7 @@ async def health_check() -> HealthResponse:
     """
     return HealthResponse(
         status="healthy",
-        timestamp=datetime.utcnow().isoformat() + "Z",
+        timestamp=datetime.now(timezone.utc).isoformat(),
         version="1.0.0",
         services=_service_status.copy(),
     )

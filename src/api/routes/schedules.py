@@ -81,10 +81,7 @@ async def create_schedule(request: CreateScheduleRequest) -> Schedule:
         enabled=request.enabled,
     )
 
-    if schedule.enabled:
-        trigger = CronTrigger.from_crontab(schedule.cron_expression)
-        next_run = trigger.get_next_fire_time(None, datetime.now(timezone.utc))
-        schedule.next_run_time = next_run
+    schedule.next_run_time = SchedulerService.compute_next_run(schedule)
 
     created = store.create(schedule)
     logger.info(f"Created schedule '{created.name}' (ID: {created.id})")
@@ -137,11 +134,7 @@ async def update_schedule(schedule_id: str, request: UpdateScheduleRequest) -> S
 
     schedule.updated_at = datetime.now(timezone.utc)
     if scheduling_changed:
-        if schedule.enabled:
-            trigger = CronTrigger.from_crontab(schedule.cron_expression)
-            schedule.next_run_time = trigger.get_next_fire_time(None, datetime.now(timezone.utc))
-        else:
-            schedule.next_run_time = None
+        schedule.next_run_time = SchedulerService.compute_next_run(schedule)
     updated = store.update(schedule)
     logger.info(
         f"Updated schedule '{updated.name}' "
