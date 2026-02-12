@@ -152,6 +152,30 @@ cd sap-automation-qa
 ./scripts/setup.sh
 ```
 
+The setup script accepts the following optional flags:
+
+| Flag | Description |
+|------|-------------|
+| `--upgrade`, `-u` | Remove the existing virtual environment and recreate it from scratch. |
+| `--python <executable>`, `-p <executable>` | Use a specific Python interpreter for the virtual environment (e.g. `/usr/bin/python3.11`). Defaults to `python3`. The interpreter must be Python 3.10 or later. |
+| `--help`, `-h` | Display usage information. |
+
+**Examples:**
+
+```bash
+# Standard incremental setup (default)
+./scripts/setup.sh
+
+# Full upgrade — destroy and recreate the virtual environment
+./scripts/setup.sh --upgrade
+
+# Create the virtual environment with a specific Python version
+./scripts/setup.sh --python /usr/bin/python3.11
+
+# Upgrade and switch to a different Python version
+./scripts/setup.sh --upgrade --python /usr/bin/python3.11
+```
+
 1.5. **Activate the python environment**:
 
 ```bash
