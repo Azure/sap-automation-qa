@@ -226,7 +226,7 @@ class JobWorker:
                     raise ValueError(f"No inventory path for workspace {job.workspace_id}")
 
                 extra_vars = workspace_config.get("extra_vars") or {}
-                workspace_dir = self.workspaces_base / job.workspace_id
+                workspace_dir = (self.workspaces_base / job.workspace_id).resolve()
                 extra_vars["_workspace_directory"] = str(workspace_dir)
                 ssh_credential = await asyncio.to_thread(
                     self._provision_ssh_credential,
