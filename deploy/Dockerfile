@@ -26,6 +26,7 @@ RUN tdnf update -y && tdnf install -y \
     util-linux \
     && tdnf clean all \
     && ln -sf /usr/bin/python3 /usr/bin/python \
+    && pip install --no-cache-dir azure-cli \
     && mkdir -p /app/.ssh \
     && chmod 777 /app /app/.ssh
 
