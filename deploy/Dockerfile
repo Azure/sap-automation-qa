@@ -24,6 +24,7 @@ RUN tdnf update -y && tdnf install -y \
     git \
     curl \
     util-linux \
+    gawk \
     && tdnf clean all \
     && ln -sf /usr/bin/python3 /usr/bin/python \
     && pip install --no-cache-dir azure-cli \
@@ -34,6 +35,7 @@ WORKDIR /app
 
 COPY --from=builder /opt/venv /opt/venv
 COPY src/ ./src/
+COPY VERSION ./VERSION
 
 ENV PATH="/opt/venv/bin:$PATH"
 ENV VIRTUAL_ENV=/opt/venv
