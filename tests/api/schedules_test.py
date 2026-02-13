@@ -95,6 +95,31 @@ class TestSchedulesApi:
             == 422
         )
 
+    def test_create_schedule_invalid_test_group(self, client: TestClient) -> None:
+        """Returns 400 when test_group is not a valid canonical name."""
+        response = client.post(
+            "/api/v1/schedules",
+            json={
+                "name": "Bad Group",
+                "cron_expression": "0 0 * * *",
+                "workspace_ids": ["WS-01"],
+                "test_group": "BOGUS_GROUP",
+            },
+        )
+        assert response.status_code == 400
+        assert "Unknown test_group" in response.json()["detail"]
+
+    def test_update_schedule_invalid_test_group(
+        self, client: TestClient, sample_schedule: Schedule,
+    ) -> None:
+        """Returns 400 when updating test_group to invalid value."""
+        response = client.patch(
+            f"/api/v1/schedules/{sample_schedule.id}",
+            json={"test_group": "NOT_REAL"},
+        )
+        assert response.status_code == 400
+        assert "Unknown test_group" in response.json()["detail"]
+
     def test_update_schedule_success(self, client: TestClient, sample_schedule: Schedule) -> None:
         """
         Updates schedule successfully.

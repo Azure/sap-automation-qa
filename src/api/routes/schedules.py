@@ -8,6 +8,7 @@ from typing import Optional
 from apscheduler.triggers.cron import CronTrigger
 from fastapi import APIRouter, HTTPException, Query
 from src.api.routes.jobs import get_job_store
+from src.core.execution.executor import TEST_GROUP_PLAYBOOKS
 from src.core.models.schedule import (
     Schedule,
     CreateScheduleRequest,
@@ -70,6 +71,16 @@ async def create_schedule(request: CreateScheduleRequest) -> Schedule:
         )
     if not request.workspace_ids:
         raise HTTPException(status_code=400, detail="At least one workspace_id is required")
+
+    if request.test_group and request.test_group not in TEST_GROUP_PLAYBOOKS:
+        raise HTTPException(
+            status_code=400,
+            detail=(
+                f"Unknown test_group '{request.test_group}'. "
+                f"Valid values: {sorted(TEST_GROUP_PLAYBOOKS)}"
+            ),
+        )
+
     schedule = Schedule(
         name=request.name,
         description=request.description,
@@ -120,6 +131,17 @@ async def update_schedule(schedule_id: str, request: UpdateScheduleRequest) -> S
     if not schedule:
         raise HTTPException(status_code=404, detail=f"Schedule {schedule_id} not found")
     update_data = request.model_dump(exclude_unset=True)
+
+    if "test_group" in update_data and update_data["test_group"]:
+        if update_data["test_group"] not in TEST_GROUP_PLAYBOOKS:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    f"Unknown test_group '{update_data['test_group']}'. "
+                    f"Valid values: {sorted(TEST_GROUP_PLAYBOOKS)}"
+                ),
+            )
+
     if "cron_expression" in update_data:
         try:
             CronTrigger.from_crontab(update_data["cron_expression"])
