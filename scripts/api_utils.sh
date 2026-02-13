@@ -54,13 +54,50 @@ _api_request() {
     echo "$body"
 }
 
-# Format JSON output for display.
+# Format JSON output as readable key-value pairs.
+# Objects: "  Key : Value" per line, nulls/empty skipped.
+# Arrays inside objects: joined with ", ".
+# Top-level arrays: each item separated by a blank line.
+# Wrapper keys like "jobs", "schedules", "workspaces" are unwrapped.
 _format_json() {
-    if command -v jq &>/dev/null; then
-        jq .
-    else
+    if ! command -v jq &>/dev/null; then
         python3 -m json.tool 2>/dev/null || cat
+        return
     fi
+    jq -r '
+def fmt_obj:
+  to_entries
+  | map(select(.value != null and .value != "" and .value != []))
+  | (map(.key | length) | max // 0) as $w
+  | map(
+      "  \(.key | . + " " * ($w - length)) : "
+      + (if (.value | type) == "array" then
+           (.value | map(tostring) | join(", "))
+         elif (.value | type) == "object" then
+           (.value | tojson)
+         else
+           (.value | tostring)
+         end)
+    )
+  | join("\n");
+
+def unwrap:
+  if type == "object" then
+    if has("jobs")      then .jobs
+    elif has("schedules")  then .schedules
+    elif has("workspaces") then .workspaces
+    else .
+    end
+  else .
+  end;
+
+unwrap
+| if type == "array" then
+    map(fmt_obj) | join("\n\n")
+  else
+    fmt_obj
+  end
+'
 }
 
 api_health() {
