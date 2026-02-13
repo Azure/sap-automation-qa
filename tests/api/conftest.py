@@ -153,7 +153,7 @@ def sample_job(job_store: JobStore) -> Job:
     """Provide a sample job in the store."""
     job = Job(
         workspace_id="TEST-WORKSPACE-01",
-        test_group="CONFIG_CHECKS",
+        test_group="ConfigurationChecks",
         test_ids=["test1", "test2"],
     )
     job_store.create(job)
@@ -165,7 +165,7 @@ def sample_running_job(job_store: JobStore) -> Job:
     """Provide a sample running job in the store."""
     job = Job(
         workspace_id="TEST-WORKSPACE-02",
-        test_group="HA_DB_HANA",
+        test_group="DatabaseHighAvailability",
     )
     job.start()
     job_store.create(job)
@@ -179,7 +179,7 @@ def sample_schedule(schedule_store: ScheduleStore) -> Schedule:
         name="Nightly Config Checks",
         cron_expression="0 0 * * *",
         workspace_ids=["WS-01", "WS-02"],
-        test_group="CONFIG_CHECKS",
+        test_group="ConfigurationChecks",
     )
     schedule_store.create(schedule)
     return schedule

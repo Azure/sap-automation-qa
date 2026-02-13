@@ -85,21 +85,21 @@ class TestJobsApi:
             "/api/v1/jobs",
             json={
                 "workspace_id": "NEW-WORKSPACE",
-                "test_group": "CONFIG_CHECKS",
+                "test_group": "ConfigurationChecks",
                 "test_ids": ["test1"],
             },
         )
         assert response.status_code == 201
         data = response.json()
         assert data["workspace_id"] == "NEW-WORKSPACE"
-        assert data["test_group"] == "CONFIG_CHECKS"
+        assert data["test_group"] == "ConfigurationChecks"
         assert "id" in data
 
     def test_create_job_missing_workspace(self, client: TestClient) -> None:
         """
         Returns 422 when workspace_id missing.
         """
-        assert client.post("/api/v1/jobs", json={"test_group": "CONFIG_CHECKS"}).status_code == 422
+        assert client.post("/api/v1/jobs", json={"test_group": "ConfigurationChecks"}).status_code == 422
 
     def test_create_job_starts_execution(self, client: TestClient) -> None:
         """
@@ -109,7 +109,7 @@ class TestJobsApi:
             "/api/v1/jobs",
             json={
                 "workspace_id": "EXEC-TEST",
-                "test_group": "CONFIG_CHECKS",
+                "test_group": "ConfigurationChecks",
             },
         )
         assert response.status_code == 201
@@ -269,7 +269,7 @@ class TestJobsApi:
                     "/api/v1/jobs",
                     json={
                         "workspace_id": "WS",
-                        "test_group": "CONFIG_CHECKS",
+                        "test_group": "ConfigurationChecks",
                     },
                 )
                 assert response.status_code == 400

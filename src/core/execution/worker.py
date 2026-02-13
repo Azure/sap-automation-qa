@@ -268,7 +268,7 @@ class JobWorker:
                             self.executor.run_test,
                             workspace_id=job.workspace_id,
                             test_id=test_id,
-                            test_group=job.test_group or "CONFIG_CHECKS",
+                            test_group=job.test_group or "ConfigurationChecks",
                             inventory_path=inventory_path,
                             extra_vars=extra_vars,
                             log_file=log_path,

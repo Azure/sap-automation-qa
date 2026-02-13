@@ -56,7 +56,7 @@ class TestSchedulesApi:
                 "name": "Weekly HA Tests",
                 "cron_expression": "0 0 * * 0",
                 "workspace_ids": ["WS-01"],
-                "test_group": "HA_DB_HANA",
+                "test_group": "DatabaseHighAvailability",
             },
         )
         assert response.status_code == 201

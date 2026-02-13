@@ -41,11 +41,10 @@ def _describe_exit_code(returncode: int) -> str:
     return f"Process killed by {sig_name} {detail}".strip()
 
 
-TEST_GROUP_PLAYBOOKS = {
-    "CONFIG_CHECKS": "playbook_00_configuration_checks.yml",
-    "HA_DB_HANA": "playbook_00_ha_db_functional_tests.yml",
-    "HA_SCS": "playbook_00_ha_scs_functional_tests.yml",
-    "HA_OFFLINE": "playbook_01_ha_offline_tests.yml",
+TEST_GROUP_PLAYBOOKS: dict[str, str] = {
+    "ConfigurationChecks": "playbook_00_configuration_checks.yml",
+    "DatabaseHighAvailability": "playbook_00_ha_db_functional_tests.yml",
+    "CentralServicesHighAvailability": "playbook_00_ha_scs_functional_tests.yml",
 }
 
 
@@ -92,7 +91,7 @@ class ExecutorProtocol(Protocol):
 
         :param workspace_id: Workspace identifier
         :param test_id: Test ID to run (or empty for full playbook)
-        :param test_group: Test group (CONFIG_CHECKS, HA_DB_HANA, etc.)
+        :param test_group: Test group (DatabaseHighAvailability, etc.)
         :param inventory_path: Path to Ansible inventory
         :param extra_vars: Additional variables to pass
         :param log_file: Path to file for combined stdout/stderr
@@ -185,6 +184,13 @@ class AnsibleExecutor:
         all_vars["workspace_id"] = workspace_id
         if job_id:
             all_vars["job_id"] = job_id
+
+        if test_group in (
+            "DatabaseHighAvailability",
+            "CentralServicesHighAvailability",
+        ):
+            all_vars["SAP_FUNCTIONAL_TEST_TYPE"] = test_group
+            all_vars["TEST_TYPE"] = "SAPFunctionalTests"
 
         if ssh_password:
             all_vars["ansible_ssh_pass"] = ssh_password

@@ -270,7 +270,7 @@ Actions:
 
 Create options:
   --workspace <ID>         Workspace ID (required)
-  --test-group <GROUP>     Test group (required): CONFIG_CHECKS, HA_DB_HANA, HA_SCS, HA_OFFLINE
+  --test-group <GROUP>     Test group (required): DatabaseHighAvailability, CentralServicesHighAvailability, ConfigurationChecks
   --test-ids <IDS>         Comma-separated test case IDs (optional)
 
 List options:
@@ -288,7 +288,7 @@ Cancel options:
   --reason <TEXT>           Cancellation reason
 
 Examples:
-  sap_automation_qa.sh job create --workspace DEV-WEEU-SAP01-X00 --test-group HA_DB_HANA
+  sap_automation_qa.sh job create --workspace DEV-WEEU-SAP01-X00 --test-group DatabaseHighAvailability
   sap_automation_qa.sh job list --status running
   sap_automation_qa.sh job log --id <job-id> --tail 50
   sap_automation_qa.sh job cancel --id <job-id> --reason "maintenance"
@@ -513,7 +513,7 @@ Create options:
   --name <NAME>            Schedule name (required)
   --cron <EXPRESSION>      Cron expression, e.g. "0 2 * * *" (required)
   --workspaces <IDS>       Comma-separated workspace IDs (required)
-  --test-group <GROUP>     Test group: CONFIG_CHECKS, HA_DB_HANA, HA_SCS, HA_OFFLINE
+  --test-group <GROUP>     Test group: DatabaseHighAvailability, CentralServicesHighAvailability, ConfigurationChecks
   --test-ids <IDS>         Comma-separated test IDs, e.g. resource-migration,kill-indexserver
   --timezone <TZ>          IANA timezone (default: UTC)
   --description <TEXT>     Description
@@ -540,7 +540,7 @@ Jobs options:
 
 Examples:
   sap_automation_qa.sh schedule create --name "Nightly HA" --cron "0 2 * * *" \
-      --workspaces DEV-WEEU-SAP01-X00 --test-group HA_DB_HANA \
+      --workspaces DEV-WEEU-SAP01-X00 --test-group DatabaseHighAvailability \
       --test-ids resource-migration,kill-indexserver
 
   sap_automation_qa.sh schedule list --enabled

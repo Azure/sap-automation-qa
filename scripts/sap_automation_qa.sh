@@ -40,7 +40,7 @@ Examples:
   # SAP QA Service
   $0 health
   $0 workspace
-  $0 job create --workspace DEV-WEEU-SAP01-X00 --test-group HA_DB_HANA
+  $0 job create --workspace DEV-WEEU-SAP01-X00 --test-group DatabaseHighAvailability
   $0 schedule create --name "Nightly HA" --cron "0 2 * * *" --workspaces DEV-WEEU-SAP01-X00
 
   # High Availability Tests (direct)

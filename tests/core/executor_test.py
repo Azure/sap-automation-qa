@@ -137,7 +137,7 @@ class TestAnsibleExecutor:
         result = executor.run_test(
             workspace_id="WS",
             test_id="t1",
-            test_group="CONFIG_CHECKS",
+            test_group="ConfigurationChecks",
             inventory_path="/fake/hosts",
         )
         assert result["status"] == "failed"
@@ -163,7 +163,7 @@ class TestAnsibleExecutor:
         result = executor.run_test(
             workspace_id="WS",
             test_id="t1",
-            test_group="CONFIG_CHECKS",
+            test_group="ConfigurationChecks",
             inventory_path="/fake/hosts",
         )
         assert result["status"] == "failed"
@@ -189,7 +189,7 @@ class TestAnsibleExecutor:
         result = executor.run_test(
             workspace_id="WS",
             test_id="t1",
-            test_group="CONFIG_CHECKS",
+            test_group="ConfigurationChecks",
             inventory_path="/fake/hosts",
         )
         assert result["status"] == "failed"
@@ -247,7 +247,7 @@ class TestAnsibleExecutor:
         result = executor.run_test(
             workspace_id="WS",
             test_id="t1",
-            test_group="CONFIG_CHECKS",
+            test_group="ConfigurationChecks",
             inventory_path="/fake/hosts",
             log_file=log_file,
         )
@@ -282,7 +282,7 @@ class TestAnsibleExecutor:
         result = executor.run_test(
             workspace_id="WS",
             test_id="t1",
-            test_group="CONFIG_CHECKS",
+            test_group="ConfigurationChecks",
             inventory_path="/fake/hosts",
             log_file=log_file,
         )
@@ -309,7 +309,7 @@ class TestAnsibleExecutor:
         result = executor.run_test(
             workspace_id="WS",
             test_id="t1",
-            test_group="CONFIG_CHECKS",
+            test_group="ConfigurationChecks",
             inventory_path="/fake/hosts",
         )
         assert result["status"] == "success"
@@ -389,7 +389,7 @@ class TestAnsibleExecutor:
         executor.run_test(
             workspace_id="WS",
             test_id="t1",
-            test_group="CONFIG_CHECKS",
+            test_group="ConfigurationChecks",
             inventory_path="/fake/hosts",
             job_id="track-me",
         )
@@ -421,7 +421,7 @@ class TestAnsibleExecutor:
         executor.run_test(
             workspace_id="WS",
             test_id="t1",
-            test_group="CONFIG_CHECKS",
+            test_group="ConfigurationChecks",
             inventory_path="/fake/hosts",
             job_id="jid-123",
         )
@@ -453,7 +453,7 @@ class TestAnsibleExecutor:
         executor_with_input_api.run_test(
             workspace_id="WS",
             test_id="resource-migration",
-            test_group="HA_DB_HANA",
+            test_group="DatabaseHighAvailability",
             inventory_path="/fake/hosts",
         )
 
@@ -489,7 +489,7 @@ class TestAnsibleExecutor:
         executor_with_input_api.run_test(
             workspace_id="WS",
             test_id="",
-            test_group="HA_DB_HANA",
+            test_group="DatabaseHighAvailability",
             inventory_path="/fake/hosts",
         )
 
