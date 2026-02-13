@@ -12,7 +12,7 @@ import subprocess
 import threading
 from pathlib import Path
 from typing import Any, Optional, Protocol
-
+from src.module_utils.filter_tests import TestFilter
 from src.core.observability import get_logger
 
 logger = get_logger(__name__)
@@ -190,6 +190,25 @@ class AnsibleExecutor:
             all_vars["ansible_ssh_pass"] = ssh_password
         if test_id:
             all_vars["test_id"] = test_id
+            input_api = self.playbook_dir / "vars" / "input-api.yaml"
+            if input_api.exists():
+                try:
+                    filtered = json.loads(
+                        TestFilter(str(input_api)).get_ansible_vars(
+                            test_cases=[test_id],
+                        )
+                    )
+                    all_vars.update(filtered)
+                    logger.info(
+                        "Applied test filter: only '%s' enabled",
+                        test_id,
+                    )
+                except (Exception, SystemExit):
+                    logger.warning(
+                        "Test filter unavailable; playbook will "
+                        "run all enabled tests (test_id=%s)",
+                        test_id,
+                    )
 
         if all_vars:
             cmd.extend(["-e", json.dumps(all_vars)])

@@ -129,7 +129,7 @@ _job_create() {
         case "$1" in
             --workspace)    workspace_id="$2"; shift 2 ;;
             --test-group)   test_group="$2"; shift 2 ;;
-            --test-ids)     test_ids="$2"; shift 2 ;;
+            --test-id|--test-ids) test_ids="$2"; shift 2 ;;
             *)              log "ERROR" "Unknown option: $1"; _job_help; exit 1 ;;
         esac
     done
@@ -316,7 +316,7 @@ api_schedule() {
 
 _schedule_create() {
     local name="" cron="" timezone="UTC" workspace_ids="" test_group=""
-    local enabled="true" description=""
+    local enabled="true" description="" test_ids=""
 
     while [[ $# -gt 0 ]]; do
         case "$1" in
@@ -325,6 +325,7 @@ _schedule_create() {
             --timezone)     timezone="$2"; shift 2 ;;
             --workspaces)   workspace_ids="$2"; shift 2 ;;
             --test-group)   test_group="$2"; shift 2 ;;
+            --test-id|--test-ids) test_ids="$2"; shift 2 ;;
             --description)  description="$2"; shift 2 ;;
             --disabled)     enabled="false"; shift ;;
             *)              log "ERROR" "Unknown option: $1"; _schedule_help; exit 1 ;;
@@ -347,6 +348,12 @@ _schedule_create() {
     payload+=",\"enabled\":$enabled"
     [[ -n "$test_group" ]] && payload+=",\"test_group\":\"$test_group\""
     [[ -n "$description" ]] && payload+=",\"description\":\"$description\""
+    if [[ -n "$test_ids" ]]; then
+        local ids_json
+        ids_json=$(echo "$test_ids" | python3 -c \
+            "import sys,json; print(json.dumps(sys.stdin.read().strip().split(',')))")
+        payload+=",\"test_ids\":$ids_json"
+    fi
     payload+="}"
 
     log "INFO" "Creating schedule: $name"
@@ -398,6 +405,13 @@ _schedule_update() {
             --cron)         $has_fields && payload+=","; payload+="\"cron_expression\":\"$2\""; has_fields=true; shift 2 ;;
             --timezone)     $has_fields && payload+=","; payload+="\"timezone\":\"$2\""; has_fields=true; shift 2 ;;
             --test-group)   $has_fields && payload+=","; payload+="\"test_group\":\"$2\""; has_fields=true; shift 2 ;;
+            --test-id|--test-ids)
+                $has_fields && payload+=","
+                local ids_json
+                ids_json=$(echo "$2" | python3 -c \
+                    "import sys,json; print(json.dumps(sys.stdin.read().strip().split(',')))")
+                payload+="\"test_ids\":$ids_json"
+                has_fields=true; shift 2 ;;
             --description)  $has_fields && payload+=","; payload+="\"description\":\"$2\""; has_fields=true; shift 2 ;;
             --enable)       $has_fields && payload+=","; payload+="\"enabled\":true"; has_fields=true; shift ;;
             --disable)      $has_fields && payload+=","; payload+="\"enabled\":false"; has_fields=true; shift ;;
@@ -500,6 +514,7 @@ Create options:
   --cron <EXPRESSION>      Cron expression, e.g. "0 2 * * *" (required)
   --workspaces <IDS>       Comma-separated workspace IDs (required)
   --test-group <GROUP>     Test group: CONFIG_CHECKS, HA_DB_HANA, HA_SCS, HA_OFFLINE
+  --test-ids <IDS>         Comma-separated test IDs, e.g. resource-migration,kill-indexserver
   --timezone <TZ>          IANA timezone (default: UTC)
   --description <TEXT>     Description
   --disabled               Create in disabled state
@@ -510,6 +525,7 @@ Update options:
   --cron <EXPRESSION>      New cron expression
   --workspaces <IDS>       New workspace IDs (comma-separated)
   --test-group <GROUP>     New test group
+  --test-ids <IDS>         New test IDs (comma-separated)
   --timezone <TZ>          New timezone
   --description <TEXT>     New description
   --enable                 Enable the schedule
@@ -524,7 +540,8 @@ Jobs options:
 
 Examples:
   sap_automation_qa.sh schedule create --name "Nightly HA" --cron "0 2 * * *" \
-      --workspaces DEV-WEEU-SAP01-X00 --test-group HA_DB_HANA
+      --workspaces DEV-WEEU-SAP01-X00 --test-group HA_DB_HANA \
+      --test-ids resource-migration,kill-indexserver
 
   sap_automation_qa.sh schedule list --enabled
   sap_automation_qa.sh schedule update --id <id> --cron "0 3 * * *" --disable

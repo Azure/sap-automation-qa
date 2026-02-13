@@ -6,8 +6,8 @@
 import json
 import subprocess
 from pathlib import Path
-from unittest.mock import patch, MagicMock
 import pytest
+from pytest_mock import MockerFixture
 from src.core.execution.executor import (
     AnsibleExecutor,
     _describe_exit_code,
@@ -16,12 +16,13 @@ from src.core.execution.executor import (
 
 
 def _make_mock_popen(
+    mocker: MockerFixture,
     returncode: int = 0,
     stdout: str = "",
     stderr: str = "",
-) -> MagicMock:
-    """Create a MagicMock mimicking subprocess.Popen."""
-    proc = MagicMock()
+):
+    """Create a mock mimicking subprocess.Popen."""
+    proc = mocker.MagicMock()
     proc.returncode = returncode
     proc.pid = 12345
     proc.wait.return_value = returncode
@@ -42,6 +43,34 @@ class TestAnsibleExecutor:
         (playbook_dir / "ansible.cfg").write_text("")
         playbook = playbook_dir / "playbook_00_configuration_checks.yml"
         playbook.write_text("---\n- hosts: all\n")
+        return AnsibleExecutor(playbook_dir=playbook_dir)
+
+    @pytest.fixture
+    def executor_with_input_api(self, tmp_path: Path) -> AnsibleExecutor:
+        """
+        Create executor with input-api.yaml for filter tests.
+        """
+        playbook_dir = tmp_path / "src"
+        playbook_dir.mkdir(exist_ok=True)
+        (playbook_dir / "ansible.cfg").write_text("")
+        playbook = playbook_dir / "playbook_00_ha_db_functional_tests.yml"
+        playbook.write_text("---\n- hosts: all\n")
+        vars_dir = playbook_dir / "vars"
+        vars_dir.mkdir()
+        (vars_dir / "input-api.yaml").write_text(
+            "test_groups:\n"
+            "  - name: HA_DB_HANA\n"
+            "    test_cases:\n"
+            "      - name: HA Config\n"
+            "        task_name: ha-config\n"
+            "        enabled: true\n"
+            "      - name: Resource Migration\n"
+            "        task_name: resource-migration\n"
+            "        enabled: true\n"
+            "      - name: Primary Node Crash\n"
+            "        task_name: primary-node-crash\n"
+            "        enabled: true\n"
+        )
         return AnsibleExecutor(playbook_dir=playbook_dir)
 
     def test_zero_exit_code(self) -> None:
@@ -90,16 +119,19 @@ class TestAnsibleExecutor:
         """
         assert "signal" in _describe_exit_code(-99).lower()
 
-    @patch("src.core.execution.executor.subprocess.Popen")
     def test_sigkill_empty_stderr(
         self,
-        mock_popen: MagicMock,
+        mocker: MockerFixture,
         executor: AnsibleExecutor,
     ) -> None:
         """
         Verify SIGKILL with empty stderr produces useful msg.
         """
+        mock_popen = mocker.patch(
+            "src.core.execution.executor.subprocess.Popen",
+        )
         mock_popen.return_value = _make_mock_popen(
+            mocker,
             returncode=-9,
         )
         result = executor.run_test(
@@ -112,16 +144,19 @@ class TestAnsibleExecutor:
         assert "SIGKILL" in result["error"]
         assert result["return_code"] == -9
 
-    @patch("src.core.execution.executor.subprocess.Popen")
     def test_stderr_preferred_over_signal_msg(
         self,
-        mock_popen: MagicMock,
+        mocker: MockerFixture,
         executor: AnsibleExecutor,
     ) -> None:
         """
         Verify stderr is used when available, not signal msg.
         """
+        mock_popen = mocker.patch(
+            "src.core.execution.executor.subprocess.Popen",
+        )
         mock_popen.return_value = _make_mock_popen(
+            mocker,
             returncode=-11,
             stderr="fatal: SSH connection lost",
         )
@@ -135,16 +170,19 @@ class TestAnsibleExecutor:
         assert "SSH connection lost" in result["error"]
         assert "SIGSEGV" not in result["error"]
 
-    @patch("src.core.execution.executor.subprocess.Popen")
     def test_stdout_fallback_when_no_stderr(
         self,
-        mock_popen: MagicMock,
+        mocker: MockerFixture,
         executor: AnsibleExecutor,
     ) -> None:
         """
         Verify last stdout is appended when stderr is empty.
         """
+        mock_popen = mocker.patch(
+            "src.core.execution.executor.subprocess.Popen",
+        )
         mock_popen.return_value = _make_mock_popen(
+            mocker,
             returncode=-9,
             stdout="TASK [check_hana] ok\nTASK [fencing]",
         )
@@ -183,10 +221,9 @@ class TestAnsibleExecutor:
         """
         assert _tail_file(tmp_path / "missing.log") == ""
 
-    @patch("src.core.execution.executor.subprocess.Popen")
     def test_success_writes_log_file(
         self,
-        mock_popen: MagicMock,
+        mocker: MockerFixture,
         executor: AnsibleExecutor,
         tmp_path: Path,
     ) -> None:
@@ -197,13 +234,16 @@ class TestAnsibleExecutor:
 
         def fake_popen(cmd, stdout, stderr, **kw):
             stdout.write("TASK [ok] ***\n")
-            proc = MagicMock()
+            proc = mocker.MagicMock()
             proc.returncode = 0
             proc.pid = 99
             proc.wait.return_value = 0
             return proc
 
-        mock_popen.side_effect = fake_popen
+        mocker.patch(
+            "src.core.execution.executor.subprocess.Popen",
+            side_effect=fake_popen,
+        )
         result = executor.run_test(
             workspace_id="WS",
             test_id="t1",
@@ -216,10 +256,9 @@ class TestAnsibleExecutor:
         assert "TASK [ok]" in log_file.read_text()
         assert "stdout" not in result
 
-    @patch("src.core.execution.executor.subprocess.Popen")
     def test_failure_reads_tail_from_log(
         self,
-        mock_popen: MagicMock,
+        mocker: MockerFixture,
         executor: AnsibleExecutor,
         tmp_path: Path,
     ) -> None:
@@ -230,13 +269,16 @@ class TestAnsibleExecutor:
 
         def fake_popen(cmd, stdout, stderr, **kw):
             stdout.write("TASK [fatal error here]\n")
-            proc = MagicMock()
+            proc = mocker.MagicMock()
             proc.returncode = 2
             proc.pid = 99
             proc.wait.return_value = 2
             return proc
 
-        mock_popen.side_effect = fake_popen
+        mocker.patch(
+            "src.core.execution.executor.subprocess.Popen",
+            side_effect=fake_popen,
+        )
         result = executor.run_test(
             workspace_id="WS",
             test_id="t1",
@@ -248,16 +290,19 @@ class TestAnsibleExecutor:
         assert "fatal error here" in result["error"]
         assert result["return_code"] == 2
 
-    @patch("src.core.execution.executor.subprocess.Popen")
     def test_no_log_file_uses_capture(
         self,
-        mock_popen: MagicMock,
+        mocker: MockerFixture,
         executor: AnsibleExecutor,
     ) -> None:
         """
         Verify no log_file falls back to in-memory capture.
         """
+        mock_popen = mocker.patch(
+            "src.core.execution.executor.subprocess.Popen",
+        )
         mock_popen.return_value = _make_mock_popen(
+            mocker,
             returncode=0,
             stdout="output here",
         )
@@ -281,12 +326,13 @@ class TestAnsibleExecutor:
 
     def test_terminate_sends_sigterm(
         self,
+        mocker: MockerFixture,
         executor: AnsibleExecutor,
     ) -> None:
         """
         Verify terminate sends SIGTERM to tracked process.
         """
-        proc = MagicMock()
+        proc = mocker.MagicMock()
         proc.pid = 1001
         proc.wait.return_value = 0
         executor._processes["job-1"] = proc
@@ -296,12 +342,13 @@ class TestAnsibleExecutor:
 
     def test_terminate_escalates_to_sigkill(
         self,
+        mocker: MockerFixture,
         executor: AnsibleExecutor,
     ) -> None:
         """
         Verify SIGKILL sent when SIGTERM times out.
         """
-        proc = MagicMock()
+        proc = mocker.MagicMock()
         proc.pid = 1002
         proc.wait.side_effect = [
             subprocess.TimeoutExpired("cmd", 5),
@@ -315,6 +362,7 @@ class TestAnsibleExecutor:
 
     def test_process_tracked_during_execution(
         self,
+        mocker: MockerFixture,
         executor: AnsibleExecutor,
     ) -> None:
         """
@@ -323,7 +371,7 @@ class TestAnsibleExecutor:
         captured_keys: list[list[str]] = []
 
         def fake_popen(cmd, **kw):
-            proc = MagicMock()
+            proc = mocker.MagicMock()
             proc.returncode = 0
             proc.pid = 42
 
@@ -334,22 +382,23 @@ class TestAnsibleExecutor:
             proc.communicate = fake_communicate
             return proc
 
-        with patch(
+        mocker.patch(
             "src.core.execution.executor.subprocess.Popen",
             side_effect=fake_popen,
-        ):
-            executor.run_test(
-                workspace_id="WS",
-                test_id="t1",
-                test_group="CONFIG_CHECKS",
-                inventory_path="/fake/hosts",
-                job_id="track-me",
-            )
+        )
+        executor.run_test(
+            workspace_id="WS",
+            test_id="t1",
+            test_group="CONFIG_CHECKS",
+            inventory_path="/fake/hosts",
+            job_id="track-me",
+        )
         assert "track-me" in captured_keys[0]
         assert "track-me" not in executor._processes
 
     def test_job_id_injected_as_extra_var(
         self,
+        mocker: MockerFixture,
         executor: AnsibleExecutor,
     ) -> None:
         """
@@ -359,21 +408,90 @@ class TestAnsibleExecutor:
 
         def fake_popen(cmd, **kw):
             captured_cmd.extend(cmd)
-            proc = MagicMock()
+            proc = mocker.MagicMock()
             proc.returncode = 0
             proc.pid = 42
             proc.communicate.return_value = ("", "")
             return proc
 
-        with patch(
+        mocker.patch(
             "src.core.execution.executor.subprocess.Popen",
             side_effect=fake_popen,
-        ):
-            executor.run_test(
-                workspace_id="WS",
-                test_id="t1",
-                test_group="CONFIG_CHECKS",
-                inventory_path="/fake/hosts",
-                job_id="jid-123",
-            )
+        )
+        executor.run_test(
+            workspace_id="WS",
+            test_id="t1",
+            test_group="CONFIG_CHECKS",
+            inventory_path="/fake/hosts",
+            job_id="jid-123",
+        )
         assert json.loads(captured_cmd[captured_cmd.index("-e") + 1])["job_id"] == "jid-123"
+
+    def test_test_id_applies_filter(
+        self,
+        mocker: MockerFixture,
+        executor_with_input_api: AnsibleExecutor,
+    ) -> None:
+        """
+        Verify test_id filters test_groups so only the
+        matching test case is enabled.
+        """
+        captured_cmd: list[str] = []
+
+        def fake_popen(cmd, **kw):
+            captured_cmd.extend(cmd)
+            proc = mocker.MagicMock()
+            proc.returncode = 0
+            proc.pid = 42
+            proc.communicate.return_value = ("", "")
+            return proc
+
+        mocker.patch(
+            "src.core.execution.executor.subprocess.Popen",
+            side_effect=fake_popen,
+        )
+        executor_with_input_api.run_test(
+            workspace_id="WS",
+            test_id="resource-migration",
+            test_group="HA_DB_HANA",
+            inventory_path="/fake/hosts",
+        )
+
+        extra = json.loads(captured_cmd[captured_cmd.index("-e") + 1])
+        assert "test_groups" in extra
+        groups = extra["test_groups"]
+        ha_group = next(g for g in groups if g["name"] == "HA_DB_HANA")
+        enabled = [c["task_name"] for c in ha_group["test_cases"] if c.get("enabled")]
+        assert enabled == ["resource-migration"]
+
+    def test_empty_test_id_no_filter(
+        self,
+        mocker: MockerFixture,
+        executor_with_input_api: AnsibleExecutor,
+    ) -> None:
+        """
+        Verify empty test_id does NOT inject test_groups filter.
+        """
+        captured_cmd: list[str] = []
+
+        def fake_popen(cmd, **kw):
+            captured_cmd.extend(cmd)
+            proc = mocker.MagicMock()
+            proc.returncode = 0
+            proc.pid = 42
+            proc.communicate.return_value = ("", "")
+            return proc
+
+        mocker.patch(
+            "src.core.execution.executor.subprocess.Popen",
+            side_effect=fake_popen,
+        )
+        executor_with_input_api.run_test(
+            workspace_id="WS",
+            test_id="",
+            test_group="HA_DB_HANA",
+            inventory_path="/fake/hosts",
+        )
+
+        extra = json.loads(captured_cmd[captured_cmd.index("-e") + 1])
+        assert "test_groups" not in extra
