@@ -8,6 +8,7 @@ This test class uses pytest to run functional tests on the Manual Restart tasks
 defined in roles/ha_scs/tasks/manual-restart.yml. It sets up a temporary test environment,
 mocks necessary Python modules and commands, and verifies the execution of the tasks.
 """
+
 import os
 import shutil
 from pathlib import Path

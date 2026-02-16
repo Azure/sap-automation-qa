@@ -4,6 +4,7 @@
 """
 Collectors for data collection in SAP Automation QA
 """
+
 import json
 from abc import ABC, abstractmethod
 import logging

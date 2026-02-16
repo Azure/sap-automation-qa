@@ -24,6 +24,16 @@
           - azure-storage-queue
           - pandas
 
+    - name:                            "Authenticate to Azure using Managed Identity"
+      ansible.builtin.command:
+        cmd:                            >-
+                                        az login --identity
+                                        {% if user_assigned_identity_client_id | default('') | length > 0
+                                        and user_assigned_identity_client_id != '00000000-0000-0000-0000-000000000000' %}
+                                        --client-id {{ user_assigned_identity_client_id }}
+                                        {% endif %}
+      changed_when:                     false
+
 - hosts: "{{ sap_sid | upper }}_SCS:
     {{ sap_sid | upper }}_ERS"
   name:                                "Host tasks"

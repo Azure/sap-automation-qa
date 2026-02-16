@@ -59,8 +59,7 @@ class TestHTMLReportRenderer:
         """
         mock_open = mocker.patch(
             "builtins.open",
-            mocker.mock_open(
-                read_data="""
+            mocker.mock_open(read_data="""
 <!DOCTYPE html>
 <html>
 <head>
@@ -81,8 +80,7 @@ class TestHTMLReportRenderer:
     </table>
 </body>
 </html>
-"""
-            ),
+"""),
         )
 
         html_report_renderer.render_report(

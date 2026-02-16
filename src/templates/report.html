@@ -324,20 +324,21 @@
           <div class="system-info-container">
             <h2 class="system-info-heading">System Information</h2>
             <div class="system-info-columns">
+              {% set first_result = test_case_results[0] if test_case_results else {} %}
               {% set properties = [
-                {'label': 'Test Group Name', 'value': test_case_results.0.TestGroupName},
-                {'label': 'DB SID', 'value': test_case_results.0.DbSid},
-                {'label': 'SAP SID', 'value': test_case_results.0.SapSid},
-                {'label': 'DB Type', 'value': test_case_results.0.DBType},
-                {'label': 'Storage Type', 'value': test_case_results.0.StorageType},
-                {'label': 'OS Version', 'value': test_case_results.0.OsVersion},
-                {'label': 'Hostnames', 'value': test_case_results|map(attribute='TestCaseHostname')|unique|join(', ')}
+                {'label': 'Test Group Name', 'value': first_result.TestGroupName|default('N/A')},
+                {'label': 'DB SID', 'value': first_result.DbSid|default('N/A')},
+                {'label': 'SAP SID', 'value': first_result.SapSid|default('N/A')},
+                {'label': 'DB Type', 'value': first_result.DBType|default('N/A')},
+                {'label': 'Storage Type', 'value': first_result.StorageType|default('N/A')},
+                {'label': 'OS Version', 'value': first_result.OsVersion|default('N/A')},
+                {'label': 'Hostnames', 'value': test_case_results|selectattr('TestCaseHostname', 'defined')|map(attribute='TestCaseHostname')|unique|join(', ')|default('N/A')}
               ] %}
 
-              {% if test_case_results.0.TestGroupName == 'DatabaseHighAvailability' %}
-                  {% set properties = properties + [{'label': 'DB Fencing Agent', 'value': test_case_results.0.DbFencingType}] %}
-              {% elif test_case_results.0.TestGroupName == 'CentralServicesHighAvailability' %}
-                  {% set properties = properties + [{'label': 'SCS Fencing Agent', 'value': test_case_results.0.ScsFencingType}] %}
+              {% if first_result.TestGroupName|default('') == 'DatabaseHighAvailability' %}
+                  {% set properties = properties + [{'label': 'DB Fencing Agent', 'value': first_result.DbFencingType|default('N/A')}] %}
+              {% elif first_result.TestGroupName|default('') == 'CentralServicesHighAvailability' %}
+                  {% set properties = properties + [{'label': 'SCS Fencing Agent', 'value': first_result.ScsFencingType|default('N/A')}] %}
               {% endif %}
 
               {% set num_columns = 3 %}
