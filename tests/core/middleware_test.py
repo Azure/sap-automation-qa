@@ -75,13 +75,13 @@ class TestObservabilityMiddleware:
         assert response.status_code == 200
         assert response.headers[CORRELATION_ID_HEADER] == cid
 
-    def test_skips_healthz(self, test_client: TestClient) -> None:
+    def test_healthz_is_observed(self, test_client: TestClient) -> None:
         """
-        Middleware skips skip paths without adding headers.
+        Middleware processes /healthz like any other path.
         """
         response = test_client.get("/healthz")
         assert response.status_code == 200
-        assert CORRELATION_ID_HEADER not in response.headers
+        assert CORRELATION_ID_HEADER in response.headers
 
     def test_workspace_id_from_header(self, test_client: TestClient) -> None:
         """
@@ -162,6 +162,6 @@ class TestObservabilityMiddleware:
         """
         SKIP_PATHS contains expected paths.
         """
-        assert "/healthz" in SKIP_PATHS
+        assert "/healthz" not in SKIP_PATHS
         assert "/favicon.ico" in SKIP_PATHS
         assert "/metrics" in SKIP_PATHS
