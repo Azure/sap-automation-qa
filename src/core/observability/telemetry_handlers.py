@@ -187,8 +187,8 @@ class _BaseRemoteLogHandler(logging.Handler):
                     self._send_batch(batch)
                     batch = []
                     last_flush = time.time()
-            except Exception:
-                pass
+            except Exception as exc:
+                _logger.debug("sender_loop error: %s", exc)
 
         while not self._queue.empty():
             try:
@@ -348,10 +348,21 @@ class LogAnalyticsHandler(_BaseRemoteLogHandler):
                     params["user_assigned_identity_client_id"] = self._user_mi_client_id
             sender = TelemetryDataSender(module_params=params)
             if not sender.validate_params():
+                _logger.warning(
+                    "LA validate_params failed for %s",
+                    self.table_name,
+                )
                 return False
             response = sender.send_telemetry_data_to_azureloganalytics(json.dumps(batch))
+            _logger.info(
+                "LA send_batch: %d records → %s (status %s)",
+                len(batch),
+                self.table_name,
+                response.status_code,
+            )
             return response.status_code in (200, 202)
-        except Exception:
+        except Exception as exc:
+            _logger.warning("LA send_batch error: %s", exc)
             return False
 
 
@@ -401,6 +412,12 @@ class ADXHandler(_BaseRemoteLogHandler):
                 }
             )
             sender.send_telemetry_data_to_azuredataexplorer(json.dumps(batch))
+            _logger.info(
+                "ADX send_batch: %d records → %s",
+                len(batch),
+                self.table_name,
+            )
             return True
-        except Exception:
+        except Exception as exc:
+            _logger.warning("ADX send_batch error: %s", exc)
             return False

@@ -43,7 +43,8 @@ This guide outlines the steps to create an Azure Data Explorer (Kusto) cluster a
     - **adx_cluster_fqdn:** Azure Data Explorer Cluster FQDN [Data Ingestion URI].
     - **adx_database_name:** Azure Data Explorer Database Name [Database Name]
     - **adx_client_id:** Azure Data Explorer Client ID [MSI Client ID]
-    - **telemetry_table_name:** Name of the table in the ADX database SAP_AUTOMATION_QA
+    - **telemetry_table_name:** Name of the table in the ADX database (default: `SAP_AUTOMATION_QA`)
+    - **service_log_table_name:** Table for service/API logs (default: `<telemetry_table_name>_ServiceLogs`)
 
 ## Azure Log Analytics Workspace Setup
 
@@ -74,9 +75,12 @@ This guide outlines the steps to create an Azure Data Explorer (Kusto) cluster a
 
 5. **Parameters**
     - **laws_workspace_id:** Log Analytics Workspace ID [Workspace ID]
-    - **laws_shared_key:** Log Analytics Shared Key [Primary Key, if available]
+    - **laws_shared_key:** Log Analytics Shared Key [Primary Key, if available]. If not provided, the key is auto-fetched from Azure using managed identity.
     - **laws_subscription_id:** Subscription ID where the Log Analytics Workspace is created
     - **laws_resource_group:** Resource Group name where the Log Analytics Workspace is created
     - **laws_workspace_name:** Log Analytics Workspace name
-    - **telemetry_table_name:** Name of the table in Log Analytics SAP_AUTOMATION_QA
-    - **user_assigned_identity_client_id:** User Assigned Managed Identity Client ID (optional, required if using UAMI for authentication)
+    - **telemetry_table_name:** Name of the table in Log Analytics (default: `SAP_AUTOMATION_QA`)
+    - **service_log_table_name:** Table for service/API logs (default: `<telemetry_table_name>_ServiceLogs`). Azure appends `_CL` suffix automatically.
+    - **user_assigned_identity_client_id:** Client ID of a User Assigned Managed Identity. Required when the VM has multiple managed identities and `laws_shared_key` is not provided.
+
+> **Note:** When `laws_shared_key` is not provided, the framework auto-fetches it using Azure SDK with managed identity. If the VM has multiple managed identities, you must specify `user_assigned_identity_client_id` to avoid ambiguity.
