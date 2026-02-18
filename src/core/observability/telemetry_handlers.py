@@ -269,28 +269,51 @@ class LogAnalyticsHandler(_BaseRemoteLogHandler):
         flush_interval: float = 5.0,
         config: Optional["TelemetryConfig"] = None,
     ) -> None:
+        self._config = config
         if config is not None:
             self.workspace_id = workspace_id or config.laws_workspace_id or ""
             self.shared_key = shared_key or config.laws_shared_key or ""
+            self._subscription_id = config.laws_subscription_id or ""
+            self._resource_group = config.laws_resource_group or ""
+            self._workspace_name = config.laws_workspace_name or ""
+            self._user_mi_client_id = config.user_assigned_identity_client_id or ""
             _table = table_name or config.service_table()
             _batch = config.batch_size
             _flush = config.flush_interval_seconds
+            _enabled = config.has_log_analytics
         else:
             self.workspace_id = workspace_id or os.environ.get("LOG_ANALYTICS_WORKSPACE_ID", "")
             self.shared_key = shared_key or os.environ.get("LOG_ANALYTICS_SHARED_KEY", "")
+            self._subscription_id = ""
+            self._resource_group = ""
+            self._workspace_name = ""
+            self._user_mi_client_id = ""
             _table = table_name or os.environ.get("LOG_ANALYTICS_TABLE", "SAPQALogs")
             _batch = int(os.environ.get("LOG_ANALYTICS_BATCH_SIZE", batch_size))
             _flush = float(os.environ.get("LOG_ANALYTICS_FLUSH_INTERVAL", flush_interval))
+            _enabled = bool(self.workspace_id and self.shared_key)
 
         super().__init__(
             table_name=_table,
             batch_size=_batch,
             flush_interval=_flush,
-            enabled=bool(self.workspace_id and self.shared_key),
+            enabled=_enabled,
         )
 
+    @property
+    def _has_credentials(self) -> bool:
+        """True when handler can send (direct key or Azure lookup)."""
+        if self.workspace_id and self.shared_key:
+            return True
+        if self._config is not None:
+            return self._config.has_log_analytics
+        return False
+
     def emit(self, record: logging.LogRecord) -> None:
-        if not self.workspace_id or not self.shared_key:
+        """
+        Enqueue a log record for async sending.
+        """
+        if not self._has_credentials:
             return
         try:
             self._queue.put_nowait(self._format_record(record))
@@ -298,19 +321,35 @@ class LogAnalyticsHandler(_BaseRemoteLogHandler):
             pass
 
     def _send_batch(self, batch: List[Dict[str, Any]]) -> bool:
-        if not batch or not self.workspace_id or not self.shared_key:
+        """
+        Send a batch to Log Analytics via TelemetryDataSender.
+
+        When shared_key is absent but Azure lookup fields are
+        present, TelemetryDataSender.validate_params() resolves
+        the key via managed identity automatically.
+        """
+        if not batch or not self._has_credentials:
             return False
         try:
-            response = TelemetryDataSender(
-                module_params={
-                    "test_group_json_data": {},
-                    "telemetry_data_destination": ("azureloganalytics"),
-                    "laws_workspace_id": self.workspace_id,
-                    "laws_shared_key": self.shared_key,
-                    "telemetry_table_name": self.table_name,
-                    "workspace_directory": os.environ.get("LOG_DIR", "data/logs"),
-                }
-            ).send_telemetry_data_to_azureloganalytics(json.dumps(batch))
+            params: Dict[str, Any] = {
+                "test_group_json_data": {},
+                "telemetry_data_destination": "azureloganalytics",
+                "laws_workspace_id": self.workspace_id,
+                "telemetry_table_name": self.table_name,
+                "workspace_directory": os.environ.get("LOG_DIR", "data/logs"),
+            }
+            if self.shared_key:
+                params["laws_shared_key"] = self.shared_key
+            else:
+                params["laws_subscription_id"] = self._subscription_id
+                params["laws_resource_group"] = self._resource_group
+                params["laws_workspace_name"] = self._workspace_name
+                if self._user_mi_client_id:
+                    params["user_assigned_identity_client_id"] = self._user_mi_client_id
+            sender = TelemetryDataSender(module_params=params)
+            if not sender.validate_params():
+                return False
+            response = sender.send_telemetry_data_to_azureloganalytics(json.dumps(batch))
             return response.status_code in (200, 202)
         except Exception:
             return False
