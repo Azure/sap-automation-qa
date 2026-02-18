@@ -11,11 +11,30 @@ import signal
 import subprocess
 import threading
 from pathlib import Path
+from dataclasses import asdict
 from typing import Any, Optional, Protocol
 from src.module_utils.filter_tests import TestFilter
 from src.core.observability import get_logger
+from src.core.models.telemetry import TelemetryConfig
+from src.core.observability.telemetry_handlers import (
+    load_telemetry_config,
+)
 
 logger = get_logger(__name__)
+
+_TELEMETRY_VAR_KEYS = (
+    "telemetry_data_destination",
+    "telemetry_table_name",
+    "laws_workspace_id",
+    "laws_shared_key",
+    "laws_subscription_id",
+    "laws_resource_group",
+    "laws_workspace_name",
+    "adx_database_name",
+    "adx_cluster_fqdn",
+    "adx_client_id",
+    "user_assigned_identity_client_id",
+)
 
 
 def _describe_exit_code(returncode: int) -> str:
@@ -121,16 +140,35 @@ class AnsibleExecutor:
         self,
         playbook_dir: Path | str = "src",
         ansible_cfg: Optional[Path | str] = None,
+        telemetry_config: Optional[TelemetryConfig] = None,
     ) -> None:
         """Initialize the executor.
 
         :param playbook_dir: Directory containing playbooks
         :param ansible_cfg: Path to ansible.cfg
+        :param telemetry_config: Telemetry config to inject into ansible process
         """
         self.playbook_dir = Path(playbook_dir)
         self.ansible_cfg = Path(ansible_cfg) if ansible_cfg else self.playbook_dir / "ansible.cfg"
         self._processes: dict[str, subprocess.Popen] = {}
         self._lock = threading.Lock()
+        self._telemetry_vars = self._build_telemetry_vars(telemetry_config)
+
+    @staticmethod
+    def _build_telemetry_vars(
+        config: Optional[TelemetryConfig],
+    ) -> dict[str, str]:
+        """Extract non-null telemetry fields for Ansible extra-vars.
+
+        :param config: Telemetry config (may be None)
+        :returns: Dict of telemetry key/value pairs
+        """
+        if config is None:
+            config = load_telemetry_config()
+        if not config.is_enabled:
+            return {}
+        raw = asdict(config)
+        return {k: str(v) for k in _TELEMETRY_VAR_KEYS if (v := raw.get(k)) is not None}
 
     def run_test(
         self,
@@ -184,6 +222,8 @@ class AnsibleExecutor:
         all_vars["workspace_id"] = workspace_id
         if job_id:
             all_vars["job_id"] = job_id
+        for k, v in self._telemetry_vars.items():
+            all_vars.setdefault(k, v)
 
         if test_group in (
             "DatabaseHighAvailability",

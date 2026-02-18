@@ -6,6 +6,7 @@
 from src.core.models.job import Job, JobStatus, JobEvent, JobEventType
 from src.core.models.schedule import Schedule
 from src.core.models.ssh import AuthType, SshCredential
+from src.core.models.telemetry import TelemetryConfig
 
 __all__ = [
     "Job",
@@ -15,4 +16,5 @@ __all__ = [
     "Schedule",
     "AuthType",
     "SshCredential",
+    "TelemetryConfig",
 ]

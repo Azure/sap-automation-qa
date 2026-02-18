@@ -16,6 +16,7 @@ from src.core.observability import (
     initialize_logging,
     get_logger,
     ObservabilityMiddleware,
+    load_telemetry_config,
 )
 from src.core.storage.job_store import JobStore
 from src.core.storage.schedule_store import ScheduleStore
@@ -46,7 +47,12 @@ CORS_ORIGINS = os.environ.get("CORS_ORIGINS", "http://localhost:3000,http://loca
     ","
 )
 
-initialize_logging(level=logging.INFO, log_format=LOG_FORMAT)
+telemetry_config = load_telemetry_config()
+initialize_logging(
+    level=logging.INFO,
+    log_format=LOG_FORMAT,
+    telemetry_config=telemetry_config,
+)
 logger = get_logger(__name__)
 
 
@@ -76,7 +82,10 @@ async def lifespan(app: FastAPI) -> AsyncGenerator[None, None]:
         set_workspace_loader(workspace_loader)
         job_worker = JobWorker(
             job_store=job_store,
-            executor=AnsibleExecutor(playbook_dir=PLAYBOOK_DIR),
+            executor=AnsibleExecutor(
+                playbook_dir=PLAYBOOK_DIR,
+                telemetry_config=telemetry_config,
+            ),
             workspace_config_loader=workspace_loader,
             workspaces_base=WORKSPACES_BASE,
         )

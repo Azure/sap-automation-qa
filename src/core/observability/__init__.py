@@ -67,10 +67,13 @@ from src.core.observability.logger import (
     clear_correlation_id,
 )
 
-from src.core.observability.log_analytics import (
+from src.core.observability.telemetry_handlers import (
     LogAnalyticsHandler,
-    add_log_analytics_handler,
+    ADXHandler,
+    load_telemetry_config,
 )
+
+from src.core.models.telemetry import TelemetryConfig
 
 from src.core.observability.middleware import (
     ObservabilityMiddleware,
@@ -104,7 +107,9 @@ __all__ = [
     "initialize_logging",
     "get_logger",
     "LogAnalyticsHandler",
-    "add_log_analytics_handler",
+    "ADXHandler",
+    "TelemetryConfig",
+    "load_telemetry_config",
     "ObservabilityMiddleware",
     "add_observability_middleware",
     "CORRELATION_ID_HEADER",

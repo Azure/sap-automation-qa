@@ -256,10 +256,18 @@ laws_subscription_id: "your-laws-subscription-id"
 laws_resource_group: "your-laws-resource-group"
 laws_workspace_name: "your-laws-workspace-name"
 
+# Optional: User Assigned Managed Identity Client ID.
+# Required when the VM has multiple managed identities and laws_shared_key is not provided.
+user_assigned_identity_client_id: "your-managed-identity-client-id"
+
+# Optional: Override the service log table name (default: <telemetry_table_name>_ServiceLogs).
+# Service logs are sent by the API/service layer, separate from Ansible test results.
+service_log_table_name: null
+
 # The cluster name, data ingestion URI, and client ID of the Azure Data Explorer.
 adx_cluster_fqdn: "your-adx-cluster-fqdn"
 adx_database_name: "your-adx-database-name"
-ade_client_id: "your-adx-client-id"
+adx_client_id: "your-adx-client-id"
 ```
 
 #### 2.2. System Configuration (WORKSPACES)
