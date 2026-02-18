@@ -13,9 +13,97 @@ set_output_context
 
 PROJECT_ROOT="$(dirname "$script_dir")"
 
+# Creates .venv (if absent), installs OS packages, Azure CLI, and
+# :param $1  python_bin  Python interpreter to use (default: python3)
+# :param $2  upgrade     "true" to destroy & recreate an existing venv
+_setup_local_env() {
+    local python_bin="${1:-python3}"
+    local upgrade="${2:-false}"
+
+    cd "$PROJECT_ROOT"
+
+    packages=("python3-pip" "sshpass" "python3-venv")
+    install_packages "${packages[@]}"
+
+    if ! command_exists az; then
+        log "INFO" "Azure CLI not found. Installing Azure CLI..."
+        curl -L https://aka.ms/InstallAzureCli | bash
+        if command_exists az; then
+            log "INFO" "Azure CLI installed successfully."
+        else
+            log "ERROR" "Failed to install Azure CLI. Please install it manually."
+            exit 1
+        fi
+    fi
+
+    # Resolve & validate the requested Python interpreter
+    if ! command -v "$python_bin" &>/dev/null; then
+        log "ERROR" "Python interpreter '$python_bin' not found. Please install it or provide a valid path."
+        exit 1
+    fi
+
+    python_bin="$(command -v "$python_bin")"   # resolve to absolute path
+    local python_version
+    python_version=$("$python_bin" -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')
+    log "INFO" "Using Python interpreter: $python_bin (Python $python_version)"
+
+    # Enforce minimum Python 3.10
+    local minor=${python_version#3.}
+    if [[ "${python_version%%.*}" -lt 3 ]] || [[ "$minor" -lt 10 ]]; then
+        log "ERROR" "Python >= 3.10 is required. Detected $python_version at $python_bin."
+        exit 1
+    fi
+
+    if [[ "$upgrade" == true ]]; then
+        if [[ -d ".venv" ]]; then
+            log "INFO" "Upgrade requested — removing existing virtual environment..."
+            deactivate 2>/dev/null || true
+            rm -rf .venv
+            log "INFO" "Existing virtual environment removed."
+        else
+            log "INFO" "Upgrade requested but no existing virtual environment found. Creating fresh."
+        fi
+    fi
+
+    # Create virtual environment if it doesn't exist
+    if [[ ! -d ".venv" ]]; then
+        log "INFO" "Creating Python virtual environment with $python_bin ..."
+        if "$python_bin" -m venv .venv; then
+            log "INFO" "Python virtual environment created (Python $python_version)."
+        else
+            log "ERROR" "Failed to create Python virtual environment."
+            exit 1
+        fi
+    fi
+
+    # Ensure virtual environment is activated
+    log "INFO" "Activating Python virtual environment..."
+    if source .venv/bin/activate; then
+        log "INFO" "Python virtual environment activated."
+    else
+        log "ERROR" "Failed to activate Python virtual environment."
+        exit 1
+    fi
+
+    log "INFO" "Installing Python packages..."
+    if ! pip install --upgrade pip; then
+        log "ERROR" "Failed to upgrade pip."
+    fi
+    if pip install -r requirements.in; then
+        log "INFO" "Python packages installed successfully."
+    else
+        log "ERROR" "Failed to install Python packages."
+    fi
+
+    log "INFO" "Which Python: $(which python)"
+
+    export ANSIBLE_HOST_KEY_CHECKING=False
+    export ANSIBLE_PYTHON_INTERPRETER=$(which python3)
+}
+
 setup_environment() {
-    UPGRADE=false
-    PYTHON_BIN="python3"   # default interpreter
+    local UPGRADE=false
+    local PYTHON_BIN="python3"
 
     while [[ $# -gt 0 ]]; do
         case "$1" in
@@ -39,85 +127,7 @@ setup_environment() {
         esac
     done
 
-    cd "$PROJECT_ROOT"
-
-    packages=("python3-pip" "sshpass" "python3-venv")
-    install_packages "${packages[@]}"
-
-    if ! command_exists az; then
-		log "INFO" "Azure CLI not found. Installing Azure CLI..."
-		curl -L https://aka.ms/InstallAzureCli | bash
-		if command_exists az; then
-			log "INFO" "Azure CLI installed successfully."
-		else
-			log "ERROR" "Failed to install Azure CLI. Please install it manually."
-			exit 1
-		fi
-    fi
-
-    # Resolve & validate the requested Python interpreter
-    if ! command -v "$PYTHON_BIN" &>/dev/null; then
-        log "ERROR" "Python interpreter '$PYTHON_BIN' not found. Please install it or provide a valid path."
-        exit 1
-    fi
-
-    PYTHON_BIN="$(command -v "$PYTHON_BIN")"   # resolve to absolute path
-    PYTHON_VERSION=$("$PYTHON_BIN" -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')
-    log "INFO" "Using Python interpreter: $PYTHON_BIN (Python $PYTHON_VERSION)"
-
-    # Enforce minimum Python 3.10
-    MINOR=${PYTHON_VERSION#3.}
-    if [[ "${PYTHON_VERSION%%.*}" -lt 3 ]] || [[ "$MINOR" -lt 10 ]]; then
-        log "ERROR" "Python >= 3.10 is required. Detected $PYTHON_VERSION at $PYTHON_BIN."
-        exit 1
-    fi
-
-    if [[ "$UPGRADE" == true ]]; then
-        if [[ -d ".venv" ]]; then
-            log "INFO" "Upgrade requested — removing existing virtual environment..."
-            # Deactivate if we are inside the venv (ignore errors when not active)
-            deactivate 2>/dev/null || true
-            rm -rf .venv
-            log "INFO" "Existing virtual environment removed."
-        else
-            log "INFO" "Upgrade requested but no existing virtual environment found. Creating fresh."
-        fi
-    fi
-
-    # Create virtual environment if it doesn't exist
-    if [[ ! -d ".venv" ]]; then
-        log "INFO" "Creating Python virtual environment with $PYTHON_BIN ..."
-        if "$PYTHON_BIN" -m venv .venv; then
-            log "INFO" "Python virtual environment created (Python $PYTHON_VERSION)."
-        else
-            log "ERROR" "Failed to create Python virtual environment."
-            exit 1
-        fi
-    fi
-
-    # Ensure virtual environment is activated
-    log "INFO" "Activating Python virtual environment..."
-    if source .venv/bin/activate; then
-        log "INFO" "Python virtual environment activated."
-    else
-        log "ERROR" "Failed to activate Python virtual environment."
-        exit 1
-    fi
-
-    log "INFO" "Installing Python packages..."
-    if ! pip install --upgrade pip; then
-		log "ERROR" "Failed to upgrade pip."
-    fi
-    if pip install -r requirements.in; then
-        log "INFO" "Python packages installed successfully."
-    else
-        log "ERROR" "Failed to install Python packages."
-    fi
-
-    log "INFO" "Which Python: $(which python)"
-
-    export ANSIBLE_HOST_KEY_CHECKING=False
-    export ANSIBLE_PYTHON_INTERPRETER=$(which python3)
+    _setup_local_env "$PYTHON_BIN" "$UPGRADE"
 
     log "INFO" "Setup completed successfully!"
     log "INFO" "Virtual environment is located at: $(pwd)/.venv"

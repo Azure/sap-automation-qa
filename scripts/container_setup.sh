@@ -113,7 +113,8 @@ container_start() {
     local acr_image="${1:-}"
 
     log "INFO" "=== Starting SAP QA ==="
-
+    log "INFO" "Setting up local Python environment..."
+    _setup_local_env
     _ensure_docker
 
     if [[ ! -d "$_CONTAINER_DEPLOY_DIR" ]]; then
