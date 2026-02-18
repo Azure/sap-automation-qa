@@ -13,13 +13,17 @@ from abc import ABC, abstractmethod
 from datetime import datetime, timezone
 from logging.handlers import RotatingFileHandler
 from pathlib import Path
-from typing import Any, Optional, Union
+from typing import Any, Optional, TYPE_CHECKING, Union
 from src.core.observability.context import ObservabilityContextManager
 from src.core.observability.events import (
     ServiceEvent,
     ExecutionEvent,
 )
-from src.core.observability.log_analytics import LogAnalyticsHandler
+from src.core.observability.telemetry_handlers import (
+    LogAnalyticsHandler,
+    ADXHandler,
+)
+from src.core.models.telemetry import TelemetryConfig
 
 
 class LogFormatter(ABC, logging.Formatter):
@@ -273,6 +277,7 @@ class LoggerFactory:
     _format: str = "json"
     _level: int = logging.INFO
     _service_name: str = "sap-qa-"
+    _telemetry_config: Optional[TelemetryConfig] = None
 
     @classmethod
     def initialize(
@@ -280,6 +285,7 @@ class LoggerFactory:
         level: int = logging.INFO,
         log_format: str = "json",
         service_name: str = "sap-qa-service",
+        telemetry_config: Optional[TelemetryConfig] = None,
     ) -> None:
         """Initialize logging configuration.
 
@@ -291,6 +297,8 @@ class LoggerFactory:
         :type log_format: str
         :param service_name: Service name for logs
         :type service_name: str
+        :param telemetry_config: Telemetry config from vars.yaml
+        :type telemetry_config: Optional[TelemetryConfig]
         """
         if cls._initialized:
             return
@@ -298,8 +306,21 @@ class LoggerFactory:
         cls._format = log_format
         cls._level = level
         cls._service_name = service_name
-        cls._configure_logger("src.core", level, log_format, service_name)
-        cls._configure_logger("src.api", level, log_format, service_name)
+        cls._telemetry_config = telemetry_config
+        cls._configure_logger(
+            "src.core",
+            level,
+            log_format,
+            service_name,
+            telemetry_config,
+        )
+        cls._configure_logger(
+            "src.api",
+            level,
+            log_format,
+            service_name,
+            telemetry_config,
+        )
         cls._initialized = True
 
     @classmethod
@@ -309,6 +330,7 @@ class LoggerFactory:
         level: int,
         log_format: str,
         service_name: str,
+        telemetry_config: Optional[TelemetryConfig] = None,
     ) -> None:
         """Configure a logger with formatter.
 
@@ -316,6 +338,7 @@ class LoggerFactory:
         :param level: Log level
         :param log_format: Format type
         :param service_name: Service name
+        :param telemetry_config: Optional telemetry config
         """
         logger = logging.getLogger(name)
         logger.setLevel(level)
@@ -345,18 +368,31 @@ class LoggerFactory:
         file_handler.setFormatter(JSONFormatter(service_name=service_name))
         logger.addHandler(file_handler)
 
-        la_workspace = os.environ.get("LOG_ANALYTICS_WORKSPACE_ID")
-        la_key = os.environ.get("LOG_ANALYTICS_SHARED_KEY")
-        if la_workspace and la_key:
-            la_handler = LogAnalyticsHandler(
-                workspace_id=la_workspace,
-                shared_key=la_key,
-                table_name=os.environ.get("LOG_ANALYTICS_TABLE", "SAPQALogs"),
-            )
+        cls._attach_telemetry_handlers(logger, level, telemetry_config)
+        logger.propagate = False
+
+    @classmethod
+    def _attach_telemetry_handlers(
+        cls,
+        logger: logging.Logger,
+        level: int,
+        telemetry_config: Optional[TelemetryConfig] = None,
+    ) -> None:
+        """Attach Log Analytics and/or ADX handlers.
+
+        :param logger: Logger to attach handlers to
+        :param level: Log level
+        :param telemetry_config: Optional telemetry config from vars.yaml
+        """
+        if telemetry_config and telemetry_config.has_log_analytics:
+            la_handler = LogAnalyticsHandler(config=telemetry_config)
             la_handler.setLevel(level)
             logger.addHandler(la_handler)
 
-        logger.propagate = False
+        if telemetry_config and telemetry_config.has_adx:
+            adx_handler = ADXHandler(config=telemetry_config)
+            adx_handler.setLevel(level)
+            logger.addHandler(adx_handler)
 
     @classmethod
     def get_logger(cls, name: str) -> StructuredLogger:
@@ -381,14 +417,21 @@ def initialize_logging(
     level: int = logging.INFO,
     log_format: str = "json",
     service_name: str = "sap-qa-service",
+    telemetry_config: Optional[TelemetryConfig] = None,
 ) -> None:
     """Initialize logging. Call once at startup.
 
     :param level: Log level
     :param log_format: "json" or "console"
     :param service_name: Service name for logs
+    :param telemetry_config: Optional telemetry config from vars.yaml
     """
-    LoggerFactory.initialize(level=level, log_format=log_format, service_name=service_name)
+    LoggerFactory.initialize(
+        level=level,
+        log_format=log_format,
+        service_name=service_name,
+        telemetry_config=telemetry_config,
+    )
 
 
 def get_logger(name: str) -> StructuredLogger:

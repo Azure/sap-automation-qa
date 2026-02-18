@@ -16,6 +16,15 @@ services:
                           - LOG_LEVEL=${LOG_LEVEL:-INFO}
                           - SCHEDULER_CHECK_INTERVAL=${SCHEDULER_CHECK_INTERVAL:-60}
                           - PYTHONPATH=/app
+                          - TELEMETRY_DATA_DESTINATION=${TELEMETRY_DATA_DESTINATION:-}
+                          - LAWS_WORKSPACE_ID=${LAWS_WORKSPACE_ID:-}
+                          - LAWS_SHARED_KEY=${LAWS_SHARED_KEY:-}
+                          - LAWS_SUBSCRIPTION_ID=${LAWS_SUBSCRIPTION_ID:-}
+                          - LAWS_RESOURCE_GROUP=${LAWS_RESOURCE_GROUP:-}
+                          - LAWS_WORKSPACE_NAME=${LAWS_WORKSPACE_NAME:-}
+                          - ADX_DATABASE_NAME=${ADX_DATABASE_NAME:-}
+                          - ADX_CLUSTER_FQDN=${ADX_CLUSTER_FQDN:-}
+                          - ADX_CLIENT_ID=${ADX_CLIENT_ID:-}
     volumes:
                           - sap-qa-data:/app/data
                           - ../WORKSPACES:/app/WORKSPACES
