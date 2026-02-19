@@ -7,18 +7,26 @@ Python script to get and validate the status of a HANA cluster.
 
 import logging
 import xml.etree.ElementTree as ET
-from typing import Dict, Any
+from typing import Dict, Any, List
 from ansible.module_utils.basic import AnsibleModule
 from ansible.module_utils.facts.compat import ansible_facts
 
 try:
     from ansible.module_utils.get_cluster_status import BaseClusterStatusChecker
-    from ansible.module_utils.enums import OperatingSystemFamily, HanaSRProvider
+    from ansible.module_utils.enums import (
+        OperatingSystemFamily,
+        HanaSRProvider,
+        HanaTopology,
+    )
     from ansible.module_utils.commands import AUTOMATED_REGISTER, PRIORITY_FENCING_DELAY
 except ImportError:
     from src.module_utils.get_cluster_status import BaseClusterStatusChecker
     from src.module_utils.commands import AUTOMATED_REGISTER, PRIORITY_FENCING_DELAY
-    from src.module_utils.enums import OperatingSystemFamily, HanaSRProvider
+    from src.module_utils.enums import (
+        OperatingSystemFamily,
+        HanaSRProvider,
+        HanaTopology,
+    )
 
 
 DOCUMENTATION = r"""
@@ -51,6 +59,16 @@ options:
             - The instance number of the SAP HANA database
         type: str
         required: true
+    hana_topology:
+        description:
+            - The SAP HANA topology type
+            - For scale_out_standby (no Pacemaker), this module does not apply
+        type: str
+        required: false
+        default: scale_up
+        choices:
+            - scale_up
+            - scale_out_hsr
 author:
     - Microsoft Corporation
 notes:
@@ -121,16 +139,41 @@ AUTOMATED_REGISTER:
     returned: always
     type: str
     sample: "true"
+primary_site_nodes:
+    description: List of node names on the primary site (scale-out HSR only)
+    returned: when hana_topology is scale_out_hsr
+    type: list
+    sample: ["hanadb1", "hanadb2"]
+secondary_site_nodes:
+    description: List of node names on the secondary site (scale-out HSR only)
+    returned: when hana_topology is scale_out_hsr
+    type: list
+    sample: ["hanadb3", "hanadb4"]
+majority_maker_node:
+    description: Name of the majority maker node (scale-out HSR only)
+    returned: when hana_topology is scale_out_hsr
+    type: str
+    sample: "hanadb5"
+secondary_site_name:
+    description: Name of the secondary site in HANA system replication
+    returned: when hana_topology is scale_out_hsr
+    type: str
+    sample: "Site2"
+hana_topology:
+    description: The configured HANA topology type
+    returned: always
+    type: str
+    sample: "scale_up"
 cluster_status:
     description: Detailed cluster attributes for each node
     returned: always
     type: dict
     contains:
         primary:
-            description: Attributes of the primary node
+            description: Attributes of the primary node (scale-up) or dict of nodes (scale-out)
             type: dict
         secondary:
-            description: Attributes of the secondary node
+            description: Attributes of the secondary node (scale-up) or dict of nodes (scale-out)
             type: dict
 """
 
@@ -146,6 +189,7 @@ class HanaClusterStatusChecker(BaseClusterStatusChecker):
         db_instance_number: str,
         saphanasr_provider: HanaSRProvider,
         ansible_os_family: OperatingSystemFamily,
+        hana_topology: HanaTopology = HanaTopology.SCALE_UP,
         hana_clone_resource_name: str = "",
         hana_primitive_resource_name: str = "",
     ):
@@ -153,15 +197,21 @@ class HanaClusterStatusChecker(BaseClusterStatusChecker):
         self.database_sid = database_sid
         self.saphanasr_provider = saphanasr_provider
         self.db_instance_number = db_instance_number
+        self.hana_topology = hana_topology
         self.hana_clone_resource_name = hana_clone_resource_name
         self.hana_primitive_resource_name = hana_primitive_resource_name
         self.result.update(
             {
                 "primary_node": "",
                 "secondary_node": "",
+                "primary_site_nodes": [],
+                "secondary_site_nodes": [],
+                "majority_maker_node": "",
                 "operation_mode": "",
                 "replication_mode": "",
                 "primary_site_name": "",
+                "secondary_site_name": "",
+                "hana_topology": hana_topology.value,
                 "AUTOMATED_REGISTER": "false",
                 "PRIORITY_FENCING_DELAY": "",
             }
@@ -188,14 +238,64 @@ class HanaClusterStatusChecker(BaseClusterStatusChecker):
 
     def _process_node_attributes(self, cluster_status_xml: ET.Element) -> Dict[str, Any]:
         """
-        Processes node attributes and identifies primary and secondary nodes.
+        Dispatches node attribute processing based on HANA topology.
+
+        :param cluster_status_xml: XML element containing node attributes.
+        :type cluster_status_xml: ET.Element
+        :return: Dictionary with node information.
+        :rtype: Dict[str, Any]
+        """
+        if self.hana_topology == HanaTopology.SCALE_OUT_HSR:
+            return self._process_scale_out_hsr_attributes(cluster_status_xml)
+        return self._process_scale_up_attributes(cluster_status_xml)
+
+    def _get_provider_config(self) -> Dict[str, Any]:
+        """
+        Returns provider-specific attribute names and expected values.
+
+        :return: Provider configuration dictionary with clone/sync
+            attribute names and expected primary/secondary values.
+        :rtype: Dict[str, Any]
+        """
+        providers = {
+            HanaSRProvider.SAPHANASR: {
+                "clone_attr": (f"hana_{self.database_sid}_clone_state"),
+                "sync_attr": (f"hana_{self.database_sid}_sync_state"),
+                "primary": {"clone": "PROMOTED", "sync": "PRIM"},
+                "secondary": {"clone": "DEMOTED", "sync": "SOK"},
+            },
+            HanaSRProvider.ANGI: {
+                "clone_attr": (f"hana_{self.database_sid}_clone_state"),
+                "sync_attr": (
+                    f"master-{self.hana_primitive_resource_name}"
+                    if self.hana_clone_resource_name
+                    else "master-rsc_SAPHanaCon_"
+                    + f"{self.database_sid.upper()}"
+                    + f"_HDB{self.db_instance_number}"
+                ),
+                "primary": {"clone": "PROMOTED", "sync": "150"},
+                "secondary": {
+                    "clone": "DEMOTED",
+                    "sync": "100",
+                },
+            },
+        }
+
+        return providers.get(
+            self.saphanasr_provider,
+            providers[HanaSRProvider.SAPHANASR],
+        )
+
+    def _process_scale_up_attributes(self, cluster_status_xml: ET.Element) -> Dict[str, Any]:
+        """
+        Processes node attributes for a scale-up (2-node) HANA cluster.
 
         :param cluster_status_xml: XML element containing node attributes.
         :type cluster_status_xml: ET.Element
         :return: Dictionary with primary and secondary node information.
         :rtype: Dict[str, Any]
         """
-        result = {
+        result: Dict[str, Any] = {
             "primary_node": "",
             "secondary_node": "",
             "cluster_status": {"primary": {}, "secondary": {}},
@@ -211,37 +311,18 @@ class HanaClusterStatusChecker(BaseClusterStatusChecker):
             )
             return result
 
-        providers = {
-            HanaSRProvider.SAPHANASR: {
-                "clone_attr": f"hana_{self.database_sid}_clone_state",
-                "sync_attr": f"hana_{self.database_sid}_sync_state",
-                "primary": {"clone": "PROMOTED", "sync": "PRIM"},
-                "secondary": {"clone": "DEMOTED", "sync": "SOK"},
-            },
-            HanaSRProvider.ANGI: {
-                "clone_attr": f"hana_{self.database_sid}_clone_state",
-                "sync_attr": (
-                    f"master-{self.hana_primitive_resource_name}"
-                    if self.hana_clone_resource_name
-                    else f"master-rsc_SAPHanaCon_{self.database_sid.upper()}"
-                    + f"_HDB{self.db_instance_number}"
-                ),
-                "primary": {"clone": "PROMOTED", "sync": "150"},
-                "secondary": {"clone": "DEMOTED", "sync": "100"},
-            },
-        }
-        provider_config = providers.get(
-            self.saphanasr_provider, providers[HanaSRProvider.SAPHANASR]
-        )
+        provider_config = self._get_provider_config()
 
         for node in node_attributes:
             node_name = node.attrib["name"]
             attrs = {attr.attrib["name"]: attr.attrib["value"] for attr in node}
             result["operation_mode"] = attrs.get(
-                f"hana_{self.database_sid}_op_mode", result["operation_mode"]
+                f"hana_{self.database_sid}_op_mode",
+                result["operation_mode"],
             )
             result["replication_mode"] = attrs.get(
-                f"hana_{self.database_sid}_srmode", result["replication_mode"]
+                f"hana_{self.database_sid}_srmode",
+                result["replication_mode"],
             )
             clone_state = attrs.get(provider_config["clone_attr"], "")
             sync_state = attrs.get(provider_config["sync_attr"], "")
@@ -252,7 +333,10 @@ class HanaClusterStatusChecker(BaseClusterStatusChecker):
                 result.update(
                     {
                         "primary_node": node_name,
-                        "primary_site_name": attrs.get(f"hana_{self.database_sid}_site", ""),
+                        "primary_site_name": attrs.get(
+                            f"hana_{self.database_sid}_site",
+                            "",
+                        ),
                     }
                 )
                 result["cluster_status"]["primary"] = attrs
@@ -263,6 +347,96 @@ class HanaClusterStatusChecker(BaseClusterStatusChecker):
             ):
                 result["secondary_node"] = node_name
                 result["cluster_status"]["secondary"] = attrs
+
+        self.result.update(result)
+        return result
+
+    def _process_scale_out_hsr_attributes(self, cluster_status_xml: ET.Element) -> Dict[str, Any]:
+        """
+        Processes node attributes for a scale-out HSR HANA cluster.
+
+        :param cluster_status_xml: XML element containing node
+        :type cluster_status_xml: ET.Element
+        :return: Dictionary with scale-out HSR cluster information
+        :rtype: Dict[str, Any]
+        """
+        result: Dict[str, Any] = {
+            "primary_node": "",
+            "secondary_node": "",
+            "primary_site_nodes": [],
+            "secondary_site_nodes": [],
+            "majority_maker_node": "",
+            "cluster_status": {"primary": {}, "secondary": {}},
+            "operation_mode": "",
+            "replication_mode": "",
+            "primary_site_name": "",
+            "secondary_site_name": "",
+        }
+        node_attributes = cluster_status_xml.find("node_attributes")
+        if node_attributes is None:
+            self.log(
+                logging.ERROR,
+                "No node attributes found in the cluster status XML.",
+            )
+            return result
+
+        provider_config = self._get_provider_config()
+        clone_attr = provider_config["clone_attr"]
+
+        nodes_by_site: Dict[str, List[tuple]] = {}
+        majority_maker_candidates: List[str] = []
+
+        for node in node_attributes:
+            node_name = node.attrib["name"]
+            attrs = {attr.attrib["name"]: attr.attrib["value"] for attr in node}
+            result["operation_mode"] = attrs.get(
+                f"hana_{self.database_sid}_op_mode",
+                result["operation_mode"],
+            )
+            result["replication_mode"] = attrs.get(
+                f"hana_{self.database_sid}_srmode",
+                result["replication_mode"],
+            )
+            site = attrs.get(f"hana_{self.database_sid}_site", "")
+            clone_state = attrs.get(clone_attr, "")
+
+            if not site and not clone_state:
+                majority_maker_candidates.append(node_name)
+                continue
+
+            nodes_by_site.setdefault(site, []).append((node_name, attrs))
+
+        primary_site = ""
+        for site, nodes in nodes_by_site.items():
+            for node_name, attrs in nodes:
+                clone_state = attrs.get(clone_attr, "")
+                sync_state = attrs.get(provider_config["sync_attr"], "")
+                if (
+                    clone_state == provider_config["primary"]["clone"]
+                    and sync_state == provider_config["primary"]["sync"]
+                ):
+                    primary_site = site
+                    result["primary_node"] = node_name
+                    result["primary_site_name"] = site
+                    break
+            if primary_site:
+                break
+
+        for site, nodes in nodes_by_site.items():
+            node_names = [n for n, _ in nodes]
+            node_attrs = {n: a for n, a in nodes}
+            if site == primary_site:
+                result["primary_site_nodes"] = node_names
+                result["cluster_status"]["primary"] = node_attrs
+            else:
+                result["secondary_site_name"] = site
+                result["secondary_site_nodes"] = node_names
+                result["cluster_status"]["secondary"] = node_attrs
+                if not result["secondary_node"] and nodes:
+                    result["secondary_node"] = nodes[0][0]
+
+        if majority_maker_candidates:
+            result["majority_maker_node"] = majority_maker_candidates[0]
 
         self.result.update(result)
         return result
@@ -278,11 +452,17 @@ class HanaClusterStatusChecker(BaseClusterStatusChecker):
 
     def _is_cluster_stable(self) -> bool:
         """
-        Check if both primary and secondary nodes are identified.
+        Check if the cluster is in a stable state.
 
-        :return: True if both nodes are identified, False otherwise.
+        :return: True if the cluster is stable, False otherwise.
         :rtype: bool
         """
+        if self.hana_topology == HanaTopology.SCALE_OUT_HSR:
+            return (
+                self.result["primary_node"] != ""
+                and len(self.result["secondary_site_nodes"]) > 0
+                and self.result["majority_maker_node"] != ""
+            )
         return self.result["primary_node"] != "" and self.result["secondary_node"] != ""
 
     def run(self) -> Dict[str, str]:
@@ -306,6 +486,12 @@ def run_module() -> None:
         database_sid=dict(type="str", required=True),
         saphanasr_provider=dict(type="str", required=True),
         db_instance_number=dict(type="str", required=True),
+        hana_topology=dict(
+            type="str",
+            required=False,
+            default="scale_up",
+            choices=["scale_up", "scale_out_hsr"],
+        ),
         hana_clone_resource_name=dict(type="str", required=False),
         hana_primitive_resource_name=dict(type="str", required=False),
         filter=dict(type="str", required=False, default="os_family"),
@@ -320,6 +506,7 @@ def run_module() -> None:
             str(ansible_facts(module).get("os_family", "UNKNOWN")).upper()
         ),
         db_instance_number=module.params["db_instance_number"],
+        hana_topology=HanaTopology(module.params["hana_topology"]),
         hana_clone_resource_name=module.params.get("hana_clone_resource_name", ""),
         hana_primitive_resource_name=module.params.get("hana_primitive_resource_name", ""),
     )

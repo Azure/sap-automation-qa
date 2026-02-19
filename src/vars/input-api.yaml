@@ -36,6 +36,8 @@ test_groups:
           including Corosync settings, Pacemaker resources, SBD device configuration,
           and HANA system replication setup.
         enabled:                    true
+        applicability:
+          topology:                 [scale_up, scale_out_hsr, scale_out_standby]
 
       - name:                       HA Parameters Validation Offline
         task_name:                  ha-config-offline
@@ -45,6 +47,8 @@ test_groups:
           and HANA system replication setup. This test is run in an offline mode where the CIB files are
           already available in the offline_validation directory.
         enabled:                    true
+        applicability:
+          topology:                 [scale_up, scale_out_hsr]
 
       - name:                       Azure Load Balancer Validation
         task_name:                  azure-lb
@@ -52,6 +56,8 @@ test_groups:
           The Azure LB configuration test validates Azure Load Balancer setup including health probe
           configuration, backend pool settings, load balancing rules, and frontend IP configuration.
         enabled:                    true
+        applicability:
+          topology:                 [scale_up, scale_out_hsr]
 
       - name:                       HA Functional Test- Resource Migration
         task_name:                  resource-migration
@@ -62,6 +68,8 @@ test_groups:
           stability throughout the transition, and validates complete data synchronization after
           migration.
         enabled:                    true
+        applicability:
+          topology:                 [scale_up, scale_out_hsr]
 
       - name:                       HA Functional Test- Primary Node Crash
         task_name:                  primary-node-crash
@@ -71,6 +79,8 @@ test_groups:
           the process, then verifies automatic failover to the secondary node, monitors system
           replication status, and confirms service recovery without data loss.
         enabled:                    true
+        applicability:
+          topology:                 [scale_up, scale_out_hsr]
 
       - name:                       HA Functional Test- Block Network Communication
         task_name:                  block-network
@@ -79,8 +89,10 @@ test_groups:
           implementing iptables rules to block communication between primary and secondary HANA nodes.
           It verifies split-brain prevention mechanisms, validates proper failover execution when nodes
           become isolated, and ensures cluster stability and data consistency after network
-          sconnectivity is restored.
+          connectivity is restored.
         enabled:                    true
+        applicability:
+          topology:                 [scale_up, scale_out_hsr]
 
       - name:                       HA Functional Test- Crash index server on primary node
         task_name:                  primary-crash-index
@@ -91,6 +103,8 @@ test_groups:
           proper failover execution, ensures data consistency, and validates service restoration after
           recovery.
         enabled:                    true
+        applicability:
+          topology:                 [scale_up, scale_out_hsr]
 
       - name:                       HA Functional Test- Primary Node Kill
         task_name:                  primary-node-kill
@@ -100,6 +114,8 @@ test_groups:
           triggering automatic failover to the secondary node. The test verifies proper promotion of
           secondary to primary, ensures data consistency, and validates complete cluster recovery.
         enabled:                    true
+        applicability:
+          topology:                 [scale_up, scale_out_hsr]
 
       - name:                       HA Functional Test- Echo B on Primary Node
         task_name:                  primary-echo-b
@@ -109,6 +125,8 @@ test_groups:
           tests the cluster's ability to handle unexpected primary node failures, validates proper
           failover execution, and verifies data consistency after recovery.
         enabled:                    true
+        applicability:
+          topology:                 [scale_up, scale_out_hsr]
 
       - name:                       HA Functional Test- Secondary Node Kill
         task_name:                  secondary-node-kill
@@ -118,6 +136,8 @@ test_groups:
           node maintains normal operation while the secondary node undergoes recovery, ensuring cluster
           stability and proper data synchronization after the recovery process completes.
         enabled:                    true
+        applicability:
+          topology:                 [scale_up, scale_out_hsr]
 
       - name:                       HA Functional Test- Echo B on Secondary Node
         task_name:                  secondary-echo-b
@@ -127,6 +147,8 @@ test_groups:
           procedures. The test validates that the primary node maintains operation, verifies cluster
           stability, and ensures system replication resumes correctly after the secondary node recovers.
         enabled:                    true
+        applicability:
+          topology:                 [scale_up, scale_out_hsr]
 
       - name:                       HA Functional Test- Freeze File System on Primary Node
         task_name:                  fs-freeze
@@ -136,6 +158,8 @@ test_groups:
           node running HANA database, which triggers automatic failover to the secondary node. The test
           verifies proper cluster reaction, resource migration, and data consistency after recovery.
         enabled:                    true
+        applicability:
+          topology:                 [scale_up, scale_out_hsr]
 
       - name:                       HA Functional Test- Test SBD Inquisitor kill
         task_name:                  sbd-fencing
@@ -144,6 +168,8 @@ test_groups:
           node. Tests proper fence detection, node isolation, and automated failover to ensure cluster
           integrity during hardware or communication failures.
         enabled:                    true
+        applicability:
+          topology:                 [scale_up, scale_out_hsr]
 
       - name:                       HA Functional Test- Crash index server on secondary node
         task_name:                  secondary-crash-index
@@ -153,6 +179,20 @@ test_groups:
           verifying the cluster's ability to handle secondary failures, tests automatic recovery
           mechanisms, and ensures system replication resumes properly after service restoration.
         enabled:                    true
+        applicability:
+          topology:                 [scale_up, scale_out_hsr]
+
+      - name:                       HA Functional Test- Block /hana/shared NFS
+        task_name:                  block-hana-shared
+        description: |
+          Simulates loss of the /hana/shared NFS mount on the primary master
+          nameserver by blocking the NFS server IP via iptables.  The HANA
+          resource agent monitoring operation depends on binaries stored on
+          /hana/shared; blocking access causes the monitor to fail and triggers
+          a HANA resource failover to the secondary site.
+        enabled:                    true
+        applicability:
+          topology:                 [scale_out_hsr]
 
   - name:                           HA_SCS
     test_cases:

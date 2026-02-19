@@ -67,6 +67,12 @@
         msg:                           "ipAddress: {{ item.ipAddress }} | interfaceName: {{ item.interfaceName }} | Subnet: {{ item.subnet }}"
       loop:                            "{{ network_info_parsed | list }}"
 
+    - name:                            "Determine HANA topology from inventory"
+      ansible.builtin.set_fact:
+        hana_topology:                 "{{ 'scale_out_hsr' if (database_scale_out | default(database_HANA_use_scaleout_scenario | default(false)) | bool) else 'scale_up' }}"
+      run_once:                        true
+      when:                            SAP_FUNCTIONAL_TEST_TYPE == 'DatabaseHighAvailability'
+
     - name:                            "Set the test group name based on the inputs"
       ansible.builtin.set_fact:
         test_group_name:               "{{ sap_functional_test_type_map
@@ -81,7 +87,10 @@
         test_cases:                    "{{ test_groups
                                             | selectattr('name', 'equalto', test_group_name)
                                             | map(attribute='test_cases') | list | flatten(levels=1)
-                                            | selectattr('enabled', 'equalto', true) | list }}"
+                                            | selectattr('enabled', 'equalto', true)
+                                            | selectattr('applicability.topology', 'contains',
+                                              hana_topology | default('scale_up'))
+                                            | list }}"
       run_once:                        true
 
     - name:                            "Run test cases by including them as roles"

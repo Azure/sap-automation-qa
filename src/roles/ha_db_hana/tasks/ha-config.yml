@@ -178,6 +178,7 @@
         fencing_mechanism:              "{{ database_cluster_type }}"
         pcmk_constants:                 "{{ lookup('file', 'constants.yaml') | from_yaml }}"
         saphanasr_provider:             "{{ saphanasr_provider | default('SAPHanaSR') }}"
+        hana_topology:                  "{{ hana_topology | default('scale_up') }}"
       register:                         test_result
 
     - name:                             "Set the test case status to PASSED"

@@ -17,11 +17,21 @@ from ansible.module_utils.facts.compat import ansible_facts
 
 try:
     from ansible.module_utils.get_pcmk_properties import BaseHAClusterValidator
-    from ansible.module_utils.enums import OperatingSystemFamily, HanaSRProvider
+    from ansible.module_utils.enums import (
+        OperatingSystemFamily,
+        HanaSRProvider,
+        HanaTopology,
+        TestStatus,
+    )
     from ansible.module_utils.commands import CIB_ADMIN
 except ImportError:
     from src.module_utils.get_pcmk_properties import BaseHAClusterValidator
-    from src.module_utils.enums import OperatingSystemFamily, HanaSRProvider
+    from src.module_utils.enums import (
+        OperatingSystemFamily,
+        HanaSRProvider,
+        HanaTopology,
+        TestStatus,
+    )
     from src.module_utils.commands import CIB_ADMIN
 
 DOCUMENTATION = r"""
@@ -64,6 +74,12 @@ options:
             - SAP HANA SR provider type (e.g., SAPHanaSR, SAPHanaSR-angi)
         type: str
         required: true
+    hana_topology:
+        description:
+            - SAP HANA topology type (scale_up, scale_out_hsr, scale_out_standby)
+        type: str
+        required: false
+        default: scale_up
     cib_output:
         description:
             - Output from cibadmin command to query Pacemaker configuration
@@ -173,6 +189,18 @@ class HAClusterValidator(BaseHAClusterValidator):
         "angi_hana": ".//primitive[@type='SAPHanaController']",
         "azureevents": ".//primitive[@type='azure-events-az']",
     }
+    SCALEOUT_RESOURCE_CATEGORIES = {
+        "sbd_stonith": ".//primitive[@type='external/sbd']",
+        "fence_agent": ".//primitive[@type='fence_azure_arm']",
+        "scaleout_topology": (".//clone/primitive[@type='SAPHanaTopology']"),
+        "scaleout_topology_legacy": (".//clone/primitive[@type='SAPHanaTopologyScaleOut']"),
+        "scaleout_hana": (".//primitive[@type='SAPHanaController']"),
+        "nfs_filesystem": (".//clone/primitive[@type='Filesystem']"),
+        "nfs_attribute": (".//clone/primitive[@type='attribute']"),
+        "ipaddr": ".//primitive[@type='IPaddr2']",
+        "azurelb": ".//primitive[@type='azure-lb']",
+        "azureevents": ".//primitive[@type='azure-events-az']",
+    }
 
     def __init__(
         self,
@@ -184,6 +212,7 @@ class HAClusterValidator(BaseHAClusterValidator):
         constants: dict,
         saphanasr_provider: HanaSRProvider,
         cib_output: str,
+        hana_topology: HanaTopology = HanaTopology.SCALE_UP,
         category=None,
     ):
         super().__init__(
@@ -197,11 +226,56 @@ class HAClusterValidator(BaseHAClusterValidator):
         )
         self.instance_number = instance_number
         self.saphanasr_provider = saphanasr_provider
+        self.hana_topology = hana_topology
         self.validate_from_constants()
+
+    def _get_active_resource_categories(self):
+        """
+        Get the resource categories applicable to the current topology and provider.
+
+        :return: A dictionary of resource category names to XPath expressions.
+        :rtype: dict
+        """
+        if self.hana_topology == HanaTopology.SCALE_OUT_HSR:
+            return self.SCALEOUT_RESOURCE_CATEGORIES.copy()
+
+        categories = self.RESOURCE_CATEGORIES.copy()
+        if self.saphanasr_provider == HanaSRProvider.ANGI:
+            categories.pop("topology", None)
+        else:
+            categories.pop("angi_topology", None)
+            categories.pop("angi_filesystem", None)
+            categories.pop("angi_hana", None)
+        return categories
+
+    def _get_expected_value_for_category(self, category, subcategory, name, op_name):
+        """
+        Get expected value based on category type, topology-aware.
+
+        :param category: The category of the configuration parameter.
+        :type category: str
+        :param subcategory: The subcategory of the parameter.
+        :type subcategory: str
+        :param name: The name of the configuration parameter.
+        :type name: str
+        :param op_name: The name of the operation (if applicable).
+        :type op_name: str
+        :return: The expected value for the configuration parameter.
+        :rtype: str or list or dict or None
+        """
+        all_resource_cats = set(self.RESOURCE_CATEGORIES) | set(self.SCALEOUT_RESOURCE_CATEGORIES)
+        if category in all_resource_cats:
+            return self._get_resource_expected_value(
+                resource_type=category,
+                section=subcategory,
+                param_name=name,
+                op_name=op_name,
+            )
+        return self._get_expected_value(category, name)
 
     def _parse_resources_section(self, root):
         """
-        Parse resources section with HANA-specific logic.
+        Parse resources section with topology and provider-aware logic.
 
         :param root: The XML root element to parse.
         :type root: xml.etree.ElementTree.Element
@@ -209,13 +283,14 @@ class HAClusterValidator(BaseHAClusterValidator):
         :rtype: list
         """
         parameters = []
-        resource_categories = self.RESOURCE_CATEGORIES.copy()
-        if self.saphanasr_provider == HanaSRProvider.ANGI:
-            resource_categories.pop("topology", None)
-        else:
-            resource_categories.pop("angi_topology", None)
-            resource_categories.pop("angi_filesystem", None)
-            resource_categories.pop("angi_hana", None)
+        resource_categories = self._get_active_resource_categories()
+
+        if self.hana_topology == HanaTopology.SCALE_OUT_HSR:
+            modern = root.findall(resource_categories.get("scaleout_topology", ""))
+            if modern:
+                resource_categories.pop("scaleout_topology_legacy", None)
+            else:
+                resource_categories.pop("scaleout_topology", None)
 
         for sub_category, xpath in resource_categories.items():
             elements = root.findall(xpath)
@@ -223,6 +298,47 @@ class HAClusterValidator(BaseHAClusterValidator):
                 parameters.extend(self._parse_resource(element, sub_category))
 
         return parameters
+
+    def _check_required_resources(self):
+        """
+        Check required resources using topology-aware categories.
+        """
+        if "RESOURCE_DEFAULTS" not in self.constants:
+            return
+
+        try:
+            if self.cib_output:
+                resource_scope = self._get_scope_from_cib("resources")
+            else:
+                resource_scope = self.parse_xml_output(
+                    self.execute_command_subprocess(CIB_ADMIN(scope="resources"))
+                )
+            if resource_scope is None:
+                return
+
+            all_cats = dict(self.RESOURCE_CATEGORIES)
+            all_cats.update(self.SCALEOUT_RESOURCE_CATEGORIES)
+
+            for resource_type, resource_config in (
+                self.constants["RESOURCE_DEFAULTS"].get(self.os_type, {}).items()
+            ):
+                if not isinstance(resource_config, dict):
+                    continue
+                if resource_config.get("required", False):
+                    if resource_type in all_cats:
+                        xpath = all_cats[resource_type]
+                        elements = resource_scope.findall(xpath)
+                        if not elements:
+                            self.missing_required_items.append(
+                                {
+                                    "type": "resource",
+                                    "name": resource_type,
+                                    "xpath": xpath,
+                                }
+                            )
+                            self.result["status"] = TestStatus.WARNING.value
+        except Exception as ex:
+            self.result["message"] += f"Error checking required resources: {ex!s} "
 
     def _validate_resource_constants(self):
         """
@@ -262,7 +378,14 @@ class HAClusterValidator(BaseHAClusterValidator):
         global_ini_defaults = (
             self.constants["GLOBAL_INI"]
             .get(self.os_type, {})
-            .get(self.saphanasr_provider.value, {})
+            .get(
+                (
+                    "SAPHanaController"
+                    if self.hana_topology == HanaTopology.SCALE_OUT_HSR
+                    else self.saphanasr_provider.value
+                ),
+                {},
+            )
         )
 
         try:
@@ -340,6 +463,11 @@ def main() -> None:
                 fencing_mechanism=dict(type="str"),
                 pcmk_constants=dict(type="dict"),
                 saphanasr_provider=dict(type="str"),
+                hana_topology=dict(
+                    type="str",
+                    required=False,
+                    default="scale_up",
+                ),
                 cib_output=dict(type="str", required=False, default=""),
                 os_family=dict(type="str", required=False),
                 filter=dict(type="str", required=False, default="os_family"),
@@ -357,6 +485,11 @@ def main() -> None:
                 fencing_mechanism=dict(type="str"),
                 pcmk_constants=dict(type="dict"),
                 saphanasr_provider=dict(type="str"),
+                hana_topology=dict(
+                    type="str",
+                    required=False,
+                    default="scale_up",
+                ),
                 cib_output=dict(type="str", required=False, default=""),
                 os_family=dict(type="str", required=False),
             )
@@ -371,6 +504,7 @@ def main() -> None:
         fencing_mechanism=module.params["fencing_mechanism"],
         constants=module.params["pcmk_constants"],
         saphanasr_provider=HanaSRProvider(module.params["saphanasr_provider"]),
+        hana_topology=HanaTopology(module.params.get("hana_topology", "scale_up")),
         cib_output=module.params.get("cib_output"),
     )
 

@@ -1,0 +1,77 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+
+# /*---------------------------------------------------------------------------|
+# |    Scale-out HSR Pre-Validation Tasks                                      |
+# |    Validates multi-node HANA topology: sites, workers, majority maker      |
+# /*---------------------------------------------------------------------------|
+
+- name:                             "Scale-out HSR: Set site and node facts"
+  ansible.builtin.set_fact:
+    master_nameserver_node:         "{{ cluster_status_pre.primary_node }}"
+    primary_site_nodes:             "{{ cluster_status_pre.primary_site_nodes }}"
+    secondary_site_nodes:           "{{ cluster_status_pre.secondary_site_nodes }}"
+    majority_maker_node:            "{{ cluster_status_pre.majority_maker_node }}"
+    primary_site_name:              "{{ cluster_status_pre.primary_site_name }}"
+    secondary_site_name:            "{{ cluster_status_pre.secondary_site_name }}"
+
+- name:                             "Scale-out HSR: Verify majority maker is identified and not running HANA"
+  ansible.builtin.assert:
+    that:
+      - majority_maker_node | default('') | length > 0
+    fail_msg: >-
+      Majority maker node not found. Scale-out HSR requires a
+      majority maker node that is online in the cluster but
+      not running HANA (no site attribute, no clone state).
+    success_msg: >-
+      Majority maker node '{{ majority_maker_node }}' is online
+      and not running HANA (verified by absence of site/clone
+      attributes).
+
+- name:                             "Scale-out HSR: Verify primary site has worker nodes"
+  ansible.builtin.assert:
+    that:
+      - primary_site_nodes | length > 0
+    fail_msg: >-
+      No worker nodes found on primary site. Expected at
+      least 1 HANA worker node on the primary site.
+    success_msg: >-
+      Primary site '{{ primary_site_name }}' has
+      {{ primary_site_nodes | length }} node(s):
+      {{ primary_site_nodes | join(', ') }}
+
+- name:                             "Scale-out HSR: Verify secondary site has worker nodes"
+  ansible.builtin.assert:
+    that:
+      - secondary_site_nodes | length > 0
+    fail_msg: >-
+      No worker nodes found on secondary site. Expected at
+      least 1 HANA worker node on the secondary site.
+    success_msg: >-
+      Secondary site '{{ secondary_site_name }}' has
+      {{ secondary_site_nodes | length }} node(s):
+      {{ secondary_site_nodes | join(', ') }}
+
+- name:                             "Scale-out HSR: Verify master nameserver is on primary site"
+  ansible.builtin.assert:
+    that:
+      - master_nameserver_node | default('') | length > 0
+      - master_nameserver_node in primary_site_nodes
+    fail_msg: >-
+      Master nameserver '{{ master_nameserver_node }}' is not
+      identified or not a member of primary site
+      '{{ primary_site_name }}'. The PROMOTED node must belong
+      to the primary site.
+    success_msg: >-
+      Master nameserver '{{ master_nameserver_node }}' confirmed
+      on primary site '{{ primary_site_name }}'.
+
+- name:                             "Scale-out HSR: Log cluster topology"
+  ansible.builtin.debug:
+    msg:
+      - "HANA Topology:         scale_out_hsr"
+      - "Primary site:          {{ primary_site_name }} ({{ primary_site_nodes | length }} nodes: {{ primary_site_nodes | join(', ') }})"
+      - "Secondary site:        {{ secondary_site_name }} ({{ secondary_site_nodes | length }} nodes: {{ secondary_site_nodes | join(', ') }})"
+      - "Master nameserver:     {{ master_nameserver_node }}"
+      - "Majority maker:        {{ majority_maker_node }}"
+      - "Total cluster nodes:   {{ (primary_site_nodes | length) + (secondary_site_nodes | length) + 1 }}"
