@@ -29,10 +29,10 @@ from ansible.module_utils.basic import AnsibleModule
 
 try:
     from ansible.module_utils.sap_automation_qa import SapAutomationQA
-    from ansible.module_utils.enums import TelemetryDataDestination, TestStatus
+    from ansible.module_utils.enums import HanaSRProvider, TelemetryDataDestination, TestStatus
 except ImportError:
     from src.module_utils.sap_automation_qa import SapAutomationQA
-    from src.module_utils.enums import TelemetryDataDestination, TestStatus
+    from src.module_utils.enums import HanaSRProvider, TelemetryDataDestination, TestStatus
 
 DOCUMENTATION = r"""
 ---
@@ -424,6 +424,13 @@ class TelemetryDataSender(SapAutomationQA):
                 "SapSid": system_context.get("sap_sid", ""),
                 "DbFencingType": system_context.get("high_availability_agent", ""),
                 "ScsFencingType": system_context.get("high_availability_agent", ""),
+                "SAPHanaSRProvider": common_vars.get("saphanasr_provider", ""),
+                "SAPHanaTopology": (
+                    "Scale Out"
+                    if common_vars.get("saphanasr_provider", "")
+                    == HanaSRProvider.SCALEOUT.value
+                    else "Scale Up"
+                ),
             }
 
             telemetry_batch.append(entry)

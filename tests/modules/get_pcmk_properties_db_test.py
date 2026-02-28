@@ -116,6 +116,32 @@ DUMMY_XML_RESOURCES = """<resources>
       <nvpair name="SID" value="HDB"/>
     </instance_attributes>
   </primitive>
+  <clone id="hana_nfs_s1_active-clone">
+    <meta_attributes id="hana_nfs_s1_active-clone-meta_attributes">
+      <nvpair name="clone-node-max" value="1"/>
+      <nvpair name="interleave" value="true"/>
+    </meta_attributes>
+    <primitive id="hana_nfs_s1_active" class="ocf" provider="pacemaker" type="attribute">
+      <instance_attributes id="hana_nfs_s1_active-instance_attributes">
+        <nvpair name="active_value" value="true"/>
+        <nvpair name="inactive_value" value="false"/>
+        <nvpair name="name" value="hana_nfs_s1_active"/>
+      </instance_attributes>
+    </primitive>
+  </clone>
+  <clone id="hana_nfs_s2_active-clone">
+    <meta_attributes id="hana_nfs_s2_active-clone-meta_attributes">
+      <nvpair name="clone-node-max" value="1"/>
+      <nvpair name="interleave" value="true"/>
+    </meta_attributes>
+    <primitive id="hana_nfs_s2_active" class="ocf" provider="pacemaker" type="attribute">
+      <instance_attributes id="hana_nfs_s2_active-instance_attributes">
+        <nvpair name="active_value" value="true"/>
+        <nvpair name="inactive_value" value="false"/>
+        <nvpair name="name" value="hana_nfs_s2_active"/>
+      </instance_attributes>
+    </primitive>
+  </clone>
 </resources>"""
 
 DUMMY_XML_FULL_CIB = f"""<?xml version="1.0" encoding="UTF-8"?>
@@ -378,7 +404,7 @@ DUMMY_CONSTANTS = {
                 },
                 "instance_attributes": {"SID": {"value": "HDB", "required": False}},
             },
-            "nfs_filesystem": {
+            "scaleout_filesystem": {
                 "instance_attributes": {
                     "fast_stop": {"value": "no", "required": False},
                 },
@@ -643,6 +669,32 @@ class TestHAClusterValidator:
             builtins.open = original_open
 
     @pytest.fixture
+    def validator_scaleout(self, mock_xml_outputs):
+        """
+        Fixture for creating a TestableHAClusterValidator instance with SCALEOUT provider.
+        """
+        mock_execute = MockExecuteCommand(mock_xml_outputs)
+        mock_open = MockOpen(DUMMY_GLOBAL_INI_SAPHANASR)
+        original_open = builtins.open
+        builtins.open = mock_open
+        try:
+            validator = TestableHAClusterValidator(
+                mock_execute,
+                mock_open,
+                os_type=OperatingSystemFamily.REDHAT,
+                sid="HDB",
+                instance_number="00",
+                fencing_mechanism="sbd",
+                virtual_machine_name="vmname",
+                constants=DUMMY_CONSTANTS,
+                saphanasr_provider=HanaSRProvider.SCALEOUT,
+                cib_output="",
+            )
+            yield validator
+        finally:
+            builtins.open = original_open
+
+    @pytest.fixture
     def validator_with_cib(self):
         """
         Fixture for creating a validator with CIB output.
@@ -734,6 +786,45 @@ class TestHAClusterValidator:
         assert len(params) > 0
         categories = [p.get("category", "") for p in params]
         assert not any(cat == "topology" for cat in categories)
+        assert not any("nfs_attribute" in cat for cat in categories)
+
+    def test_parse_resources_section_scaleout(self, validator_scaleout):
+        """
+        Test _parse_resources_section method with SCALEOUT provider.
+        """
+        xml_str = DUMMY_XML_RESOURCES
+        root = ET.fromstring(xml_str)
+        params = validator_scaleout._parse_resources_section(root)
+        assert len(params) > 0
+        categories = [p.get("category", "") for p in params]
+        assert not any("angi_hana" in cat for cat in categories)
+        assert not any("angi_filesystem" in cat for cat in categories)
+        assert any("nfs_attribute" in cat for cat in categories)
+
+    def test_nfs_attribute_parameters(self, validator_scaleout):
+        """
+        Test NFS attribute resource parameters are parsed and validated.
+        """
+        xml_str = DUMMY_XML_RESOURCES
+        root = ET.fromstring(xml_str)
+        params = validator_scaleout._parse_resources_section(root)
+        nfs_params = [
+            p for p in params if "nfs_attribute" in p.get("category", "")
+        ]
+        assert len(nfs_params) > 0
+        nfs_names = [p["name"] for p in nfs_params]
+        assert "active_value" in nfs_names
+        assert "inactive_value" in nfs_names
+        assert "clone-node-max" in nfs_names
+        assert "interleave" in nfs_names
+        for p in nfs_params:
+            if p["name"] in ("active_value", "inactive_value", "clone-node-max", "interleave"):
+                assert p["status"] == TestStatus.SUCCESS.value, (
+                    f"NFS param {p['name']} expected SUCCESS, got {p['status']}"
+                )
+        info_params = [p for p in nfs_params if p["name"] == "name"]
+        for p in info_params:
+            assert p["status"] == TestStatus.INFO.value
 
     def test_parse_global_ini_parameters_saphanasr(self, validator):
         """
@@ -1006,11 +1097,11 @@ class TestHAClusterValidator:
         """
         scaleout = HAClusterValidator.SCALEOUT_RESOURCE_CATEGORIES
         scaleup = HAClusterValidator.RESOURCE_CATEGORIES
-        assert "nfs_filesystem" in scaleout
+        assert "scaleout_filesystem" in scaleout
         assert "nfs_attribute" in scaleout
         assert "scaleout_hana" in scaleout
         assert "scaleout_topology" in scaleout
-        assert "nfs_filesystem" not in scaleup
+        assert "scaleout_filesystem" not in scaleup
         assert "scaleout_hana" not in scaleup
 
     def test_scaleout_parse_resources_finds_nfs(self, validator_scaleout):
@@ -1020,7 +1111,7 @@ class TestHAClusterValidator:
         root = ET.fromstring(DUMMY_XML_SCALEOUT_RESOURCES)
         params = validator_scaleout._parse_resources_section(root)
         categories = [p.get("category", "") for p in params]
-        assert any("nfs_filesystem" in cat for cat in categories)
+        assert any("scaleout_filesystem" in cat for cat in categories)
 
     def test_scaleout_parse_resources_finds_controller(self, validator_scaleout):
         """
@@ -1097,7 +1188,7 @@ class TestHAClusterValidator:
         Test that scale-out validator returns scaleout categories.
         """
         cats = validator_scaleout._get_active_resource_categories()
-        assert "nfs_filesystem" in cats
+        assert "scaleout_filesystem" in cats
         assert "nfs_attribute" in cats
         assert "scaleout_hana" in cats
         assert "scaleout_topology" in cats
@@ -1126,7 +1217,7 @@ class TestHAClusterValidator:
         cats = validator._get_active_resource_categories()
         assert "topology" in cats
         assert "hana" in cats
-        assert "nfs_filesystem" not in cats
+        assert "scaleout_filesystem" not in cats
         assert "scaleout_hana" not in cats
 
         assert validator.hana_topology == HanaTopology.SCALE_UP

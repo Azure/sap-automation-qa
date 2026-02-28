@@ -60,6 +60,7 @@ class HanaSRProvider(Enum):
 
     SAPHANASR = "SAPHanaSR"
     ANGI = "SAPHanaSR-angi"
+    SCALEOUT = "SAPHanaSR-ScaleOut"
 
 
 class HanaTopology(str, Enum):

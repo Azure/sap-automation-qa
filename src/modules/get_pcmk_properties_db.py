@@ -195,8 +195,8 @@ class HAClusterValidator(BaseHAClusterValidator):
         "scaleout_topology": (".//clone/primitive[@type='SAPHanaTopology']"),
         "scaleout_topology_legacy": (".//clone/primitive[@type='SAPHanaTopologyScaleOut']"),
         "scaleout_hana": (".//primitive[@type='SAPHanaController']"),
-        "nfs_filesystem": (".//clone/primitive[@type='Filesystem']"),
-        "nfs_attribute": (".//clone/primitive[@type='attribute']"),
+        "scaleout_filesystem": (".//clone/primitive[@type='Filesystem']"),
+        "nfs_attribute": ".//clone",
         "ipaddr": ".//primitive[@type='IPaddr2']",
         "azurelb": ".//primitive[@type='azure-lb']",
         "azureevents": ".//primitive[@type='azure-events-az']",
@@ -273,6 +273,77 @@ class HAClusterValidator(BaseHAClusterValidator):
             )
         return self._get_expected_value(category, name)
 
+    _SCALEOUT_SKIP_CRM_CONFIG = {"priority-fencing-delay"}
+    _SCALEOUT_SKIP_RSC_DEFAULTS = {"priority"}
+
+    def _validate_basic_constants(self, category):
+        """
+        Override base to skip parameters not applicable
+        to scale-out clusters.
+        """
+        if self.saphanasr_provider == HanaSRProvider.SCALEOUT:
+            skip_set = set()
+            if category == "crm_config":
+                skip_set = self._SCALEOUT_SKIP_CRM_CONFIG
+            elif category == "rsc_defaults":
+                skip_set = self._SCALEOUT_SKIP_RSC_DEFAULTS
+
+            if skip_set:
+                orig = self.constants
+                _, constants_key = self.BASIC_CATEGORIES[category]
+                filtered = {
+                    k: v
+                    for k, v in self.constants.get(
+                        constants_key, {}
+                    ).items()
+                    if k not in skip_set
+                }
+                self.constants = {**orig, constants_key: filtered}
+                try:
+                    return super()._validate_basic_constants(
+                        category
+                    )
+                finally:
+                    self.constants = orig
+
+        return super()._validate_basic_constants(category)
+
+    def _parse_os_parameters(self):
+        """
+        Override base to apply >= comparison for corosync
+        totem parameters on scale-out clusters.
+        """
+        parameters = super()._parse_os_parameters()
+        if self.saphanasr_provider != HanaSRProvider.SCALEOUT:
+            return parameters
+
+        _GTE_PARAMS = {
+            "runtime.config.totem.token": 30000,
+            "runtime.config.totem.consensus": 36000,
+        }
+        for param in parameters:
+            if param.get("name") not in _GTE_PARAMS:
+                continue
+            threshold = _GTE_PARAMS[param["name"]]
+            raw = param.get("value", "")
+            try:
+                actual = int(
+                    raw.split("=")[-1].strip()
+                )
+            except (ValueError, IndexError):
+                continue
+            if actual >= threshold:
+                param["status"] = "PASSED"
+                param["expected_value"] = (
+                    f">= {threshold}"
+                )
+            else:
+                param["status"] = "FAILED"
+                param["expected_value"] = (
+                    f">= {threshold}"
+                )
+        return parameters
+
     def _parse_resources_section(self, root):
         """
         Parse resources section with topology and provider-aware logic.
@@ -295,6 +366,14 @@ class HAClusterValidator(BaseHAClusterValidator):
         for sub_category, xpath in resource_categories.items():
             elements = root.findall(xpath)
             for element in elements:
+                if (
+                    sub_category == "nfs_attribute"
+                    and element.find(
+                        "primitive[@type='attribute']"
+                    )
+                    is None
+                ):
+                    continue
                 parameters.extend(self._parse_resource(element, sub_category))
 
         return parameters
@@ -408,7 +487,7 @@ class HAClusterValidator(BaseHAClusterValidator):
                     properties_slice = global_ini_content[section_start + 1 : next_section_start]
 
                     global_ini_properties = {
-                        key.strip(): val.strip()
+                        key.strip(): val.strip().rstrip("/")
                         for line in properties_slice
                         for key, sep, val in [line.partition("=")]
                         if sep and key.strip()

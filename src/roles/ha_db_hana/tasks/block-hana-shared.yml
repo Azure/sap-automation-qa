@@ -83,36 +83,6 @@
                                         cluster_status_test_execution.primary_node != "" and
                                         cluster_status_test_execution.primary_node != cluster_status_pre.primary_node
 
-    - name:                             "Test Execution: Restore /hana/shared access on old primary"
-      when:                             ansible_hostname == cluster_status_pre.primary_node
-      block:
-        - name:                         "Test Execution: Remove iptables rule blocking /hana/shared NFS"
-          ansible.builtin.shell: |
-                                        iptables -D OUTPUT -d {{ hana_shared_nfs_ip }} -j DROP 2>/dev/null;
-                                        iptables -D INPUT  -s {{ hana_shared_nfs_ip }} -j DROP 2>/dev/null;
-                                        true
-          register:                     firewall_rule_deleted
-          changed_when:                 true
-
-        - name:                         "Test Execution: Re-mount /hana/shared if needed"
-          ansible.builtin.shell: |
-                                        if ! mountpoint -q /hana/shared; then
-                                          mount /hana/shared
-                                        fi
-          register:                     hana_shared_remount
-          changed_when:                 "'mounted' not in hana_shared_remount.stdout | default('')"
-          failed_when:                  false
-
-        - name:                         "Test Execution: Ensure Pacemaker cluster is running on this node"
-          ansible.builtin.shell: |
-                                        if ! pcs cluster status >/dev/null 2>&1; then
-                                          pcs cluster start
-                                          sleep 10
-                                        fi
-          register:                     cluster_start_result
-          changed_when:                 "'started' in cluster_start_result.stdout | default('')"
-          failed_when:                  false
-
     - name:                             "Test Execution: Manual re-registration of old primary"
       when:
                                         - ansible_hostname == cluster_status_pre.primary_node
@@ -150,18 +120,8 @@
             executable:                 /bin/bash
 
     - name:                             "Test Execution: Cleanup and verify recovery"
-      when:                             ansible_hostname == cluster_status_pre.primary_node
+      when:                             ansible_hostname == cluster_status_pre.secondary_node
       block:
-        - name:                         "Test Execution: CleanUp any failed resource"
-          ansible.builtin.command:      "crm_resource --cleanup"
-          register:                     cleanup_failed_resource_post
-          changed_when:                 cleanup_failed_resource_post.rc == 0
-          ignore_errors:                true
-
-        - name:                         "Test Execution: Wait for cluster stabilisation"
-          ansible.builtin.wait_for:
-            timeout:                    "{{ default_timeout }}"
-
         - name:                         "Test Execution: Validate HANA DB cluster status (post recovery)"
           get_cluster_status_db:
             db_instance_number:         "{{ db_instance_number }}"
@@ -180,47 +140,73 @@
                                         (
                                           (hana_topology | default('scale_up') == 'scale_out_hsr' and
                                            cluster_status_post.primary_node in cluster_status_pre.secondary_site_nodes and
-                                           cluster_status_post.primary_node != cluster_status_pre.primary_node)
+                                           cluster_status_post.primary_node != cluster_status_pre.primary_node and
+                                           cluster_status_pre.primary_node in cluster_status_post.secondary_site_nodes)
                                           or
                                           (hana_topology | default('scale_up') != 'scale_out_hsr' and
                                            cluster_status_post.primary_node == cluster_status_pre.secondary_node and
                                            cluster_status_post.secondary_node == cluster_status_pre.primary_node)
                                         )
 
-    - name:                             "Test Execution: Determine result"
-      when:                             ansible_hostname == cluster_status_pre.primary_node
-      block:
+        - name:                         "Test Execution: CleanUp any failed resource"
+          ansible.builtin.command:      "crm_resource --cleanup"
+          register:                     cleanup_failed_resource_post
+          changed_when:                 cleanup_failed_resource_post.rc == 0
+          ignore_errors:                true
+
+        - name:                         "Test Execution: CleanUp any failed resource"
+          ansible.builtin.command:      "crm_resource --cleanup"
+          register:                     cleanup_failed_resource_post
+          changed_when:                 cleanup_failed_resource_post.rc == 0
+          ignore_errors:                true
+
         - name:                         "Test Execution: Determine test execution status"
           ansible.builtin.set_fact:
             test_execution_status:      "{{ 'PASSED' if (
                                             (hana_topology | default('scale_up') == 'scale_out_hsr' and
                                              cluster_status_post.primary_node in cluster_status_pre.secondary_site_nodes and
-                                             cluster_status_post.primary_node != cluster_status_pre.primary_node)
+                                             cluster_status_post.primary_node != cluster_status_pre.primary_node and
+                                             cluster_status_pre.primary_node in cluster_status_post.secondary_site_nodes)
                                             or
                                             (hana_topology | default('scale_up') != 'scale_out_hsr' and
                                              cluster_status_post.primary_node == cluster_status_pre.secondary_node and
                                              cluster_status_post.secondary_node == cluster_status_pre.primary_node)
                                           ) else 'FAILED' }}"
 
-        - name:                         "Test Execution: Stop timer"
+    - name:                             "Post Validations: Consolidate results on primary"
+      when:                             ansible_hostname == cluster_status_pre.primary_node
+      block:
+        - name:                         "Post Validations: Pull results from secondary node"
           ansible.builtin.set_fact:
             test_execution_end:         "{{ now(utc=true, fmt='%Y-%m-%d %H:%M:%S') }}"
+            cluster_status_post:        "{{ hostvars[cluster_status_pre.secondary_node].cluster_status_post
+                                            | default({}) }}"
+            cluster_status_test_execution: "{{ hostvars[
+                                              cluster_status_pre.secondary_site_nodes[0]
+                                              if hana_topology | default('scale_up') == 'scale_out_hsr'
+                                              else cluster_status_pre.secondary_node
+                                            ].cluster_status_test_execution | default({}) }}"
+            test_execution_status:      "{{ hostvars[cluster_status_pre.secondary_node].test_execution_status
+                                            | default('FAILED') }}"
+            cleanup_failed_resource_post: "{{ hostvars[cluster_status_pre.secondary_node].cleanup_failed_resource_post
+                                            | default('N/A') }}"
 
-        - name:                         "Set test case message and details"
+        - name:                         "Post Validations: Set test case message and details"
           ansible.builtin.set_fact:
             test_case_message_from_test_case: |
                                         NFS IP blocked:  {{ hana_shared_nfs_ip }}
                                         Old primary:     {{ cluster_status_pre.primary_node }}
-                                        New primary:     {{ cluster_status_post.primary_node }}
+                                        New primary:     {{ cluster_status_post.primary_node | default('') }}
                                         Old secondary:   {{ cluster_status_pre.secondary_node }}
-                                        New secondary:   {{ cluster_status_post.secondary_node }}
+                                        New secondary:   {{ cluster_status_post.secondary_node | default('') }}
             test_case_details_from_test_case: {
                                         "Pre Validations: Remove any location_constraints": "{{ location_constraints_results }}",
                                         "Pre Validations: Validate HANA DB cluster status": "{{ cluster_status_pre }}",
                                         "Pre Validations: CleanUp any failed resource": "{{ cleanup_failed_resource_pre }}",
                                         "Test Execution: /hana/shared NFS IP": "{{ hana_shared_nfs_ip }}",
-                                        "Test Execution: Firewall rule created": "{{ firewall_rule_created }}",
+                                        "Test Execution: Firewall rule created": "{{ firewall_rule_created | default('N/A') }}",
                                         "Test Execution: Cluster status after block": "{{ cluster_status_test_execution | default('N/A') }}",
+                                        "Test Execution: Old primary failed state": "{{ cluster_status_failed | default('N/A') }}",
                                         "Test Execution: Firewall rule deleted": "{{ firewall_rule_deleted | default('Node rebooted') }}",
                                         "Test Execution: /hana/shared re-mount": "{{ hana_shared_remount | default('N/A') }}",
                                         "Test Execution: SR re-register": "{{ hana_sr_register_result | default('AUTOMATED_REGISTER=true') }}",
@@ -241,6 +227,7 @@
       register:                         rescue_firewall_cleanup
       changed_when:                     true
       failed_when:                      false
+      ignore_unreachable:               true
       when:                             ansible_hostname == cluster_status_pre.primary_node and
                                         hana_shared_nfs_ip is defined
 
@@ -251,6 +238,7 @@
                                           mount /hana/shared
                                         fi
       failed_when:                      false
+      ignore_unreachable:               true
       when:                             ansible_hostname == cluster_status_pre.primary_node
 
     - name:                             "Rescue operation"

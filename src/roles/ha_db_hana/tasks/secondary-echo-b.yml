@@ -129,7 +129,7 @@
                                         "Pre Validations: Remove any location_constraints": "{{ location_constraints_results }}",
                                         "Pre Validations: Validate HANA DB cluster status": "{{ cluster_status_pre }}",
                                         "Pre Validations: CleanUp any failed resource": "{{ cleanup_failed_resource_pre }}",
-                                        "Test Execution: Echo b results": "{{ echo_b_result }}",
+                                        "Test Execution: Echo b results": "{{ hostvars[cluster_status_pre.secondary_node].echo_b_result | default('N/A') }}",
                                         "Post Validations: Validate HANA DB cluster status": "{{ cluster_status_post }}",
                                         }
 

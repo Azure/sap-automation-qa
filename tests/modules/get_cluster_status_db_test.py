@@ -315,6 +315,22 @@ class TestHanaClusterStatusCheckerScaleOutHSR:
     Test cases for HanaClusterStatusChecker with scale-out HSR topology.
     """
 
+    def test_get_cluster_parameters_skips_priority_fencing_delay(
+        self, mocker, scaleout_checker_classic
+    ):
+        """
+        Verify PRIORITY_FENCING_DELAY is not queried for scale-out.
+        """
+        mocker.patch.object(
+            scaleout_checker_classic,
+            "execute_command_subprocess",
+            return_value="true",
+        )
+        scaleout_checker_classic._get_cluster_parameters()
+        assert scaleout_checker_classic.result["AUTOMATED_REGISTER"] == "true"
+        assert scaleout_checker_classic.result["PRIORITY_FENCING_DELAY"] == ""
+        scaleout_checker_classic.execute_command_subprocess.assert_called_once()
+
     @pytest.fixture
     def scaleout_checker_classic(self):
         """

@@ -8,10 +8,8 @@
 - name:                                 "High Availability Checks"
   become:                               true
   block:
-    - name:                             "Get the SAPHanaSR provider (SUSE only)"
-      when:                             >-
-                                        (ansible_os_family | upper) == "SUSE" and
-                                        role == 'DB'
+    - name:                             "Get the SAPHanaSR provider"
+      when:                             role == 'DB'
       ansible.builtin.include_tasks:    "roles/misc/tasks/get-saphanasr-provider.yml"
 
     - name:                             "Execute HA DB Configuration Module"

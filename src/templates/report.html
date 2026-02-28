@@ -337,6 +337,12 @@
 
               {% if first_result.TestGroupName|default('') == 'DatabaseHighAvailability' %}
                   {% set properties = properties + [{'label': 'DB Fencing Agent', 'value': first_result.DbFencingType|default('N/A')}] %}
+                  {% if first_result.SAPHanaSRProvider|default('') %}
+                      {% set properties = properties + [{'label': 'SAPHanaSR Provider', 'value': first_result.SAPHanaSRProvider|default('N/A')}] %}
+                  {% endif %}
+                  {% if first_result.SAPHanaTopology|default('') %}
+                      {% set properties = properties + [{'label': 'SAPHana Topology', 'value': first_result.SAPHanaTopology|default('N/A')}] %}
+                  {% endif %}
               {% elif first_result.TestGroupName|default('') == 'CentralServicesHighAvailability' %}
                   {% set properties = properties + [{'label': 'SCS Fencing Agent', 'value': first_result.ScsFencingType|default('N/A')}] %}
               {% endif %}

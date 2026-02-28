@@ -61,11 +61,10 @@
   become_user:                          root
   block:
     - name:                             "Get the SAPHanaSR provider"
-      when:                             (ansible_os_family | upper) == "SUSE"
       ansible.builtin.include_tasks:    "roles/misc/tasks/get-saphanasr-provider.yml"
 
     - name:                             "Pre validation: Get HANA resource id for saphanasr_angi"
-      when:                             saphanasr_provider | default('SAPHanaSR') == "SAPHanaSR-angi"
+      when:                             saphanasr_provider | default('SAPHanaSR') in ["SAPHanaSR-angi", "SAPHanaSR-ScaleOut"]
       block:
         - name:                         "Pre validation: Get HANA clone resource id for saphanasr_angi"
           become:                       true
@@ -194,7 +193,7 @@
     - name:                             "Test case failed"
       ansible.builtin.set_fact:
           test_case_status:             "FAILED"
-          test_case_details:            "{{ test_result }}"
+          test_case_details:            "{{ test_result | default(ansible_failed_result | default('Pre-validation failed')) }}"
           test_case_message:            "{{ ansible_failed_result }}"
           test_case_hostname:           "{{ virtual_host }}"
           package_versions:             "{{ packages_list.details }}"

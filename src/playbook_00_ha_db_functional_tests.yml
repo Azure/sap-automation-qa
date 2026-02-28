@@ -28,11 +28,12 @@
       ansible.builtin.command:
         cmd:                            >-
                                         az login --identity
-                                        {% if user_assigned_identity_client_id | default('') | length > 0
-                                        and user_assigned_identity_client_id != '00000000-0000-0000-0000-000000000000' %}
+                                        {% if user_assigned_identity_client_id | default('', true) | length > 0
+                                        and user_assigned_identity_client_id | default('', true) != '00000000-0000-0000-0000-000000000000' %}
                                         --client-id {{ user_assigned_identity_client_id }}
                                         {% endif %}
       changed_when:                     false
+      ignore_errors:                    true
 
 - hosts:                               "{{ sap_sid | upper }}_DB"
   name:                                "Host tasks"
@@ -110,6 +111,10 @@
 
     - name:                            "Render HTML report for the test group logs"
       ansible.builtin.include_tasks:   "./roles/misc/tasks/render-html-report.yml"
+      when:                            test_group_name is defined
+
+    - name:                            "Display test execution summary"
+      ansible.builtin.include_tasks:   "./roles/misc/tasks/display-test-summary.yml"
       when:                            test_group_name is defined
 
     - name:                            "Debug the group_invocation_id"

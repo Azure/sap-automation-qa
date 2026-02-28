@@ -419,7 +419,7 @@ class BaseHAClusterValidator(SapAutomationQA, ABC):
         if category.endswith("_meta"):
             param_dict = self._parse_nvpair_elements(
                 elements=element.findall(".//nvpair"),
-                category=category.split("_")[0],
+                category=category.rsplit("_meta", 1)[0],
                 subcategory="meta_attributes",
             )
             parameters.extend(param_dict)

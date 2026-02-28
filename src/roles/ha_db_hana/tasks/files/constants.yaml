@@ -71,10 +71,18 @@ CONSTRAINTS:
     rsc-role:
       value:                        "Started"
       required:                     false
+    with-rsc-role:
+      value:                        ["Master", "Promoted"]
+      required:                     false
 
   rsc_order:
     kind:
-      value:                        "Optional"
+      value:                        ["Optional", "Mandatory"]
+      required:                     false
+
+  rsc_location:
+    score:
+      value:                        "-INFINITY"
       required:                     false
 
 # === Valid Configurations for different OS versions ===
@@ -320,6 +328,19 @@ RESOURCE_DEFAULTS:
         priority:
           value:                    "100"
           required:                 false
+
+    scaleout_hana:
+      required:                     false
+      meta_attributes:
+        clone-node-max:
+          value:                    "1"
+          required:                 false
+        master-max:
+          value:                    "1"
+          required:                 false
+        interleave:
+          value:                    "true"
+          required:                 false
       instance_attributes:
         PREFER_SITE_TAKEOVER:
           value:                    "true"
@@ -360,6 +381,9 @@ RESOURCE_DEFAULTS:
             value:                  ["320", "320s"]
             required:               false
         monitor:
+          interval:
+            value:                  ["60", "60s", "61", "61s"]
+            required:               false
           timeout:
             value:                  ["700", "700s"]
             required:               false
@@ -378,9 +402,20 @@ RESOURCE_DEFAULTS:
           timeout:
             value:                  ["20", "20s"]
             required:               false
+        start:
+          interval:
+            value:                  ["0", "0s"]
+            required:               false
+          timeout:
+            value:                  ["60", "60s"]
+            required:               false
 
     filesystem:
       required:                     false
+      instance_attributes:
+        fstype:
+          value:                    ["nfs", "nfs4"]
+          required:                 false
       meta_attributes:
         clone-node-max:
           value:                    "1"
@@ -490,12 +525,11 @@ RESOURCE_DEFAULTS:
             value:                  ["10", "10s"]
             required:               false
 
-    # === Scale-Out HSR Resources (SUSE) ===
-    nfs_filesystem:
+    scaleout_filesystem:
       required:                     false
       instance_attributes:
-        fast_stop:
-          value:                    "no"
+        fstype:
+          value:                    ["nfs", "nfs4"]
           required:                 false
       meta_attributes:
         clone-node-max:
@@ -503,104 +537,31 @@ RESOURCE_DEFAULTS:
           required:                 false
         interleave:
           value:                    "true"
-          required:                 false
-      operations:
-        monitor:
-          interval:
-            value:                  ["20", "20s"]
-            required:               false
-          timeout:
-            value:                  ["120", "120s"]
-            required:               false
-        start:
-          interval:
-            value:                  ["0", "0s"]
-            required:               false
-          timeout:
-            value:                  ["120", "120s"]
-            required:               false
-        stop:
-          interval:
-            value:                  ["0", "0s"]
-            required:               false
-          timeout:
-            value:                  ["120", "120s"]
-            required:               false
-
-    nfs_attribute:
-      required:                     false
-      instance_attributes:
-        active_value:
-          value:                    "true"
-          required:                 false
-        inactive_value:
-          value:                    "false"
-          required:                 false
-      meta_attributes:
-        clone-node-max:
-          value:                    "1"
-          required:                 false
-        interleave:
-          value:                    "true"
-          required:                 false
-
-    scaleout_hana:
-      required:                     false
-      meta_attributes:
-        notify:
-          value:                    "true"
-          required:                 false
-        clone-node-max:
-          value:                    "1"
           required:                 false
         target-role:
           value:                    "Started"
           required:                 false
-        interleave:
-          value:                    "true"
-          required:                 false
-      instance_attributes:
-        PREFER_SITE_TAKEOVER:
-          value:                    "true"
-          required:                 false
-        DUPLICATE_PRIMARY_TIMEOUT:
-          value:                    "7200"
-          required:                 false
-        AUTOMATED_REGISTER:
-          value:                    "true"
-          required:                 false
       operations:
+        monitor:
+          interval:
+            value:                  ["120", "120s"]
+            required:               false
+          timeout:
+            value:                  ["120", "120s"]
+            required:               false
         start:
           interval:
             value:                  ["0", "0s"]
             required:               false
           timeout:
-            value:                  ["3600", "3600s"]
+            value:                  ["120", "120s"]
             required:               false
         stop:
           interval:
             value:                  ["0", "0s"]
             required:               false
           timeout:
-            value:                  ["3600", "3600s"]
-            required:               false
-        promote:
-          interval:
-            value:                  ["0", "0s"]
-            required:               false
-          timeout:
-            value:                  ["3600", "3600s"]
-            required:               false
-        demote:
-          interval:
-            value:                  ["0", "0s"]
-            required:               false
-          timeout:
-            value:                  ["320", "320s"]
-            required:               false
-        monitor:
-          timeout:
-            value:                  ["700", "700s"]
+            value:                  ["120", "120s"]
             required:               false
 
     scaleout_topology:
@@ -664,6 +625,9 @@ RESOURCE_DEFAULTS:
         monitor:
           interval:
             value:                  ["3600", "3600s"]
+            required:               false
+          timeout:
+            value:                  ["120", "120s"]
             required:               false
 
     sbd_stonith:
@@ -806,6 +770,82 @@ RESOURCE_DEFAULTS:
             value:                  ["700", "700s"]
             required:               false
 
+    scaleout_hana:
+      required:                     false
+      meta_attributes:
+        clone-node-max:
+          value:                    "1"
+          required:                 false
+        master-max:
+          value:                    "1"
+          required:                 false
+        promotable:
+          value:                    "true"
+          required:                 false
+        interleave:
+          value:                    "true"
+          required:                 false
+      instance_attributes:
+        PREFER_SITE_TAKEOVER:
+          value:                    "true"
+          required:                 false
+        DUPLICATE_PRIMARY_TIMEOUT:
+          value:                    "7200"
+          required:                 false
+        AUTOMATED_REGISTER:
+          value:                    "true"
+          required:                 false
+      operations:
+        start:
+          interval:
+            value:                  ["0", "0s"]
+            required:               false
+          timeout:
+            value:                  ["3600", "3600s"]
+            required:               false
+        stop:
+          interval:
+            value:                  ["0", "0s"]
+            required:               false
+          timeout:
+            value:                  ["3600", "3600s"]
+            required:               false
+        promote:
+          interval:
+            value:                  ["0", "0s"]
+            required:               false
+          timeout:
+            value:                  ["3600", "3600s"]
+            required:               false
+        demote:
+          interval:
+            value:                  ["0", "0s"]
+            required:               false
+          timeout:
+            value:                  ["320", "320s"]
+            required:               false
+        methods:
+          interval:
+            value:                  ["0", "0s"]
+            required:               false
+          timeout:
+            value:                  ["5", "5s"]
+            required:               false
+        monitor:
+          interval:
+            value:                  ["60", "60s", "61", "61s"]
+            required:               false
+          timeout:
+            value:                  ["700", "700s"]
+            required:               false
+        reload:
+          interval:
+            value:                  ["0", "0s"]
+            required:               false
+          timeout:
+            value:                  ["5", "5s"]
+            required:               false
+
     ipaddr:
       meta_attributes:
         target-role:
@@ -836,6 +876,10 @@ RESOURCE_DEFAULTS:
 
     filesystem:
       required:                     false
+      instance_attributes:
+        fstype:
+          value:                    ["nfs", "nfs4"]
+          required:                 false
       meta_attributes:
         clone-node-max:
           value:                    "1"
@@ -856,14 +900,14 @@ RESOURCE_DEFAULTS:
             value:                  ["0", "0s"]
             required:               false
           timeout:
-            value:                  ["60", "60s"]
+            value:                  ["120", "120s"]
             required:               false
         stop:
           interval:
             value:                  ["0", "0s"]
             required:               false
           timeout:
-            value:                  ["60", "60s"]
+            value:                  ["120", "120s"]
             required:               false
 
     azurelb:
@@ -927,9 +971,12 @@ RESOURCE_DEFAULTS:
             value:                  ["10", "10s"]
             required:               false
 
-    nfs_filesystem:
+    scaleout_filesystem:
       required:                     false
       instance_attributes:
+        fstype:
+          value:                    ["nfs", "nfs4"]
+          required:                 false
         fast_stop:
           value:                    "no"
           required:                 false
@@ -979,64 +1026,48 @@ RESOURCE_DEFAULTS:
         interleave:
           value:                    "true"
           required:                 false
-
-    scaleout_hana:
-      required:                     false
-      meta_attributes:
-        notify:
-          value:                    "true"
-          required:                 false
-        clone-node-max:
-          value:                    "1"
-          required:                 false
-        target-role:
-          value:                    "Started"
-          required:                 false
-        interleave:
-          value:                    "true"
-          required:                 false
-      instance_attributes:
-        PREFER_SITE_TAKEOVER:
-          value:                    "true"
-          required:                 false
-        DUPLICATE_PRIMARY_TIMEOUT:
-          value:                    "7200"
-          required:                 false
-        AUTOMATED_REGISTER:
-          value:                    "true"
-          required:                 false
       operations:
+        monitor:
+          interval:
+            value:                  ["10", "10s"]
+            required:               false
+          timeout:
+            value:                  ["20", "20s"]
+            required:               false
         start:
           interval:
             value:                  ["0", "0s"]
             required:               false
           timeout:
-            value:                  ["3600", "3600s"]
+            value:                  ["20", "20s"]
             required:               false
         stop:
           interval:
             value:                  ["0", "0s"]
             required:               false
           timeout:
-            value:                  ["3600", "3600s"]
+            value:                  ["20", "20s"]
             required:               false
-        promote:
+        reload:
           interval:
             value:                  ["0", "0s"]
             required:               false
           timeout:
-            value:                  ["3600", "3600s"]
+            value:                  ["20", "20s"]
             required:               false
-        demote:
+        migrate_to:
           interval:
             value:                  ["0", "0s"]
             required:               false
           timeout:
-            value:                  ["320", "320s"]
+            value:                  ["20", "20s"]
             required:               false
-        monitor:
+        migrate_from:
+          interval:
+            value:                  ["0", "0s"]
+            required:               false
           timeout:
-            value:                  ["700", "700s"]
+            value:                  ["20", "20s"]
             required:               false
 
     scaleout_topology:
@@ -1079,6 +1110,13 @@ RESOURCE_DEFAULTS:
             required:               false
           interval:
             value:                  ["0", "0s"]
+            required:               false
+        reload:
+          interval:
+            value:                  ["0", "0s"]
+            required:               false
+          timeout:
+            value:                  ["5", "5s"]
             required:               false
 
 # === OS Parameters ===
@@ -1162,9 +1200,9 @@ GLOBAL_INI:
         ha_dr_suschksrv:
           required:                   false
     SAPHanaController:
-      ha_dr_provider_SAPHanaSR:
+      ha_dr_provider_saphanasrmultitarget:
         provider:
-          value:                      "SAPHanaSR"
+          value:                      "SAPHanaSrMultiTarget"
           required:                   true
         path:
           value:                      ["/usr/share/SAPHanaSR-ScaleOut", "/hana/shared/myHooks"]
@@ -1182,13 +1220,12 @@ GLOBAL_INI:
         execution_order:
           value:                      "3"
           required:                   true
-        action_on_host:
-          value:                      "fence"
+        action_on_lost:
+          value:                      "kill"
           required:                   true
       trace:
-        ha_dr_sushanasr:
-          required:                   false
-        ha_dr_suschksrv:
+        ha_dr_saphanasrmultitarget:
+          value:                      "info"
           required:                   false
   REDHAT:
     SAPHanaSR:
@@ -1246,8 +1283,10 @@ GLOBAL_INI:
           required:                   true
       trace:
         ha_dr_saphanasr:
+          value:                      "info"
           required:                   false
         ha_dr_chksrv:
+          value:                      "info"
           required:                   false
 
 # === Azure Load Balancer ===

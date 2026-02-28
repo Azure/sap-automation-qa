@@ -15,11 +15,10 @@
       register:                     location_constraints_results
 
     - name:                         "Pre validation: Get SAPHanaSR provider"
-      when:                         (ansible_os_family | upper) == "SUSE"
       ansible.builtin.include_tasks: "roles/misc/tasks/get-saphanasr-provider.yml"
 
     - name:                         "Pre validation: Get HANA resource id for saphanasr_angi"
-      when:                         saphanasr_provider | default('SAPHanaSR') == "SAPHanaSR-angi"
+      when:                         saphanasr_provider | default('SAPHanaSR') in ["SAPHanaSR-angi", "SAPHanaSR-ScaleOut"]
       block:
         - name:                     "Pre validation: Get HANA clone resource id for saphanasr_angi"
           become:                   true

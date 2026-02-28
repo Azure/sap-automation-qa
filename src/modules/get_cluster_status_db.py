@@ -227,8 +227,9 @@ class HanaClusterStatusChecker(BaseClusterStatusChecker):
                 if self.hana_primitive_resource_name
                 else AUTOMATED_REGISTER(self.hana_clone_resource_name)
             ),
-            "PRIORITY_FENCING_DELAY": PRIORITY_FENCING_DELAY,
         }
+        if self.hana_topology != HanaTopology.SCALE_OUT_HSR:
+            param_commands["PRIORITY_FENCING_DELAY"] = PRIORITY_FENCING_DELAY
 
         for param_name, command in param_commands.items():
             try:
@@ -278,6 +279,17 @@ class HanaClusterStatusChecker(BaseClusterStatusChecker):
                     "clone": "DEMOTED",
                     "sync": "100",
                 },
+            },
+            HanaSRProvider.SCALEOUT: {
+                "clone_attr": f"hana_{self.database_sid}_clone_state",
+                "sync_attr": (
+                    f"master-{self.hana_primitive_resource_name}"
+                    if self.hana_primitive_resource_name
+                    else f"master-rsc_SAPHana_{self.database_sid.upper()}"
+                    + f"_HDB{self.db_instance_number}"
+                ),
+                "primary": {"clone": "PROMOTED", "sync": "150"},
+                "secondary": {"clone": "DEMOTED", "sync": "100"},
             },
         }
 
@@ -432,8 +444,19 @@ class HanaClusterStatusChecker(BaseClusterStatusChecker):
                 result["secondary_site_name"] = site
                 result["secondary_site_nodes"] = node_names
                 result["cluster_status"]["secondary"] = node_attrs
-                if not result["secondary_node"] and nodes:
-                    result["secondary_node"] = nodes[0][0]
+                for node_name, attrs in nodes:
+                    clone_state = attrs.get(clone_attr, "")
+                    sync_state = attrs.get(
+                        provider_config["sync_attr"], "",
+                    )
+                    if (
+                        clone_state
+                        == provider_config["secondary"]["clone"]
+                        and sync_state
+                        == provider_config["secondary"]["sync"]
+                    ):
+                        result["secondary_node"] = node_name
+                        break
 
         if majority_maker_candidates:
             result["majority_maker_node"] = majority_maker_candidates[0]

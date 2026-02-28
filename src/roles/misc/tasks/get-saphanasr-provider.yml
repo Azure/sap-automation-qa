@@ -5,10 +5,10 @@
 # |                          Get SAPHanaSR Provider (on SUSE only)            |
 # +--------------------------------------------------------------------------*/
 
-- name:                               Get SAPHanaSR provider for SUSE
-  when:                               (ansible_os_family | upper) == "SUSE"
+- name:                               Get SAPHanaSR provider
   block:
-  - name:                             "Get SAPHanaSR Provider using command"
+  - name:                             "Get SAPHanaSR Provider using command (SUSE only)"
+    when:                             (ansible_os_family | upper) == "SUSE"
     become:                           true
     become_user:                      "{{ db_sid | lower }}adm"
     ansible.builtin.command:          "SAPHanaSR-manageProvider --sid {{ db_sid | upper }} --show --provider=sushanasr"
@@ -18,12 +18,49 @@
     args:
       chdir:                          "/usr/sbin"
 
+  - name:                             "Detect SAPHanaController resource type in CIB"
+    become:                           true
+    ansible.builtin.shell: >-
+                                      set -o pipefail &&
+                                      cibadmin --query --xpath
+                                      "//primitive[@type='SAPHanaController']"
+                                      --node-path 2>/dev/null | head -1
+    args:
+      executable:                     /bin/bash
+    register:                         hanacontroller_check
+    changed_when:                     false
+    failed_when:                      false
+
   - name:                             "Set SAPHanaSR-angi Provider"
-    when:                             hanasr_command_output.stdout != 0
+    when:                             >
+                                      (hanasr_command_output.stdout | default('') | length > 0)
+                                      or
+                                      (hanacontroller_check.rc == 0
+                                      and hanacontroller_check.stdout | length > 0)
     ansible.builtin.set_fact:
       saphanasr_provider:             "SAPHanaSR-angi"
 
   - name:                             "Set SAPHanaSR Provider"
-    when:                             hanasr_command_output.stdout == ""
+    when:                             >
+                                      (hanasr_command_output.stdout | default('') == "")
+                                      and
+                                      (hanacontroller_check.rc != 0
+                                      or hanacontroller_check.stdout | length == 0)
     ansible.builtin.set_fact:
       saphanasr_provider:             "SAPHanaSR"
+
+  - name:                             "Check if SAPHanaSR-ScaleOut package is installed"
+    become:                           true
+    ansible.builtin.shell: >-
+                                      rpm -q SAPHanaSR-ScaleOut ||
+                                      rpm -q resource-agents-sap-hana-scaleout
+    register:                         scaleout_rpm_check
+    changed_when:                     false
+    failed_when:                      false
+
+  - name:                             "Set SAPHanaSR-ScaleOut Provider"
+    when:
+                                      - saphanasr_provider in ["SAPHanaSR", "SAPHanaSR-angi"]
+                                      - scaleout_rpm_check.rc == 0
+    ansible.builtin.set_fact:
+      saphanasr_provider:             "SAPHanaSR-ScaleOut"
