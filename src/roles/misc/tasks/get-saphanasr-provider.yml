@@ -51,16 +51,20 @@
 
   - name:                             "Check if SAPHanaSR-ScaleOut package is installed"
     become:                           true
-    ansible.builtin.shell: >-
-                                      rpm -q SAPHanaSR-ScaleOut ||
-                                      rpm -q resource-agents-sap-hana-scaleout
-    register:                         scaleout_rpm_check
-    changed_when:                     false
-    failed_when:                      false
+    ansible.builtin.package_facts:
+      manager:                        rpm
+    register:                         scaleout_pkg_facts
+
+  - name:                             "Set SAPHanaSR-ScaleOut package check result"
+    ansible.builtin.set_fact:
+      scaleout_rpm_check:
+        rc:                           "{{ 0 if ('SAPHanaSR-ScaleOut' in ansible_facts.packages
+                                            or 'resource-agents-sap-hana-scaleout' in ansible_facts.packages)
+                                          else 1 }}"
 
   - name:                             "Set SAPHanaSR-ScaleOut Provider"
     when:
                                       - saphanasr_provider in ["SAPHanaSR", "SAPHanaSR-angi"]
-                                      - scaleout_rpm_check.rc == 0
+                                      - scaleout_rpm_check.rc | int == 0
     ansible.builtin.set_fact:
       saphanasr_provider:             "SAPHanaSR-ScaleOut"

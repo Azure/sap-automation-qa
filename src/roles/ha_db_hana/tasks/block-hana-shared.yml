@@ -89,6 +89,7 @@
                                         - cluster_status_pre.AUTOMATED_REGISTER == "false"
       block:
         - name:                         "Test Execution: Stop HANA on old primary if still running"
+          become:                       true
           become_user:                  "{{ db_sid | lower }}adm"
           ansible.builtin.shell: >-
             sapcontrol -nr {{ db_instance_number }} -function StopWait 600 10
@@ -104,8 +105,11 @@
                                             else cluster_status_pre.secondary_node }}"
 
         - name:                         "Test Execution: Register old primary as secondary"
+          become:                       true
           become_user:                  "{{ db_sid | lower }}adm"
-          ansible.builtin.shell: |
+          ansible.builtin.shell:
+            cmd: |
+                                        set -o pipefail
                                         source /usr/sap/{{ db_sid | upper }}/HDB{{ db_instance_number }}/HDBSettings.sh && \
                                         hdbnsutil -sr_register \
                                           --name={{ cluster_status_pre.primary_site_name }} \
