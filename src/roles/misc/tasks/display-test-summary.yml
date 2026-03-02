@@ -17,12 +17,15 @@
 
     - name:                             "Show test execution summary"
       ansible.builtin.debug:
-        msg:                            "{{ test_summary_result.summary }}"
+        msg:                            "{{ test_summary_result.summary.split('\n') }}"
       when:                             test_summary_result.summary | default('') | length > 0
 
     - name:                             "Show failed parameters detail"
       ansible.builtin.debug:
-        msg:                            "{{ test_summary_result.failed_parameters }}"
+        msg:                            "{{ item.name }}: actual={{ item.value }} expected={{ item.expected_value }} ({{ item.category }})"
+      loop:                             "{{ test_summary_result.failed_parameters | default([]) }}"
+      loop_control:
+        label:                          "{{ item.name }}"
       when:
                                         - test_summary_result.failed_parameters | default([]) | length > 0
                                         - display_failed_details | default(true) | bool
