@@ -273,6 +273,14 @@ class HAClusterValidator(BaseHAClusterValidator):
             )
         return self._get_expected_value(category, name)
 
+    @property
+    def _is_scale_out(self):
+        """Check if this is a scale-out cluster (by topology or provider)."""
+        return (
+            self.hana_topology == HanaTopology.SCALE_OUT_HSR
+            or self.saphanasr_provider == HanaSRProvider.SCALEOUT
+        )
+
     _SCALEOUT_SKIP_CRM_CONFIG = {"priority-fencing-delay"}
     _SCALEOUT_SKIP_RSC_DEFAULTS = {"priority"}
 
@@ -281,7 +289,7 @@ class HAClusterValidator(BaseHAClusterValidator):
         Override base to skip parameters not applicable
         to scale-out clusters.
         """
-        if self.saphanasr_provider == HanaSRProvider.SCALEOUT:
+        if self._is_scale_out:
             skip_set = set()
             if category == "crm_config":
                 skip_set = self._SCALEOUT_SKIP_CRM_CONFIG
@@ -310,7 +318,7 @@ class HAClusterValidator(BaseHAClusterValidator):
         totem parameters on scale-out clusters.
         """
         parameters = super()._parse_os_parameters()
-        if self.saphanasr_provider != HanaSRProvider.SCALEOUT:
+        if not self._is_scale_out:
             return parameters
 
         _GTE_PARAMS = {

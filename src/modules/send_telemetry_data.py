@@ -29,10 +29,10 @@ from ansible.module_utils.basic import AnsibleModule
 
 try:
     from ansible.module_utils.sap_automation_qa import SapAutomationQA
-    from ansible.module_utils.enums import HanaSRProvider, TelemetryDataDestination, TestStatus
+    from ansible.module_utils.enums import TelemetryDataDestination, TestStatus
 except ImportError:
     from src.module_utils.sap_automation_qa import SapAutomationQA
-    from src.module_utils.enums import HanaSRProvider, TelemetryDataDestination, TestStatus
+    from src.module_utils.enums import TelemetryDataDestination, TestStatus
 
 DOCUMENTATION = r"""
 ---
@@ -427,7 +427,9 @@ class TelemetryDataSender(SapAutomationQA):
                 "SAPHanaSRProvider": common_vars.get("saphanasr_provider", ""),
                 "SAPHanaTopology": (
                     "Scale Out"
-                    if common_vars.get("saphanasr_provider", "") == HanaSRProvider.SCALEOUT.value
+                    if common_vars.get("hana_topology", "scale_up") in (
+                        "scale_out_hsr", "scale_out_standby"
+                    )
                     else "Scale Up"
                 ),
             }

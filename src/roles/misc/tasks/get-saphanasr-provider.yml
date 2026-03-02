@@ -33,7 +33,8 @@
 
   - name:                             "Set SAPHanaSR-angi Provider"
     when:                             >
-                                      (hanasr_command_output.stdout | default('') | length > 0)
+                                      (hanasr_command_output is defined
+                                      and hanasr_command_output.stdout | default('') | length > 0)
                                       or
                                       (hanacontroller_check.rc == 0
                                       and hanacontroller_check.stdout | length > 0)
@@ -42,7 +43,8 @@
 
   - name:                             "Set SAPHanaSR Provider"
     when:                             >
-                                      (hanasr_command_output.stdout | default('') == "")
+                                      (hanasr_command_output is not defined
+                                      or hanasr_command_output.stdout | default('') == "")
                                       and
                                       (hanacontroller_check.rc != 0
                                       or hanacontroller_check.stdout | length == 0)
@@ -54,12 +56,14 @@
     ansible.builtin.package_facts:
       manager:                        rpm
     register:                         scaleout_pkg_facts
+    failed_when:                      false
 
   - name:                             "Set SAPHanaSR-ScaleOut package check result"
     ansible.builtin.set_fact:
       scaleout_rpm_check:
-        rc:                           "{{ 0 if ('SAPHanaSR-ScaleOut' in ansible_facts.packages
-                                            or 'resource-agents-sap-hana-scaleout' in ansible_facts.packages)
+        rc:                           "{{ 0 if (ansible_facts.packages is defined
+                                            and ('SAPHanaSR-ScaleOut' in ansible_facts.packages
+                                              or 'resource-agents-sap-hana-scaleout' in ansible_facts.packages))
                                           else 1 }}"
 
   - name:                             "Set SAPHanaSR-ScaleOut Provider"
