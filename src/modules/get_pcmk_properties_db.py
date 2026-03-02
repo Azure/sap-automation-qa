@@ -293,16 +293,12 @@ class HAClusterValidator(BaseHAClusterValidator):
                 _, constants_key = self.BASIC_CATEGORIES[category]
                 filtered = {
                     k: v
-                    for k, v in self.constants.get(
-                        constants_key, {}
-                    ).items()
+                    for k, v in self.constants.get(constants_key, {}).items()
                     if k not in skip_set
                 }
                 self.constants = {**orig, constants_key: filtered}
                 try:
-                    return super()._validate_basic_constants(
-                        category
-                    )
+                    return super()._validate_basic_constants(category)
                 finally:
                     self.constants = orig
 
@@ -327,21 +323,15 @@ class HAClusterValidator(BaseHAClusterValidator):
             threshold = _GTE_PARAMS[param["name"]]
             raw = param.get("value", "")
             try:
-                actual = int(
-                    raw.split("=")[-1].strip()
-                )
+                actual = int(raw.split("=")[-1].strip())
             except (ValueError, IndexError):
                 continue
             if actual >= threshold:
                 param["status"] = "PASSED"
-                param["expected_value"] = (
-                    f">= {threshold}"
-                )
+                param["expected_value"] = f">= {threshold}"
             else:
                 param["status"] = "FAILED"
-                param["expected_value"] = (
-                    f">= {threshold}"
-                )
+                param["expected_value"] = f">= {threshold}"
         return parameters
 
     def _parse_resources_section(self, root):
@@ -368,10 +358,7 @@ class HAClusterValidator(BaseHAClusterValidator):
             for element in elements:
                 if (
                     sub_category == "nfs_attribute"
-                    and element.find(
-                        "primitive[@type='attribute']"
-                    )
-                    is None
+                    and element.find("primitive[@type='attribute']") is None
                 ):
                     continue
                 parameters.extend(self._parse_resource(element, sub_category))

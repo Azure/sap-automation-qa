@@ -8,6 +8,23 @@ Leveraging Ansible, the framework orchestrates these failure scenarios and valid
 
 Azure offers various deployment options for SAP workloads on different operating system distributions. The SAP Testing Automation Framework executes its test scenarios on the SAP system configurations running on Linux distribution. You can find the support matrix on supported Linux distribution version, and high availability configuration pattern in [SAP Testing Automation Framework Supported Platforms and Features](https://learn.microsoft.com/azure/sap/automation/testing-framework-supportability#supported-sap-system-configurations).
 
+### HANA Topologies
+
+The framework supports the following HANA System Replication topologies for HA testing:
+
+| Topology | Description | Configuration Parameter |
+|----------|-------------|------------------------|
+| **Scale-Up** (default) | Classic two-node HSR with a single primary and secondary node. | `database_scale_out: false` |
+| **Scale-Out HSR** | Multi-node HSR with primary and secondary sites containing multiple worker nodes, plus a majority maker node for quorum. | `database_scale_out: true` |
+
+For scale-out HSR deployments, the framework automatically:
+- Discovers all worker nodes on each site (`primary_site_nodes`, `secondary_site_nodes`).
+- Identifies the majority maker node (required for quorum, does not run HANA).
+- Validates site membership during failover instead of exact node identity.
+- Runs additional pre-validation checks (site node counts, majority maker presence, master nameserver placement).
+
+See [DB High Availability Test Cases](./high_availability/DB_HIGH_AVAILABILITY.md) for detailed per-test topology documentation.
+
 ## Pre-requisites
 
 Before executing the HA tests, complete the following prerequisite steps.
@@ -62,6 +79,19 @@ Execute the tests using the `sap_automation_qa.sh` script from the `scripts` dir
 
 # Run with verbose output
 ./scripts/sap_automation_qa.sh --test_groups=HA_DB_HANA --test_cases=[primary-node-crash] -vvv
+```
+
+### Scale-Out HSR Configuration
+
+For HANA scale-out HSR deployments, set `database_scale_out: true` in the system configuration (`vars.yaml` or extra variables). This enables:
+
+- Scale-out-aware pre-validation (verifies site node lists and majority maker node).
+- Site membership-based failover validation instead of exact node identity checks.
+- Support for SAPHanaSR-ScaleOut provider alongside SAPHanaSR and SAPHanaSR-angi.
+
+```bash
+# Run HA tests for a scale-out HSR deployment
+./scripts/sap_automation_qa.sh --test_groups=HA_DB_HANA --extra_vars="database_scale_out=true"
 ```
 
 ## Viewing Test Results

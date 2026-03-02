@@ -81,10 +81,7 @@ class TestPackageListFormatter:
         """
         Test that rpm subprocess fallback is used when package_facts_list is empty.
         """
-        rpm_output = (
-            "corosync\t2.4.5\t1.el7\tx86_64\n"
-            "pacemaker\t2.1.0\t3.el8\tx86_64\n"
-        )
+        rpm_output = "corosync\t2.4.5\t1.el7\tx86_64\n" "pacemaker\t2.1.0\t3.el8\tx86_64\n"
         mocker.patch.object(
             PackageListFormatter,
             "execute_command_subprocess",
@@ -93,9 +90,7 @@ class TestPackageListFormatter:
         formatter = PackageListFormatter({})
         result = formatter.format_packages()
         assert result["status"] == "PASSED"
-        names = [
-            list(d.keys())[0] for d in result["details"]
-        ]
+        names = [list(d.keys())[0] for d in result["details"]]
         assert "Corosync" in names
         assert "Pacemaker" in names
 

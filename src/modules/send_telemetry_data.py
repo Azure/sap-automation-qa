@@ -427,8 +427,7 @@ class TelemetryDataSender(SapAutomationQA):
                 "SAPHanaSRProvider": common_vars.get("saphanasr_provider", ""),
                 "SAPHanaTopology": (
                     "Scale Out"
-                    if common_vars.get("saphanasr_provider", "")
-                    == HanaSRProvider.SCALEOUT.value
+                    if common_vars.get("saphanasr_provider", "") == HanaSRProvider.SCALEOUT.value
                     else "Scale Up"
                 ),
             }

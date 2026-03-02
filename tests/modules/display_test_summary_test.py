@@ -69,9 +69,7 @@ class TestTestSummaryDisplay:
         """Fixture that writes JSONL entries to the log file."""
 
         def _inner(entries: list):
-            log_dir = (
-                display.workspace_directory + "/logs"
-            )
+            log_dir = display.workspace_directory + "/logs"
             with open(
                 f"{log_dir}/{display.test_group_invocation_id}.log",
                 "w",
@@ -81,7 +79,6 @@ class TestTestSummaryDisplay:
                     fh.write(json.dumps(entry) + "\n")
 
         return _inner
-
 
     def test_all_passed(self, display, _write_log):
         """All parameters passed on one host."""
@@ -177,9 +174,7 @@ class TestTestSummaryDisplay:
         assert tc["host_count"] == 2
         assert len(result["failed_parameters"]) == 1
 
-    def test_non_ha_config_no_failed_params(
-        self, display, _write_log
-    ):
+    def test_non_ha_config_no_failed_params(self, display, _write_log):
         """Non-ha-config test does not populate failed_parameters."""
         _write_log(
             [
@@ -271,8 +266,6 @@ class TestModuleEntryPoint:
 
     def test_main_calls_run_module(self, mocker):
         """main() delegates to run_module()."""
-        mock_run = mocker.patch(
-            "src.modules.display_test_summary.run_module"
-        )
+        mock_run = mocker.patch("src.modules.display_test_summary.run_module")
         main()
         mock_run.assert_called_once()

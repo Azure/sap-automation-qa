@@ -1,19 +1,25 @@
 # Resource Migration Test Case
 
+## Supported Topologies
+
+This test supports both **Scale-Up** (two-node) and **Scale-Out HSR** (multi-node with sites) topologies.
+
 ## Prerequisites
 
 - Functioning HANA cluster
-- Two active nodes (primary and secondary)
 - System replication configured
 - Cluster services running
+- **Scale-Up**: Two active nodes (primary and secondary)
+- **Scale-Out HSR**: Multiple worker nodes across two sites, plus a majority maker node
 
 ## Validation
 
 - Verify node roles switched correctly
 - Check cluster stability
 - Validate failover behavior
+- **Scale-Out HSR**: Verify new primary belongs to the former secondary site (site membership check)
 
-## Pseudocode
+## Pseudocode (Scale-Up)
 
 ```pseudocode
 FUNCTION ResourceMigrationTest():
@@ -75,6 +81,54 @@ FUNCTION ResourceMigrationTest():
     RETURN "Test Passed"
 END FUNCTION
 ```
+
+## Scale-Out HSR Differences
+
+In a scale-out HSR topology, the validation logic changes from exact node identity checks to **site membership** checks. The cluster contains multiple worker nodes per site, so any node from the promoted site can become the new master nameserver.
+
+### Pre-Validation (Scale-Out HSR)
+
+```pseudocode
+// Scale-out pre-validation requires:
+//   - primary_site_nodes list is non-empty
+//   - secondary_site_nodes list is non-empty
+//   - majority_maker_node is non-empty
+//   - master_nameserver_node belongs to primary_site_nodes
+```
+
+### Validation Changes (Scale-Out HSR)
+
+```pseudocode
+FUNCTION ResourceMigrationTest_ScaleOut():
+    // ... same setup and migration execution ...
+
+    // Initial Migration Check (scale-out)
+    WHILE timeout_not_reached AND retries_remaining DO
+        check_cluster_status()
+        // New primary must be from the old secondary site
+        IF new_primary IN old_secondary_site_nodes AND new_secondary == "" THEN
+            BREAK
+        WAIT 10_seconds
+    END WHILE
+
+    // ... registration and constraint removal ...
+
+    // Final Validation (scale-out)
+    WHILE timeout_not_reached AND retries_remaining DO
+        check_cluster_status()
+        // New primary is from old secondary site and is not the old primary
+        IF new_primary IN old_secondary_site_nodes AND
+           new_primary != old_primary_node THEN
+            BREAK
+        WAIT 10_seconds
+    END WHILE
+END FUNCTION
+```
+
+| Check Point | Scale-Up | Scale-Out HSR |
+|------------|----------|---------------|
+| Mid-migration | `new_primary == old_secondary` | `new_primary IN old_secondary_site_nodes` |
+| Final validation | `new_primary == old_secondary AND new_secondary == old_primary` | `new_primary IN old_secondary_site_nodes AND new_primary != old_primary_node` |
 
 ## ASCS Migration Test Case
 

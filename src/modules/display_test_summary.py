@@ -126,7 +126,6 @@ class TestSummaryDisplay(SapAutomationQA):
             }
         )
 
-
     def _read_log_file(self) -> List[Dict[str, Any]]:
         """
         Read and parse the JSONL log file.
@@ -158,7 +157,6 @@ class TestSummaryDisplay(SapAutomationQA):
             self.log(logging.ERROR, f"Log file not found: {log_path}")
             self.handle_error(exc)
             return []
-
 
     @staticmethod
     def _deduplicate_results(
@@ -200,9 +198,7 @@ class TestSummaryDisplay(SapAutomationQA):
                         "category": param.get("category", ""),
                         "name": param.get("name", ""),
                         "value": param.get("value", ""),
-                        "expected_value": param.get(
-                            "expected_value", ""
-                        ),
+                        "expected_value": param.get("expected_value", ""),
                         "id": param.get("id", ""),
                     }
                 )
@@ -230,14 +226,8 @@ class TestSummaryDisplay(SapAutomationQA):
         ]
 
         for tc in test_case_summaries:
-            status_icon = (
-                "[PASS]"
-                if tc["status"] == TestStatus.SUCCESS.value
-                else "[FAIL]"
-            )
-            lines.append(
-                f"  {status_icon}  {tc['test_name']}"
-            )
+            status_icon = "[PASS]" if tc["status"] == TestStatus.SUCCESS.value else "[FAIL]"
+            lines.append(f"  {status_icon}  {tc['test_name']}")
             lines.append(
                 f"          Hosts: {tc['host_count']}  |  "
                 f"Passed: {tc['passed']}  |  "
@@ -248,40 +238,22 @@ class TestSummaryDisplay(SapAutomationQA):
 
         if failed_params:
             lines.append("")
-            lines.append(
-                "  FAILED PARAMETERS  "
-                "(HA Parameters Validation)"
-            )
+            lines.append("  FAILED PARAMETERS  " "(HA Parameters Validation)")
             lines.append(_SEPARATOR)
             for fp in failed_params:
-                lines.append(
-                    f"    - {fp['name']}"
-                )
-                lines.append(
-                    f"      Category : {fp['category']}"
-                )
-                lines.append(
-                    f"      Actual   : {fp['value']}"
-                )
-                lines.append(
-                    f"      Expected : {fp['expected_value']}"
-                )
+                lines.append(f"    - {fp['name']}")
+                lines.append(f"      Category : {fp['category']}")
+                lines.append(f"      Actual   : {fp['value']}")
+                lines.append(f"      Expected : {fp['expected_value']}")
             lines.append(_SEPARATOR)
 
         lines.append("")
-        overall_icon = (
-            "[PASS]"
-            if overall_status == TestStatus.SUCCESS.value
-            else "[FAIL]"
-        )
-        lines.append(
-            f"  OVERALL: {overall_icon}  {overall_status}"
-        )
+        overall_icon = "[PASS]" if overall_status == TestStatus.SUCCESS.value else "[FAIL]"
+        lines.append(f"  OVERALL: {overall_icon}  {overall_status}")
         lines.append(_HEADER)
         lines.append("")
 
         return "\n".join(lines)
-
 
     def generate_summary(self) -> None:
         """
@@ -311,9 +283,7 @@ class TestSummaryDisplay(SapAutomationQA):
             tc_status = TestStatus.SUCCESS.value
 
             for entry in tc_entries:
-                entry_status = entry.get(
-                    "TestCaseStatus", TestStatus.SUCCESS.value
-                )
+                entry_status = entry.get("TestCaseStatus", TestStatus.SUCCESS.value)
                 if entry_status == TestStatus.ERROR.value:
                     tc_status = TestStatus.ERROR.value
                     has_failure = True
@@ -329,9 +299,7 @@ class TestSummaryDisplay(SapAutomationQA):
                         info += 1
 
                 if tc_name == _HA_CONFIG_TEST_NAME:
-                    all_failed_params.extend(
-                        self._extract_failed_parameters(entry)
-                    )
+                    all_failed_params.extend(self._extract_failed_parameters(entry))
 
             test_case_summaries.append(
                 {
@@ -352,15 +320,9 @@ class TestSummaryDisplay(SapAutomationQA):
                 seen_failures.add(key)
                 unique_failures.append(fp)
 
-        overall = (
-            TestStatus.ERROR.value
-            if has_failure
-            else TestStatus.SUCCESS.value
-        )
+        overall = TestStatus.ERROR.value if has_failure else TestStatus.SUCCESS.value
 
-        summary_text = self._format_summary(
-            test_case_summaries, unique_failures, overall
-        )
+        summary_text = self._format_summary(test_case_summaries, unique_failures, overall)
 
         self.result["status"] = overall
         self.result["summary"] = summary_text
@@ -384,9 +346,7 @@ def run_module() -> None:
     )
 
     display = TestSummaryDisplay(
-        test_group_invocation_id=module.params[
-            "test_group_invocation_id"
-        ],
+        test_group_invocation_id=module.params["test_group_invocation_id"],
         workspace_directory=module.params["workspace_directory"],
     )
     display.generate_summary()

@@ -1,21 +1,27 @@
 # Block Network Communication Test Case
 
+## Supported Topologies
+
+This test supports both **Scale-Up** (two-node) and **Scale-Out HSR** (multi-node with sites) topologies.
+
 ## Prerequisites
 
 - Functioning HANA cluster
-- Two active nodes (primary and secondary)
 - System replication configured
 - Cluster services running
 - iptables service accessible
 - STONITH configuration (stonith-enabled=true)
+- **Scale-Up**: Two active nodes (primary and secondary)
+- **Scale-Out HSR**: Multiple worker nodes across two sites, plus a majority maker node
 
 ## Validation
 
 - Verify node roles switched correctly
 - Check cluster stability
 - Validate failover behavior
+- **Scale-Out HSR**: Verify surviving site nodes retain or assume correct roles via site membership checks
 
-## Pseudocode
+## Pseudocode (Scale-Up)
 
 ```pseudocode
 FUNCTION BlockNetworkTest():
@@ -82,6 +88,40 @@ FUNCTION BlockNetworkTest():
     RETURN "TEST_PASSED"
 END FUNCTION
 ```
+
+## Scale-Out HSR Differences
+
+In a scale-out HSR topology, the block-network test has **two possible outcomes** depending on which node survives the network partition. Validation uses site membership checks instead of exact node identity.
+
+### Validation Changes (Scale-Out HSR)
+
+```pseudocode
+FUNCTION BlockNetworkTest_ScaleOut():
+    // ... same setup and iptables blocking ...
+
+    // Outcome A: Primary site node survives
+    // Mid-test check: primary is from pre.primary_site_nodes, secondary is empty
+    IF new_primary IN old_primary_site_nodes AND new_secondary == "" THEN
+        // After recovery: original roles restored
+        // Final: primary IN old_primary_site_nodes AND secondary IN old_secondary_site_nodes
+    END IF
+
+    // Outcome B: Secondary site node survives (failover occurred)
+    // Mid-test check: primary is from pre.secondary_site_nodes, secondary is empty
+    IF new_primary IN old_secondary_site_nodes AND new_secondary == "" THEN
+        // After recovery: roles swapped at site level
+        // Final: primary IN old_secondary_site_nodes AND primary != old_primary_node
+    END IF
+END FUNCTION
+```
+
+| Check Point | Scale-Up | Scale-Out HSR |
+|------------|----------|---------------|
+| Primary survives (mid-test) | `primary == pre.primary` and `secondary == ""` | `primary IN pre.primary_site_nodes` and `secondary == ""` |
+| Primary survives (final) | `primary == pre.primary` and `secondary == pre.secondary` | `primary IN pre.primary_site_nodes` and `secondary IN pre.secondary_site_nodes` |
+| Secondary survives (mid-test) | `primary == pre.secondary` and `secondary == ""` | `primary IN pre.secondary_site_nodes` and `secondary == ""` |
+| Secondary survives (final) | `primary == pre.secondary` and `secondary == pre.primary` | `primary IN pre.secondary_site_nodes` and `primary != pre.primary_node` |
+| PASSED determination | Exact node swap or same nodes | Site membership: `(primary IN pre.secondary_site_nodes AND primary != pre.primary) OR (primary IN pre.primary_site_nodes AND secondary IN pre.secondary_site_nodes)` |
 
 ## ASCS Block Network Test Case
 

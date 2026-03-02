@@ -122,7 +122,8 @@ class PackageListFormatter(SapAutomationQA):
         try:
             output = self.execute_command_subprocess(
                 [
-                    "rpm", "-qa",
+                    "rpm",
+                    "-qa",
                     "--queryformat",
                     "%{NAME}\t%{VERSION}\t%{RELEASE}\t%{ARCH}\n",
                 ],

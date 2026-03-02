@@ -447,13 +447,12 @@ class HanaClusterStatusChecker(BaseClusterStatusChecker):
                 for node_name, attrs in nodes:
                     clone_state = attrs.get(clone_attr, "")
                     sync_state = attrs.get(
-                        provider_config["sync_attr"], "",
+                        provider_config["sync_attr"],
+                        "",
                     )
                     if (
-                        clone_state
-                        == provider_config["secondary"]["clone"]
-                        and sync_state
-                        == provider_config["secondary"]["sync"]
+                        clone_state == provider_config["secondary"]["clone"]
+                        and sync_state == provider_config["secondary"]["sync"]
                     ):
                         result["secondary_node"] = node_name
                         break
@@ -508,14 +507,16 @@ class HanaClusterStatusChecker(BaseClusterStatusChecker):
             return
 
         try:
-            output = self.execute_command_subprocess([
-            "su",
-            "-",
-            f"{self.database_sid}adm",
-            "-c",
-            f"/usr/sap/{self.database_sid.upper()}/HDB{ self.db_instance_number}/exe/hdbnsutil "
-            f"-sr_state --sapcontrol=1",
-        ])
+            output = self.execute_command_subprocess(
+                [
+                    "su",
+                    "-",
+                    f"{self.database_sid}adm",
+                    "-c",
+                    f"/usr/sap/{self.database_sid.upper()}/HDB{ self.db_instance_number}"
+                    f"/exe/hdbnsutil -sr_state --sapcontrol=1",
+                ]
+            )
         except Exception as exc:
             self.log(
                 logging.WARNING,
@@ -526,16 +527,12 @@ class HanaClusterStatusChecker(BaseClusterStatusChecker):
 
         for line in output.splitlines():
             line = line.strip()
-            if not self.result["replication_mode"] and line.startswith(
-                "siteReplicationMode/"
-            ):
+            if not self.result["replication_mode"] and line.startswith("siteReplicationMode/"):
                 value = line.split("=", 1)[1]
                 if value != "primary":
                     self.result["replication_mode"] = value
 
-            if not self.result["operation_mode"] and line.startswith(
-                "siteOperationMode/"
-            ):
+            if not self.result["operation_mode"] and line.startswith("siteOperationMode/"):
                 value = line.split("=", 1)[1]
                 if value != "primary":
                     self.result["operation_mode"] = value

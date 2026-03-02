@@ -1,20 +1,26 @@
 # Primary / Secondary Echo B Test Case
 
+## Supported Topologies
+
+This test supports both **Scale-Up** (two-node) and **Scale-Out HSR** (multi-node with sites) topologies.
+
 ## Prerequisites
 
 - Functioning HANA cluster
-- Two active nodes (primary and secondary)
 - System replication configured
 - sysrq-trigger access enabled
 - STONITH configuration (stonith-enabled=true)
+- **Scale-Up**: Two active nodes (primary and secondary)
+- **Scale-Out HSR**: Multiple worker nodes across two sites, plus a majority maker node
 
 ## Validation
 
 - Verify node roles switched correctly
 - Check cluster stability
 - Validate failover behavior
+- **Scale-Out HSR**: Verify site membership for role validation
 
-## Pseudocode
+## Pseudocode (Scale-Up)
 
 ```pseudocode
 FUNCTION PrimaryEchoBTest():
@@ -83,6 +89,67 @@ When executed on secondary node, the test triggers immediate crash but maintains
 2. Secondary temporarily disappears (secondary_node="")
 3. Secondary node reboots and auto-recovers
 4. Cluster returns to original state with same roles
+
+## Scale-Out HSR Differences
+
+In a scale-out HSR topology, validation uses site membership checks instead of exact node matching.
+
+### Primary Echo B (Scale-Out HSR)
+
+```pseudocode
+FUNCTION PrimaryEchoBTest_ScaleOut():
+    // ... same echo b on primary ...
+
+    // Monitoring from secondary (auto-register=true):
+    WHILE timeout_not_reached DO
+        check_cluster_status()
+        // New primary must be from old secondary site
+        IF new_primary IN old_secondary_site_nodes AND
+           new_primary != old_primary_node AND
+           new_secondary != "" THEN
+            BREAK
+        WAIT 10_seconds
+    END WHILE
+
+    // Monitoring from secondary (auto-register=false):
+    WHILE timeout_not_reached DO
+        check_cluster_status()
+        IF new_primary IN old_secondary_site_nodes AND
+           new_secondary == "" THEN
+            BREAK
+        WAIT 10_seconds
+    END WHILE
+
+    // Final: new_primary IN old_secondary_site_nodes AND new_primary != old_primary_node
+END FUNCTION
+```
+
+### Secondary Echo B (Scale-Out HSR)
+
+```pseudocode
+FUNCTION SecondaryEchoBTest_ScaleOut():
+    // ... same echo b on secondary ...
+
+    // Mid-crash: primary stays in primary site, secondary is empty
+    validate_cluster_status(
+        expect_primary IN old_primary_site_nodes,
+        expect_secondary = ""
+    )
+
+    // Final: both sites restored
+    validate_final_status(
+        expect_primary IN old_primary_site_nodes,
+        expect_secondary IN old_secondary_site_nodes
+    )
+END FUNCTION
+```
+
+| Check Point | Scale-Up | Scale-Out HSR |
+|------------|----------|---------------|
+| Primary echo-b (auto-register) | `new_primary == old_secondary` and `new_secondary == old_primary` | `new_primary IN old_secondary_site_nodes` and `new_primary != old_primary` and `new_secondary != ""` |
+| Primary echo-b (manual) | `new_primary == old_secondary` and `new_secondary == ""` | `new_primary IN old_secondary_site_nodes` and `new_secondary == ""` |
+| Secondary echo-b (mid) | `primary == old_primary` and `secondary == ""` | `primary IN old_primary_site_nodes` and `secondary == ""` |
+| Secondary echo-b (final) | `primary == old_primary` and `secondary == old_secondary` | `primary IN old_primary_site_nodes` and `secondary IN old_secondary_site_nodes` |
 
 ## Implementation Flow
 

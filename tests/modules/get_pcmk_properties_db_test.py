@@ -808,9 +808,7 @@ class TestHAClusterValidator:
         xml_str = DUMMY_XML_RESOURCES
         root = ET.fromstring(xml_str)
         params = validator_scaleout._parse_resources_section(root)
-        nfs_params = [
-            p for p in params if "nfs_attribute" in p.get("category", "")
-        ]
+        nfs_params = [p for p in params if "nfs_attribute" in p.get("category", "")]
         assert len(nfs_params) > 0
         nfs_names = [p["name"] for p in nfs_params]
         assert "active_value" in nfs_names
@@ -819,9 +817,9 @@ class TestHAClusterValidator:
         assert "interleave" in nfs_names
         for p in nfs_params:
             if p["name"] in ("active_value", "inactive_value", "clone-node-max", "interleave"):
-                assert p["status"] == TestStatus.SUCCESS.value, (
-                    f"NFS param {p['name']} expected SUCCESS, got {p['status']}"
-                )
+                assert (
+                    p["status"] == TestStatus.SUCCESS.value
+                ), f"NFS param {p['name']} expected SUCCESS, got {p['status']}"
         info_params = [p for p in nfs_params if p["name"] == "name"]
         for p in info_params:
             assert p["status"] == TestStatus.INFO.value
