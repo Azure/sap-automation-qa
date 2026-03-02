@@ -118,7 +118,7 @@
           ansible.builtin.shell: |
                                         source /usr/sap/{{ db_sid | upper }}/HDB{{ db_instance_number | upper }}/HDBSettings.sh && \
                                         /usr/sap/{{ db_sid | upper }}/HDB{{ db_instance_number }}/exe/hdbnsutil -sr_register \
-                                        --remoteHost={{ cluster_status_pre.secondary_node }} \
+                                        --remoteHost={{ cluster_status_test_execution.primary_node }} \
                                         --remoteInstance={{ db_instance_number }} \
                                         --replicationMode={{ replication_mode }} \
                                         --name={{ primary_site_name }} \

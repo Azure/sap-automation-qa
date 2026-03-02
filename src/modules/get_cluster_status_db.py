@@ -497,7 +497,48 @@ class HanaClusterStatusChecker(BaseClusterStatusChecker):
         """
         result = super().run()
         self._get_cluster_parameters()
+        self._get_replication_params()
         return result
+
+    def _get_replication_params(self) -> None:
+        """
+        Retrieves replication_mode and operation_mode when not available from CIB node attributes
+        """
+        if self.result["operation_mode"] and self.result["replication_mode"]:
+            return
+
+        try:
+            output = self.execute_command_subprocess([
+            "su",
+            "-",
+            f"{self.database_sid}adm",
+            "-c",
+            f"/usr/sap/{self.database_sid.upper()}/HDB{ self.db_instance_number}/exe/hdbnsutil "
+            f"-sr_state --sapcontrol=1",
+        ])
+        except Exception as exc:
+            self.log(
+                logging.WARNING,
+                "Failed to query hdbnsutil -sr_state: %s",
+                str(exc),
+            )
+            return
+
+        for line in output.splitlines():
+            line = line.strip()
+            if not self.result["replication_mode"] and line.startswith(
+                "siteReplicationMode/"
+            ):
+                value = line.split("=", 1)[1]
+                if value != "primary":
+                    self.result["replication_mode"] = value
+
+            if not self.result["operation_mode"] and line.startswith(
+                "siteOperationMode/"
+            ):
+                value = line.split("=", 1)[1]
+                if value != "primary":
+                    self.result["operation_mode"] = value
 
 
 def run_module() -> None:
