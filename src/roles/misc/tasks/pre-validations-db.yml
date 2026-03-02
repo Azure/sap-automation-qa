@@ -117,7 +117,7 @@
 
     - name:                         "Pre Validation: Determine HANA topology"
       ansible.builtin.set_fact:
-        hana_topology:              "{{ 'scale_out_hsr' 
+        hana_topology:              "{{ 'scale_out_hsr'
                                     if (database_scale_out | default(database_HANA_use_scaleout_scenario | default(false)) | bool)
                                     else 'scale_up' }}"
 
