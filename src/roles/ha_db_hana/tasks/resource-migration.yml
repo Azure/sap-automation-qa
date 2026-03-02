@@ -91,12 +91,15 @@
                 hana_clone_resource_name: "{{ hana_clone_resource_id.stdout }}"
 
         - name:                         "Test Execution: Move the resource to the targeted node"
-          ansible.builtin.command:      "{{ commands | selectattr(
+          ansible.builtin.shell: |
+                                        set -o pipefail && {{ commands | selectattr(
                                         'name', 'equalto', 'resource_migration_cmd') | map(
-                                        attribute=(ansible_os_family | upper)) | first }}"
+                                        attribute=(ansible_os_family | upper)) | first }}
           register:                     hana_db_resource_migration
           failed_when:                  hana_db_resource_migration.rc != 0
           changed_when:                 hana_db_resource_migration.rc == 0
+          args:
+            executable:                 /bin/bash
 
         - name:                         "Test Execution: Validate HANA DB cluster status 1"
           get_cluster_status_db:

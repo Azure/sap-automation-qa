@@ -339,8 +339,18 @@ commands:
     REDHAT:                         "cibadmin --query --xpath \"//primitive[@type='SAPHanaController']\" --node-path | grep -oP \"primitive\\[@id='\\K[^']+\""
 
   - name:                           resource_migration_cmd
-    SUSE:                           "crm resource move {{ hana_clone_resource_name | default('msl_SAPHana_' ~ (db_sid | upper) ~ '_HDB' ~ db_instance_number) }} {{ cluster_status_pre.secondary_node | default('') }} force"
-    REDHAT:                         "pcs resource move {{ hana_clone_resource_name | default('SAPHana_' ~ (db_sid | upper) ~ '_' ~ db_instance_number ~ '-clone') }} --master"
+    SUSE:                           >-
+                                    crm resource move
+                                    {{ hana_clone_resource_name | default('msl_SAPHana_' ~ (db_sid | upper) ~ '_HDB' ~ db_instance_number) }}
+                                    {{ cluster_status_pre.secondary_node | default('') }}
+                                    force
+    REDHAT:                         >-
+                                    pcs resource move
+                                    {{ hana_clone_resource_name | default('SAPHana_' ~ (db_sid | upper) ~ '_' ~ db_instance_number ~ '-clone') }}
+                                    --promoted 2>/dev/null ||
+                                    pcs resource move
+                                    {{ hana_clone_resource_name | default('SAPHana_' ~ (db_sid | upper) ~ '_' ~ db_instance_number ~ '-clone') }}
+                                    --master
 
   - name:                           crm_report_cmd
     SUSE:                           "crm_report -f '{{ test_group_start_time }}' /tmp/{{ test_group_invocation_id }}"
