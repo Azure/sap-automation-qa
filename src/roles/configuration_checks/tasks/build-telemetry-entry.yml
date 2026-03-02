@@ -35,7 +35,7 @@
 - name:                             "Add parameter-level entries"
   no_log:                           true
   when:
-                                    - "check_result.details is defined and check_result.details is not none 
+                                    - "check_result.details is defined and check_result.details is not none
                                       and check_result.details.parameters is defined and check_result.details.parameters is not none
                                       and (check_result.details.parameters | length) > 0"
                                     - "param.status | default('') not in ['SKIPPED']"
