@@ -61,5 +61,5 @@
                                           'TestCaseHostname': lookup('vars', 'test_case_hostname', default=''),
                                           'TestCaseLogMessagesFromSap': lookup('vars', 'test_case_var_log_messages', default=''),
                                           'SAPHanaSRProvider': lookup('vars', 'saphanasr_provider', default=''),
-                                          'SAPHanaTopology': ('Scale Out' if lookup('vars', 'saphanasr_provider', default='') == 'SAPHanaSR-ScaleOut' else 'Scale Up')
+                                          'SAPHanaTopology': ('Scale Out' if lookup('vars', 'hana_topology', default='scale_up') in ['scale_out_hsr', 'scale_out_standby'] else 'Scale Up')
                                         } }}"

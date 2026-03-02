@@ -669,7 +669,7 @@ class TestHAClusterValidator:
             builtins.open = original_open
 
     @pytest.fixture
-    def validator_scaleout(self, mock_xml_outputs):
+    def validator_scaleout_provider(self, mock_xml_outputs):
         """
         Fixture for creating a TestableHAClusterValidator instance with SCALEOUT provider.
         """

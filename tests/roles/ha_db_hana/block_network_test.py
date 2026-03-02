@@ -137,7 +137,7 @@ class TestBlockNetworkTest(RolesTestingBaseDB):
 
         assert len(ok_events) > 0
         # There will be 1 failed event, connection failure to primary node
-        # This is the behavior be have mocked in the nc functionality
+        # This is the behavior we have mocked in the nc functionality
         assert len(failed_events) == 1
 
         post_status = {}
