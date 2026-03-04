@@ -114,7 +114,7 @@
           become:                       true
           ansible.builtin.command:      "crm_resource --cleanup"
           changed_when:                 true
-          ignore_errors:                true
+          failed_when:                  false
 
     - name:                             "Test Execution: Cleanup and verify recovery"
       when:                             ansible_hostname == cluster_status_pre.secondary_node
