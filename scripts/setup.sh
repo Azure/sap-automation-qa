@@ -13,31 +13,12 @@ set_output_context
 
 PROJECT_ROOT="$(dirname "$script_dir")"
 
-setup_environment() {
-    UPGRADE=false
-    PYTHON_BIN="python3"   # default interpreter
-
-    while [[ $# -gt 0 ]]; do
-        case "$1" in
-            --upgrade|-u)
-                UPGRADE=true
-                shift
-                ;;
-            --python|-p)
-                if [[ -z "${2:-}" ]]; then
-                    log "ERROR" "--python requires a value (e.g. python3.11 or /usr/bin/python3.12)."
-                    exit 1
-                fi
-                PYTHON_BIN="$2"
-                shift 2
-                ;;
-            *)
-                log "ERROR" "Unknown option: $1"
-                show_help
-                exit 1
-                ;;
-        esac
-    done
+# Creates .venv (if absent), installs OS packages, Azure CLI, and
+# :param $1  python_bin  Python interpreter to use (default: python3)
+# :param $2  upgrade     "true" to destroy & recreate an existing venv
+_setup_local_env() {
+    local python_bin="${1:-python3}"
+    local upgrade="${2:-false}"
 
     cd "$PROJECT_ROOT"
 
@@ -61,19 +42,20 @@ setup_environment() {
     fi
 
     # Resolve & validate the requested Python interpreter
-    if ! command -v "$PYTHON_BIN" &>/dev/null; then
-        log "ERROR" "Python interpreter '$PYTHON_BIN' not found. Please install it or provide a valid path."
+    if ! command -v "$python_bin" &>/dev/null; then
+        log "ERROR" "Python interpreter '$python_bin' not found. Please install it or provide a valid path."
         exit 1
     fi
 
-    PYTHON_BIN="$(command -v "$PYTHON_BIN")"   # resolve to absolute path
-    PYTHON_VERSION=$("$PYTHON_BIN" -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')
-    log "INFO" "Using Python interpreter: $PYTHON_BIN (Python $PYTHON_VERSION)"
+    python_bin="$(command -v "$python_bin")"   # resolve to absolute path
+    local python_version
+    python_version=$("$python_bin" -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')
+    log "INFO" "Using Python interpreter: $python_bin (Python $python_version)"
 
     # Enforce minimum Python 3.10
-    MINOR=${PYTHON_VERSION#3.}
-    if [[ "${PYTHON_VERSION%%.*}" -lt 3 ]] || [[ "$MINOR" -lt 10 ]]; then
-        log "ERROR" "Python >= 3.10 is required. Detected $PYTHON_VERSION at $PYTHON_BIN."
+    local minor=${python_version#3.}
+    if [[ "${python_version%%.*}" -lt 3 ]] || [[ "$minor" -lt 10 ]]; then
+        log "ERROR" "Python >= 3.10 is required. Detected $python_version at $python_bin."
         exit 1
     fi
 
@@ -92,7 +74,6 @@ setup_environment() {
     if [[ "$UPGRADE" == true ]]; then
         if [[ -d ".venv" ]]; then
             log "INFO" "Upgrade requested — removing existing virtual environment..."
-            # Deactivate if we are inside the venv (ignore errors when not active)
             deactivate 2>/dev/null || true
             rm -rf .venv
             log "INFO" "Existing virtual environment removed."
@@ -103,9 +84,9 @@ setup_environment() {
 
     # Create virtual environment if it doesn't exist
     if [[ ! -d ".venv" ]]; then
-        log "INFO" "Creating Python virtual environment with $PYTHON_BIN ..."
-        if "$PYTHON_BIN" -m venv .venv; then
-            log "INFO" "Python virtual environment created (Python $PYTHON_VERSION)."
+        log "INFO" "Creating Python virtual environment with $python_bin ..."
+        if "$python_bin" -m venv .venv; then
+            log "INFO" "Python virtual environment created (Python $python_version)."
         else
             log "ERROR" "Failed to create Python virtual environment."
             exit 1
@@ -123,7 +104,7 @@ setup_environment() {
 
     log "INFO" "Installing Python packages..."
     if ! pip install --upgrade pip; then
-		log "ERROR" "Failed to upgrade pip."
+        log "ERROR" "Failed to upgrade pip."
     fi
     if pip install -r requirements.in; then
         log "INFO" "Python packages installed successfully."
@@ -135,6 +116,35 @@ setup_environment() {
 
     export ANSIBLE_HOST_KEY_CHECKING=False
     export ANSIBLE_PYTHON_INTERPRETER=$(which python3)
+}
+
+setup_environment() {
+    local UPGRADE=false
+    local PYTHON_BIN="python3"
+
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            --upgrade|-u)
+                UPGRADE=true
+                shift
+                ;;
+            --python|-p)
+                if [[ -z "${2:-}" ]]; then
+                    log "ERROR" "--python requires a value (e.g. python3.11 or /usr/bin/python3.12)."
+                    exit 1
+                fi
+                PYTHON_BIN="$2"
+                shift 2
+                ;;
+            *)
+                log "ERROR" "Unknown option: $1"
+                show_help
+                exit 1
+                ;;
+        esac
+    done
+
+    _setup_local_env "$PYTHON_BIN" "$UPGRADE"
 
     log "INFO" "Setup completed successfully!"
     log "INFO" "Virtual environment is located at: $(pwd)/.venv"
