@@ -15,11 +15,10 @@
       register:                     location_constraints_results
 
     - name:                         "Pre validation: Get SAPHanaSR provider"
-      when:                         (ansible_os_family | upper) == "SUSE"
       ansible.builtin.include_tasks: "roles/misc/tasks/get-saphanasr-provider.yml"
 
     - name:                         "Pre validation: Get HANA resource id for saphanasr_angi"
-      when:                         saphanasr_provider | default('SAPHanaSR') == "SAPHanaSR-angi"
+      when:                         saphanasr_provider | default('SAPHanaSR') in ["SAPHanaSR-angi", "SAPHanaSR-ScaleOut"]
       block:
         - name:                     "Pre validation: Get HANA clone resource id for saphanasr_angi"
           become:                   true
@@ -116,6 +115,12 @@
           ansible.builtin.set_fact:
             hana_primitive_resource_name: "{{ hana_primitive_resource_id.stdout }}"
 
+    - name:                         "Pre Validation: Determine HANA topology"
+      ansible.builtin.set_fact:
+        hana_topology:              "{{ 'scale_out_hsr'
+                                    if (database_scale_out | default(database_HANA_use_scaleout_scenario | default(false)) | bool)
+                                    else 'scale_up' }}"
+
     - name:                         "Pre Validation: Validate HANA DB cluster status on primary node"
       become:                       true
       get_cluster_status_db:
@@ -125,10 +130,15 @@
         saphanasr_provider:         "{{ saphanasr_provider | default('SAPHanaSR') }}"
         hana_clone_resource_name:   "{{ hana_clone_resource_name | default('') }}"
         hana_primitive_resource_name: "{{ hana_primitive_resource_name | default('') }}"
+        hana_topology:                "{{ hana_topology | default('scale_up') }}"
       register:                     cluster_status_pre
-      until:                        cluster_status_pre.primary_node != "" or
+      until:                        cluster_status_pre.primary_node != "" and
                                     cluster_status_pre.secondary_node != ""
       retries:                      3
+
+    - name:                         "Pre Validation: Scale-out HSR cluster topology"
+      when:                         hana_topology == 'scale_out_hsr'
+      ansible.builtin.include_tasks: "roles/misc/tasks/pre-validations-scaleout-hsr.yml"
 
     - name:                         "Pre Validation: CleanUp any failed resource"
       become:                       true
@@ -145,11 +155,24 @@
       ansible.builtin.set_fact:
         pre_validations_status:     "FAILED"
 
-    - name:                         "Pre Validation: Set pre Validation status"
+    - name:                         "Pre Validation: Set pre Validation status (scale-up)"
       when:
+                                    - hana_topology != 'scale_out_hsr'
                                     - cluster_status_pre is defined
-                                    - cluster_status_pre.primary_node != "" and
-                                      cluster_status_pre.secondary_node != ""
+                                    - cluster_status_pre.primary_node != ""
+                                    - cluster_status_pre.secondary_node != ""
+                                    - cluster_status_pre.pacemaker_status == "running"
+      ansible.builtin.set_fact:
+        pre_validations_status:     "PASSED"
+
+    - name:                         "Pre Validation: Set pre Validation status (scale-out HSR)"
+      when:
+                                    - hana_topology == 'scale_out_hsr'
+                                    - cluster_status_pre is defined
+                                    - cluster_status_pre.primary_node != ""
+                                    - cluster_status_pre.primary_site_nodes | length > 0
+                                    - cluster_status_pre.secondary_site_nodes | length > 0
+                                    - cluster_status_pre.majority_maker_node != ""
                                     - cluster_status_pre.pacemaker_status == "running"
       ansible.builtin.set_fact:
         pre_validations_status:     "PASSED"

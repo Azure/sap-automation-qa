@@ -59,12 +59,21 @@
             saphanasr_provider:         "{{ saphanasr_provider | default('SAPHanaSR') }}"
             hana_clone_resource_name:   "{{ hana_clone_resource_name | default('') }}"
             hana_primitive_resource_name: "{{ hana_primitive_resource_name | default('') }}"
+            hana_topology:                "{{ hana_topology | default('scale_up') }}"
           register:                     cluster_status_test_execution
           retries:                      "{{ default_retries }}"
           delay:                        "{{ default_delay }}"
-          until: |
-                                        cluster_status_test_execution.primary_node == cluster_status_pre.primary_node and
-                                        cluster_status_test_execution.secondary_node == ""
+          until: >
+                                        cluster_status_test_execution.primary_node != "" and
+                                        (
+                                          (hana_topology | default('scale_up') == 'scale_out_hsr' and
+                                           cluster_status_test_execution.primary_node in cluster_status_pre.primary_site_nodes and
+                                           cluster_status_test_execution.secondary_node == "")
+                                          or
+                                          (hana_topology | default('scale_up') != 'scale_out_hsr' and
+                                           cluster_status_test_execution.primary_node == cluster_status_pre.primary_node and
+                                           cluster_status_test_execution.secondary_node == "")
+                                        )
 
         - name:                         "Test Execution: Validate HANA DB cluster status 2"
           get_cluster_status_db:
@@ -74,18 +83,33 @@
             saphanasr_provider:         "{{ saphanasr_provider | default('SAPHanaSR') }}"
             hana_clone_resource_name:   "{{ hana_clone_resource_name | default('') }}"
             hana_primitive_resource_name: "{{ hana_primitive_resource_name | default('') }}"
+            hana_topology:                "{{ hana_topology | default('scale_up') }}"
           register:                     cluster_status_post
           retries:                      "{{ default_retries }}"
           delay:                        "{{ default_delay }}"
-          until: |
-                                        cluster_status_post.primary_node == cluster_status_pre.primary_node and
-                                        cluster_status_post.secondary_node == cluster_status_pre.secondary_node
+          until: >
+                                        cluster_status_post.primary_node != "" and
+                                        cluster_status_post.secondary_node != "" and
+                                        (
+                                          (hana_topology | default('scale_up') == 'scale_out_hsr' and
+                                           cluster_status_post.primary_node in cluster_status_pre.primary_site_nodes and
+                                           cluster_status_post.secondary_node in cluster_status_pre.secondary_site_nodes)
+                                          or
+                                          (hana_topology | default('scale_up') != 'scale_out_hsr' and
+                                           cluster_status_post.primary_node == cluster_status_pre.primary_node and
+                                           cluster_status_post.secondary_node == cluster_status_pre.secondary_node)
+                                        )
 
         - name:                         "Test Execution: Determine test execution status"
           ansible.builtin.set_fact:
             test_execution_status:      "{{ 'PASSED' if (
-                                            cluster_status_post.primary_node == cluster_status_pre.primary_node and
-                                            cluster_status_post.secondary_node == cluster_status_pre.secondary_node
+                                            (hana_topology | default('scale_up') == 'scale_out_hsr' and
+                                             cluster_status_post.primary_node in cluster_status_pre.primary_site_nodes and
+                                             cluster_status_post.secondary_node in cluster_status_pre.secondary_site_nodes)
+                                            or
+                                            (hana_topology | default('scale_up') != 'scale_out_hsr' and
+                                             cluster_status_post.primary_node == cluster_status_pre.primary_node and
+                                             cluster_status_post.secondary_node == cluster_status_pre.secondary_node)
                                           ) else 'FAILED' }}"
 
         - name:                         "Test Execution: CleanUp any failed resource"
@@ -109,7 +133,7 @@
                                         "Pre Validations: Remove any location_constraints": "{{ location_constraints_results }}",
                                         "Pre Validations: Validate HANA DB cluster status": "{{ cluster_status_pre }}",
                                         "Pre Validations: CleanUp any failed resource": "{{ cleanup_failed_resource_pre }}",
-                                        "Test Execution: Index Server Crash": "{{ index_server_result }}",
+                                        "Test Execution: Index Server Crash": "{{ hostvars[cluster_status_pre.secondary_node].index_server_result | default('N/A') }}",
                                         "Post Validations: CleanUp any failed resource": "{{ cleanup_failed_resource_post }}",
                                         "Post Validations: Validate HANA DB cluster status": "{{ cluster_status_post }}",
                                         }

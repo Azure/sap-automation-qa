@@ -145,7 +145,7 @@ class TestDbResourceMigration(RolesTestingBaseDB):
             task_result = event.get("event_data", {}).get("res")
             if task and "Move the resource to the targeted node" in task:
                 assert task_result.get("rc") == 0
-                assert task_result.get("cmd")[3] == "msl_SAPHana_HDB"
+                assert "msl_SAPHana_HDB" in task_result.get("cmd", "")
             elif task and "Test Execution: Validate HANA DB cluster status 1" in task:
                 assert task_result.get("secondary_node") == ""
             elif task and "Test Execution: Validate HANA DB cluster status 2" in task:

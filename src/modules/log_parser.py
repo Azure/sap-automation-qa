@@ -178,6 +178,7 @@ SYS_KEYWORDS = {
     "Result of",
     "reboot",
 }
+BAN_KEYWORDS = {"setroubleshoot"}
 
 
 class LogParser(SapAutomationQA):
@@ -287,6 +288,9 @@ class LogParser(SapAutomationQA):
                         else:
                             continue
 
+                        line_lower = line.lower()
+                        if any(banned_keyword in line_lower for banned_keyword in BAN_KEYWORDS):
+                            continue
                         if start_dt <= log_time <= end_dt and any(
                             keyword in line for keyword in self.keywords
                         ):

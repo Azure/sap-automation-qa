@@ -424,6 +424,13 @@ class TelemetryDataSender(SapAutomationQA):
                 "SapSid": system_context.get("sap_sid", ""),
                 "DbFencingType": system_context.get("high_availability_agent", ""),
                 "ScsFencingType": system_context.get("high_availability_agent", ""),
+                "SAPHanaSRProvider": common_vars.get("saphanasr_provider", ""),
+                "SAPHanaTopology": (
+                    "Scale Out"
+                    if common_vars.get("hana_topology", "scale_up")
+                    in ("scale_out_hsr", "scale_out_standby")
+                    else "Scale Up"
+                ),
             }
 
             telemetry_batch.append(entry)

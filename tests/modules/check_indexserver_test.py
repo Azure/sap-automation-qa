@@ -104,6 +104,33 @@ class TestIndexServerCheck:
             result = checker.get_result()
             assert result["status"] == TestStatus.SUCCESS.value
 
+    def test_suse_indexserver_scaleout_success(self, monkeypatch):
+        """
+        Simulate a global.ini with SAPHanaSR-ScaleOut path (scale-out HSR).
+
+        :param monkeypatch: Monkeypatch fixture.
+        :type monkeypatch: pytest.MonkeyPatch
+        """
+        file_lines = [
+            "[ha_dr_provider_suschksrv]",
+            "provider=susChkSrv",
+            "path=/usr/share/SAPHanaSR-ScaleOut",
+            "execution_order=3",
+        ]
+        with monkeypatch.context() as monkey_patch:
+            monkey_patch.setattr("builtins.open", fake_open_factory(file_lines))
+            checker = IndexServerCheck(
+                database_sid="TEST", os_distribution=OperatingSystemFamily.SUSE
+            )
+            checker.check_indexserver()
+            result = checker.get_result()
+
+            assert result["status"] == TestStatus.SUCCESS.value
+            assert result["message"] == "Indexserver is configured."
+            assert result["indexserver_enabled"] == "yes"
+            assert result["details"]["provider"] == "susChkSrv"
+            assert result["details"]["path"] == "/usr/share/SAPHanaSR-ScaleOut"
+
     def test_unsupported_os(self):
         """
         Test unsupported OS distribution.

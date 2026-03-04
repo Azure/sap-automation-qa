@@ -98,12 +98,21 @@
             saphanasr_provider:             "{{ saphanasr_provider | default('SAPHanaSR') }}"
             hana_clone_resource_name:       "{{ hana_clone_resource_name | default('') }}"
             hana_primitive_resource_name:   "{{ hana_primitive_resource_name | default('') }}"
+            hana_topology:                  "{{ hana_topology | default('scale_up') }}"
           register:                         cluster_status_test_execution_primary
           retries:                          "{{ default_retries }}"
           delay:                            "{{ default_delay }}"
-          until: |
-                                            cluster_status_test_execution_primary.primary_node == cluster_status_pre.primary_node and
-                                            cluster_status_test_execution_primary.secondary_node == ""
+          until: >
+                                            cluster_status_test_execution_primary.primary_node != "" and
+                                            (
+                                              (hana_topology | default('scale_up') == 'scale_out_hsr' and
+                                               cluster_status_test_execution_primary.primary_node in cluster_status_pre.primary_site_nodes and
+                                               cluster_status_test_execution_primary.secondary_node == "")
+                                              or
+                                              (hana_topology | default('scale_up') != 'scale_out_hsr' and
+                                               cluster_status_test_execution_primary.primary_node == cluster_status_pre.primary_node and
+                                               cluster_status_test_execution_primary.secondary_node == "")
+                                            )
 
         - name:                             "Test Execution: Remove the firewall rule on primary node."
           become:                           true
@@ -126,12 +135,22 @@
             saphanasr_provider:             "{{ saphanasr_provider | default('SAPHanaSR') }}"
             hana_clone_resource_name:       "{{ hana_clone_resource_name | default('') }}"
             hana_primitive_resource_name:   "{{ hana_primitive_resource_name | default('') }}"
+            hana_topology:                  "{{ hana_topology | default('scale_up') }}"
           register:                         cluster_status_post_primary
           retries:                          "{{ default_retries }}"
           delay:                            "{{ default_delay }}"
-          until: |
-                                            cluster_status_post_primary.primary_node == cluster_status_pre.primary_node and
-                                            cluster_status_post_primary.secondary_node == cluster_status_pre.secondary_node
+          until: >
+                                            cluster_status_post_primary.primary_node != "" and
+                                            cluster_status_post_primary.secondary_node != "" and
+                                            (
+                                              (hana_topology | default('scale_up') == 'scale_out_hsr' and
+                                               cluster_status_post_primary.primary_node in cluster_status_pre.primary_site_nodes and
+                                               cluster_status_post_primary.secondary_node in cluster_status_pre.secondary_site_nodes)
+                                              or
+                                              (hana_topology | default('scale_up') != 'scale_out_hsr' and
+                                               cluster_status_post_primary.primary_node == cluster_status_pre.primary_node and
+                                               cluster_status_post_primary.secondary_node == cluster_status_pre.secondary_node)
+                                            )
 
     - name:                                 "Test Execution: Block Network Communication (Secondary Node)"
       when:
@@ -147,12 +166,21 @@
             saphanasr_provider:             "{{ saphanasr_provider | default('SAPHanaSR') }}"
             hana_clone_resource_name:       "{{ hana_clone_resource_name | default('') }}"
             hana_primitive_resource_name:   "{{ hana_primitive_resource_name | default('') }}"
+            hana_topology:                  "{{ hana_topology | default('scale_up') }}"
           register:                         cluster_status_test_execution_secondary
           retries:                          "{{ default_retries }}"
           delay:                            "{{ default_delay }}"
-          until: |
-                                            cluster_status_test_execution_secondary.primary_node == cluster_status_pre.secondary_node and
-                                            cluster_status_test_execution_secondary.secondary_node == ""
+          until: >
+                                            cluster_status_test_execution_secondary.primary_node != "" and
+                                            (
+                                              (hana_topology | default('scale_up') == 'scale_out_hsr' and
+                                               cluster_status_test_execution_secondary.primary_node in cluster_status_pre.secondary_site_nodes and
+                                               cluster_status_test_execution_secondary.secondary_node == "")
+                                              or
+                                              (hana_topology | default('scale_up') != 'scale_out_hsr' and
+                                               cluster_status_test_execution_secondary.primary_node == cluster_status_pre.secondary_node and
+                                               cluster_status_test_execution_secondary.secondary_node == "")
+                                            )
 
         - name:                             "Test Execution: Wait for the cluster to be in a stable state"
           ansible.builtin.wait_for:
@@ -166,12 +194,22 @@
             saphanasr_provider:             "{{ saphanasr_provider | default('SAPHanaSR') }}"
             hana_clone_resource_name:       "{{ hana_clone_resource_name | default('') }}"
             hana_primitive_resource_name:   "{{ hana_primitive_resource_name | default('') }}"
+            hana_topology:                  "{{ hana_topology | default('scale_up') }}"
           register:                         cluster_status_post_secondary
           retries:                          "{{ default_retries }}"
           delay:                            "{{ default_delay }}"
-          until: |
-                                            cluster_status_post_secondary.primary_node == cluster_status_pre.secondary_node and
-                                            cluster_status_post_secondary.secondary_node == cluster_status_pre.primary_node
+          until: >
+                                            cluster_status_post_secondary.primary_node != "" and
+                                            cluster_status_post_secondary.secondary_node != "" and
+                                            (
+                                              (hana_topology | default('scale_up') == 'scale_out_hsr' and
+                                               cluster_status_post_secondary.primary_node in cluster_status_pre.secondary_site_nodes and
+                                               cluster_status_post_secondary.primary_node != cluster_status_pre.primary_node)
+                                              or
+                                              (hana_topology | default('scale_up') != 'scale_out_hsr' and
+                                               cluster_status_post_secondary.primary_node == cluster_status_pre.secondary_node and
+                                               cluster_status_post_secondary.secondary_node == cluster_status_pre.primary_node)
+                                            )
 
     - name:                                 "Test Execution: Block Network Communication"
       when:                                 ansible_hostname == cluster_status_pre.primary_node
@@ -189,10 +227,17 @@
         - name:                             "Test Execution: Determine test execution status"
           ansible.builtin.set_fact:
             test_execution_status:          "{{ 'PASSED' if (
-                                              (cluster_status_post.primary_node == cluster_status_pre.secondary_node and
-                                               cluster_status_post.secondary_node == cluster_status_pre.primary_node) or
-                                              (cluster_status_post.primary_node == cluster_status_pre.primary_node and
-                                               cluster_status_post.secondary_node == cluster_status_pre.secondary_node)
+                                              (hana_topology | default('scale_up') == 'scale_out_hsr' and (
+                                                (cluster_status_post.primary_node in cluster_status_pre.secondary_site_nodes and
+                                                 cluster_status_post.primary_node != cluster_status_pre.primary_node) or
+                                                (cluster_status_post.primary_node in cluster_status_pre.primary_site_nodes and
+                                                 cluster_status_post.secondary_node in cluster_status_pre.secondary_site_nodes)))
+                                              or
+                                              (hana_topology | default('scale_up') != 'scale_out_hsr' and (
+                                                (cluster_status_post.primary_node == cluster_status_pre.secondary_node and
+                                                 cluster_status_post.secondary_node == cluster_status_pre.primary_node) or
+                                                (cluster_status_post.primary_node == cluster_status_pre.primary_node and
+                                                 cluster_status_post.secondary_node == cluster_status_pre.secondary_node)))
                                             ) else 'FAILED' }}"
 
         - name:                             "Set test case message and details"

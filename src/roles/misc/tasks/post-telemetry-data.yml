@@ -59,5 +59,7 @@
                                           'TestExecutionStartTime': lookup('vars', 'test_execution_start_time', default=''),
                                           'TestExecutionEndTime': lookup('vars', 'test_execution_end_time', default=''),
                                           'TestCaseHostname': lookup('vars', 'test_case_hostname', default=''),
-                                          'TestCaseLogMessagesFromSap': lookup('vars', 'test_case_var_log_messages', default='')
+                                          'TestCaseLogMessagesFromSap': lookup('vars', 'test_case_var_log_messages', default=''),
+                                          'SAPHanaSRProvider': lookup('vars', 'saphanasr_provider', default=''),
+                                          'SAPHanaTopology': ('Scale Out' if lookup('vars', 'hana_topology', default='scale_up') in ['scale_out_hsr', 'scale_out_standby'] else 'Scale Up')
                                         } }}"

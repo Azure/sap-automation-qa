@@ -48,12 +48,22 @@
             saphanasr_provider:         "{{ saphanasr_provider | default('SAPHanaSR') }}"
             hana_clone_resource_name:   "{{ hana_clone_resource_name | default('') }}"
             hana_primitive_resource_name: "{{ hana_primitive_resource_name | default('') }}"
+            hana_topology:                "{{ hana_topology | default('scale_up') }}"
           register:                     cluster_status_test_execution
           retries:                      "{{ default_retries }}"
           delay:                        "{{ default_delay }}"
-          until: |
-                                        cluster_status_test_execution.primary_node == cluster_status_pre.secondary_node and
-                                        cluster_status_test_execution.secondary_node == cluster_status_pre.primary_node
+          until: >
+                                        cluster_status_test_execution.primary_node != "" and
+                                        (
+                                          (hana_topology | default('scale_up') == 'scale_out_hsr' and
+                                           cluster_status_test_execution.primary_node in cluster_status_pre.secondary_site_nodes and
+                                           cluster_status_test_execution.primary_node != cluster_status_pre.primary_node and
+                                           cluster_status_test_execution.secondary_node != "")
+                                          or
+                                          (hana_topology | default('scale_up') != 'scale_out_hsr' and
+                                           cluster_status_test_execution.primary_node == cluster_status_pre.secondary_node and
+                                           cluster_status_test_execution.secondary_node == cluster_status_pre.primary_node)
+                                        )
 
         - name:                         "Test Execution: Register Failed Resource when automated_register is false"
           when:                         cluster_status_pre.AUTOMATED_REGISTER == "false"
@@ -66,12 +76,21 @@
                 saphanasr_provider:     "{{ saphanasr_provider | default('SAPHanaSR') }}"
                 hana_clone_resource_name: "{{ hana_clone_resource_name | default('') }}"
                 hana_primitive_resource_name: "{{ hana_primitive_resource_name | default('') }}"
+                hana_topology:                "{{ hana_topology | default('scale_up') }}"
               register:                 cluster_status_test_execution
               retries:                  "{{ default_retries }}"
               delay:                    "{{ default_delay }}"
-              until: |
-                                        cluster_status_test_execution.primary_node == cluster_status_pre.secondary_node and
-                                        cluster_status_test_execution.secondary_node == ""
+              until: >
+                                        cluster_status_test_execution.primary_node != "" and
+                                        (
+                                          (hana_topology | default('scale_up') == 'scale_out_hsr' and
+                                           cluster_status_test_execution.primary_node in cluster_status_pre.secondary_site_nodes and
+                                           cluster_status_test_execution.secondary_node == "")
+                                          or
+                                          (hana_topology | default('scale_up') != 'scale_out_hsr' and
+                                           cluster_status_test_execution.primary_node == cluster_status_pre.secondary_node and
+                                           cluster_status_test_execution.secondary_node == "")
+                                        )
 
             - name:                     "Test Execution: Set facts for the failed resource"
               ansible.builtin.set_fact:
@@ -85,7 +104,7 @@
               ansible.builtin.shell: |
                                         source /usr/sap/{{ db_sid | upper }}/HDB{{ db_instance_number | upper }}/HDBSettings.sh && \
                                         /usr/sap/{{ db_sid | upper }}/HDB{{ db_instance_number }}/exe/hdbnsutil -sr_register \
-                                        --remoteHost={{ cluster_status_pre.secondary_node }} \
+                                        --remoteHost={{ cluster_status_test_execution.primary_node }} \
                                         --remoteInstance={{ db_instance_number }} \
                                         --replicationMode={{ replication_mode }} \
                                         --name={{ primary_site_name }} \
@@ -112,18 +131,33 @@
             saphanasr_provider:         "{{ saphanasr_provider | default('SAPHanaSR') }}"
             hana_clone_resource_name:   "{{ hana_clone_resource_name | default('') }}"
             hana_primitive_resource_name: "{{ hana_primitive_resource_name | default('') }}"
+            hana_topology:                "{{ hana_topology | default('scale_up') }}"
           register:                     cluster_status_post
           retries:                      "{{ default_retries }}"
           delay:                        "{{ default_delay }}"
-          until: |
-                                        cluster_status_post.primary_node == cluster_status_pre.secondary_node and
-                                        cluster_status_post.secondary_node == cluster_status_pre.primary_node
+          until: >
+                                        cluster_status_post.primary_node != "" and
+                                        cluster_status_post.secondary_node != "" and
+                                        (
+                                          (hana_topology | default('scale_up') == 'scale_out_hsr' and
+                                           cluster_status_post.primary_node in cluster_status_pre.secondary_site_nodes and
+                                           cluster_status_post.primary_node != cluster_status_pre.primary_node)
+                                          or
+                                          (hana_topology | default('scale_up') != 'scale_out_hsr' and
+                                           cluster_status_post.primary_node == cluster_status_pre.secondary_node and
+                                           cluster_status_post.secondary_node == cluster_status_pre.primary_node)
+                                        )
 
         - name:                         "Test Execution: Determine test execution status"
           ansible.builtin.set_fact:
             test_execution_status:      "{{ 'PASSED' if (
-                                            cluster_status_post.primary_node == cluster_status_pre.secondary_node and
-                                            cluster_status_post.secondary_node == cluster_status_pre.primary_node
+                                            (hana_topology | default('scale_up') == 'scale_out_hsr' and
+                                             cluster_status_post.primary_node in cluster_status_pre.secondary_site_nodes and
+                                             cluster_status_post.primary_node != cluster_status_pre.primary_node)
+                                            or
+                                            (hana_topology | default('scale_up') != 'scale_out_hsr' and
+                                             cluster_status_post.primary_node == cluster_status_pre.secondary_node and
+                                             cluster_status_post.secondary_node == cluster_status_pre.primary_node)
                                           ) else 'FAILED' }}"
 
         - name:                         "Set test case message and details"

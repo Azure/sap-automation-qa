@@ -31,6 +31,7 @@
             fencing_mechanism:          "{{ database_cluster_type }}"
             pcmk_constants:             "{{ lookup('file', '../../ha_db_hana/tasks/files/constants.yaml') | from_yaml }}"
             saphanasr_provider:         "{{ saphanasr_provider | default('SAPHanaSR') }}"
+            hana_topology:              "{{ hana_topology | default('scale_up') }}"
             os_family:                  "{{ target_os_family | default('UNKNOWN') }}"
             cib_output:                 "{{ cib_file_content.content | b64decode if cib_file_content.content is defined else '' }}"
           register:                     test_result

@@ -10,7 +10,8 @@ def main():
             fencing_mechanism=dict(type="str"),
             os_version=dict(type="str"),
             pcmk_constants=dict(type="dict"),
-            saphanasr_provider=dict(type="str", required=True)
+            saphanasr_provider=dict(type="str", required=True),
+            hana_topology=dict(type="str", required=False, default="scale_up")
         )
     )
 

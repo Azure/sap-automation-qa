@@ -34,6 +34,8 @@ class BaseClusterStatusChecker(SapAutomationQA):
     Base class to check the status of a pacemaker cluster.
     """
 
+    MAX_READINESS_ATTEMPTS: int = 25
+
     def __init__(self, ansible_os_family: OperatingSystemFamily):
         super().__init__()
         self.ansible_os_family = ansible_os_family
@@ -153,13 +155,23 @@ class BaseClusterStatusChecker(SapAutomationQA):
         self._get_stonith_action()
 
         try:
+            attempts = 0
             while not self._is_cluster_ready():
+                if attempts >= self.MAX_READINESS_ATTEMPTS:
+                    self.result["message"] = (
+                        "Cluster readiness check exceeded max attempts "
+                        f"({self.MAX_READINESS_ATTEMPTS}). "
+                        "Primary node could not be identified from node attributes."
+                    )
+                    self.log(logging.ERROR, self.result["message"])
+                    break
                 self.result["cluster_status"] = self.execute_command_subprocess(CLUSTER_STATUS)
                 cluster_status_xml = ET.fromstring(self.result["cluster_status"])
                 self.log(logging.INFO, "Cluster status retrieved")
 
                 self._validate_cluster_basic_status(cluster_status_xml)
                 self._process_node_attributes(cluster_status_xml=cluster_status_xml)
+                attempts += 1
 
             if not self._is_cluster_stable():
                 self.result["message"] = "Pacemaker cluster isn't stable"

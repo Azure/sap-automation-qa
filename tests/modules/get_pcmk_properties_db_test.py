@@ -10,7 +10,12 @@ import io
 import xml.etree.ElementTree as ET
 import pytest
 from src.modules.get_pcmk_properties_db import HAClusterValidator, main
-from src.module_utils.enums import OperatingSystemFamily, HanaSRProvider, TestStatus
+from src.module_utils.enums import (
+    OperatingSystemFamily,
+    HanaSRProvider,
+    HanaTopology,
+    TestStatus,
+)
 
 DUMMY_XML_RSC = """<rsc_defaults>
   <meta_attributes id="build-resource-defaults">
@@ -111,6 +116,32 @@ DUMMY_XML_RESOURCES = """<resources>
       <nvpair name="SID" value="HDB"/>
     </instance_attributes>
   </primitive>
+  <clone id="hana_nfs_s1_active-clone">
+    <meta_attributes id="hana_nfs_s1_active-clone-meta_attributes">
+      <nvpair name="clone-node-max" value="1"/>
+      <nvpair name="interleave" value="true"/>
+    </meta_attributes>
+    <primitive id="hana_nfs_s1_active" class="ocf" provider="pacemaker" type="attribute">
+      <instance_attributes id="hana_nfs_s1_active-instance_attributes">
+        <nvpair name="active_value" value="true"/>
+        <nvpair name="inactive_value" value="false"/>
+        <nvpair name="name" value="hana_nfs_s1_active"/>
+      </instance_attributes>
+    </primitive>
+  </clone>
+  <clone id="hana_nfs_s2_active-clone">
+    <meta_attributes id="hana_nfs_s2_active-clone-meta_attributes">
+      <nvpair name="clone-node-max" value="1"/>
+      <nvpair name="interleave" value="true"/>
+    </meta_attributes>
+    <primitive id="hana_nfs_s2_active" class="ocf" provider="pacemaker" type="attribute">
+      <instance_attributes id="hana_nfs_s2_active-instance_attributes">
+        <nvpair name="active_value" value="true"/>
+        <nvpair name="inactive_value" value="false"/>
+        <nvpair name="name" value="hana_nfs_s2_active"/>
+      </instance_attributes>
+    </primitive>
+  </clone>
 </resources>"""
 
 DUMMY_XML_FULL_CIB = f"""<?xml version="1.0" encoding="UTF-8"?>
@@ -123,6 +154,159 @@ DUMMY_XML_FULL_CIB = f"""<?xml version="1.0" encoding="UTF-8"?>
     {DUMMY_XML_RESOURCES}
   </configuration>
 </cib>"""
+
+DUMMY_XML_SCALEOUT_RESOURCES = """<resources>
+  <primitive id="stonith-sbd" class="stonith" type="external/sbd">
+    <instance_attributes id="stonith-sbd-instance_attributes">
+      <nvpair name="pcmk_delay_max" value="30s"/>
+    </instance_attributes>
+    <operations id="stonith-sbd-operations">
+      <op name="monitor" interval="10" timeout="600"/>
+    </operations>
+  </primitive>
+  <primitive id="rsc_fence_azure" class="stonith" type="fence_azure_arm">
+    <instance_attributes>
+      <nvpair name="login" value="testuser"/>
+    </instance_attributes>
+  </primitive>
+  <clone id="fs_hana_shared_s1-clone">
+    <meta_attributes id="fs_hana_shared_s1-clone-meta">
+      <nvpair name="clone-node-max" value="1"/>
+      <nvpair name="interleave" value="true"/>
+    </meta_attributes>
+    <primitive id="fs_hana_shared_s1" class="ocf" provider="heartbeat" type="Filesystem">
+      <instance_attributes id="fs_hana_shared_s1-instance_attributes">
+        <nvpair name="device" value="10.23.1.7:/HN1-shared-s1"/>
+        <nvpair name="directory" value="/hana/shared"/>
+        <nvpair name="fstype" value="nfs"/>
+        <nvpair name="fast_stop" value="no"/>
+      </instance_attributes>
+      <operations>
+        <op name="monitor" interval="20" timeout="120"/>
+        <op name="start" interval="0" timeout="120"/>
+        <op name="stop" interval="0" timeout="120"/>
+      </operations>
+    </primitive>
+  </clone>
+  <clone id="fs_hana_shared_s2-clone">
+    <meta_attributes id="fs_hana_shared_s2-clone-meta">
+      <nvpair name="clone-node-max" value="1"/>
+      <nvpair name="interleave" value="true"/>
+    </meta_attributes>
+    <primitive id="fs_hana_shared_s2" class="ocf" provider="heartbeat" type="Filesystem">
+      <instance_attributes id="fs_hana_shared_s2-instance_attributes">
+        <nvpair name="device" value="10.23.1.7:/HN1-shared-s2"/>
+        <nvpair name="directory" value="/hana/shared"/>
+        <nvpair name="fstype" value="nfs"/>
+        <nvpair name="fast_stop" value="no"/>
+      </instance_attributes>
+      <operations>
+        <op name="monitor" interval="20" timeout="120"/>
+        <op name="start" interval="0" timeout="120"/>
+        <op name="stop" interval="0" timeout="120"/>
+      </operations>
+    </primitive>
+  </clone>
+  <clone id="hana_nfs_s1_active-clone">
+    <meta_attributes id="hana_nfs_s1_active-clone-meta">
+      <nvpair name="clone-node-max" value="1"/>
+      <nvpair name="interleave" value="true"/>
+    </meta_attributes>
+    <primitive id="hana_nfs_s1_active" class="ocf" provider="pacemaker" type="attribute">
+      <instance_attributes id="hana_nfs_s1_active-instance_attributes">
+        <nvpair name="active_value" value="true"/>
+        <nvpair name="inactive_value" value="false"/>
+        <nvpair name="name" value="hana_nfs_s1_active"/>
+      </instance_attributes>
+    </primitive>
+  </clone>
+  <clone id="hana_nfs_s2_active-clone">
+    <meta_attributes id="hana_nfs_s2_active-clone-meta">
+      <nvpair name="clone-node-max" value="1"/>
+      <nvpair name="interleave" value="true"/>
+    </meta_attributes>
+    <primitive id="hana_nfs_s2_active" class="ocf" provider="pacemaker" type="attribute">
+      <instance_attributes id="hana_nfs_s2_active-instance_attributes">
+        <nvpair name="active_value" value="true"/>
+        <nvpair name="inactive_value" value="false"/>
+        <nvpair name="name" value="hana_nfs_s2_active"/>
+      </instance_attributes>
+    </primitive>
+  </clone>
+  <clone id="cln_SAPHanaTopology_HN1_HDB03-clone">
+    <meta_attributes id="cln_SAPHanaTopology_HN1_HDB03-clone-meta">
+      <nvpair name="clone-node-max" value="1"/>
+      <nvpair name="interleave" value="true"/>
+    </meta_attributes>
+    <primitive id="rsc_SAPHanaTopology_HN1_HDB03" class="ocf" provider="heartbeat" type="SAPHanaTopology">
+      <instance_attributes>
+        <nvpair name="SID" value="HN1"/>
+        <nvpair name="InstanceNumber" value="03"/>
+      </instance_attributes>
+      <operations>
+        <op name="monitor" interval="10" timeout="600"/>
+        <op name="start" interval="0" timeout="600"/>
+        <op name="stop" interval="0" timeout="300"/>
+      </operations>
+    </primitive>
+  </clone>
+  <primitive id="rsc_SAPHana_HN1_HDB03" class="ocf" provider="heartbeat" type="SAPHanaController">
+    <instance_attributes id="rsc_SAPHana_HN1_HDB03-instance_attributes">
+      <nvpair name="SID" value="HN1"/>
+      <nvpair name="InstanceNumber" value="03"/>
+      <nvpair name="PREFER_SITE_TAKEOVER" value="true"/>
+      <nvpair name="DUPLICATE_PRIMARY_TIMEOUT" value="7200"/>
+      <nvpair name="AUTOMATED_REGISTER" value="false"/>
+    </instance_attributes>
+    <operations>
+      <op name="start" interval="0" timeout="3600"/>
+      <op name="stop" interval="0" timeout="3600"/>
+      <op name="promote" interval="0" timeout="3600"/>
+      <op name="demote" interval="0" timeout="320"/>
+      <op name="monitor" interval="60" timeout="700"/>
+    </operations>
+  </primitive>
+  <primitive id="rsc_ip_HN1_HDB03" class="ocf" provider="heartbeat" type="IPaddr2">
+    <instance_attributes>
+      <nvpair name="ip" value="10.23.0.18"/>
+    </instance_attributes>
+  </primitive>
+  <primitive id="rsc_azure_lb" class="ocf" provider="heartbeat" type="azure-lb">
+    <instance_attributes>
+      <nvpair name="port" value="62503"/>
+    </instance_attributes>
+  </primitive>
+</resources>"""
+
+DUMMY_XML_SCALEOUT_CIB = f"""<?xml version="1.0" encoding="UTF-8"?>
+<cib>
+  <configuration>
+    {DUMMY_XML_CRM}
+    {DUMMY_XML_RSC}
+    {DUMMY_XML_OP}
+    {DUMMY_XML_CONSTRAINTS}
+    {DUMMY_XML_SCALEOUT_RESOURCES}
+  </configuration>
+</cib>"""
+
+DUMMY_GLOBAL_INI_SCALEOUT = """[DEFAULT]
+dummy1 = dummy2
+
+[ha_dr_provider_SAPHanaSR]
+provider = SAPHanaSR
+path = /usr/share/SAPHanaSR-ScaleOut
+execution_order = 1
+
+[ha_dr_provider_chksrv]
+provider = ChkSrv
+path = /usr/share/SAPHanaSR-ScaleOut
+execution_order = 2
+action_on_lost = kill
+
+[trace]
+ha_dr_saphanasr = info
+ha_dr_chksrv = info
+"""
 
 DUMMY_OS_COMMAND = """kernel.numa_balancing = 0"""
 
@@ -220,6 +404,59 @@ DUMMY_CONSTANTS = {
                 },
                 "instance_attributes": {"SID": {"value": "HDB", "required": False}},
             },
+            "scaleout_filesystem": {
+                "instance_attributes": {
+                    "fast_stop": {"value": "no", "required": False},
+                },
+                "meta_attributes": {
+                    "clone-node-max": {"value": "1", "required": False},
+                    "interleave": {"value": "true", "required": False},
+                },
+                "operations": {
+                    "monitor": {
+                        "interval": {"value": ["20", "20s"], "required": False},
+                        "timeout": {"value": ["120", "120s"], "required": False},
+                    },
+                },
+            },
+            "nfs_attribute": {
+                "instance_attributes": {
+                    "active_value": {"value": "true", "required": False},
+                    "inactive_value": {"value": "false", "required": False},
+                },
+                "meta_attributes": {
+                    "clone-node-max": {"value": "1", "required": False},
+                    "interleave": {"value": "true", "required": False},
+                },
+            },
+            "scaleout_hana": {
+                "meta_attributes": {
+                    "notify": {"value": "true", "required": False},
+                    "clone-node-max": {"value": "1", "required": False},
+                },
+                "instance_attributes": {
+                    "SID": {"value": "HN1", "required": False},
+                    "PREFER_SITE_TAKEOVER": {"value": "true", "required": False},
+                    "AUTOMATED_REGISTER": {"value": "true", "required": False},
+                },
+                "operations": {
+                    "monitor": {
+                        "timeout": {"value": ["700", "700s"], "required": False},
+                    },
+                },
+            },
+            "scaleout_topology": {
+                "meta_attributes": {
+                    "clone-node-max": {"value": "1", "required": False},
+                    "interleave": {"value": "true", "required": False},
+                },
+                "operations": {
+                    "monitor": {
+                        "interval": {"value": ["10", "10s"], "required": False},
+                        "timeout": {"value": ["600", "600s"], "required": False},
+                    },
+                },
+            },
         }
     },
     "OS_PARAMETERS": {
@@ -252,7 +489,36 @@ DUMMY_CONSTANTS = {
                 "trace": {
                     "ha_dr_sushanasr": {"required": False},
                 },
-            }
+            },
+            "SAPHanaController": {
+                "ha_dr_provider_SAPHanaSR": {
+                    "provider": {"value": "SAPHanaSR", "required": True},
+                    "path": {
+                        "value": [
+                            "/usr/share/SAPHanaSR-ScaleOut",
+                            "/hana/shared/myHooks",
+                        ],
+                        "required": True,
+                    },
+                    "execution_order": {"value": "1", "required": True},
+                },
+                "ha_dr_provider_chksrv": {
+                    "provider": {"value": "ChkSrv", "required": True},
+                    "path": {
+                        "value": [
+                            "/usr/share/SAPHanaSR-ScaleOut",
+                            "/hana/shared/myHooks",
+                        ],
+                        "required": True,
+                    },
+                    "execution_order": {"value": "2", "required": True},
+                    "action_on_lost": {"value": "kill", "required": True},
+                },
+                "trace": {
+                    "ha_dr_saphanasr": {"required": False},
+                    "ha_dr_chksrv": {"required": False},
+                },
+            },
         },
         "SUSE": {
             "SAPHanaSR-angi": {
@@ -403,6 +669,32 @@ class TestHAClusterValidator:
             builtins.open = original_open
 
     @pytest.fixture
+    def validator_scaleout_provider(self, mock_xml_outputs):
+        """
+        Fixture for creating a TestableHAClusterValidator instance with SCALEOUT provider.
+        """
+        mock_execute = MockExecuteCommand(mock_xml_outputs)
+        mock_open = MockOpen(DUMMY_GLOBAL_INI_SAPHANASR)
+        original_open = builtins.open
+        builtins.open = mock_open
+        try:
+            validator = TestableHAClusterValidator(
+                mock_execute,
+                mock_open,
+                os_type=OperatingSystemFamily.REDHAT,
+                sid="HDB",
+                instance_number="00",
+                fencing_mechanism="sbd",
+                virtual_machine_name="vmname",
+                constants=DUMMY_CONSTANTS,
+                saphanasr_provider=HanaSRProvider.SCALEOUT,
+                cib_output="",
+            )
+            yield validator
+        finally:
+            builtins.open = original_open
+
+    @pytest.fixture
     def validator_with_cib(self):
         """
         Fixture for creating a validator with CIB output.
@@ -416,6 +708,52 @@ class TestHAClusterValidator:
             constants=DUMMY_CONSTANTS,
             saphanasr_provider=HanaSRProvider.SAPHANASR,
             cib_output=DUMMY_XML_FULL_CIB,
+        )
+
+    @pytest.fixture
+    def validator_scaleout(self, mock_xml_outputs):
+        """
+        Fixture for creating a scale-out HSR validator.
+        """
+        scaleout_outputs = mock_xml_outputs.copy()
+        scaleout_outputs["resources"] = DUMMY_XML_SCALEOUT_RESOURCES
+        mock_execute = MockExecuteCommand(scaleout_outputs)
+        mock_open = MockOpen(DUMMY_GLOBAL_INI_SCALEOUT)
+        original_open = builtins.open
+        builtins.open = mock_open
+        try:
+            validator = TestableHAClusterValidator(
+                mock_execute,
+                mock_open,
+                os_type=OperatingSystemFamily.REDHAT,
+                sid="HN1",
+                instance_number="03",
+                fencing_mechanism="sbd",
+                virtual_machine_name="hana-s1-db1",
+                constants=DUMMY_CONSTANTS,
+                saphanasr_provider=HanaSRProvider.SAPHANASR,
+                hana_topology=HanaTopology.SCALE_OUT_HSR,
+                cib_output="",
+            )
+            yield validator
+        finally:
+            builtins.open = original_open
+
+    @pytest.fixture
+    def validator_scaleout_cib(self):
+        """
+        Fixture for creating a scale-out HSR validator with CIB output.
+        """
+        return HAClusterValidator(
+            os_type=OperatingSystemFamily.REDHAT,
+            sid="HN1",
+            instance_number="03",
+            fencing_mechanism="sbd",
+            virtual_machine_name="hana-s1-db1",
+            constants=DUMMY_CONSTANTS,
+            saphanasr_provider=HanaSRProvider.SAPHANASR,
+            hana_topology=HanaTopology.SCALE_OUT_HSR,
+            cib_output=DUMMY_XML_SCALEOUT_CIB,
         )
 
     def test_init(self, validator):
@@ -448,6 +786,43 @@ class TestHAClusterValidator:
         assert len(params) > 0
         categories = [p.get("category", "") for p in params]
         assert not any(cat == "topology" for cat in categories)
+        assert not any("nfs_attribute" in cat for cat in categories)
+
+    def test_parse_resources_section_scaleout(self, validator_scaleout):
+        """
+        Test _parse_resources_section method with SCALEOUT provider.
+        """
+        xml_str = DUMMY_XML_RESOURCES
+        root = ET.fromstring(xml_str)
+        params = validator_scaleout._parse_resources_section(root)
+        assert len(params) > 0
+        categories = [p.get("category", "") for p in params]
+        assert not any("angi_hana" in cat for cat in categories)
+        assert not any("angi_filesystem" in cat for cat in categories)
+        assert any("nfs_attribute" in cat for cat in categories)
+
+    def test_nfs_attribute_parameters(self, validator_scaleout):
+        """
+        Test NFS attribute resource parameters are parsed and validated.
+        """
+        xml_str = DUMMY_XML_RESOURCES
+        root = ET.fromstring(xml_str)
+        params = validator_scaleout._parse_resources_section(root)
+        nfs_params = [p for p in params if "nfs_attribute" in p.get("category", "")]
+        assert len(nfs_params) > 0
+        nfs_names = [p["name"] for p in nfs_params]
+        assert "active_value" in nfs_names
+        assert "inactive_value" in nfs_names
+        assert "clone-node-max" in nfs_names
+        assert "interleave" in nfs_names
+        for p in nfs_params:
+            if p["name"] in ("active_value", "inactive_value", "clone-node-max", "interleave"):
+                assert (
+                    p["status"] == TestStatus.SUCCESS.value
+                ), f"NFS param {p['name']} expected SUCCESS, got {p['status']}"
+        info_params = [p for p in nfs_params if p["name"] == "name"]
+        for p in info_params:
+            assert p["status"] == TestStatus.INFO.value
 
     def test_parse_global_ini_parameters_saphanasr(self, validator):
         """
@@ -557,6 +932,7 @@ class TestHAClusterValidator:
                     "fencing_mechanism": "sbd",
                     "pcmk_constants": DUMMY_CONSTANTS,
                     "saphanasr_provider": "SAPHanaSR",
+                    "hana_topology": "scale_up",
                     "cib_output": "",
                     "os_family": "RedHat",
                 }
@@ -601,6 +977,7 @@ class TestHAClusterValidator:
                     "fencing_mechanism": "sbd",
                     "pcmk_constants": DUMMY_CONSTANTS,
                     "saphanasr_provider": "SAPHanaSR",
+                    "hana_topology": "scale_up",
                     "cib_output": "",
                     "os_family": "RedHat",
                 }
@@ -700,3 +1077,160 @@ class TestHAClusterValidator:
         assert "details" in result
         assert "parameters" in result["details"]
         assert isinstance(result["details"]["parameters"], list)
+
+    def test_scaleout_init(self, validator_scaleout):
+        """
+        Test scale-out validator initializes with correct topology.
+        The detected provider is SAPHanaSR (not SAPHanaController)
+        because Ansible detection returns the installed package name.
+        """
+        assert validator_scaleout.hana_topology == HanaTopology.SCALE_OUT_HSR
+        assert validator_scaleout.saphanasr_provider == HanaSRProvider.SAPHANASR
+        assert validator_scaleout.sid == "HN1"
+        assert validator_scaleout.instance_number == "03"
+
+    def test_scaleout_resource_categories_distinct(self):
+        """
+        Test that SCALEOUT_RESOURCE_CATEGORIES is distinct from RESOURCE_CATEGORIES.
+        """
+        scaleout = HAClusterValidator.SCALEOUT_RESOURCE_CATEGORIES
+        scaleup = HAClusterValidator.RESOURCE_CATEGORIES
+        assert "scaleout_filesystem" in scaleout
+        assert "nfs_attribute" in scaleout
+        assert "scaleout_hana" in scaleout
+        assert "scaleout_topology" in scaleout
+        assert "scaleout_filesystem" not in scaleup
+        assert "scaleout_hana" not in scaleup
+
+    def test_scaleout_parse_resources_finds_nfs(self, validator_scaleout):
+        """
+        Test that scale-out resource parsing finds NFS filesystem clones.
+        """
+        root = ET.fromstring(DUMMY_XML_SCALEOUT_RESOURCES)
+        params = validator_scaleout._parse_resources_section(root)
+        categories = [p.get("category", "") for p in params]
+        assert any("scaleout_filesystem" in cat for cat in categories)
+
+    def test_scaleout_parse_resources_finds_controller(self, validator_scaleout):
+        """
+        Test that scale-out resource parsing finds SAPHanaController.
+        """
+        root = ET.fromstring(DUMMY_XML_SCALEOUT_RESOURCES)
+        params = validator_scaleout._parse_resources_section(root)
+        categories = [p.get("category", "") for p in params]
+        assert any("scaleout_hana" in cat for cat in categories)
+
+    def test_scaleout_parse_resources_finds_topology(self, validator_scaleout):
+        """
+        Test that scale-out resource parsing finds SAPHanaTopology.
+        """
+        root = ET.fromstring(DUMMY_XML_SCALEOUT_RESOURCES)
+        params = validator_scaleout._parse_resources_section(root)
+        categories = [p.get("category", "") for p in params]
+        assert any("scaleout_topology" in cat for cat in categories)
+
+    def test_scaleout_parse_resources_finds_nfs_attributes(self, validator_scaleout):
+        """
+        Test that scale-out resource parsing finds NFS attribute resources.
+        """
+        root = ET.fromstring(DUMMY_XML_SCALEOUT_RESOURCES)
+        params = validator_scaleout._parse_resources_section(root)
+        categories = [p.get("category", "") for p in params]
+        assert any("nfs_attribute" in cat for cat in categories)
+
+    def test_scaleout_excludes_scaleup_categories(self, validator_scaleout):
+        """
+        Test that scale-out does not use scale-up specific categories.
+        """
+        root = ET.fromstring(DUMMY_XML_SCALEOUT_RESOURCES)
+        params = validator_scaleout._parse_resources_section(root)
+        categories = [p.get("category", "") for p in params]
+        assert not any(cat == "hana" for cat in categories)
+        assert not any(cat == "topology" for cat in categories)
+        assert not any(cat == "angi_hana" for cat in categories)
+
+    def test_scaleout_validation_with_cib(self, validator_scaleout_cib):
+        """
+        Test scale-out validation using CIB output produces valid result.
+        """
+        result = validator_scaleout_cib.get_result()
+        assert result["status"] in [
+            TestStatus.SUCCESS.value,
+            TestStatus.ERROR.value,
+            TestStatus.WARNING.value,
+        ]
+        assert "parameters" in result["details"]
+        assert "CIB output provided" in result["message"]
+
+    def test_scaleout_global_ini_scaleout_path(self, validator_scaleout):
+        """
+        Test that scale-out validator reads SAPHanaSR-ScaleOut path.
+        """
+        params = validator_scaleout._parse_global_ini_parameters()
+        path_params = [p for p in params if p["name"] == "path"]
+        path_values = [p["value"] for p in path_params]
+        assert any("/usr/share/SAPHanaSR-ScaleOut" in v for v in path_values)
+
+    def test_scaleout_global_ini_provider_values(self, validator_scaleout):
+        """
+        Test scale-out global.ini has correct provider values.
+        """
+        params = validator_scaleout._parse_global_ini_parameters()
+        provider_params = [p for p in params if p["name"] == "provider"]
+        provider_values = [p["value"] for p in provider_params]
+        assert "SAPHanaSR" in provider_values
+        assert "ChkSrv" in provider_values
+
+    def test_get_active_resource_categories_scaleout(self, validator_scaleout):
+        """
+        Test that scale-out validator returns scaleout categories.
+        """
+        cats = validator_scaleout._get_active_resource_categories()
+        assert "scaleout_filesystem" in cats
+        assert "nfs_attribute" in cats
+        assert "scaleout_hana" in cats
+        assert "scaleout_topology" in cats
+        assert "topology" not in cats
+        assert "hana" not in cats
+
+    def test_get_active_resource_categories_angi(self, validator_angi):
+        """
+        Test that ANGI validator returns correct categories.
+        """
+        cats = validator_angi._get_active_resource_categories()
+        assert "angi_topology" in cats
+        assert "angi_hana" in cats
+        assert "angi_filesystem" in cats
+        assert "topology" not in cats
+
+        assert validator_angi.saphanasr_provider == HanaSRProvider.ANGI
+        assert validator_angi.hana_topology == HanaTopology.SCALE_UP
+        defaults = validator_angi.constants["GLOBAL_INI"].get(validator_angi.os_type, {})
+        assert validator_angi.saphanasr_provider.value in defaults
+
+    def test_default_topology_is_scaleup(self, validator):
+        """
+        Test that default topology is SCALE_UP.
+        """
+        cats = validator._get_active_resource_categories()
+        assert "topology" in cats
+        assert "hana" in cats
+        assert "scaleout_filesystem" not in cats
+        assert "scaleout_hana" not in cats
+
+        assert validator.hana_topology == HanaTopology.SCALE_UP
+
+        assert validator.saphanasr_provider == HanaSRProvider.SAPHANASR
+        assert validator.hana_topology == HanaTopology.SCALE_UP
+        defaults = validator.constants["GLOBAL_INI"].get(validator.os_type, {})
+        assert validator.saphanasr_provider.value in defaults
+
+    def test_global_ini_provider_key_scaleout(self, validator_scaleout):
+        """
+        Test that scale-out dispatches to SAPHanaController regardless
+        of the detected provider (which will be SAPHanaSR at runtime).
+        """
+        assert validator_scaleout.saphanasr_provider == (HanaSRProvider.SAPHANASR)
+        assert validator_scaleout.hana_topology == (HanaTopology.SCALE_OUT_HSR)
+        defaults = validator_scaleout.constants["GLOBAL_INI"].get(validator_scaleout.os_type, {})
+        assert "SAPHanaController" in defaults

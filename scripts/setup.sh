@@ -26,14 +26,19 @@ _setup_local_env() {
     install_packages "${packages[@]}"
 
     if ! command_exists az; then
-        log "INFO" "Azure CLI not found. Installing Azure CLI..."
-        curl -L https://aka.ms/InstallAzureCli | bash
-        if command_exists az; then
-            log "INFO" "Azure CLI installed successfully."
-        else
-            log "ERROR" "Failed to install Azure CLI. Please install it manually."
-            exit 1
-        fi
+		log "INFO" "Azure CLI not found. Installing Azure CLI..."
+		if [[ "${DISTRO_FAMILY:-}" == "debian" ]]; then
+			curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
+		else
+			curl -sL https://aka.ms/InstallAzureCli | bash
+		fi
+		if command_exists az; then
+			log "INFO" "Azure CLI installed successfully."
+		else
+			log "ERROR" "Failed to install Azure CLI. Please install it manually."
+			log "ERROR" "See https://learn.microsoft.com/cli/azure/install-azure-cli"
+			exit 1
+		fi
     fi
 
     # Resolve & validate the requested Python interpreter
@@ -54,7 +59,19 @@ _setup_local_env() {
         exit 1
     fi
 
-    if [[ "$upgrade" == true ]]; then
+    if [[ "${DISTRO_FAMILY:-}" == "debian" ]]; then
+        local venv_pkg="python${PYTHON_VERSION}-venv"
+        if ! is_package_installed "$venv_pkg"; then
+            log "INFO" "Installing version-specific venv package: $venv_pkg"
+            if sudo ${PKG_INSTALL} "$venv_pkg"; then
+                log "INFO" "$venv_pkg installed successfully."
+            else
+                log "WARN" "Could not install $venv_pkg. Virtual environment creation may fail."
+            fi
+        fi
+    fi
+
+    if [[ "$UPGRADE" == true ]]; then
         if [[ -d ".venv" ]]; then
             log "INFO" "Upgrade requested — removing existing virtual environment..."
             deactivate 2>/dev/null || true

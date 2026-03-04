@@ -12,7 +12,9 @@ def main():
             saphanasr_provider=dict(type="str", required=True),
             db_instance_number=dict(type="str", required=True),
             hana_clone_resource_name=dict(type="str", default=""),
-            hana_primitive_resource_name=dict(type="str", default="")
+            hana_primitive_resource_name=dict(type="str", default=""),
+            hana_topology=dict(type="str", required=False, default="scale_up"),
+            filter=dict(type="str", required=False, default="os_family")
         )
     )
 

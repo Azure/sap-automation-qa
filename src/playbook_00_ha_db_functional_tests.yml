@@ -28,11 +28,12 @@
       ansible.builtin.command:
         cmd:                            >-
                                         az login --identity
-                                        {% if user_assigned_identity_client_id | default('') | length > 0
-                                        and user_assigned_identity_client_id != '00000000-0000-0000-0000-000000000000' %}
+                                        {% if user_assigned_identity_client_id | default('', true) | length > 0
+                                        and user_assigned_identity_client_id | default('', true) != '00000000-0000-0000-0000-000000000000' %}
                                         --client-id {{ user_assigned_identity_client_id }}
                                         {% endif %}
       changed_when:                     false
+      failed_when:                      false
 
 - hosts:                               "{{ sap_sid | upper }}_DB"
   name:                                "Host tasks"
@@ -67,6 +68,12 @@
         msg:                           "ipAddress: {{ item.ipAddress }} | interfaceName: {{ item.interfaceName }} | Subnet: {{ item.subnet }}"
       loop:                            "{{ network_info_parsed | list }}"
 
+    - name:                            "Determine HANA topology from inventory"
+      ansible.builtin.set_fact:
+        hana_topology:                 "{{ 'scale_out_hsr' if (database_scale_out | default(database_HANA_use_scaleout_scenario | default(false)) | bool) else 'scale_up' }}"
+      run_once:                        true
+      when:                            SAP_FUNCTIONAL_TEST_TYPE == 'DatabaseHighAvailability'
+
     - name:                            "Set the test group name based on the inputs"
       ansible.builtin.set_fact:
         test_group_name:               "{{ sap_functional_test_type_map
@@ -81,7 +88,10 @@
         test_cases:                    "{{ test_groups
                                             | selectattr('name', 'equalto', test_group_name)
                                             | map(attribute='test_cases') | list | flatten(levels=1)
-                                            | selectattr('enabled', 'equalto', true) | list }}"
+                                            | selectattr('enabled', 'equalto', true)
+                                            | selectattr('applicability.topology', 'contains',
+                                              hana_topology | default('scale_up'))
+                                            | list }}"
       run_once:                        true
 
     - name:                            "Run test cases by including them as roles"
@@ -101,6 +111,10 @@
 
     - name:                            "Render HTML report for the test group logs"
       ansible.builtin.include_tasks:   "./roles/misc/tasks/render-html-report.yml"
+      when:                            test_group_name is defined
+
+    - name:                            "Display test execution summary"
+      ansible.builtin.include_tasks:   "./roles/misc/tasks/display-test-summary.yml"
       when:                            test_group_name is defined
 
     - name:                            "Debug the group_invocation_id"

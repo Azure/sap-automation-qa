@@ -14,6 +14,7 @@
     saphanasr_provider:                 "{{ saphanasr_provider | default('SAPHanaSR') }}"
     hana_clone_resource_name:           "{{ hana_clone_resource_name | default('') }}"
     hana_primitive_resource_name:       "{{ hana_primitive_resource_name | default('') }}"
+    hana_topology:                      "{{ hana_topology | default('scale_up') }}"
   register:                             cluster_status
   failed_when:                          cluster_status.primary_node == ""
 

@@ -34,11 +34,14 @@
 
 - name:                             "Add parameter-level entries"
   no_log:                           true
-  when:                             "(check_result.details is defined and check_result.details is not none and check_result.details.parameters is defined and check_result.details.parameters is not none and (check_result.details.parameters | length) > 0)"
+  when:
+                                    - "check_result.details is defined and check_result.details is not none
+                                      and check_result.details.parameters is defined and check_result.details.parameters is not none
+                                      and (check_result.details.parameters | length) > 0"
+                                    - "param.status | default('') not in ['SKIPPED']"
   loop:                             "{{ check_result.details.parameters | default([]) }}"
   loop_control:
     loop_var:                       param
-  when:                             "param.status | default('') not in ['SKIPPED']"
   ansible.builtin.set_fact:
     _telemetry_batch_all:           "{{ _telemetry_batch_all + [{
                                       'TestCaseInvocationId': (param.id | default(param.name | default(''))),

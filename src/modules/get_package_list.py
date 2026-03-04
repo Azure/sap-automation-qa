@@ -5,7 +5,7 @@
 Custom ansible module for formatting the packages list
 """
 
-from typing import Dict, Any
+from typing import Dict, Any, List
 from ansible.module_utils.basic import AnsibleModule
 
 try:
@@ -111,6 +111,38 @@ class PackageListFormatter(SapAutomationQA):
         super().__init__()
         self.package_facts_list = package_facts_list
 
+    def _collect_packages_via_rpm(self) -> Dict[str, List[Dict[str, str]]]:
+        """
+        Collects installed packages using rpm subprocess via base class executor.
+
+        :return: Dict mapping package name to list of version dicts.
+        :rtype: Dict[str, List[Dict[str, str]]]
+        """
+        result: Dict[str, List[Dict[str, str]]] = {}
+        try:
+            output = self.execute_command_subprocess(
+                [
+                    "rpm",
+                    "-qa",
+                    "--queryformat",
+                    "%{NAME}\t%{VERSION}\t%{RELEASE}\t%{ARCH}\n",
+                ],
+            )
+            for line in output.strip().splitlines():
+                parts = line.split("\t")
+                if len(parts) == 4:
+                    name, version, release, arch = parts
+                    result.setdefault(name, []).append(
+                        {
+                            "version": version,
+                            "release": release,
+                            "arch": arch,
+                        }
+                    )
+        except Exception:
+            pass
+        return result
+
     def format_packages(self) -> Dict[str, Any]:
         """
         Formats the package list based on the provided package facts list.
@@ -118,6 +150,8 @@ class PackageListFormatter(SapAutomationQA):
         :return: A dictionary containing the formatted package list.
         :rtype: Dict[str, Any]
         """
+        if not self.package_facts_list:
+            self.package_facts_list = self._collect_packages_via_rpm()
         try:
             self.result["details"] = [
                 {

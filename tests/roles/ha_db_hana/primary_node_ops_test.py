@@ -11,6 +11,7 @@ the execution of the tasks.
 """
 
 import os
+import re
 import shutil
 from pathlib import Path
 import pytest
@@ -171,9 +172,9 @@ class TestDbHDBOperations(RolesTestingBaseDB):
         self.file_operations(
             operation="write",
             file_path=f"{temp_dir}/project/roles/ha_db_hana/tasks/{task_type['task_name']}.yml",
-            content=playbook_content.replace("set -o pipefail\n", "").replace(
-                "/usr/sap/{{ db_sid | upper }}/HDB{{ db_instance_number }}/", ""
-            ),
+            content=re.sub(
+                r"^\s*set -o pipefail\n", "", playbook_content, flags=re.MULTILINE
+            ).replace("/usr/sap/{{ db_sid | upper }}/HDB{{ db_instance_number }}/", ""),
         )
 
         yield temp_dir

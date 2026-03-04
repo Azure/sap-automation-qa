@@ -132,6 +132,12 @@ class IndexServerCheck(SapAutomationQA):
                         "path": "/usr/share/SAPHanaSR-angi",
                     }
                 },
+                {
+                    "[ha_dr_provider_suschksrv]": {
+                        "provider": "susChkSrv",
+                        "path": "/usr/share/SAPHanaSR-ScaleOut",
+                    }
+                },
             ],
         }
 

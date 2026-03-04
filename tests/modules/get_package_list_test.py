@@ -60,10 +60,15 @@ class TestPackageListFormatter:
         assert result["details"] == expected_details
         assert result["status"] == "PASSED"
 
-    def test_format_packages_no_packages(self):
+    def test_format_packages_no_packages(self, mocker):
         """
-        Test the format_packages method of the PackageListFormatter class with no packages.
+        Test the format_packages method with no packages and no rpm fallback.
         """
+        mocker.patch.object(
+            PackageListFormatter,
+            "_collect_packages_via_rpm",
+            return_value={},
+        )
         empty_facts = {}
         formatter = PackageListFormatter(empty_facts)
         result = formatter.format_packages()
@@ -71,6 +76,23 @@ class TestPackageListFormatter:
         assert result["status"] == "PASSED"
         assert result.get("changed") is False
         assert result.get("message") == ""
+
+    def test_format_packages_rpm_fallback(self, mocker):
+        """
+        Test that rpm subprocess fallback is used when package_facts_list is empty.
+        """
+        rpm_output = "corosync\t2.4.5\t1.el7\tx86_64\n" "pacemaker\t2.1.0\t3.el8\tx86_64\n"
+        mocker.patch.object(
+            PackageListFormatter,
+            "execute_command_subprocess",
+            return_value=rpm_output,
+        )
+        formatter = PackageListFormatter({})
+        result = formatter.format_packages()
+        assert result["status"] == "PASSED"
+        names = [list(d.keys())[0] for d in result["details"]]
+        assert "Corosync" in names
+        assert "Pacemaker" in names
 
     def test_main_method(self, monkeypatch):
         """

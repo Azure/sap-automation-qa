@@ -60,6 +60,17 @@ class HanaSRProvider(Enum):
 
     SAPHANASR = "SAPHanaSR"
     ANGI = "SAPHanaSR-angi"
+    SCALEOUT = "SAPHanaSR-ScaleOut"
+
+
+class HanaTopology(str, Enum):
+    """
+    Enum for the SAP HANA topology.
+    """
+
+    SCALE_UP = "scale_up"
+    SCALE_OUT_HSR = "scale_out_hsr"
+    SCALE_OUT_STANDBY = "scale_out_standby"
 
 
 class Parameters:
