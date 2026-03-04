@@ -482,6 +482,7 @@ class HanaClusterStatusChecker(BaseClusterStatusChecker):
         if self.hana_topology == HanaTopology.SCALE_OUT_HSR:
             return (
                 self.result["primary_node"] != ""
+                and self.result["secondary_node"] != ""
                 and len(self.result["secondary_site_nodes"]) > 0
                 and self.result["majority_maker_node"] != ""
             )

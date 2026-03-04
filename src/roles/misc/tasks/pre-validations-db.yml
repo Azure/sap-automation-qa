@@ -132,7 +132,7 @@
         hana_primitive_resource_name: "{{ hana_primitive_resource_name | default('') }}"
         hana_topology:                "{{ hana_topology | default('scale_up') }}"
       register:                     cluster_status_pre
-      until:                        cluster_status_pre.primary_node != "" or
+      until:                        cluster_status_pre.primary_node != "" and
                                     cluster_status_pre.secondary_node != ""
       retries:                      3
 
