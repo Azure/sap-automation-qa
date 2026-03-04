@@ -189,6 +189,8 @@ class TestSummaryDisplay(SapAutomationQA):
         :return: List of dicts with category / name / value / expected.
         """
         details = entry.get("TestCaseDetails", {})
+        if not isinstance(details, dict):
+            return []
         params = details.get("parameters", [])
         failures: List[Dict[str, str]] = []
         for param in params:
@@ -289,6 +291,8 @@ class TestSummaryDisplay(SapAutomationQA):
                     has_failure = True
 
                 details = entry.get("TestCaseDetails", {})
+                if not isinstance(details, dict):
+                    details = {}
                 for param in details.get("parameters", []):
                     pstatus = param.get("status", "")
                     if pstatus == TestStatus.SUCCESS.value:

@@ -345,12 +345,12 @@ commands:
                                     {{ cluster_status_pre.secondary_node | default('') }}
                                     force
     REDHAT:                         >-
-                                    pcs resource move
+                                    crm_resource --resource
                                     {{ hana_clone_resource_name | default('SAPHana_' ~ (db_sid | upper) ~ '_' ~ db_instance_number ~ '-clone') }}
-                                    --promoted 2>/dev/null ||
-                                    pcs resource move
+                                    --move --promoted 2>/dev/null ||
+                                    crm_resource --resource
                                     {{ hana_clone_resource_name | default('SAPHana_' ~ (db_sid | upper) ~ '_' ~ db_instance_number ~ '-clone') }}
-                                    --master
+                                    --move --master
 
   - name:                           crm_report_cmd
     SUSE:                           "crm_report -f '{{ test_group_start_time }}' /tmp/{{ test_group_invocation_id }}"

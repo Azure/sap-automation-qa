@@ -88,40 +88,33 @@
                                         - ansible_hostname == cluster_status_pre.primary_node
                                         - cluster_status_pre.AUTOMATED_REGISTER == "false"
       block:
-        - name:                         "Test Execution: Stop HANA on old primary if still running"
+        - name:                         "Test Execution: Register Failed Resource"
           become:                       true
           become_user:                  "{{ db_sid | lower }}adm"
-          ansible.builtin.shell: >-
-            sapcontrol -nr {{ db_instance_number }} -function StopWait 600 10
-          register:                     hana_stop_old_primary
-          failed_when:                  false
-          args:
-            executable:                 /bin/bash
-
-        - name:                         "Test Execution: Determine observation host"
-          ansible.builtin.set_fact:
-            _observation_host:          "{{ cluster_status_pre.secondary_site_nodes[0]
-                                            if hana_topology | default('scale_up') == 'scale_out_hsr'
-                                            else cluster_status_pre.secondary_node }}"
-
-        - name:                         "Test Execution: Register old primary as secondary"
-          become:                       true
-          become_user:                  "{{ db_sid | lower }}adm"
+          when:                         cluster_status_pre.AUTOMATED_REGISTER == "false"
           ansible.builtin.shell:
             cmd: |
                                         set -o pipefail
                                         source /usr/sap/{{ db_sid | upper }}/HDB{{ db_instance_number }}/HDBSettings.sh && \
                                         hdbnsutil -sr_register \
                                           --name={{ cluster_status_pre.primary_site_name }} \
-                                          --remoteHost={{ hostvars[_observation_host].cluster_status_test_execution.primary_node
+                                          --remoteHost={{ hostvars[
+                                            cluster_status_pre.secondary_site_nodes[0]
                                             if hana_topology | default('scale_up') == 'scale_out_hsr'
-                                            else cluster_status_pre.secondary_node }} \
+                                            else cluster_status_pre.secondary_node
+                                          ].cluster_status_test_execution.primary_node }} \
                                           --remoteInstance={{ db_instance_number }} \
                                           --replicationMode={{ cluster_status_pre.replication_mode }} \
-                                          --operationMode={{ cluster_status_pre.operation_mode }}
-          register:                     hana_sr_register_result
+                                          --operationMode={{ cluster_status_pre.operation_mode }} --online
+          register:                     hana_db_register_failed_resource
           args:
             executable:                 /bin/bash
+
+        - name:                         "Test Execution: CleanUp any failed resource after registration"
+          become:                       true
+          ansible.builtin.command:      "crm_resource --cleanup"
+          changed_when:                 true
+          ignore_errors:                true
 
     - name:                             "Test Execution: Cleanup and verify recovery"
       when:                             ansible_hostname == cluster_status_pre.secondary_node
