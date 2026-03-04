@@ -633,6 +633,7 @@ class TestHanaClusterStatusCheckerScaleOutHSR:
         components are present.
         """
         scaleout_checker_classic.result["primary_node"] = "node1"
+        scaleout_checker_classic.result["secondary_node"] = "node3"
         scaleout_checker_classic.result["secondary_site_nodes"] = [
             "node3",
             "node4",
