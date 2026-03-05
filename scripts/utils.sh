@@ -275,19 +275,24 @@ install_docker() {
             # Remove stale Docker repo files from previous attempts
             sudo rm -f /etc/yum.repos.d/docker-ce.repo
 
-            # Add Docker repository (use rhel repo for RHEL, centos for others)
+            # Determine Docker repo OS and major version
+            # Docker publishes under major versions only (e.g. 9, not 9.4)
             local docker_os="centos"
             if [[ "$DISTRO" == "rhel" ]]; then
                 docker_os="rhel"
             fi
-            sudo yum-config-manager --add-repo "https://download.docker.com/linux/${docker_os}/docker-ce.repo"
-
-            # Fix $releasever — Docker only publishes packages under major versions (e.g. 9, not 9.4)
             local major_ver
-            major_ver=$(rpm -E '%{rhel}' 2>/dev/null || . /etc/os-release && echo "${VERSION_ID%%.*}")
-            if [[ -f /etc/yum.repos.d/docker-ce.repo ]]; then
-                sudo sed -i 's/\$releasever/'"${major_ver}"'/g' /etc/yum.repos.d/docker-ce.repo
-            fi
+            major_ver=$(. /etc/os-release && echo "${VERSION_ID%%.*}")
+
+            # Write Docker repo file directly (avoids $releasever expansion issues)
+            sudo tee /etc/yum.repos.d/docker-ce.repo > /dev/null <<EOF
+[docker-ce-stable]
+name=Docker CE Stable - \$basearch
+baseurl=https://download.docker.com/linux/${docker_os}/${major_ver}/\$basearch/stable
+enabled=1
+gpgcheck=1
+gpgkey=https://download.docker.com/linux/${docker_os}/gpg
+EOF
 
             # Install Docker Engine
             sudo $PKG_INSTALL docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
