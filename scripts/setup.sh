@@ -52,11 +52,11 @@ _setup_local_env() {
     python_version=$("$python_bin" -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')
     log "INFO" "Using Python interpreter: $python_bin (Python $python_version)"
 
-    # Enforce minimum Python 3.10
+    # Warn if Python < 3.10 (some features like the scheduling service require 3.10+)
     local minor=${python_version#3.}
     if [[ "${python_version%%.*}" -lt 3 ]] || [[ "$minor" -lt 10 ]]; then
-        log "ERROR" "Python >= 3.10 is required. Detected $python_version at $python_bin."
-        exit 1
+        log "WARN" "Python >= 3.10 is recommended. Detected $python_version at $python_bin."
+        log "WARN" "Ansible playbook execution will work, but the scheduling service (API/Docker) requires Python 3.10+."
     fi
 
     if [[ "${DISTRO_FAMILY:-}" == "debian" ]]; then
