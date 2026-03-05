@@ -32,7 +32,7 @@
             test_execution_hostname:    "{{ hostvars[cluster_status_pre.primary_node].ansible_hostname }}"
 
         - name:                         "Test Execution: Get HANA resource id for saphanasr_angi"
-          when:                         saphanasr_provider | default('SAPHanaSR') == "SAPHanaSR-angi"
+          when:                         saphanasr_provider | default('SAPHanaSR') in ["SAPHanaSR-angi", "SAPHanaSR-ScaleOut"]
           block:
             - name:                     "Test Execution: Get HANA resource id for saphanasr_angi"
               ansible.builtin.shell: >-

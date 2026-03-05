@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file.
 
+## 1.1.0
+Release Date: 03-04-2026
+1. Add support for scale-out HANA System Replication (HSR) topology in HA functional tests
+   - Support for SAPHanaSR-ScaleOut provider alongside SAPHanaSR and SAPHanaSR-angi.
+   - Updated all HA DB test scenarios (resource migration, node crash/kill, echo-b, crash-index, block-network, fs-freeze, sbd-fencing) with scale-out HSR support.
+   - New `display_test_summary` module and role task for consolidated test result reporting.
+   - Updated HTML report template and telemetry injection for scale-out topologies.
+2. Scheduling functional tests and configuration checks via REST API and CLI
+   - Scheduling support for both HA functional tests and configuration checks through REST API and CLI.
+   - API endpoints for triggering tests and checks, retrieving results, and managing test runs.
+   - Docker deployment with multi-stage build, non-root user, and healthcheck.
+   - CLI wrapper scripts (`api_utils.sh`, `container_setup.sh`) for API and Docker management.
+
 ## 1.0.2
 Release Date: 09-01-2026
 1. Enhance telemetry injection for configuration checks and scale out

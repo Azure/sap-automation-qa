@@ -118,6 +118,7 @@
       when:                            test_group_name is defined
 
     - name:                            "Debug the group_invocation_id"
+      run_once:                        true
       ansible.builtin.debug:
         msg:                           "Group invocation ID: {{ test_group_invocation_id }}"
       when:                            test_group_invocation_id is defined

@@ -194,7 +194,7 @@ is_package_installed() {
     local package=$1
     case "$DISTRO_FAMILY" in
         debian)
-            dpkg -l "$package" &> /dev/null
+            dpkg -s "$package" &> /dev/null
             ;;
         rhel|suse)
             rpm -q "$package" &> /dev/null
@@ -271,16 +271,48 @@ install_docker() {
         rhel)
             # Install prerequisites
             sudo $PKG_INSTALL yum-utils
-            
-            # Add Docker repository
-            sudo yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
-            
+
+            # Remove stale Docker repo files from previous attempts
+            sudo rm -f /etc/yum.repos.d/docker-ce.repo
+
+            # Determine Docker repo OS and major version
+            # Docker publishes under major versions only (e.g. 9, not 9.4)
+            local docker_os="centos"
+            if [[ "$DISTRO" == "rhel" ]]; then
+                docker_os="rhel"
+            fi
+            local major_ver
+            major_ver=$(. /etc/os-release && echo "${VERSION_ID%%.*}")
+
+            # Write Docker repo file directly (avoids $releasever expansion issues)
+            sudo tee /etc/yum.repos.d/docker-ce.repo > /dev/null <<EOF
+[docker-ce-stable]
+name=Docker CE Stable - \$basearch
+baseurl=https://download.docker.com/linux/${docker_os}/${major_ver}/\$basearch/stable
+enabled=1
+gpgcheck=1
+gpgkey=https://download.docker.com/linux/${docker_os}/gpg
+EOF
+
             # Install Docker Engine
             sudo $PKG_INSTALL docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
             ;;
         suse)
             # Install Docker from SUSE repositories
-            sudo zypper install -y docker docker-compose
+            sudo zypper install -y docker
+
+            # Install Docker Compose plugin (not available as a SUSE package)
+            if ! docker compose version &>/dev/null 2>&1; then
+                local compose_version
+                compose_version=$(curl -fsSL https://api.github.com/repos/docker/compose/releases/latest | grep '"tag_name"' | head -1 | cut -d'"' -f4)
+                compose_version="${compose_version:-v2.32.4}"
+                local compose_dest="/usr/lib/docker/cli-plugins"
+                sudo mkdir -p "$compose_dest"
+                sudo curl -fsSL "https://github.com/docker/compose/releases/download/${compose_version}/docker-compose-linux-$(uname -m)" \
+                    -o "${compose_dest}/docker-compose"
+                sudo chmod +x "${compose_dest}/docker-compose"
+                log "INFO" "Docker Compose plugin ${compose_version} installed."
+            fi
             ;;
         *)
             log "ERROR" "Unsupported distribution for Docker installation: $DISTRO_FAMILY"

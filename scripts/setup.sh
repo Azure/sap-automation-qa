@@ -52,15 +52,15 @@ _setup_local_env() {
     python_version=$("$python_bin" -c 'import sys; print(f"{sys.version_info.major}.{sys.version_info.minor}")')
     log "INFO" "Using Python interpreter: $python_bin (Python $python_version)"
 
-    # Enforce minimum Python 3.10
+    # Warn if Python < 3.10 (some features like the scheduling service require 3.10+)
     local minor=${python_version#3.}
     if [[ "${python_version%%.*}" -lt 3 ]] || [[ "$minor" -lt 10 ]]; then
-        log "ERROR" "Python >= 3.10 is required. Detected $python_version at $python_bin."
-        exit 1
+        log "WARN" "Python >= 3.10 is recommended. Detected $python_version at $python_bin."
+        log "WARN" "Ansible playbook execution will work, but the scheduling service (API/Docker) requires Python 3.10+."
     fi
 
     if [[ "${DISTRO_FAMILY:-}" == "debian" ]]; then
-        local venv_pkg="python${PYTHON_VERSION}-venv"
+        local venv_pkg="python${python_version}-venv"
         if ! is_package_installed "$venv_pkg"; then
             log "INFO" "Installing version-specific venv package: $venv_pkg"
             if sudo ${PKG_INSTALL} "$venv_pkg"; then
@@ -71,7 +71,7 @@ _setup_local_env() {
         fi
     fi
 
-    if [[ "$UPGRADE" == true ]]; then
+    if [[ "$upgrade" == true ]]; then
         if [[ -d ".venv" ]]; then
             log "INFO" "Upgrade requested — removing existing virtual environment..."
             deactivate 2>/dev/null || true
@@ -82,13 +82,19 @@ _setup_local_env() {
         fi
     fi
 
-    # Create virtual environment if it doesn't exist
+    # Create virtual environment if it doesn't exist or is incomplete
+    if [[ -d ".venv" ]] && [[ ! -f ".venv/bin/activate" ]]; then
+        log "WARN" "Incomplete virtual environment detected — removing .venv ..."
+        rm -rf .venv
+    fi
+
     if [[ ! -d ".venv" ]]; then
         log "INFO" "Creating Python virtual environment with $python_bin ..."
         if "$python_bin" -m venv .venv; then
             log "INFO" "Python virtual environment created (Python $python_version)."
         else
             log "ERROR" "Failed to create Python virtual environment."
+            rm -rf .venv 2>/dev/null || true
             exit 1
         fi
     fi

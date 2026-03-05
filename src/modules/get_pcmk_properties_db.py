@@ -201,6 +201,18 @@ class HAClusterValidator(BaseHAClusterValidator):
         "azurelb": ".//primitive[@type='azure-lb']",
         "azureevents": ".//primitive[@type='azure-events-az']",
     }
+    ANGI_SCALEOUT_RESOURCE_CATEGORIES = {
+        "sbd_stonith": ".//primitive[@type='external/sbd']",
+        "fence_agent": ".//primitive[@type='fence_azure_arm']",
+        "angi_topology": ".//clone/primitive[@type='SAPHanaTopology']",
+        "angi_scaleout_hana": ".//primitive[@type='SAPHanaController']",
+        "angi_filesystem": ".//primitive[@type='SAPHanaFilesystem']",
+        "scaleout_filesystem": ".//clone/primitive[@type='Filesystem']",
+        "nfs_attribute": ".//clone",
+        "ipaddr": ".//primitive[@type='IPaddr2']",
+        "azurelb": ".//primitive[@type='azure-lb']",
+        "azureevents": ".//primitive[@type='azure-events-az']",
+    }
 
     def __init__(
         self,
@@ -237,6 +249,8 @@ class HAClusterValidator(BaseHAClusterValidator):
         :rtype: dict
         """
         if self.hana_topology == HanaTopology.SCALE_OUT_HSR:
+            if self.saphanasr_provider == HanaSRProvider.ANGI:
+                return self.ANGI_SCALEOUT_RESOURCE_CATEGORIES.copy()
             return self.SCALEOUT_RESOURCE_CATEGORIES.copy()
 
         categories = self.RESOURCE_CATEGORIES.copy()
@@ -263,7 +277,11 @@ class HAClusterValidator(BaseHAClusterValidator):
         :return: The expected value for the configuration parameter.
         :rtype: str or list or dict or None
         """
-        all_resource_cats = set(self.RESOURCE_CATEGORIES) | set(self.SCALEOUT_RESOURCE_CATEGORIES)
+        all_resource_cats = (
+            set(self.RESOURCE_CATEGORIES)
+            | set(self.SCALEOUT_RESOURCE_CATEGORIES)
+            | set(self.ANGI_SCALEOUT_RESOURCE_CATEGORIES)
+        )
         if category in all_resource_cats:
             return self._get_resource_expected_value(
                 resource_type=category,
@@ -354,7 +372,10 @@ class HAClusterValidator(BaseHAClusterValidator):
         parameters = []
         resource_categories = self._get_active_resource_categories()
 
-        if self.hana_topology == HanaTopology.SCALE_OUT_HSR:
+        if (
+            self.hana_topology == HanaTopology.SCALE_OUT_HSR
+            and self.saphanasr_provider != HanaSRProvider.ANGI
+        ):
             modern = root.findall(resource_categories.get("scaleout_topology", ""))
             if modern:
                 resource_categories.pop("scaleout_topology_legacy", None)
@@ -392,6 +413,7 @@ class HAClusterValidator(BaseHAClusterValidator):
 
             all_cats = dict(self.RESOURCE_CATEGORIES)
             all_cats.update(self.SCALEOUT_RESOURCE_CATEGORIES)
+            all_cats.update(self.ANGI_SCALEOUT_RESOURCE_CATEGORIES)
 
             for resource_type, resource_config in (
                 self.constants["RESOURCE_DEFAULTS"].get(self.os_type, {}).items()
@@ -449,17 +471,15 @@ class HAClusterValidator(BaseHAClusterValidator):
         :rtype: list
         """
         parameters = []
+        if self.saphanasr_provider == HanaSRProvider.ANGI:
+            global_ini_key = self.saphanasr_provider.value
+        elif self.hana_topology == HanaTopology.SCALE_OUT_HSR:
+            global_ini_key = "SAPHanaController"
+        else:
+            global_ini_key = self.saphanasr_provider.value
+
         global_ini_defaults = (
-            self.constants["GLOBAL_INI"]
-            .get(self.os_type, {})
-            .get(
-                (
-                    "SAPHanaController"
-                    if self.hana_topology == HanaTopology.SCALE_OUT_HSR
-                    else self.saphanasr_provider.value
-                ),
-                {},
-            )
+            self.constants["GLOBAL_INI"].get(self.os_type, {}).get(global_ini_key, {})
         )
 
         try:

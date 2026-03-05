@@ -114,6 +114,13 @@ VALID_CONFIGS:
     stonith-timeout:
       value:                        ["210", "210s"]
       required:                     true
+  angi_scale_out_hsr:
+    migration-threshold:
+      value:                        ["50"]
+      required:                     true
+    pcmk_action_limit:
+      value:                        ["-1"]
+      required:                     false
 
 # === Resource Defaults ===
 # cibadmin --query --scope resources
@@ -328,6 +335,65 @@ RESOURCE_DEFAULTS:
         priority:
           value:                    "100"
           required:                 false
+
+    angi_scaleout_hana:
+      required:                     false
+      meta_attributes:
+        clone-node-max:
+          value:                    "1"
+          required:                 false
+        master-max:
+          value:                    "1"
+          required:                 false
+        interleave:
+          value:                    "true"
+          required:                 false
+      instance_attributes:
+        PREFER_SITE_TAKEOVER:
+          value:                    "true"
+          required:                 false
+        DUPLICATE_PRIMARY_TIMEOUT:
+          value:                    "7200"
+          required:                 false
+        AUTOMATED_REGISTER:
+          value:                    "true"
+          required:                 false
+      operations:
+        start:
+          interval:
+            value:                  ["0", "0s"]
+            required:               false
+          timeout:
+            value:                  ["3600", "3600s"]
+            required:               false
+        stop:
+          interval:
+            value:                  ["0", "0s"]
+            required:               false
+          timeout:
+            value:                  ["3600", "3600s"]
+            required:               false
+        promote:
+          interval:
+            value:                  ["0", "0s"]
+            required:               false
+          timeout:
+            value:                  ["900", "900s"]
+            required:               false
+        demote:
+          interval:
+            value:                  ["0", "0s"]
+            required:               false
+          timeout:
+            value:                  ["320", "320s"]
+            required:               false
+        monitor:
+          interval:
+            value:                  ["60", "60s", "61", "61s"]
+            required:               false
+          timeout:
+            value:                  ["700", "700s"]
+            required:               false
 
     scaleout_hana:
       required:                     false

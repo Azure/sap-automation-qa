@@ -130,7 +130,10 @@ DUMMY_CONSTANTS = {
             "cluster-name": {"value": "scs_S4D", "required": False},
         },
         "azure-fence-agent": {"priority": {"value": "10", "required": False}},
-        "sbd": {"pcmk_delay_max": {"value": "30", "required": False}},
+        "sbd": {
+            "have-watchdog": {"value": "true", "required": True},
+            "stonith-timeout": {"value": "210", "required": True},
+        },
     },
     "RSC_DEFAULTS": {
         "resource-stickiness": {"value": "1000", "required": False},

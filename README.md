@@ -25,9 +25,9 @@ SAP Testing Automation is designed as a scalable framework to orchestrate and va
 
 ### High Availability Testing
 
-In the SAP Testing Automation Framework, thorough validation of high availability SAP HANA scale-up and SAP Central Services failover mechanism in a two node pacemaker cluster can be performed, ensuring the system operates correctly across different situations.
+In the SAP Testing Automation Framework, thorough validation of high availability SAP HANA (scale-up and scale-out HSR) and SAP Central Services failover mechanisms in pacemaker clusters can be performed, ensuring the system operates correctly across different situations.
 
-- **High Availability Configuration Validation:** The framework helps to ensure that SAP HANA scale-up and SAP Central Services configurations and load balancer settings are compliant with SAP on Azure high availability configuration guidelines.
+- **High Availability Configuration Validation:** The framework helps to ensure that SAP HANA (scale-up and scale-out HSR) and SAP Central Services configurations and load balancer settings are compliant with SAP on Azure high availability configuration guidelines.
 - **Functional Testing:** The framework executes series of real-world scenarios based on the SAP HANA and SAP Central Services high availability setup to identify potential issues, whether during a new system deployment or before implementing cluster changes in a production environment. The test cases are based on what is documented in how-to guides for SAP HANA and SAP Central Services configuration.
 - **Offline configuration validation:** Offline validation is a mode of the framework that validates SAP HANA and SAP Central Services high availability cluster configurations without establishing a live SSH connection to the production cluster. Instead, it analyzes captured cluster information base (CIB) XML files exported from each cluster node.
 
