@@ -272,12 +272,22 @@ install_docker() {
             # Install prerequisites
             sudo $PKG_INSTALL yum-utils
 
+            # Remove stale Docker repo files from previous attempts
+            sudo rm -f /etc/yum.repos.d/docker-ce.repo
+
             # Add Docker repository (use rhel repo for RHEL, centos for others)
             local docker_os="centos"
             if [[ "$DISTRO" == "rhel" ]]; then
                 docker_os="rhel"
             fi
             sudo yum-config-manager --add-repo "https://download.docker.com/linux/${docker_os}/docker-ce.repo"
+
+            # Fix $releasever — Docker only publishes packages under major versions (e.g. 9, not 9.4)
+            local major_ver
+            major_ver=$(rpm -E '%{rhel}' 2>/dev/null || . /etc/os-release && echo "${VERSION_ID%%.*}")
+            if [[ -f /etc/yum.repos.d/docker-ce.repo ]]; then
+                sudo sed -i "s/\$releasever/${major_ver}/g" /etc/yum.repos.d/docker-ce.repo
+            fi
 
             # Install Docker Engine
             sudo $PKG_INSTALL docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
