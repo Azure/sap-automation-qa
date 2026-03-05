@@ -31,26 +31,6 @@
     changed_when:                     false
     failed_when:                      false
 
-  - name:                             "Set SAPHanaSR-angi Provider"
-    when:                             >
-                                      (hanasr_command_output is defined
-                                      and hanasr_command_output.stdout | default('') | length > 0)
-                                      or
-                                      (hanacontroller_check.rc == 0
-                                      and hanacontroller_check.stdout | length > 0)
-    ansible.builtin.set_fact:
-      saphanasr_provider:             "SAPHanaSR-angi"
-
-  - name:                             "Set SAPHanaSR Provider"
-    when:                             >
-                                      (hanasr_command_output is not defined
-                                      or hanasr_command_output.stdout | default('') == "")
-                                      and
-                                      (hanacontroller_check.rc != 0
-                                      or hanacontroller_check.stdout | length == 0)
-    ansible.builtin.set_fact:
-      saphanasr_provider:             "SAPHanaSR"
-
   - name:                             "Check if SAPHanaSR-ScaleOut package is installed"
     become:                           true
     ansible.builtin.package_facts:
@@ -68,7 +48,26 @@
 
   - name:                             "Set SAPHanaSR-ScaleOut Provider"
     when:
-                                      - saphanasr_provider in ["SAPHanaSR", "SAPHanaSR-angi"]
                                       - scaleout_rpm_check.rc | int == 0
+                                      - hanasr_command_output is not defined or
+                                        hanasr_command_output.stdout | default('') == ""
     ansible.builtin.set_fact:
       saphanasr_provider:             "SAPHanaSR-ScaleOut"
+
+  - name:                             "Set SAPHanaSR-angi Provider"
+    when:                             >
+                                      saphanasr_provider is not defined
+                                      and (
+                                        (hanasr_command_output is defined
+                                        and hanasr_command_output.stdout | default('') | length > 0)
+                                        or
+                                        (hanacontroller_check.rc == 0
+                                        and hanacontroller_check.stdout | length > 0)
+                                      )
+    ansible.builtin.set_fact:
+      saphanasr_provider:             "SAPHanaSR-angi"
+
+  - name:                             "Set SAPHanaSR Provider"
+    when:                             saphanasr_provider is not defined
+    ansible.builtin.set_fact:
+      saphanasr_provider:             "SAPHanaSR"

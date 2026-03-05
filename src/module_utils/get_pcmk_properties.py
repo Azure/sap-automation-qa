@@ -95,22 +95,24 @@ class BaseHAClusterValidator(SapAutomationQA, ABC):
         """
         _, defaults_key = self.BASIC_CATEGORIES[category]
 
-        fence_config = self.constants["VALID_CONFIGS"].get(self.fencing_mechanism, {})
-        os_config = self.constants["VALID_CONFIGS"].get(self.os_type, {})
+        topology = getattr(self, "hana_topology", None)
+        provider = getattr(self, "saphanasr_provider", None)
+        provider_topology_key = (
+            f"{provider.name.lower()}_{topology.value}" if provider and topology else None
+        )
 
-        fence_param = fence_config.get(name, {})
-        if fence_param:
-            if isinstance(fence_param, dict) and fence_param.get("value"):
-                return (fence_param.get("value", ""), fence_param.get("required", False))
-            elif isinstance(fence_param, (str, list)):
-                return (fence_param, False)
+        lookup_keys = [self.fencing_mechanism, provider_topology_key, self.os_type]
 
-        os_param = os_config.get(name, {})
-        if os_param:
-            if isinstance(os_param, dict) and os_param.get("value"):
-                return (os_param.get("value", ""), os_param.get("required", False))
-            elif isinstance(os_param, (str, list)):
-                return (os_param, False)
+        for key in lookup_keys:
+            if not key:
+                continue
+            config = self.constants["VALID_CONFIGS"].get(key, {})
+            param = config.get(name, {})
+            if param:
+                if isinstance(param, dict) and param.get("value"):
+                    return (param.get("value", ""), param.get("required", False))
+                elif isinstance(param, (str, list)):
+                    return (param, False)
 
         default_param = self.constants[defaults_key].get(name, {})
         if default_param:
@@ -148,7 +150,24 @@ class BaseHAClusterValidator(SapAutomationQA, ABC):
         elif section == "instance_attributes":
             attr = resource_defaults.get("instance_attributes", {}).get(param_name)
 
-        return (attr.get("value"), attr.get("required", False)) if attr else None
+        result = (attr.get("value"), attr.get("required", False)) if attr else None
+
+        topology = getattr(self, "hana_topology", None)
+        provider = getattr(self, "saphanasr_provider", None)
+        provider_topology_key = (
+            f"{provider.name.lower()}_{topology.value}" if provider and topology else None
+        )
+        for key in [self.fencing_mechanism, provider_topology_key, self.os_type]:
+            if not key:
+                continue
+            override = self.constants["VALID_CONFIGS"].get(key, {}).get(param_name, {})
+            if override:
+                if isinstance(override, dict) and override.get("value"):
+                    return (override["value"], override.get("required", False))
+                elif isinstance(override, (str, list)):
+                    return (override, False)
+
+        return result
 
     def _create_parameter(
         self,

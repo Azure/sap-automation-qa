@@ -137,7 +137,11 @@
       retries:                      3
 
     - name:                         "Pre Validation: Scale-out HSR cluster topology"
-      when:                         hana_topology == 'scale_out_hsr'
+      when:
+                                    - hana_topology == 'scale_out_hsr'
+                                    - cluster_status_pre is defined
+                                    - cluster_status_pre.primary_node | default('') != ''
+                                    - cluster_status_pre.secondary_site_nodes | default([]) | length > 0
       ansible.builtin.include_tasks: "roles/misc/tasks/pre-validations-scaleout-hsr.yml"
 
     - name:                         "Pre Validation: CleanUp any failed resource"
@@ -169,10 +173,11 @@
       when:
                                     - hana_topology == 'scale_out_hsr'
                                     - cluster_status_pre is defined
-                                    - cluster_status_pre.primary_node != ""
-                                    - cluster_status_pre.primary_site_nodes | length > 0
-                                    - cluster_status_pre.secondary_site_nodes | length > 0
-                                    - cluster_status_pre.majority_maker_node != ""
-                                    - cluster_status_pre.pacemaker_status == "running"
+                                    - cluster_status_pre.primary_node | default('') != ""
+                                    - cluster_status_pre.secondary_node | default('') != ""
+                                    - cluster_status_pre.primary_site_nodes | default([]) | length > 0
+                                    - cluster_status_pre.secondary_site_nodes | default([]) | length > 0
+                                    - cluster_status_pre.majority_maker_node | default('') != ""
+                                    - cluster_status_pre.pacemaker_status | default('') == "running"
       ansible.builtin.set_fact:
         pre_validations_status:     "PASSED"

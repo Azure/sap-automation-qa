@@ -60,7 +60,7 @@ _setup_local_env() {
     fi
 
     if [[ "${DISTRO_FAMILY:-}" == "debian" ]]; then
-        local venv_pkg="python${PYTHON_VERSION}-venv"
+        local venv_pkg="python${python_version}-venv"
         if ! is_package_installed "$venv_pkg"; then
             log "INFO" "Installing version-specific venv package: $venv_pkg"
             if sudo ${PKG_INSTALL} "$venv_pkg"; then
@@ -71,7 +71,7 @@ _setup_local_env() {
         fi
     fi
 
-    if [[ "$UPGRADE" == true ]]; then
+    if [[ "$upgrade" == true ]]; then
         if [[ -d ".venv" ]]; then
             log "INFO" "Upgrade requested — removing existing virtual environment..."
             deactivate 2>/dev/null || true
@@ -82,13 +82,19 @@ _setup_local_env() {
         fi
     fi
 
-    # Create virtual environment if it doesn't exist
+    # Create virtual environment if it doesn't exist or is incomplete
+    if [[ -d ".venv" ]] && [[ ! -f ".venv/bin/activate" ]]; then
+        log "WARN" "Incomplete virtual environment detected — removing .venv ..."
+        rm -rf .venv
+    fi
+
     if [[ ! -d ".venv" ]]; then
         log "INFO" "Creating Python virtual environment with $python_bin ..."
         if "$python_bin" -m venv .venv; then
             log "INFO" "Python virtual environment created (Python $python_version)."
         else
             log "ERROR" "Failed to create Python virtual environment."
+            rm -rf .venv 2>/dev/null || true
             exit 1
         fi
     fi

@@ -194,7 +194,7 @@ is_package_installed() {
     local package=$1
     case "$DISTRO_FAMILY" in
         debian)
-            dpkg -l "$package" &> /dev/null
+            dpkg -s "$package" &> /dev/null
             ;;
         rhel|suse)
             rpm -q "$package" &> /dev/null
