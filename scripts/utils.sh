@@ -299,7 +299,20 @@ EOF
             ;;
         suse)
             # Install Docker from SUSE repositories
-            sudo zypper install -y docker docker-compose
+            sudo zypper install -y docker
+
+            # Install Docker Compose plugin (not available as a SUSE package)
+            if ! docker compose version &>/dev/null 2>&1; then
+                local compose_version
+                compose_version=$(curl -fsSL https://api.github.com/repos/docker/compose/releases/latest | grep '"tag_name"' | head -1 | cut -d'"' -f4)
+                compose_version="${compose_version:-v2.32.4}"
+                local compose_dest="/usr/lib/docker/cli-plugins"
+                sudo mkdir -p "$compose_dest"
+                sudo curl -fsSL "https://github.com/docker/compose/releases/download/${compose_version}/docker-compose-linux-$(uname -m)" \
+                    -o "${compose_dest}/docker-compose"
+                sudo chmod +x "${compose_dest}/docker-compose"
+                log "INFO" "Docker Compose plugin ${compose_version} installed."
+            fi
             ;;
         *)
             log "ERROR" "Unsupported distribution for Docker installation: $DISTRO_FAMILY"
