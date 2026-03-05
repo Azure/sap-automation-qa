@@ -271,10 +271,14 @@ install_docker() {
         rhel)
             # Install prerequisites
             sudo $PKG_INSTALL yum-utils
-            
-            # Add Docker repository
-            sudo yum-config-manager --add-repo https://download.docker.com/linux/centos/docker-ce.repo
-            
+
+            # Add Docker repository (use rhel repo for RHEL, centos for others)
+            local docker_os="centos"
+            if [[ "$DISTRO" == "rhel" ]]; then
+                docker_os="rhel"
+            fi
+            sudo yum-config-manager --add-repo "https://download.docker.com/linux/${docker_os}/docker-ce.repo"
+
             # Install Docker Engine
             sudo $PKG_INSTALL docker-ce docker-ce-cli containerd.io docker-buildx-plugin docker-compose-plugin
             ;;
