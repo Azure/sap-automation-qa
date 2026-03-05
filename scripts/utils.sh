@@ -286,7 +286,7 @@ install_docker() {
             local major_ver
             major_ver=$(rpm -E '%{rhel}' 2>/dev/null || . /etc/os-release && echo "${VERSION_ID%%.*}")
             if [[ -f /etc/yum.repos.d/docker-ce.repo ]]; then
-                sudo sed -i "s/\$releasever/${major_ver}/g" /etc/yum.repos.d/docker-ce.repo
+                sudo sed -i 's/\$releasever/'"${major_ver}"'/g' /etc/yum.repos.d/docker-ce.repo
             fi
 
             # Install Docker Engine
