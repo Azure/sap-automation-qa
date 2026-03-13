@@ -29,7 +29,7 @@ azure-core==1.38.0
     #   azure-storage-blob
     #   azure-storage-queue
     #   msrest
-azure-identity==1.25.1
+azure-identity==1.25.3
     # via
     #   -r requirements.in
     #   azure-kusto-data
@@ -135,7 +135,7 @@ mccabe==0.7.0
     # via pylint
 mdurl==0.1.2
     # via markdown-it-py
-msal==1.35.0b1
+msal==1.35.1
     # via
     #   azure-identity
     #   azure-kusto-data
