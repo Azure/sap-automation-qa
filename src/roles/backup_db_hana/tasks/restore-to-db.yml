@@ -39,7 +39,12 @@
             backup_restore_vm_name:        "{{ hostvars[backup_primary_node].azure_instance_metadata.json.compute.name }}"
             backup_restore_vm_rg:          "{{ hostvars[backup_primary_node].azure_instance_metadata.json.compute.resourceGroupName }}"
             backup_restore_subscription:   "{{ hostvars[backup_primary_node].azure_instance_metadata.json.compute.subscriptionId }}"
-            backup_restore_target_container: ""
+          run_once:                 true
+
+        - name:                     "Pre Validation: Build HSR primary restore container"
+          ansible.builtin.set_fact:
+            backup_restore_target_container: >-
+              VMAppContainer;Compute;{{ backup_restore_vm_rg }};{{ backup_restore_vm_name }}
           run_once:                 true
 
     - name:                         "Pre Validation: Set standalone node facts"
@@ -49,11 +54,17 @@
         backup_restore_vm_name:     "{{ azure_instance_metadata.json.compute.name }}"
         backup_restore_vm_rg:       "{{ azure_instance_metadata.json.compute.resourceGroupName }}"
         backup_restore_subscription: "{{ azure_instance_metadata.json.compute.subscriptionId }}"
-        backup_restore_target_container: ""
       run_once:                     true
       when:                         not (database_high_availability | default(false) | bool)
 
-    - name:                         "Pre Validation: Discover protected items for source VM"
+    - name:                         "Pre Validation: Build standalone restore container"
+      ansible.builtin.set_fact:
+        backup_restore_target_container: >-
+          VMAppContainer;Compute;{{ backup_restore_vm_rg }};{{ backup_restore_vm_name }}
+      run_once:                     true
+      when:                         not (database_high_availability | default(false) | bool)
+
+    - name:                          "Pre Validation: Discover protected items for source VM"
       delegate_to:                   localhost
       azure_backup_hana:
         operation:                   "discover_protected_items"
