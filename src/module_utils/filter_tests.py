@@ -83,22 +83,55 @@ class TestFilter:
 
         return json.dumps(filtered_config, indent=2)
 
+    def resolve_functional_test_type(self, test_group: str) -> Optional[str]:
+        """
+        Resolve SAP_FUNCTIONAL_TEST_TYPE from a test group name.
+
+        Uses the sap_functional_test_type_map from the config to
+        match the test group prefix to the functional test type.
+
+        :param test_group: Test group name (e.g. "BACKUP_DB_HANA")
+        :type test_group: str
+        :return: Functional test type name or None if unresolved
+        :rtype: Optional[str]
+        """
+        type_map = self.config.get("sap_functional_test_type_map", [])
+        for entry in type_map:
+            if test_group.startswith(entry["value"]):
+                return entry["name"]
+        return None
+
     def get_ansible_vars(
-        self, test_group: Optional[str] = None, test_cases: Optional[List[str]] = None
+        self,
+        test_group: Optional[str] = None,
+        test_cases: Optional[List[str]] = None,
     ) -> str:
         """
         Get Ansible variables from the filtered test configuration.
 
-        :param test_group: Name of the test group to filter, defaults to None
+        When a test_group is specified, the resolved
+        SAP_FUNCTIONAL_TEST_TYPE is included so the caller can
+        select the correct playbook automatically.
+
+        :param test_group: Name of the test group to filter
         :type test_group: Optional[str], optional
-        :param test_cases: List of test case task names to include, defaults to None
+        :param test_cases: List of test case task names to include
         :type test_cases: Optional[List[str]], optional
-        :return: JSON string representation of the Ansible variables
+        :return: JSON string of the Ansible variables
         :rtype: str
         """
         filtered_json = self.filter_tests(test_group, test_cases)
         filtered_config = json.loads(filtered_json)
-        return json.dumps({"test_groups": filtered_config["test_groups"]})
+        result: Dict[str, Any] = {
+            "test_groups": filtered_config["test_groups"],
+        }
+
+        if test_group:
+            resolved = self.resolve_functional_test_type(test_group)
+            if resolved:
+                result["SAP_FUNCTIONAL_TEST_TYPE"] = resolved
+
+        return json.dumps(result)
 
 
 def main():

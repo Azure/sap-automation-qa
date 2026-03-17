@@ -64,6 +64,7 @@ TEST_GROUP_PLAYBOOKS: dict[str, str] = {
     "ConfigurationChecks": "playbook_00_configuration_checks.yml",
     "DatabaseHighAvailability": "playbook_00_ha_db_functional_tests.yml",
     "CentralServicesHighAvailability": "playbook_00_ha_scs_functional_tests.yml",
+    "AzureBackupDatabase": "playbook_00_backup_db_functional_tests.yml",
 }
 
 
@@ -228,6 +229,7 @@ class AnsibleExecutor:
         if test_group in (
             "DatabaseHighAvailability",
             "CentralServicesHighAvailability",
+            "AzureBackupDatabase",
         ):
             all_vars["SAP_FUNCTIONAL_TEST_TYPE"] = test_group
             all_vars["TEST_TYPE"] = "SAPFunctionalTests"

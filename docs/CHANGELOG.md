@@ -3,7 +3,7 @@
 All notable changes to this project will be documented in this file.
 
 ## 1.1.0
-Release Date: 03-04-2026
+Release Date: 03-30-2026
 1. Add support for scale-out HANA System Replication (HSR) topology in HA functional tests
    - Support for SAPHanaSR-ScaleOut provider alongside SAPHanaSR and SAPHanaSR-angi.
    - Updated all HA DB test scenarios (resource migration, node crash/kill, echo-b, crash-index, block-network, fs-freeze, sbd-fencing) with scale-out HSR support.
@@ -14,6 +14,11 @@ Release Date: 03-04-2026
    - API endpoints for triggering tests and checks, retrieving results, and managing test runs.
    - Docker deployment with multi-stage build, non-root user, and healthcheck.
    - CLI wrapper scripts (`api_utils.sh`, `container_setup.sh`) for API and Docker management.
+3. Azure Backup Configuration Validation and Functional Testing
+   - New `azure_backup_hana` Ansible module for backup discovery, restore-to-database, restore-to-filesystem, restore job monitoring, and cross-VM (ALR) restores.
+   - Five test cases: backup setup verification, original location restore (OLR), restore to filesystem, native HANA recovery via database commands, and alternate location restore (ALR, disabled by default).
+   - Support for both HA (two-node HSR cluster) and non-HA (single-node) HANA deployments.
+   - HANA data-at-rest encryption support with automatic root key transfer (SAP Note 3619961) during cross-VM and cross-site restores.
 
 ## 1.0.2
 Release Date: 09-01-2026

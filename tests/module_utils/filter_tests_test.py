@@ -30,6 +30,7 @@ class TestTestFilter:
             "sap_functional_test_type_map": [
                 {"name": "DatabaseHighAvailability", "value": "HA_DB"},
                 {"name": "CentralServicesHighAvailability", "value": "HA_SCS"},
+                {"name": "AzureBackupDatabase", "value": "BACKUP_DB"},
             ],
             "test_groups": [
                 {
@@ -77,6 +78,52 @@ class TestTestFilter:
             "db_sid": "HDB",
             "default_retries": 50,
         }
+
+    @pytest.fixture
+    def backup_config(self):
+        """
+        Fixture providing config with BACKUP_DB_HANA test group.
+
+        :return: Configuration dictionary with backup test group
+        :rtype: dict
+        """
+        return {
+            "sap_functional_test_type_map": [
+                {"name": "DatabaseHighAvailability", "value": "HA_DB"},
+                {"name": "CentralServicesHighAvailability", "value": "HA_SCS"},
+                {"name": "AzureBackupDatabase", "value": "BACKUP_DB"},
+            ],
+            "test_groups": [
+                {
+                    "name": "BACKUP_DB_HANA",
+                    "test_cases": [
+                        {
+                            "name": "Azure Backup Setup Verification",
+                            "task_name": "backup-setup-verification",
+                            "description": "Verifies Azure Backup setup",
+                            "enabled": True,
+                        },
+                    ],
+                },
+            ],
+            "sap_sid": "HDB",
+            "db_sid": "HDB",
+            "default_retries": 50,
+        }
+
+    @pytest.fixture
+    def temp_backup_yaml_file(self, backup_config):
+        """
+        Fixture providing a temporary YAML file with backup configuration.
+
+        :param backup_config: Backup configuration data
+        :type backup_config: dict
+        :return: Path to temporary YAML file
+        :rtype: str
+        """
+        with tempfile.NamedTemporaryFile(mode="w", suffix=".yaml", delete=False) as f:
+            yaml.dump(backup_config, f)
+            return f.name
 
     @pytest.fixture
     def temp_yaml_file(self, sample_config):
@@ -420,5 +467,107 @@ class TestTestFilter:
             original_config = filter_obj.config.copy()
             filter_obj.filter_tests(test_group="HA_DB_HANA")
             assert filter_obj.config == original_config
+        finally:
+            os.unlink(temp_yaml_file)
+
+    def test_resolve_functional_test_type_ha_db(self, temp_yaml_file):
+        """
+        Test resolve_functional_test_type for HA_DB_HANA group.
+
+        :param temp_yaml_file: Path to temporary YAML file
+        :type temp_yaml_file: str
+        """
+        try:
+            filter_obj = TestFilter(temp_yaml_file)
+            result = filter_obj.resolve_functional_test_type("HA_DB_HANA")
+            assert result == "DatabaseHighAvailability"
+        finally:
+            os.unlink(temp_yaml_file)
+
+    def test_resolve_functional_test_type_ha_scs(self, temp_yaml_file):
+        """
+        Test resolve_functional_test_type for HA_SCS group.
+
+        :param temp_yaml_file: Path to temporary YAML file
+        :type temp_yaml_file: str
+        """
+        try:
+            filter_obj = TestFilter(temp_yaml_file)
+            result = filter_obj.resolve_functional_test_type("HA_SCS")
+            assert result == "CentralServicesHighAvailability"
+        finally:
+            os.unlink(temp_yaml_file)
+
+    def test_resolve_functional_test_type_backup_db(self, temp_yaml_file):
+        """
+        Test resolve_functional_test_type for BACKUP_DB_HANA group.
+
+        :param temp_yaml_file: Path to temporary YAML file
+        :type temp_yaml_file: str
+        """
+        try:
+            filter_obj = TestFilter(temp_yaml_file)
+            result = filter_obj.resolve_functional_test_type("BACKUP_DB_HANA")
+            assert result == "AzureBackupDatabase"
+        finally:
+            os.unlink(temp_yaml_file)
+
+    def test_resolve_functional_test_type_unknown(self, temp_yaml_file):
+        """
+        Test resolve_functional_test_type with unknown group.
+
+        :param temp_yaml_file: Path to temporary YAML file
+        :type temp_yaml_file: str
+        """
+        try:
+            filter_obj = TestFilter(temp_yaml_file)
+            result = filter_obj.resolve_functional_test_type("UNKNOWN_GROUP")
+            assert result is None
+        finally:
+            os.unlink(temp_yaml_file)
+
+    def test_get_ansible_vars_includes_resolved_type_ha_db(self, temp_yaml_file):
+        """
+        Test get_ansible_vars includes SAP_FUNCTIONAL_TEST_TYPE for HA_DB_HANA.
+
+        :param temp_yaml_file: Path to temporary YAML file
+        :type temp_yaml_file: str
+        """
+        try:
+            filter_obj = TestFilter(temp_yaml_file)
+            result = filter_obj.get_ansible_vars(test_group="HA_DB_HANA")
+            result_dict = json.loads(result)
+            assert result_dict["SAP_FUNCTIONAL_TEST_TYPE"] == "DatabaseHighAvailability"
+        finally:
+            os.unlink(temp_yaml_file)
+
+    def test_get_ansible_vars_includes_resolved_type_backup(self, temp_backup_yaml_file):
+        """
+        Test get_ansible_vars includes SAP_FUNCTIONAL_TEST_TYPE for BACKUP_DB_HANA.
+
+        :param temp_backup_yaml_file: Path to temporary YAML file
+        :type temp_backup_yaml_file: str
+        """
+        try:
+            filter_obj = TestFilter(temp_backup_yaml_file)
+            result = filter_obj.get_ansible_vars(test_group="BACKUP_DB_HANA")
+            result_dict = json.loads(result)
+            assert result_dict["SAP_FUNCTIONAL_TEST_TYPE"] == "AzureBackupDatabase"
+            assert "test_groups" in result_dict
+        finally:
+            os.unlink(temp_backup_yaml_file)
+
+    def test_get_ansible_vars_no_type_without_group(self, temp_yaml_file):
+        """
+        Test get_ansible_vars omits SAP_FUNCTIONAL_TEST_TYPE when no group specified.
+
+        :param temp_yaml_file: Path to temporary YAML file
+        :type temp_yaml_file: str
+        """
+        try:
+            filter_obj = TestFilter(temp_yaml_file)
+            result = filter_obj.get_ansible_vars()
+            result_dict = json.loads(result)
+            assert "SAP_FUNCTIONAL_TEST_TYPE" not in result_dict
         finally:
             os.unlink(temp_yaml_file)

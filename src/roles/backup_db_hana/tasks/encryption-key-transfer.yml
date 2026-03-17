@@ -1,0 +1,272 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+
+# /*---------------------------------------------------------------------------
+# |  Encryption Root Key Transfer (SAP Note 3619961)                          |
+# +--------------------------------------------------------------------------*/
+
+# /*-----------------------------------------------------------------------
+# |     Step 1: Generate and set root key backup password on source        |
+# +-----------------------------------------------------------------------*/
+- name:                                 "Encryption Key Transfer: Generate temporary root key backup password"
+  ansible.builtin.set_fact:
+    _root_key_backup_password:          "{{ lookup('password', '/dev/null length=28 chars=ascii_letters,digits') }}"
+  run_once:                             true
+  no_log:                               true
+  when:                                 backup_encryption_enabled | default(false) | bool
+
+- name:                                 "Encryption Key Transfer: Create temp directory on source"
+  become:                               true
+  become_user:                          "{{ db_sid | lower }}adm"
+  ansible.builtin.file:
+    path:                               "{{ _root_key_tmp_path }}"
+    state:                              directory
+    mode:                               "0700"
+  run_once:                             true
+  when:                                 backup_encryption_enabled | default(false) | bool
+
+- name:                                 "Encryption Key Transfer: Check tenant status on source"
+  become:                               true
+  become_user:                          "{{ db_sid | lower }}adm"
+  ansible.builtin.shell: |
+                                        set -o pipefail
+                                        source /usr/sap/{{ db_sid | upper }}/home/.sapenv.sh && \
+                                        hdbsql -U {{ hana_userstore_key | default('SYSTEM') }} -j -a -x \
+                                          "SELECT DATABASE_NAME, ACTIVE_STATUS FROM SYS.M_DATABASES WHERE DATABASE_NAME = '{{ db_item.name }}'"
+  args:
+    executable:                         /bin/bash
+  register:                             encryption_tenant_status
+  run_once:                             true
+  changed_when:                         false
+  loop:                                 "{{ backup_tenant_items }}"
+  loop_control:
+    loop_var:                           db_item
+    label:                              "{{ db_item.name }}"
+  when:
+                                        - backup_encryption_enabled | default(false) | bool
+                                        - backup_tenant_items | length > 0
+
+- name:                                 "Encryption Key Transfer: Start tenant '{{ db_item.name }}' on source (if not active)"
+  become:                               true
+  become_user:                          "{{ db_sid | lower }}adm"
+  ansible.builtin.shell: |
+                                        set -o pipefail
+                                        source /usr/sap/{{ db_sid | upper }}/home/.sapenv.sh && \
+                                        hdbsql -U {{ hana_userstore_key | default('SYSTEM') }} -j \
+                                          "ALTER SYSTEM START DATABASE {{ db_item.name }}"
+  args:
+    executable:                         /bin/bash
+  run_once:                             true
+  changed_when:                         true
+  loop:                                 "{{ backup_tenant_items }}"
+  loop_control:
+    loop_var:                           db_item
+    index_var:                          idx
+    label:                              "{{ db_item.name }}"
+  when:
+                                        - backup_encryption_enabled | default(false) | bool
+                                        - backup_tenant_items | length > 0
+                                        - encryption_tenant_status.results[idx].stdout | default('') is not search('YES')
+
+- name:                                 "Encryption Key Transfer: Set root key backup password on tenant '{{ db_item.name }}'"
+  become:                               true
+  become_user:                          "{{ db_sid | lower }}adm"
+  ansible.builtin.shell: |
+                                        set -o pipefail
+                                        source /usr/sap/{{ db_sid | upper }}/home/.sapenv.sh && \
+                                        hdbsql -U {{ hana_userstore_key | default('SYSTEM') }} -d {{ db_item.name }} -j \
+                                          "ALTER SYSTEM SET ENCRYPTION ROOT KEYS BACKUP PASSWORD {{ _root_key_backup_password }}"
+  args:
+    executable:                         /bin/bash
+  register:                             encryption_set_pwd_tenants
+  run_once:                             true
+  changed_when:                         false
+  loop:                                 "{{ backup_tenant_items }}"
+  loop_control:
+    loop_var:                           db_item
+    label:                              "{{ db_item.name }}"
+  when:
+                                        - backup_encryption_enabled | default(false) | bool
+                                        - backup_tenant_items | length > 0
+
+# /*-----------------------------------------------------------------------
+# |     Step 2: Back up root keys from source HANA                         |
+# +-----------------------------------------------------------------------*/
+- name:                                 "Encryption Key Transfer: Backup root keys from tenant '{{ db_item.name }}'"
+  become:                               true
+  become_user:                          "{{ db_sid | lower }}adm"
+  ansible.builtin.shell: |
+                                        set -o pipefail
+                                        source /usr/sap/{{ db_sid | upper }}/home/.sapenv.sh && \
+                                        hdbsql -U {{ hana_userstore_key | default('SYSTEM') }} -d {{ db_item.name }} -j \
+                                          "BACKUP ENCRYPTION ROOT KEYS USING FILE ('{{ _root_key_tmp_path }}/rkb_export_{{ db_item.name }}')"
+  args:
+    executable:                         /bin/bash
+  register:                             encryption_export_tenants
+  run_once:                             true
+  changed_when:                         false
+  loop:                                 "{{ backup_tenant_items }}"
+  loop_control:
+    loop_var:                           db_item
+    label:                              "{{ db_item.name }}"
+  when:
+                                        - backup_encryption_enabled | default(false) | bool
+                                        - backup_tenant_items | length > 0
+
+- name:                                 "Encryption Key Transfer: Log tenant key backup results"
+  ansible.builtin.debug:
+    msg: >-
+      Tenant key backup from '{{ db_result.db_item.name }}' (direct connection via -d):
+      {{ 'succeeded (rc=' ~ db_result.rc ~ ')' if db_result.rc | default(1) == 0 else 'FAILED: ' ~ db_result.stderr | default('unknown error') }}
+  loop:                                 "{{ encryption_export_tenants.results | default([]) }}"
+  loop_control:
+    loop_var:                           db_result
+    label:                              "{{ db_result.db_item.name | default('unknown') }}"
+  run_once:                             true
+  when:
+                                        - backup_encryption_enabled | default(false) | bool
+                                        - encryption_export_tenants.results is defined
+
+# /*-----------------------------------------------------------------------
+# |     Step 3: Transfer root key files via Ansible controller             |
+# +-----------------------------------------------------------------------*/
+- name:                                 "Encryption Key Transfer: List exported root key files"
+  ansible.builtin.find:
+    paths:                              "{{ _root_key_tmp_path }}"
+    patterns:                           "*_rootkeys"
+  register:                             encryption_exported_files
+  run_once:                             true
+  when:                                 backup_encryption_enabled | default(false) | bool
+
+- name:                                 "Encryption Key Transfer: Log exported root key files"
+  ansible.builtin.debug:
+    msg: >-
+      Exported {{ encryption_exported_files.files | default([]) | length }} root key file(s)
+      from source VM {{ backup_source_vm_name }}:
+      {{ encryption_exported_files.files | default([]) | map(attribute='path') | map('basename') | list }}
+  run_once:                             true
+  when:                                 backup_encryption_enabled | default(false) | bool
+
+- name:                                 "Encryption Key Transfer: Fetch root key files to controller"
+  ansible.builtin.fetch:
+    src:                                "{{ rkb_file.path }}"
+    dest:                               "/tmp/sap_root_keys_controller/"
+    flat:                               true
+  loop:                                 "{{ encryption_exported_files.files | default([]) }}"
+  loop_control:
+    loop_var:                           rkb_file
+    label:                              "{{ rkb_file.path | basename }}"
+  run_once:                             true
+  when:
+                                        - backup_encryption_enabled | default(false) | bool
+                                        - encryption_exported_files.files | default([]) | length > 0
+
+# /*-----------------------------------------------------------------------
+# |     Step 4: Import root keys on target HANA                            |
+# +-----------------------------------------------------------------------*/
+- name:                                 "Encryption Key Transfer: Create temp directory on target"
+  ansible.builtin.file:
+    path:                               "{{ _root_key_tmp_path }}"
+    state:                              directory
+    mode:                               "0700"
+    owner:                              "{{ db_sid | lower }}adm"
+    group:                              "sapsys"
+  delegate_to:                          "{{ backup_target_vm_name }}"
+  run_once:                             true
+  when:
+                                        - backup_encryption_enabled | default(false) | bool
+                                        - encryption_exported_files.files | default([]) | length > 0
+
+- name:                                 "Encryption Key Transfer: Copy root key files to target VM"
+  ansible.builtin.copy:
+    src:                                "/tmp/sap_root_keys_controller/{{ rkb_file.path | basename }}"
+    dest:                               "{{ _root_key_tmp_path }}/{{ rkb_file.path | basename }}"
+    mode:                               "0600"
+    owner:                              "{{ db_sid | lower }}adm"
+    group:                              "sapsys"
+  loop:                                 "{{ encryption_exported_files.files | default([]) }}"
+  loop_control:
+    loop_var:                           rkb_file
+    label:                              "{{ rkb_file.path | basename }}"
+  delegate_to:                          "{{ backup_target_vm_name }}"
+  run_once:                             true
+  when:
+                                        - backup_encryption_enabled | default(false) | bool
+                                        - encryption_exported_files.files | default([]) | length > 0
+
+- name:                                 "Encryption Key Transfer: Stop tenant DB on target before key recovery"
+  become:                               true
+  become_user:                          "{{ db_sid | lower }}adm"
+  ansible.builtin.shell: |
+                                        set -o pipefail
+                                        source /usr/sap/{{ db_sid | upper }}/home/.sapenv.sh && \
+                                        hdbsql -U {{ hana_userstore_key | default('SYSTEM') }} -j \
+                                          "ALTER SYSTEM STOP DATABASE {{ db_item.name }}"
+  args:
+    executable:                         /bin/bash
+  register:                             encryption_stop_tenants
+  delegate_to:                          "{{ backup_target_vm_name }}"
+  run_once:                             true
+  changed_when:                         true
+  loop:                                 "{{ backup_tenant_items }}"
+  loop_control:
+    loop_var:                           db_item
+    label:                              "{{ db_item.name }}"
+  when:
+                                        - backup_encryption_enabled | default(false) | bool
+                                        - encryption_exported_files.files | default([]) | length > 0
+                                        - backup_tenant_items | length > 0
+
+- name:                                 "Encryption Key Transfer: Recover root keys on target - tenant '{{ db_item.name }}'"
+  become:                               true
+  become_user:                          "{{ db_sid | lower }}adm"
+  ansible.builtin.shell: |
+                                        set -o pipefail
+                                        source /usr/sap/{{ db_sid | upper }}/home/.sapenv.sh && \
+                                        hdbsql -U {{ hana_userstore_key | default('SYSTEM') }} -j \
+                                          "RECOVER ENCRYPTION ROOT KEYS FOR {{ db_item.name }} USING FILE ('{{ _root_key_tmp_path }}/rkb_export_{{ db_item.name }}') PASSWORD {{ _root_key_backup_password }}"
+  args:
+    executable:                         /bin/bash
+  register:                             encryption_import_tenants
+  delegate_to:                          "{{ backup_target_vm_name }}"
+  run_once:                             true
+  changed_when:                         false
+  loop:                                 "{{ backup_tenant_items }}"
+  loop_control:
+    loop_var:                           db_item
+    label:                              "{{ db_item.name }}"
+  when:
+                                        - backup_encryption_enabled | default(false) | bool
+                                        - encryption_exported_files.files | default([]) | length > 0
+                                        - backup_tenant_items | length > 0
+
+- name:                                 "Encryption Key Transfer: Start tenant DB on target after key recovery"
+  become:                               true
+  become_user:                          "{{ db_sid | lower }}adm"
+  ansible.builtin.shell: |
+                                        set -o pipefail
+                                        source /usr/sap/{{ db_sid | upper }}/home/.sapenv.sh && \
+                                        hdbsql -U {{ hana_userstore_key | default('SYSTEM') }} -j \
+                                          "ALTER SYSTEM START DATABASE {{ db_item.name | upper }}"
+  args:
+    executable:                         /bin/bash
+  delegate_to:                          "{{ backup_target_vm_name }}"
+  run_once:                             true
+  changed_when:                         true
+  loop:                                 "{{ backup_tenant_items }}"
+  loop_control:
+    loop_var:                           db_item
+    label:                              "{{ db_item.name }}"
+  when:
+                                        - backup_encryption_enabled | default(false) | bool
+                                        - backup_tenant_items | length > 0
+
+- name:                                 "Encryption Key Transfer: Log import results"
+  ansible.builtin.debug:
+    msg: >-
+      Root key transfer completed (SAP Note 3619961).
+      Tenant recoveries: {{ encryption_import_tenants.results | default([])
+                        | map(attribute='rc') | select('defined')
+                        | select('equalto', 0) | list | length }}/{{ backup_tenant_items | length }} succeeded.
+  run_once:                             true
+  when:                                 backup_encryption_enabled | default(false) | bool

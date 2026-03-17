@@ -8,6 +8,8 @@
 [![Ansible Lint](https://github.com/Azure/sap-automation-qa/actions/workflows/github-actions-ansible-lint.yml/badge.svg)](https://github.com/Azure/sap-automation-qa/actions/workflows/github-actions-ansible-lint.yml)
 [![OpenSSF Scorecard](https://img.shields.io/ossf-scorecard/github.com/Azure/sap-automation-qa)](https://scorecard.dev/viewer/?uri=github.com/Azure/sap-automation-qa)
 [![GitHub Issues](https://img.shields.io/github/issues/Azure/sap-automation-qa)](https://github.com/Azure/sap-automation-qa/issues)
+[![GitHub Stars](https://img.shields.io/github/stars/Azure/sap-automation-qa)](https://github.com/Azure/sap-automation-qa/stargazers)
+[![GitHub Forks](https://img.shields.io/github/forks/Azure/sap-automation-qa)](https://github.com/Azure/sap-automation-qa/network/members)
 
 ## 🔍 Overview
 
@@ -30,6 +32,14 @@ In the SAP Testing Automation Framework, thorough validation of high availabilit
 - **High Availability Configuration Validation:** The framework helps to ensure that SAP HANA (scale-up and scale-out HSR) and SAP Central Services configurations and load balancer settings are compliant with SAP on Azure high availability configuration guidelines.
 - **Functional Testing:** The framework executes series of real-world scenarios based on the SAP HANA and SAP Central Services high availability setup to identify potential issues, whether during a new system deployment or before implementing cluster changes in a production environment. The test cases are based on what is documented in how-to guides for SAP HANA and SAP Central Services configuration.
 - **Offline configuration validation:** Offline validation is a mode of the framework that validates SAP HANA and SAP Central Services high availability cluster configurations without establishing a live SSH connection to the production cluster. Instead, it analyzes captured cluster information base (CIB) XML files exported from each cluster node.
+
+### Azure Backup Testing
+
+The framework validates Azure Backup operations for SAP HANA databases, covering the full backup-restore lifecycle. It supports both HA (two-node cluster) and non-HA (single-node) deployments.
+
+- **Backup Setup Verification:** Discovers protected HANA databases in the Recovery Services vault, verifies backup configuration health, and checks that recent restore points exist.
+- **Restore Operations:** Tests restore-to-database (in-place and cross-VM) and restore-to-filesystem workflows via the Azure Backup Python SDK, monitoring restore jobs to completion.
+- **Database Recovery Validation:** Validates native HANA recovery using database commands (`RECOVER DATA`), and confirms the database is consistent and operational after each restore.
 
 ### Configuration Checks (Preview)
 
@@ -65,6 +75,7 @@ For users focused solely on validating SAP functionality and configurations, the
 
 - Configure management server following the document [Setup Guide for SAP Testing Automation Framework](https://github.com/Azure/sap-automation-qa/blob/main/docs/SETUP.MD).
   - For high availability testing scenarios, see [High Availability documentation](./docs/HIGH_AVAILABILITY.md).
+  - For Azure Backup testing scenarios, see [Azure Backup Testing documentation](./docs/AZURE_BACKUP.md).
   - For Configuration Checks and Testing details, see the [Configuration Checks documentation](./docs/CONFIGURATION_CHECKS.md).
 
 ### Option 2: Integration with SAP Deployment Automation Framework (SDAF)
@@ -81,6 +92,7 @@ For support and questions, please:
 ## 📚 Additional Resources
 
 - [Azure SAP Documentation](https://docs.microsoft.com/azure/sap)
+- [Azure Backup Testing Guide](./docs/AZURE_BACKUP.md)
 - [Configuration Checks Guide](./docs/CONFIGURATION_CHECKS.md)
 - [High Availability Testing Guide](./docs/HIGH_AVAILABILITY.md)
 

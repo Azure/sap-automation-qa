@@ -1,0 +1,37 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+
+# /*---------------------------------------------------------------------------
+# |  Encryption Check - Detect HANA Backup Encryption Status                  |
+# +--------------------------------------------------------------------------*/
+
+- name:                                 "Encryption Check: Query HANA encryption status"
+  become:                               true
+  become_user:                          "{{ db_sid | lower }}adm"
+  ansible.builtin.shell: |
+                                        set -o pipefail
+                                        source /usr/sap/{{ db_sid | upper }}/home/.sapenv.sh && \
+                                        hdbsql -U {{ hana_userstore_key | default('SYSTEM') }} -j -a -x \
+                                          "SELECT COUNT(*) FROM SYS.M_ENCRYPTION_OVERVIEW \
+                                          WHERE SCOPE = 'BACKUP' AND IS_ENCRYPTION_ACTIVE = 'TRUE'"
+  args:
+    executable:                         /bin/bash
+  register:                             encryption_check_result
+  run_once:                             true
+  changed_when:                         false
+
+- name:                                 "Encryption Check: Set encryption status"
+  ansible.builtin.set_fact:
+    backup_encryption_enabled:          "{{ encryption_check_result.rc == 0
+                                            and (encryption_check_result.stdout | trim | int | default(0)) > 0 }}"
+    _root_key_tmp_path:                 "/tmp/sap_root_keys_transfer"
+  run_once:                             true
+
+- name:                                 "Encryption Check: Log encryption status"
+  ansible.builtin.debug:
+    msg: >-
+                                        HANA backup encryption: {{ 'ENABLED' if backup_encryption_enabled | bool else 'NOT ENABLED' }}.
+                                        {{ 'Root key transfer will be performed before restore (SAP Note 3619961).'
+                                          if backup_encryption_enabled | bool
+                                          else 'No encryption key transfer required.' }}
+  run_once:                             true

@@ -1,0 +1,28 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+
+###############################################################################
+# Post validation tasks for Azure Backup test cases                           #
+# Simplified variant: no cluster status checks required for backup tests      #
+###############################################################################
+
+- name:                                 "Post Validations: Azure Backup test case"
+  block:
+    - name:                             "Post Validations: Set test case status"
+      delegate_to:                      localhost
+      ansible.builtin.set_fact:
+        test_case_name:                 "{{ item.name }}: {{ test_execution_hostname | default(ansible_hostname) }}"
+        test_case_description:          "{{ item.description }}"
+        test_case_status:               "{{ test_execution_status | default('FAILED') }}"
+        test_execution_start_time:      "{{ test_execution_start | default(now(utc=true, fmt='%Y-%m-%d %H:%M:%S')) }}"
+        test_case_hostname:             "{{ test_execution_hostname | default(ansible_hostname) }}"
+        test_execution_end_time:        "{{ test_execution_end | default(now(utc=true, fmt='%Y-%m-%d %H:%M:%S')) }}"
+        test_case_var_log_messages:     "{{ test_case_var_log_messages_from_test_case | default([]) }}"
+        test_case_message:              "{{ test_case_message_from_test_case | default('Test execution status not set') }}"
+        test_case_details:              "{{ test_case_details_from_test_case | default('') }}"
+
+    - name:                             "Post Telemetry Data"
+      ansible.builtin.include_tasks:    "roles/misc/tasks/post-telemetry-data.yml"
+
+- name:                                 "Clear the failed state of hosts"
+  ansible.builtin.meta:                 clear_host_errors

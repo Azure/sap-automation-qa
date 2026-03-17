@@ -10,6 +10,8 @@ sap_functional_test_type_map:
     value:                          HA_DB
   - name:                           "CentralServicesHighAvailability"
     value:                          HA_SCS
+  - name:                           "AzureBackupDatabase"
+    value:                          BACKUP_DB
 
 configuration_test_type_map:
   - name:                           "CentralServiceInstances"
@@ -304,6 +306,56 @@ test_groups:
           cluster behavior, automatic failover execution.
         enabled:                    true
 
+  - name:                           BACKUP_DB_HANA
+    test_cases:
+      - name:                       Azure Backup Setup Verification
+        task_name:                  backup-setup-verification
+        description: |
+          Validates Azure Backup configuration for SAP HANA databases by discovering all protected
+          databases in the Recovery Services vault, verifying their backup configuration status and
+          health, and checking the last restore point for each protected item.
+        enabled:                    true
+
+      - name:                       Original Location Restore (OLR)
+        task_name:                  restore-to-db
+        description: |
+          Tests Original Location Recovery (OLR) of Azure Backup for SAP HANA.
+          Iterates over all discovered protected databases (SYSTEMDB + tenant DBs)
+          and restores each one. For standalone (non-HA) deployments, uses
+          OriginalWorkloadRestore. For HSR topologies, puts the cluster in maintenance
+          mode, breaks replication, restores using AlternateWorkloadRestore to the
+          primary node with overwrite (OLR is not supported for HSR containers),
+          re-establishes HSR replication, and takes the cluster out of maintenance mode.
+        enabled:                    true
+
+      - name:                       Restore Backup to FileSystem
+        task_name:                  restore-to-filesystem
+        description: |
+          Tests the restore-as-files functionality of Azure Backup for SAP HANA. Restores
+          the HANA database backup to a filesystem path, verifies the backup files are present,
+          then performs a HANA DB recovery from the backup files and validates the database
+          is operational.
+        enabled:                    true
+
+      - name:                       Recover DB using Database Commands
+        task_name:                  recover-db-commands
+        description: |
+          Tests HANA database recovery using native database commands (RECOVER DATA).
+          Queries the backup catalog, stops the HANA instance, performs recovery using
+          recoverSys.py, restarts the instance, and validates database consistency.
+        enabled:                    true
+
+      # ALR Test disabled by-default since it requires additional config and resources to run
+      - name:                       Alternate Location Restore (ALR)
+        task_name:                  restore-cross-vm
+        description: |
+          Tests Alternate Location Recovery (ALR) of Azure Backup for SAP HANA.
+          Restores tenant databases only (SYSTEMDB is excluded) to a
+          user-specified alternate VM using AlternateWorkloadRestore with
+          overwrite. Requires backup_target_vm_name to be set. Validates the
+          target HANA instance is running with consistent databases after all
+          tenant restores complete.
+        enabled:                    false
 
 # Default values for HANA DB HA Test Cases
 sap_sid:                            "HDB"
@@ -319,6 +371,23 @@ default_retries:                    50
 default_delay:                      10
 default_timeout:                    60
 ascs_stonith_timeout:               120
+
+# Default values for Azure Backup test cases
+backup_vault_resource_id:           ""
+backup_target_filesystem_path:      "/sapinstall/hana_backup/"
+backup_target_vm_name:              ""
+backup_target_vm_rg:                ""
+backup_restore_point_time:          ""
+backup_poll_interval:               30
+backup_poll_timeout:                7200
+backup_recover_timeout:             3600
+hana_userstore_key:                 "SYSTEM"
+backup_restore_systemdb:            true
+backup_restore_tenants:             []
+backup_hsr_primary_site:            "site1"
+backup_hsr_secondary_site:          "site2"
+backup_hsr_replication_mode:        "syncmem"
+backup_hsr_operation_mode:          "logreplay"
 
 # Commands for HANA DB HA Test Cases based on OS family
 commands:
@@ -371,3 +440,11 @@ commands:
   - name:                           ha_cluster_config_dump
     SUSE:                           "crm config show"
     REDHAT:                         "pcs config show"
+
+  - name:                           cluster_maintenance_on
+    SUSE:                           "crm configure property maintenance-mode=true"
+    REDHAT:                         "pcs property set maintenance-mode=true"
+
+  - name:                           cluster_maintenance_off
+    SUSE:                           "crm configure property maintenance-mode=false"
+    REDHAT:                         "pcs property set maintenance-mode=false"

@@ -1,7 +1,15 @@
 <!DOCTYPE html>
 <html>
   <head>
-    <title>SAP High Availability QA Results</title>
+    {% set _group = test_case_results[0].TestGroupName|default('') if test_case_results else '' %}
+    {% if _group == 'AzureBackupDatabase' %}
+      {% set report_title = 'SAP Azure Backup QA Results' %}
+    {% elif _group == 'CentralServicesHighAvailability' or _group == 'DatabaseHighAvailability' %}
+      {% set report_title = 'SAP High Availability QA Results' %}
+    {% else %}
+      {% set report_title = 'SAP Quality Assurance Results' %}
+    {% endif %}
+    <title>{{ report_title }}</title>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -611,7 +619,8 @@
   </head>
   <body>
     <div class="navbar">
-      <div class="system-id">SAP High Availability QA Results</div>
+      <div class="system-id">{{ report_title }}</div>
+      
     </div>
     <div class="main-content">
       <div class="container">
@@ -731,7 +740,7 @@
                   {% endif %}
                   <tr>
                     <th>Test Case Details</th>
-                      {% if 'HA Parameters Validation' in test_case_result.TestCaseName or 'Azure Load Balancer' in test_case_result.TestCaseName %}
+                      {% if 'HA Parameters Validation' in test_case_result.TestCaseName or 'Azure Load Balancer' in test_case_result.TestCaseName or 'Azure Backup' in test_case_result.TestCaseName %}
                       <td class="cluster">{{ test_case_result.TestCaseDetails | tojson | safe }}</td>
                     {% else %}
                       <td class="jsonobject">{{ test_case_result.TestCaseDetails | tojson | safe }}</td>
@@ -826,13 +835,20 @@
         }
       }
 
-      // Format /var/log/messages (handles both string and array)
+      // Format /var/log/messages (handles string, array, and object)
       function formatNewLineMessages() {
         const containers = document.getElementsByClassName('sap-logs-content')
         for (let container of containers) {
           try {
             const parsed = JSON.parse(container.textContent.trim())
-            let text = Array.isArray(parsed) ? parsed.join('\n') : String(parsed)
+            let text
+            if (typeof parsed === 'object' && parsed !== null && !Array.isArray(parsed)) {
+              text = toYaml(parsed)
+            } else if (Array.isArray(parsed)) {
+              text = parsed.join('\n')
+            } else {
+              text = String(parsed)
+            }
             container.innerHTML = ''
             const pre = document.createElement('pre')
             pre.textContent = text

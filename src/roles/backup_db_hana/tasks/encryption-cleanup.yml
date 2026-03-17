@@ -1,0 +1,41 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+
+# /*---------------------------------------------------------------------------
+# |  Encryption Cleanup - Remove temporary root key files and passwords       |
+# +--------------------------------------------------------------------------*/
+
+- name:                                 "Encryption Cleanup: Remove root key files on source"
+  ansible.builtin.file:
+    path:                               "{{ _root_key_tmp_path | default('/tmp/sap_root_keys_transfer') }}"
+    state:                              absent
+  run_once:                             true
+  failed_when:                          false
+  when:                                 backup_encryption_enabled | default(false) | bool
+
+- name:                                 "Encryption Cleanup: Remove root key files on target"
+  ansible.builtin.file:
+    path:                               "{{ _root_key_tmp_path | default('/tmp/sap_root_keys_transfer') }}"
+    state:                              absent
+  delegate_to:                          "{{ backup_target_vm_name }}"
+  run_once:                             true
+  failed_when:                          false
+  when:
+                                        - backup_encryption_enabled | default(false) | bool
+                                        - backup_target_vm_name | default('') | length > 0
+
+- name:                                 "Encryption Cleanup: Remove root key files on controller"
+  ansible.builtin.file:
+    path:                               "/tmp/sap_root_keys_controller"
+    state:                              absent
+  delegate_to:                          localhost
+  run_once:                             true
+  failed_when:                          false
+  when:                                 backup_encryption_enabled | default(false) | bool
+
+- name:                                 "Encryption Cleanup: Clear temporary encryption password"
+  ansible.builtin.set_fact:
+    _root_key_backup_password:          ""
+  run_once:                             true
+  no_log:                               true
+  when:                                 backup_encryption_enabled | default(false) | bool

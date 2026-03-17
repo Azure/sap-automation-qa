@@ -50,3 +50,25 @@ user_assigned_identity_client_id: "00000000-0000-0000-0000-000000000000"
 #############################################################################
 ANF_account_rg:                "ANF-RESOURCE-GROUP"
 ANF_account_name:              "ANF-ACCOUNT-NAME"
+
+#############################################################################
+#                  Azure Backup Parameters (optional)                       #
+#  Required when SAP_FUNCTIONAL_TEST_TYPE is AzureBackupDatabase            #
+#############################################################################
+
+# Recovery Services vault resource ID (required)
+backup_vault_resource_id:      "/subscriptions/<subscription-id>/resourceGroups/<resource-group>/providers/Microsoft.RecoveryServices/vaults/<vault-name>"
+
+# Protected item identifiers (required for restore test cases 2-5)
+backup_container_name:         "VMAppContainer;Compute;<resource-group>;<vm-name>"
+backup_item_name:              "saphanadatabase;<sid>;<database-name>"
+
+# Filesystem restore target path (required for test case 3)
+backup_target_filesystem_path: "/hana/backup/restore"
+
+# Cross-VM restore parameters (required for test case 5)
+backup_target_container_name:  "VMAppContainer;Compute;<resource-group>;<target-vm-name>"
+backup_target_database_name:   "SYSTEMDB"
+
+# Point-in-time restore (ISO 8601 UTC, optional)
+backup_restore_point_time:     ""

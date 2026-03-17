@@ -1,0 +1,49 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+
+backup_parameters:
+  - key:                            "backup_status"
+    name:                           "Backup Status"
+    expected_value:                  "PASSED"
+    id_source:                      "server_type"
+
+  - key:                            "health_status"
+    name:                           "Health Status"
+    expected_value:                  "Healthy"
+    expected_value_hsr:             "Healthy or Unknown (HSR)"
+    id_source:                      "db_name"
+
+  - key:                            "protection_status"
+    name:                           "Protection Status"
+    expected_value:                  "Healthy"
+    id_source:                      "db_name"
+
+  - key:                            "last_backup_time"
+    name:                           "Last Backup Time"
+    expected_value:                  ""
+    id_source:                      "db_name"
+
+  - key:                            "latest_restore_point"
+    name:                           "Latest Restore Point"
+    expected_value:                  ""
+    id_source:                      "db_name"
+
+  - key:                            "backup_type"
+    name:                           "Backup Type"
+    expected_value:                  ""
+    id_source:                      "db_name"
+
+  - key:                            "policy_name"
+    name:                           "Policy Name"
+    expected_value:                  ""
+    id_source:                      "db_name"
+
+  - key:                            "last_job"
+    name:                           "Last Job"
+    expected_value:                  "Completed"
+    id_source:                      "db_name"
+
+  - key:                            "last_full_backup"
+    name:                           "Last Full Backup"
+    expected_value:                  "Completed"
+    id_source:                      "db_name"

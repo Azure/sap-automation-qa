@@ -1,0 +1,125 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+
+# /*---------------------------------------------------------------------------8
+# |                                                                            |
+# |            Azure Backup Functional Testing for SAP HANA DB                |
+# |                                                                            |
+# +------------------------------------4--------------------------------------*/
+
+- hosts:                               localhost
+  gather_facts:                        true
+  name:                                "Setup deployer for Azure Backup Testing"
+  vars_files:                          "./vars/input-api.yaml"
+  tasks:
+    - name:                            "Install python azure packages required"
+      become:                          true
+      no_log:                          true
+      ansible.builtin.pip:
+        name:
+          - azure-identity
+          - azure-kusto-data
+          - azure-kusto-ingest
+          - azure-mgmt-compute
+          - azure-mgmt-network
+          - azure-mgmt-recoveryservicesbackup
+          - azure-storage-blob
+          - azure-storage-queue
+          - pandas
+
+    - name:                            "Authenticate to Azure using Managed Identity"
+      ansible.builtin.command:
+        cmd:                            >-
+                                        az login --identity
+                                        {% if user_assigned_identity_client_id | default('') | length > 0
+                                        and user_assigned_identity_client_id != '00000000-0000-0000-0000-000000000000' %}
+                                        --client-id {{ user_assigned_identity_client_id }}
+                                        {% endif %}
+      changed_when:                     false
+
+- hosts:                               "{{ sap_sid | upper }}_DB"
+  name:                                "Azure Backup Functional Tests for HANA DB"
+  gather_facts:                        true
+  vars_files:                          "./vars/input-api.yaml"
+  tasks:
+    - name:                            "Enable profile_tasks callback plugin"
+      ansible.builtin.set_fact:
+        ansible_callbacks:
+          profile_tasks:               true
+
+    - name:                            "SAP OS configuration: Get IP from instance metadata"
+      ansible.builtin.uri:
+        url:                           http://169.254.169.254/metadata/instance/network/interface?api-version=2021-02-01&format=json
+        use_proxy:                     false
+        headers:
+          Metadata:                    true
+      register:                        azure_network_metadata
+
+    - name:                            "Retrieve compute instance metadata (subscription, VM name)"
+      ansible.builtin.uri:
+        url:                           http://169.254.169.254/metadata/instance?api-version=2021-02-01
+        use_proxy:                     false
+        headers:
+          Metadata:                    true
+      register:                        azure_instance_metadata
+
+    - name:                            "Parse JSON and extract network information"
+      ansible.builtin.set_fact:
+        network_info_parsed:           "{{ lookup('template', 'interfaces.j2', wantlist=True) | flatten(levels=1) }}"
+
+    - name:                            "Display extracted network information"
+      ansible.builtin.debug:
+        msg:                           "ipAddress: {{ item.ipAddress }} | interfaceName: {{ item.interfaceName }} | Subnet: {{ item.subnet }}"
+      loop:                            "{{ network_info_parsed | list }}"
+
+    - name:                            "Set the test group name"
+      ansible.builtin.set_fact:
+        test_group_name:               "{{ sap_functional_test_type_map
+                                        | selectattr('name', 'equalto', SAP_FUNCTIONAL_TEST_TYPE)
+                                        | map(attribute='value') | first }}_{{ platform | upper }}"
+      run_once:                        true
+
+    - name:                            "Set the test group facts"
+      ansible.builtin.set_fact:
+        test_group_start_time:         "{{ now(utc=true,fmt='%Y-%m-%d %H:%M:%S') }}"
+        test_group_invocation_id:      "{{ lookup('pipe', 'uuidgen') }}"
+        test_cases:                    "{{ test_groups
+                                            | selectattr('name', 'equalto', test_group_name)
+                                            | map(attribute='test_cases') | list | flatten(levels=1)
+                                            | selectattr('enabled', 'equalto', true) | list }}"
+      run_once:                        true
+
+    - name:                            "Validate required Azure Backup variables"
+      ansible.builtin.assert:
+        that:
+          - backup_vault_resource_id | default('') | length > 0
+        fail_msg: >-
+          backup_vault_resource_id is not set.
+          Provide the full ARM resource ID of the Recovery Services vault
+          (e.g. /subscriptions/{sub}/resourceGroups/{rg}/providers/Microsoft.RecoveryServices/vaults/{name}).
+        success_msg:                   "Backup vault: {{ backup_vault_resource_id }}"
+      run_once:                        true
+
+    - name:                            "Run backup test cases by including tasks"
+      ansible.builtin.include_tasks:   "./roles/{{ test_group_name | lower }}/tasks/{{ item.task_name }}.yml"
+      loop:                            "{{ test_cases | list }}"
+      vars:
+        group_invocation_id:           "{{ test_group_invocation_id }}"
+        group_start_time:              "{{ test_group_start_time }}"
+        group_name:                    "{{ SAP_FUNCTIONAL_TEST_TYPE }}"
+      when:
+                                       - test_group_name is defined
+                                       - item.enabled | default(true)
+
+    - name:                            "Render HTML report for the test group logs"
+      ansible.builtin.include_tasks:   "./roles/misc/tasks/render-html-report.yml"
+      when:                            test_group_name is defined
+
+    - name:                            "Display test execution summary"
+      ansible.builtin.include_tasks:   "./roles/misc/tasks/display-test-summary.yml"
+      when:                            test_group_name is defined
+
+    - name:                            "Debug the group_invocation_id"
+      ansible.builtin.debug:
+        msg:                           "Group invocation ID: {{ test_group_invocation_id }}"
+      when:                            test_group_invocation_id is defined

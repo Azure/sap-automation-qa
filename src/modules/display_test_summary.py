@@ -76,7 +76,7 @@ summary:
     returned: always
     type: str
 overall_status:
-    description: Overall test group status (PASSED or FAILED)
+    description: Overall test group status (PASSED, WARNING, or FAILED)
     returned: always
     type: str
 test_cases:
@@ -207,17 +207,30 @@ class TestSummaryDisplay(SapAutomationQA):
         return failures
 
     @staticmethod
+    def _status_icon(status: str) -> str:
+        """Map a test status string to a display icon.
+
+        :param status: One of PASSED, WARNING, FAILED.
+        :return: Bracketed icon string.
+        """
+        if status == TestStatus.SUCCESS.value:
+            return "[PASS]"
+        if status == TestStatus.WARNING.value:
+            return "[WARN]"
+        return "[FAIL]"
+
+    @classmethod
     def _format_summary(
+        cls,
         test_case_summaries: List[Dict[str, Any]],
         failed_params: List[Dict[str, str]],
         overall_status: str,
     ) -> str:
-        """
-        Build a multi-line human-readable summary string.
+        """Build a multi-line human-readable summary string.
 
         :param test_case_summaries: Per-test-case aggregated stats.
         :param failed_params: Global list of FAILED ha-config params.
-        :param overall_status: PASSED or FAILED.
+        :param overall_status: PASSED, WARNING, or FAILED.
         :return: Formatted string.
         """
         lines: List[str] = [
@@ -228,11 +241,12 @@ class TestSummaryDisplay(SapAutomationQA):
         ]
 
         for tc in test_case_summaries:
-            status_icon = "[PASS]" if tc["status"] == TestStatus.SUCCESS.value else "[FAIL]"
-            lines.append(f"  {status_icon}  {tc['test_name']}")
+            icon = cls._status_icon(tc["status"])
+            lines.append(f"  {icon}  {tc['test_name']}")
             lines.append(
                 f"          Hosts: {tc['host_count']}  |  "
                 f"Passed: {tc['passed']}  |  "
+                f"Warned: {tc.get('warned', 0)}  |  "
                 f"Failed: {tc['failed']}  |  "
                 f"Info: {tc['info']}"
             )
@@ -240,7 +254,7 @@ class TestSummaryDisplay(SapAutomationQA):
 
         if failed_params:
             lines.append("")
-            lines.append("  FAILED PARAMETERS  " "(HA Parameters Validation)")
+            lines.append("  FAILED PARAMETERS  (HA Parameters Validation)")
             lines.append(_SEPARATOR)
             for fp in failed_params:
                 lines.append(f"    - {fp['name']}")
@@ -250,7 +264,7 @@ class TestSummaryDisplay(SapAutomationQA):
             lines.append(_SEPARATOR)
 
         lines.append("")
-        overall_icon = "[PASS]" if overall_status == TestStatus.SUCCESS.value else "[FAIL]"
+        overall_icon = cls._status_icon(overall_status)
         lines.append(f"  OVERALL: {overall_icon}  {overall_status}")
         lines.append(_HEADER)
         lines.append("")
@@ -279,31 +293,55 @@ class TestSummaryDisplay(SapAutomationQA):
         test_case_summaries: List[Dict[str, Any]] = []
         all_failed_params: List[Dict[str, str]] = []
         has_failure = False
+        has_warning = False
 
         for tc_name, tc_entries in grouped.items():
-            passed = failed = info = 0
+            passed = failed = info = warned = 0
             tc_status = TestStatus.SUCCESS.value
+
+            has_parameters = False
 
             for entry in tc_entries:
                 entry_status = entry.get("TestCaseStatus", TestStatus.SUCCESS.value)
                 if entry_status == TestStatus.ERROR.value:
                     tc_status = TestStatus.ERROR.value
                     has_failure = True
+                elif entry_status == TestStatus.WARNING.value:
+                    if tc_status != TestStatus.ERROR.value:
+                        tc_status = TestStatus.WARNING.value
+                    has_warning = True
 
                 details = entry.get("TestCaseDetails", {})
                 if not isinstance(details, dict):
                     details = {}
-                for param in details.get("parameters", []):
+                params = details.get("parameters", [])
+                if params:
+                    has_parameters = True
+                for param in params:
                     pstatus = param.get("status", "")
                     if pstatus == TestStatus.SUCCESS.value:
                         passed += 1
                     elif pstatus == TestStatus.ERROR.value:
                         failed += 1
+                    elif pstatus == TestStatus.WARNING.value:
+                        warned += 1
                     elif pstatus == TestStatus.INFO.value:
                         info += 1
 
                 if tc_name == _HA_CONFIG_TEST_NAME:
                     all_failed_params.extend(self._extract_failed_parameters(entry))
+
+            if not has_parameters:
+                for entry in tc_entries:
+                    host_status = entry.get("TestCaseStatus", TestStatus.SUCCESS.value)
+                    if host_status == TestStatus.SUCCESS.value:
+                        passed += 1
+                    elif host_status == TestStatus.ERROR.value:
+                        failed += 1
+                    elif host_status == TestStatus.WARNING.value:
+                        warned += 1
+                    elif host_status == TestStatus.INFO.value:
+                        info += 1
 
             test_case_summaries.append(
                 {
@@ -312,6 +350,7 @@ class TestSummaryDisplay(SapAutomationQA):
                     "host_count": len(tc_entries),
                     "passed": passed,
                     "failed": failed,
+                    "warned": warned,
                     "info": info,
                 }
             )
@@ -324,7 +363,12 @@ class TestSummaryDisplay(SapAutomationQA):
                 seen_failures.add(key)
                 unique_failures.append(fp)
 
-        overall = TestStatus.ERROR.value if has_failure else TestStatus.SUCCESS.value
+        if has_failure:
+            overall = TestStatus.ERROR.value
+        elif has_warning:
+            overall = TestStatus.WARNING.value
+        else:
+            overall = TestStatus.SUCCESS.value
 
         summary_text = self._format_summary(test_case_summaries, unique_failures, overall)
 

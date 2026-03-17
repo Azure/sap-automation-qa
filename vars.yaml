@@ -8,7 +8,7 @@
 TEST_TYPE:                  SAPFunctionalTests
 
 # SAP Functional Test Tier
-# Options: Database High Availability, Central Services High Availability
+# Options: DatabaseHighAvailability, CentralServicesHighAvailability, AzureBackupDatabase
 # Not required if TEST_TYPE is ConfigurationChecks
 SAP_FUNCTIONAL_TEST_TYPE:   DatabaseHighAvailability
 

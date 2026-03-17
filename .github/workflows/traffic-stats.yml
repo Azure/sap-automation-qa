@@ -1,0 +1,42 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+
+# This workflow collects repository traffic stats (clones, visitors, stars, forks)
+# on a daily schedule and logs them in the workflow output.
+
+name: Traffic Stats Collection
+on:
+  schedule:
+    - cron: '0 0 * * *' # Runs daily at midnight UTC
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  collect-traffic-stats:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Collect traffic stats
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const owner = context.repo.owner;
+            const repo = context.repo.repo;
+
+            const [clones, views, repoInfo] = await Promise.all([
+              github.rest.repos.getClones({ owner, repo, per: 'day' }),
+              github.rest.repos.getViews({ owner, repo, per: 'day' }),
+              github.rest.repos.get({ owner, repo }),
+            ]);
+
+            const today = new Date().toISOString().split('T')[0];
+
+            core.info(`Traffic stats for ${today}:`);
+            core.info(`  Unique clones:   ${clones.data.uniques}`);
+            core.info(`  Total clones:    ${clones.data.count}`);
+            core.info(`  Unique visitors: ${views.data.uniques}`);
+            core.info(`  Total views:     ${views.data.count}`);
+            core.info(`  Stars:           ${repoInfo.data.stargazers_count}`);
+            core.info(`  Forks:           ${repoInfo.data.forks_count}`);

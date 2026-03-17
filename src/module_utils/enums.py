@@ -73,6 +73,16 @@ class HanaTopology(str, Enum):
     SCALE_OUT_STANDBY = "scale_out_standby"
 
 
+class BackupOperation(Enum):
+    """Supported backup operations."""
+
+    DISCOVER_PROTECTED_ITEMS = "discover_protected_items"
+    CHECK_RESTORE_POINTS = "check_restore_points"
+    RESTORE_TO_DATABASE = "restore_to_database"
+    RESTORE_TO_FILESYSTEM = "restore_to_filesystem"
+    CHECK_RESTORE_JOB = "check_restore_job"
+
+
 class Parameters:
     """
     This class stores the parameters for the test case.
