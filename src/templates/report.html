@@ -569,16 +569,32 @@
 
       /* Execution Log Styles */
       .execution-log-container {
-        margin: 30px auto;
-        max-width: 1200px;
-        padding: 0 30px;
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-lg);
+        padding: 32px;
+        margin-bottom: 24px;
+        transition: var(--transition);
+        border: 1px solid rgba(0, 120, 215, 0.1);
+        animation: fadeInUp 0.8s ease-out;
+      }
+
+      .execution-log-container:hover {
+        box-shadow: 0 20px 40px -10px rgba(0, 120, 215, 0.2), 0 0 0 1px rgba(0, 120, 215, 0.1);
       }
 
       .execution-log-container h2 {
-        font-size: 18px;
-        font-weight: 700;
-        color: #323130;
-        margin-bottom: 12px;
+        color: #64748b;
+        margin-bottom: 24px;
+        font-size: 13px;
+        font-weight: 800;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        background: var(--primary-gradient);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
       }
 
       .execution-log-toggle {
@@ -833,21 +849,22 @@
               </div>
             {% endfor %}
           </div>
+
+          {% if execution_log %}
+          <div class="execution-log-container">
+            <h2>Execution Log</h2>
+            <div class="execution-log-toggle" onclick="toggleExecutionLog(this)">
+              <span class="arrow">&#9654;</span>
+              <span>Show Ansible Execution Log</span>
+            </div>
+            <div class="execution-log-content">
+              <pre>{{ execution_log | e }}</pre>
+            </div>
+          </div>
+          {% endif %}
         </div>
       </div>
     </div>
-    {% if execution_log %}
-    <div class="execution-log-container">
-      <h2>Execution Log</h2>
-      <div class="execution-log-toggle" onclick="toggleExecutionLog(this)">
-        <span class="arrow">&#9654;</span>
-        <span>Show Ansible Execution Log</span>
-      </div>
-      <div class="execution-log-content">
-        <pre>{{ execution_log | e }}</pre>
-      </div>
-    </div>
-    {% endif %}
     <div class="footer">Report generated on: {{ report_generation_time }} with framework version: {{ framework_version }}</div>
     <script>
       // YAML-like formatter for readable display of nested test details

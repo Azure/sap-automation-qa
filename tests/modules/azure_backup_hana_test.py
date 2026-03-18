@@ -327,6 +327,54 @@ class TestStaticHelpers:
         assert BackupDiscovery.is_hsr_container(container) == expected
 
     @pytest.mark.parametrize(
+        "source_vm, container, server_name, expected",
+        [
+            ("", "HanaHSRContainer;hsrdjwp2r11", "r11dhdb00l130", True),
+            ("", "VMAppContainer;Compute;rg;vm", "hanavm01", True),
+            (
+                "djwp2-sece-sap01-r06_r06dhdb_z1_00l0974",
+                "VMAppContainer;compute;djwp2-sece-sap01-r06;"
+                "djwp2-sece-sap01-r06_r06dhdb_z1_00l0974",
+                "r06dhdb00l097",
+                True,
+            ),
+            (
+                "djwp2-sece-sap01-r06_r06dhdb_z1_00l0974",
+                "VMAppContainer;compute;other-rg;some-other-vm",
+                "othervm01",
+                False,
+            ),
+            (
+                "djwp2-sece-sap01-r06_r06dhdb_z1_00l0974",
+                "HanaHSRContainer;hsrdjwp2r06",
+                "r06dhdb00l097",
+                True,
+            ),
+            (
+                "djwp2-sece-sap01-r06_r06dhdb_z1_00l0974",
+                "HanaHSRContainer;hsrdjwp2r11",
+                "r11dhdb00l130",
+                False,
+            ),
+            (
+                "djwp2-sece-sap01-r06_r06dhdb_z1_00l0974",
+                "HanaHSRContainer;hsrdjwp2r06",
+                "",
+                False,
+            ),
+        ],
+    )
+    def test_matches_source_vm(self, source_vm, container, server_name, expected):
+        """_matches_source_vm filters HSR by server_name overlap."""
+        disc = BackupDiscovery(
+            client=None,
+            vault_name="v",
+            vault_resource_group="rg",
+            source_vm_name=source_vm,
+        )
+        assert disc._matches_source_vm(container, server_name) == expected
+
+    @pytest.mark.parametrize(
         "health, protection, has_rp, is_hsr, last_job_status, expected",
         [
             ("Healthy", "Healthy", True, False, None, "PASSED"),
