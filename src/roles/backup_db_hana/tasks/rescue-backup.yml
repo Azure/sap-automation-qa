@@ -42,7 +42,7 @@
                                         hdbnsutil -sr_enable --name={{ cluster_status_pre.primary_site_name | default(backup_hsr_primary_site | default('site1')) }}
       args:
         executable:                     /bin/bash
-      delegate_to:                      "{{ backup_primary_node }}"
+      delegate_to:                      "{{ backup_primary_node | default(ansible_hostname) }}"
       run_once:                         true
       failed_when:                      false
 
@@ -68,10 +68,11 @@
                                         source /usr/sap/{{ db_sid | upper }}/home/.sapenv.sh && \
                                         hdbnsutil -sr_register \
                                           --name={{ backup_hsr_secondary_site | default('site2') }} \
-                                          --remoteHost={{ backup_primary_node }} \
+                                          --remoteHost={{ backup_primary_node | default(ansible_hostname) }} \
                                           --remoteInstance={{ db_instance_number }} \
                                           --replicationMode={{ cluster_status_pre.replication_mode | default(backup_hsr_replication_mode | default('syncmem')) }} \
-                                          --operationMode={{ cluster_status_pre.operation_mode | default(backup_hsr_operation_mode | default('logreplay')) }}
+                                          --operationMode={{ cluster_status_pre.operation_mode | default(backup_hsr_operation_mode | default('logreplay')) }} \
+                                          --online
       args:
         executable:                     /bin/bash
       delegate_to:                      "{{ backup_secondary_node | default(inventory_hostname, true) }}"

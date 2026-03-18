@@ -65,10 +65,18 @@ class BackupDiscovery:
     def _matches_source_vm(self, container_name: str) -> bool:
         """Check whether a container belongs to the source VM.
 
+        HSR containers (``HanaHSRContainer``) are always accepted because
+        they represent a logical replication group that is not tied to a
+        single VM name.  For ``VMAppContainer`` the VM-name substring
+        check is applied as before.
+
         :param container_name: Backup container name.
-        :returns: ``True`` when no filter is set or the container contains the configured VM name.
+        :returns: ``True`` when no filter is set, the container is HSR,
+            or the container contains the configured VM name.
         """
         if not self._source_vm:
+            return True
+        if self.is_hsr_container(container_name):
             return True
         return self._source_vm in (container_name or "").lower()
 
@@ -269,12 +277,16 @@ class BackupDiscovery:
         job_index: Dict[str, Dict[str, Optional[AzureWorkloadJob]]],
         container_name: str,
         friendly_name: str,
+        server_name: str = "",
     ) -> Dict[str, Optional[AzureWorkloadJob]]:
         """Find the best matching job entry for a protected item.
 
         :param job_index: Index returned by ``fetch_recent_jobs``.
         :param container_name: Backup container name of the item.
         :param friendly_name: DB friendly name (e.g. ``hdb``).
+        :param server_name: Server hostname from the protected item.
+            Used for HSR matching where the job references the node
+            hostname rather than the HSR container name.
         :returns: Dict with ``last_job`` and ``last_full_backup``.
         """
         db_name = friendly_name.lower()
@@ -282,6 +294,8 @@ class BackupDiscovery:
             "last_job": None,
             "last_full_backup": None,
         }
+        is_hsr = BackupDiscovery.is_hsr_container(container_name)
+        server_lower = (server_name or "").lower().strip()
         for key, entry in job_index.items():
             sep_idx = key.find("::")
             if sep_idx < 0:
@@ -291,6 +305,8 @@ class BackupDiscovery:
             if key_db != db_name:
                 continue
             if vm_hint and vm_hint in container_name.lower():
+                return entry
+            if is_hsr and server_lower and vm_hint == server_lower:
                 return entry
         return job_index.get(f"::{db_name}", empty)
 
@@ -335,7 +351,10 @@ class BackupDiscovery:
                 rp_list,
             )
             has_rp = self.has_usable_restore_point(rp_list)
-            db_jobs = self._match_jobs_for_item(job_index, container, props.friendly_name or "")
+            db_jobs = self._match_jobs_for_item(
+                job_index, container, props.friendly_name or "",
+                server_name=props.server_name or "",
+            )
             last_job: Optional[AzureWorkloadJob] = db_jobs.get("last_job")
             last_full: Optional[AzureWorkloadJob] = db_jobs.get("last_full_backup")
 

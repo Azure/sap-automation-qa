@@ -173,7 +173,12 @@
     - name:                         "Test Execution: HSR - Unregister secondary from replication"
       become:                       true
       become_user:                  "{{ db_sid | lower }}adm"
-      ansible.builtin.command:      /usr/sap/{{ db_sid | upper }}/HDB{{ db_instance_number }}/hdbnsutil -sr_unregister
+      ansible.builtin.shell: |
+                                    set -o pipefail
+                                    source /usr/sap/{{ db_sid | upper }}/home/.sapenv.sh && \
+                                    hdbnsutil -sr_unregister
+      args:
+        executable:                 /bin/bash
       register:                     hsr_unregister_result
       delegate_to:                  "{{ backup_secondary_node | default(inventory_hostname, true) }}"
       run_once:                     true
@@ -397,7 +402,8 @@
                                       --remoteHost={{ backup_primary_node }} \
                                       --remoteInstance={{ db_instance_number }} \
                                       --replicationMode={{ cluster_status_pre.replication_mode | default(backup_hsr_replication_mode | default('syncmem')) }} \
-                                      --operationMode={{ cluster_status_pre.operation_mode | default(backup_hsr_operation_mode | default('logreplay')) }}
+                                      --operationMode={{ cluster_status_pre.operation_mode | default(backup_hsr_operation_mode | default('logreplay')) }} \
+                                      --online
           args:
             executable:             /bin/bash
           register:                 hsr_register_result
