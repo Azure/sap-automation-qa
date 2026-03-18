@@ -527,6 +527,12 @@ run_ansible_playbook() {
         command+=" $ANSIBLE_VERBOSE"
     fi
 
+    # Set ANSIBLE_LOG_PATH so execution output is captured for HTML reports
+    local log_dir="${system_config_folder}/logs"
+    mkdir -p "$log_dir"
+    export ANSIBLE_LOG_PATH="${log_dir}/execution_$(date +%Y%m%d_%H%M%S).log"
+    log "INFO" "Ansible execution log: $ANSIBLE_LOG_PATH"
+
     log "INFO" "Running ansible playbook... Command: $command"
     eval $command
     return_code=$?

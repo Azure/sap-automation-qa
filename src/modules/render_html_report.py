@@ -8,6 +8,7 @@ Module to render the HTML report for the test group invocation.
 import json
 import logging
 import os
+import re
 from datetime import datetime
 from typing import Dict, Any, List
 import jinja2
@@ -73,6 +74,12 @@ options:
             - Reports will be created in {workspace_directory}/quality_assurance/
         type: str
         required: true
+    execution_log_path:
+        description:
+            - Path to the Ansible execution log file
+            - If provided and the file exists, execution logs will be embedded in the report
+        type: str
+        required: false
     framework_version:
         description:
             - Version of the SAP Automation QA framework
@@ -142,6 +149,7 @@ class HTMLReportRenderer(SapAutomationQA):
         test_case_results: List[Dict[str, Any]] = [],
         system_info: Dict[str, Any] = {},
         framework_version: str = "unknown",
+        execution_log_path: str = "",
     ):
         super().__init__()
         self.test_group_invocation_id = test_group_invocation_id
@@ -156,6 +164,7 @@ class HTMLReportRenderer(SapAutomationQA):
         self.test_case_results = test_case_results or []
         self.system_info = system_info or {}
         self.framework_version = framework_version
+        self.execution_log_path = execution_log_path
 
     def read_log_file(self) -> List[Dict[str, Any]]:
         """
@@ -188,6 +197,39 @@ class HTMLReportRenderer(SapAutomationQA):
             self.handle_error(ex)
             return []
 
+    def read_execution_log(self) -> str:
+        """
+        Reads the Ansible execution log file if it exists.
+
+        :return: The execution log content, or empty string if unavailable.
+        :rtype: str
+        """
+        max_execution_log_bytes = 2 * 1024 * 1024
+        if not self.execution_log_path:
+            return ""
+        try:
+            with open(self.execution_log_path, "r", encoding="utf-8") as f:
+                content = f.read(max_execution_log_bytes + 1)
+            content = re.compile(r"\x1b\[[0-9;]*m").sub("", content)
+            if len(content) > max_execution_log_bytes:
+                content = (
+                    content[:max_execution_log_bytes] + "\n\n--- Log truncated (exceeded 2 MB). "
+                    "See the full log file for complete output. ---"
+                )
+            return content
+        except FileNotFoundError:
+            self.log(
+                logging.WARNING,
+                f"Execution log file not found: {self.execution_log_path}",
+            )
+            return ""
+        except OSError as ex:
+            self.log(
+                logging.WARNING,
+                f"Could not read execution log: {ex}",
+            )
+            return ""
+
     def render_report(self, test_case_results: List[Dict[str, Any]]) -> None:
         """
         Renders the HTML report using the provided template and test case results.
@@ -205,6 +247,7 @@ class HTMLReportRenderer(SapAutomationQA):
             template = jinja2.Template(self.report_template)
             sanitized_results = _sanitize_for_template(test_case_results)
             sanitized_system_info = _sanitize_for_template(self.system_info)
+            execution_log = self.read_execution_log()
             with open(report_path, "w", encoding="utf-8") as report_file:
                 report_file.write(
                     template.render(
@@ -215,6 +258,7 @@ class HTMLReportRenderer(SapAutomationQA):
                             ),
                             "system_info": sanitized_system_info,
                             "framework_version": self.framework_version,
+                            "execution_log": execution_log,
                         }
                     )
                 )
@@ -237,6 +281,7 @@ def run_module() -> None:
         test_case_results=dict(type="list", required=False),
         system_info=dict(type="dict", required=False),
         framework_version=dict(type="str", required=False),
+        execution_log_path=dict(type="str", required=False, default=""),
     )
 
     module = AnsibleModule(argument_spec=module_args, supports_check_mode=True)
@@ -249,6 +294,7 @@ def run_module() -> None:
         test_case_results=module.params.get("test_case_results", []),
         system_info=module.params.get("system_info", {}),
         framework_version=module.params.get("framework_version", "unknown"),
+        execution_log_path=module.params.get("execution_log_path", ""),
     )
 
     test_case_results = (

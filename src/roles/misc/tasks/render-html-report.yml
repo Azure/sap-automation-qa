@@ -19,6 +19,15 @@
       ansible.builtin.set_fact:
         framework_version:              "{{ lookup('file', playbook_dir + '/../VERSION', errors='ignore') | default('unknown') }}"
 
+    - name:                             "Resolve execution log path"
+      ansible.builtin.set_fact:
+        _execution_log_path:            "{{ execution_log_path
+                                            | default(
+                                                lookup('env', 'ANSIBLE_LOG_PATH')
+                                                | default('', true),
+                                              true)
+                                          }}"
+
     - name:                             "Read the log file and create a HTML report"
       render_html_report:
         test_group_invocation_id:       "{{ test_group_invocation_id }}"
@@ -48,4 +57,5 @@
         test_case_results:              "{{ all_results | default([]) }}"
         system_info:                    "{{ system_info | default({}) }}"
         framework_version:              "{{ framework_version | default('unknown') }}"
+        execution_log_path:             "{{ _execution_log_path }}"
       register:                         report_file_path
