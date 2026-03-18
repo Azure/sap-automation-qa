@@ -107,7 +107,6 @@ def _make_poller(
     )
 
 
-# Load parameter definitions from the single source of truth.
 _PARAM_YAML = (
     Path(__file__).resolve().parents[2]
     / "src"
@@ -364,10 +363,10 @@ class TestStaticHelpers:
             ),
         ],
     )
-    def test_matches_source_vm(self, source_vm, container, server_name, expected):
+    def test_matches_source_vm(self, source_vm, container, server_name, expected, mocker):
         """_matches_source_vm filters HSR by server_name overlap."""
         disc = BackupDiscovery(
-            client=None,
+            client=mocker.MagicMock(),
             vault_name="v",
             vault_resource_group="rg",
             source_vm_name=source_vm,
@@ -547,7 +546,6 @@ class TestStaticHelpers:
                 protected_item_health_status="Healthy",
             ),
         ]
-        # First call returns RP, second returns empty
         mock_client.recovery_points.list.side_effect = [
             [_make_recovery_point()],
             [],
@@ -624,7 +622,7 @@ class TestStaticHelpers:
         result = backup.discover_protected_items()
 
         params = result["details"]["parameters"]
-        assert len(params) == 18  # 9 rows per DB * 2 DBs
+        assert len(params) == 18
 
     def test_details_parameters_names(
         self,
@@ -866,7 +864,6 @@ class TestStaticHelpers:
         mock_client.recovery_points.list.return_value = [
             _make_recovery_point(),
         ]
-        # SDK returns entity_friendly_name with SID prefix
         mock_client.backup_jobs.list.return_value = [
             SimpleNamespace(
                 properties=AzureWorkloadJob(
@@ -934,10 +931,7 @@ class TestStaticHelpers:
         result = backup.discover_protected_items()
 
         db = result["protected_items"][0]
-        # Backup (Full) is the most recent job
         assert db["last_job_operation"] == "Backup (Full)"
-        # "Backup (Full)" starts with "backup" → counts
-        # as a full backup
         assert db["last_full_backup_status"] == "Completed"
         assert "2026-03-05" in db["last_full_backup_time"]
 
@@ -1069,7 +1063,6 @@ class TestStaticHelpers:
         assert result["status"] == TestStatus.SUCCESS.value
         assert result["restore_job"]["recovery_type"] == (RecoveryType.ALTERNATE_LOCATION)
         assert result["restore_job"]["job_id"] == "job-hsr-1"
-        # verify source_resource_id was passed to SDK
         call_kwargs = mock_client.restores.begin_trigger.call_args
         req = call_kwargs.kwargs["parameters"]
         assert req.properties.source_resource_id == vm_arm
