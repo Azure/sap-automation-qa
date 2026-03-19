@@ -580,7 +580,7 @@
           ansible.builtin.command:  crm_resource --cleanup
           run_once:                 true
           changed_when:             false
-          ignore_errors:            true
+          failed_when:              false
           when:                     cluster_maintenance_off_result.rc | default(1) == 0
 
         - name:                     "Test Execution: HSR - Wait for cluster to stabilize"
