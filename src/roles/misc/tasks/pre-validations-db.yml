@@ -134,7 +134,8 @@
       register:                     cluster_status_pre
       until:                        cluster_status_pre.primary_node != "" and
                                     cluster_status_pre.secondary_node != ""
-      retries:                      3
+      retries:                      "{{ default_retries }}"
+      delay:                        "{{ default_delay }}"
 
     - name:                         "Pre Validation: Scale-out HSR cluster topology"
       when:
