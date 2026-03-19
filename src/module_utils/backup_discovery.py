@@ -5,6 +5,7 @@
 Discovery and validation helpers for Azure Backup HANA.
 """
 
+import re
 import logging
 from typing import Any, Callable, Dict, Iterable, List, Optional, cast
 from azure.mgmt.recoveryservicesbackup import RecoveryServicesBackupClient
@@ -62,15 +63,34 @@ class BackupDiscovery:
         )
         self._log = log_fn or (lambda _lvl, _msg: None)
 
-    def _matches_source_vm(self, container_name: str) -> bool:
+    def _matches_source_vm(
+        self,
+        container_name: str,
+        server_name: str = "",
+    ) -> bool:
         """Check whether a container belongs to the source VM.
 
         :param container_name: Backup container name.
-        :returns: ``True`` when no filter is set or the container contains the configured VM name.
+        :param server_name: HANA server hostname from item properties (used for HSR matching).
+        :returns: ``True`` when no filter is set, the container  matches the source VM,
+            or -- for HSR -- the server name shares a significant identifier with the VM name.
         """
         if not self._source_vm:
             return True
-        return self._source_vm in (container_name or "").lower()
+        lower_container = (container_name or "").lower()
+        if self._source_vm in lower_container:
+            return True
+        if self.is_hsr_container(container_name):
+            lower_server = (server_name or "").lower().strip()
+            if not lower_server:
+                return False
+
+            parts = re.split(r"[-_]", self._source_vm)
+            for part in parts:
+                if len(part) >= 5 and part in lower_server:
+                    return True
+            return False
+        return False
 
     @staticmethod
     def get_props(
@@ -269,12 +289,16 @@ class BackupDiscovery:
         job_index: Dict[str, Dict[str, Optional[AzureWorkloadJob]]],
         container_name: str,
         friendly_name: str,
+        server_name: str = "",
     ) -> Dict[str, Optional[AzureWorkloadJob]]:
         """Find the best matching job entry for a protected item.
 
         :param job_index: Index returned by ``fetch_recent_jobs``.
         :param container_name: Backup container name of the item.
         :param friendly_name: DB friendly name (e.g. ``hdb``).
+        :param server_name: Server hostname from the protected item.
+            Used for HSR matching where the job references the node
+            hostname rather than the HSR container name.
         :returns: Dict with ``last_job`` and ``last_full_backup``.
         """
         db_name = friendly_name.lower()
@@ -282,6 +306,8 @@ class BackupDiscovery:
             "last_job": None,
             "last_full_backup": None,
         }
+        is_hsr = BackupDiscovery.is_hsr_container(container_name)
+        server_lower = (server_name or "").lower().strip()
         for key, entry in job_index.items():
             sep_idx = key.find("::")
             if sep_idx < 0:
@@ -291,6 +317,8 @@ class BackupDiscovery:
             if key_db != db_name:
                 continue
             if vm_hint and vm_hint in container_name.lower():
+                return entry
+            if is_hsr and server_lower and vm_hint == server_lower:
                 return entry
         return job_index.get(f"::{db_name}", empty)
 
@@ -321,7 +349,10 @@ class BackupDiscovery:
             container = props.container_name or ""
             item_name = item.name or ""
 
-            if not self._matches_source_vm(container):
+            if not self._matches_source_vm(
+                container,
+                server_name=props.server_name or "",
+            ):
                 skipped += 1
                 continue
 
@@ -335,7 +366,12 @@ class BackupDiscovery:
                 rp_list,
             )
             has_rp = self.has_usable_restore_point(rp_list)
-            db_jobs = self._match_jobs_for_item(job_index, container, props.friendly_name or "")
+            db_jobs = self._match_jobs_for_item(
+                job_index,
+                container,
+                props.friendly_name or "",
+                server_name=props.server_name or "",
+            )
             last_job: Optional[AzureWorkloadJob] = db_jobs.get("last_job")
             last_full: Optional[AzureWorkloadJob] = db_jobs.get("last_full_backup")
 
@@ -460,7 +496,10 @@ class BackupDiscovery:
         for item in self.list_protected_items():
             props = self.get_props(item)
             container = props.container_name or ""
-            if not self._matches_source_vm(container):
+            if not self._matches_source_vm(
+                container,
+                server_name=props.server_name or "",
+            ):
                 continue
             item_count += 1
             item_name = item.name or ""

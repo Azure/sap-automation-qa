@@ -27,6 +27,7 @@
       register:                         hana_pre_check
       run_once:                         true
       changed_when:                     false
+      failed_when:                      hana_pre_check.rc not in [0, 3, 4]
 
     - name:                             "Pre Validation: HA cluster status"
       when:                             database_high_availability | default(false) | bool
@@ -108,8 +109,12 @@
     - name:                             "Test Execution: HSR - Unregister secondary from replication"
       become:                           true
       become_user:                      "{{ db_sid | lower }}adm"
-      ansible.builtin.command: >-
-        /usr/sap/{{ db_sid | upper }}/HDB{{ db_instance_number }}/hdbnsutil -sr_unregister
+      ansible.builtin.shell: |
+                                        set -o pipefail
+                                        source /usr/sap/{{ db_sid | upper }}/home/.sapenv.sh && \
+                                        hdbnsutil -sr_unregister
+      args:
+        executable:                     /bin/bash
       register:                         hsr_unregister_result
       delegate_to:                      "{{ backup_secondary_node | default(inventory_hostname, true) }}"
       run_once:                         true
@@ -282,7 +287,7 @@
           ansible.builtin.shell: |
                                         set -o pipefail
                                         source /usr/sap/{{ db_sid | upper }}/home/.sapenv.sh && \
-                                        hdbnsutil -sr_register \
+                                        hdbnsutil -sr_register --online \
                                           --name={{ backup_hsr_secondary_site | default('site2') }} \
                                           --remoteHost={{ backup_primary_node }} \
                                           --remoteInstance={{ db_instance_number }} \
@@ -332,6 +337,32 @@
           run_once:                     true
           changed_when:                 cluster_maintenance_off_result.rc == 0
           failed_when:                  false
+
+        - name:                         "Test Execution: HSR - Cleanup resources after maintenance"
+          become:                       true
+          ansible.builtin.command:      crm_resource --cleanup
+          run_once:                     true
+          changed_when:                 false
+          failed_when:                  false
+          when:                         cluster_maintenance_off_result.rc | default(1) == 0
+
+        - name:                         "Test Execution: HSR - Wait for cluster to stabilize"
+          become:                       true
+          get_cluster_status_db:
+            db_instance_number:         "{{ db_instance_number }}"
+            operation_step:             "pre_failover"
+            database_sid:               "{{ db_sid | lower }}"
+            saphanasr_provider:         "{{ saphanasr_provider | default('SAPHanaSR') }}"
+            hana_clone_resource_name:   "{{ hana_clone_resource_name | default('') }}"
+            hana_primitive_resource_name: "{{ hana_primitive_resource_name | default('') }}"
+            hana_topology:              "{{ hana_topology | default('scale_up') }}"
+          register:                     cluster_status_post_restore
+          until:                        cluster_status_post_restore.primary_node != "" and
+                                        cluster_status_post_restore.secondary_node != ""
+          retries:                      "{{ default_retries }}"
+          delay:                        "{{ default_delay }}"
+          run_once:                     true
+          when:                         cluster_maintenance_off_result.rc | default(1) == 0
 
     - name:                             "Test Execution: Take cluster out of maintenance (standalone)"
       when:

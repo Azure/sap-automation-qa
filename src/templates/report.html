@@ -567,6 +567,94 @@
       .status-warning { color: var(--warning-color); font-weight: 700; background-color: rgba(255, 140, 0, 0.1); padding: 4px 8px; border-radius: 4px; }
       .status-info { color: var(--info-color); font-weight: 700; background-color: rgba(0, 120, 215, 0.1); padding: 4px 8px; border-radius: 4px; }
 
+      /* Execution Log Styles */
+      .execution-log-container {
+        background: rgba(255, 255, 255, 0.95);
+        backdrop-filter: blur(10px);
+        border-radius: var(--radius-lg);
+        box-shadow: var(--shadow-lg);
+        padding: 32px;
+        margin-bottom: 24px;
+        transition: var(--transition);
+        border: 1px solid rgba(0, 120, 215, 0.1);
+        animation: fadeInUp 0.8s ease-out;
+      }
+
+      .execution-log-container:hover {
+        box-shadow: 0 20px 40px -10px rgba(0, 120, 215, 0.2), 0 0 0 1px rgba(0, 120, 215, 0.1);
+      }
+
+      .execution-log-container h2 {
+        color: #64748b;
+        margin-bottom: 24px;
+        font-size: 13px;
+        font-weight: 800;
+        letter-spacing: 2px;
+        text-transform: uppercase;
+        background: var(--primary-gradient);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        background-clip: text;
+      }
+
+      .execution-log-toggle {
+        cursor: pointer;
+        user-select: none;
+        background: #ffffff;
+        border: 1px solid #e1dfdd;
+        border-radius: var(--radius-sm);
+        padding: 14px 20px;
+        font-size: 15px;
+        font-weight: 600;
+        color: var(--primary-color);
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        transition: var(--transition);
+        box-shadow: var(--shadow-sm);
+      }
+
+      .execution-log-toggle:hover {
+        background: #f3f2f1;
+        box-shadow: var(--shadow-md);
+      }
+
+      .execution-log-toggle .arrow {
+        transition: transform 0.3s ease;
+        font-size: 12px;
+      }
+
+      .execution-log-toggle.open .arrow {
+        transform: rotate(90deg);
+      }
+
+      .execution-log-content {
+        display: none;
+        margin-top: 8px;
+        background: #1e1e1e;
+        border-radius: var(--radius-sm);
+        padding: 20px;
+        overflow-x: auto;
+        max-height: 600px;
+        overflow-y: auto;
+        box-shadow: var(--shadow-md);
+      }
+
+      .execution-log-content pre {
+        margin: 0;
+        font-family: 'Cascadia Code', 'Fira Code', 'Consolas', monospace;
+        font-size: 12px;
+        line-height: 1.5;
+        color: #d4d4d4;
+        white-space: pre-wrap;
+        word-wrap: break-word;
+      }
+
+      .execution-log-content.visible {
+        display: block;
+        animation: slideDown 0.3s ease;
+      }
+
       /* Footer Styles */
       .footer {
         bottom: 0;
@@ -761,6 +849,19 @@
               </div>
             {% endfor %}
           </div>
+
+          {% if execution_log %}
+          <div class="execution-log-container">
+            <h2>Execution Log</h2>
+            <div class="execution-log-toggle" onclick="toggleExecutionLog(this)">
+              <span class="arrow">&#9654;</span>
+              <span>Show Ansible Execution Log</span>
+            </div>
+            <div class="execution-log-content">
+              <pre>{{ execution_log | e }}</pre>
+            </div>
+          </div>
+          {% endif %}
         </div>
       </div>
     </div>
@@ -1067,6 +1168,16 @@
         testCases.forEach(tc => {
           tc.style.display = tc.dataset.status === status ? '' : 'none'
         })
+      }
+
+      // Toggle execution log visibility
+      function toggleExecutionLog(element) {
+        const content = element.nextElementSibling
+        element.classList.toggle('open')
+        content.classList.toggle('visible')
+        const label = element.querySelector('span:last-child')
+        label.textContent = content.classList.contains('visible')
+          ? 'Hide Ansible Execution Log' : 'Show Ansible Execution Log'
       }
 
       // Initialize all formatters

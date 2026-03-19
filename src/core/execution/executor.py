@@ -263,6 +263,9 @@ class AnsibleExecutor:
 
         env = {"ANSIBLE_CONFIG": str(self.ansible_cfg)}
 
+        if log_file:
+            env["ANSIBLE_LOG_PATH"] = str(Path(log_file).with_suffix(".ansible.log"))
+
         logger.info(
             f"Running test: workspace={workspace_id}, "
             f"test_id={test_id or 'all'}, group={test_group}"
