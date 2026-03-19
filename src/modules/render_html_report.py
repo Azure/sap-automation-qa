@@ -10,7 +10,7 @@ import logging
 import os
 import re
 from datetime import datetime
-from typing import Dict, Any, List
+from typing import Dict, Any, List, Optional
 import jinja2
 from ansible.module_utils.basic import AnsibleModule
 
@@ -146,8 +146,8 @@ class HTMLReportRenderer(SapAutomationQA):
         test_group_name: str,
         report_template: str,
         workspace_directory: str,
-        test_case_results: List[Dict[str, Any]] = [],
-        system_info: Dict[str, Any] = {},
+        test_case_results: Optional[List[Dict[str, Any]]] = None,
+        system_info: Optional[Dict[str, Any]] = None,
         framework_version: str = "unknown",
         execution_log_path: str = "",
     ):
@@ -208,12 +208,16 @@ class HTMLReportRenderer(SapAutomationQA):
         if not self.execution_log_path:
             return ""
         try:
-            with open(self.execution_log_path, "r", encoding="utf-8") as f:
-                content = f.read(max_execution_log_bytes + 1)
+            with open(self.execution_log_path, "rb") as f:
+                raw = f.read(max_execution_log_bytes + 1)
+            truncated = len(raw) > max_execution_log_bytes
+            if truncated:
+                raw = raw[:max_execution_log_bytes]
+            content = raw.decode("utf-8", errors="replace")
             content = re.compile(r"\x1b\[[0-9;]*m").sub("", content)
-            if len(content) > max_execution_log_bytes:
-                content = (
-                    content[:max_execution_log_bytes] + "\n\n--- Log truncated (exceeded 2 MB). "
+            if truncated:
+                content += (
+                    "\n\n--- Log truncated (exceeded 2 MB). "
                     "See the full log file for complete output. ---"
                 )
             return content
@@ -244,7 +248,7 @@ class HTMLReportRenderer(SapAutomationQA):
                 f"{self.test_group_name}_{self.test_group_invocation_id}.html",
             )
             os.makedirs(os.path.dirname(report_path), exist_ok=True)
-            template = jinja2.Template(self.report_template)
+            template = jinja2.Environment(autoescape=True).from_string(self.report_template)
             sanitized_results = _sanitize_for_template(test_case_results)
             sanitized_system_info = _sanitize_for_template(self.system_info)
             execution_log = self.read_execution_log()
