@@ -25,6 +25,18 @@
           ansible.builtin.set_fact:
             backup_primary_node:    "{{ cluster_status_pre.primary_node }}"
             backup_secondary_node:  "{{ cluster_status_pre.secondary_node }}"
+            backup_primary_site_name: "{{ cluster_status_pre.primary_site_name | default('') }}"
+            backup_secondary_site_name: "{{ cluster_status_pre.secondary_site_name | default('') }}"
+          run_once:                 true
+
+        - name:                     "Pre Validation: Debug cluster_status_pre site names"
+          ansible.builtin.debug:
+            msg: >-
+              cluster_status_pre keys={{ cluster_status_pre.keys() | list }},
+              primary_site_name={{ cluster_status_pre.primary_site_name | default('MISSING') }},
+              secondary_site_name={{ cluster_status_pre.secondary_site_name | default('MISSING') }},
+              backup_primary_site_name={{ backup_primary_site_name }},
+              backup_secondary_site_name={{ backup_secondary_site_name }}
           run_once:                 true
 
         - name:                     "Pre Validation: Verify secondary node is resolved"
@@ -92,10 +104,10 @@
     - name:                         "Pre Validation: Separate SYSTEMDB and tenant databases"
       ansible.builtin.set_fact:
         backup_systemdb_items:      "{{ backup_source_items
-                                        | selectattr('name','match','^(?i)systemdb$')
+                                        | selectattr('name','match','(?i)^systemdb$')
                                         | list }}"
         backup_tenant_items:        "{{ backup_source_items
-                                        | rejectattr('name','match','^(?i)systemdb$')
+                                        | rejectattr('name','match','(?i)^systemdb$')
                                         | list }}"
       run_once:                     true
 
@@ -216,7 +228,7 @@
       run_once:                     true
       changed_when:                 hana_stop_result.rc == 0
 
-    - name:                         "Test Execution: Restore SYSTEMDB '{{ db_item.name }}'"
+    - name:                         "Test Execution: Restore SYSTEMDB '{{ db_item.name | default('') }}'"
       delegate_to:                  localhost
       azure_backup_hana:
         operation:                  "restore_to_database"
@@ -232,7 +244,7 @@
           {{ '/subscriptions/' ~ backup_restore_subscription ~ '/resourceGroups/' ~ backup_restore_vm_rg ~ '/providers/Microsoft.Compute/virtualMachines/' ~ backup_restore_vm_name }}
       register:                     systemdb_restore_results
       run_once:                     true
-      failed_when:                  systemdb_restore_results.status | default('') == 'ERROR'
+      failed_when:                  systemdb_restore_results.status | default('') == 'FAILED'
       loop:                         "{{ backup_systemdb_items }}"
       loop_control:
         loop_var:                   db_item
@@ -286,7 +298,7 @@
       changed_when:                 hana_start_for_tenant.rc == 0
       when:                         backup_tenant_items | length > 0
 
-    - name:                         "Test Execution: Restore tenant database '{{ db_item.name }}'"
+    - name:                         "Test Execution: Restore tenant database '{{ db_item.name | default('') }}'"
       delegate_to:                  localhost
       azure_backup_hana:
         operation:                  "restore_to_database"
@@ -302,7 +314,7 @@
           {{ '/subscriptions/' ~ backup_restore_subscription ~ '/resourceGroups/' ~ backup_restore_vm_rg ~ '/providers/Microsoft.Compute/virtualMachines/' ~ backup_restore_vm_name }}
       register:                     tenant_restore_results
       run_once:                     true
-      failed_when:                  tenant_restore_results.status | default('') == 'ERROR'
+      failed_when:                  tenant_restore_results.status | default('') == 'FAILED'
       loop:                         "{{ backup_tenant_items }}"
       loop_control:
         loop_var:                   db_item
@@ -398,7 +410,7 @@
                                     set -o pipefail
                                     source /usr/sap/{{ db_sid | upper }}/home/.sapenv.sh && \
                                     hdbnsutil -sr_register \
-                                      --name={{ backup_hsr_secondary_site | default('site2') }} \
+                                      --name={{ backup_secondary_site_name | default(cluster_status_pre.secondary_site_name | default(backup_hsr_secondary_site | default('site2')), true) }} \
                                       --remoteHost={{ backup_primary_node }} \
                                       --remoteInstance={{ db_instance_number }} \
                                       --replicationMode={{ cluster_status_pre.replication_mode | default(backup_hsr_replication_mode | default('syncmem')) }} \

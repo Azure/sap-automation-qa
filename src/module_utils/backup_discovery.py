@@ -41,8 +41,8 @@ class BackupDiscovery:
     """
 
     HANA_BACKUP_FILTER = (
-        f"backupManagementType eq '{BackupManagementType.AZURE_WORKLOAD}' "
-        f"and itemType eq '{DataSourceType.SAP_HANA_DATABASE}'"
+        f"backupManagementType eq '{BackupManagementType.AZURE_WORKLOAD.value}' "
+        f"and itemType eq '{DataSourceType.SAP_HANA_DATABASE.value}'"
     )
 
     def __init__(
@@ -85,9 +85,17 @@ class BackupDiscovery:
             if not lower_server:
                 return False
 
+            if self._source_vm in lower_server or lower_server in self._source_vm:
+                return True
+
             parts = re.split(r"[-_]", self._source_vm)
             for part in parts:
                 if len(part) >= 5 and part in lower_server:
+                    return True
+
+            server_parts = re.split(r"[-_]", lower_server)
+            for part in server_parts:
+                if len(part) >= 5 and part in self._source_vm:
                     return True
             return False
         return False
@@ -207,7 +215,7 @@ class BackupDiscovery:
             ``{"last_job": ..., "last_full_backup": ...}``
             where values are SDK ``AzureWorkloadJob`` or ``None``.
         """
-        job_filter = f"backupManagementType eq '{BackupManagementType.AZURE_WORKLOAD}'"
+        job_filter = f"backupManagementType eq '{BackupManagementType.AZURE_WORKLOAD.value}'"
         result: Dict[str, Dict[str, Optional[AzureWorkloadJob]]] = {}
         _empty: Dict[str, Optional[AzureWorkloadJob]] = {
             "last_job": None,

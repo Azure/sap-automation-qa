@@ -25,6 +25,8 @@
           ansible.builtin.set_fact:
             backup_primary_node:    "{{ cluster_status_pre.primary_node }}"
             backup_secondary_node:  "{{ cluster_status_pre.secondary_node }}"
+            backup_primary_site_name: "{{ cluster_status_pre.primary_site_name | default('') }}"
+            backup_secondary_site_name: "{{ cluster_status_pre.secondary_site_name | default('') }}"
           run_once:                 true
 
         - name:                     "Pre Validation: Verify secondary node is resolved"
@@ -89,10 +91,10 @@
     - name:                         "Pre Validation: Separate SYSTEMDB and tenant databases"
       ansible.builtin.set_fact:
         backup_systemdb_items:      "{{ backup_source_items
-                                        | selectattr('name','match','^(?i)systemdb$')
+                                        | selectattr('name','match','(?i)^systemdb$')
                                         | list }}"
         backup_tenant_items:        "{{ backup_source_items
-                                        | rejectattr('name','match','^(?i)systemdb$')
+                                        | rejectattr('name','match','(?i)^systemdb$')
                                         | list }}"
       run_once:                     true
 
@@ -241,7 +243,7 @@
       run_once:                     true
       when:                         backup_systemdb_items | length > 0
 
-    - name:                         "Test Execution: Restore SYSTEMDB '{{ db_item.name }}' to filesystem"
+    - name:                         "Test Execution: Restore SYSTEMDB '{{ db_item.name | default('') }}' to filesystem"
       delegate_to:                  localhost
       azure_backup_hana:
         operation:                  "restore_to_filesystem"
@@ -312,7 +314,7 @@
       run_once:                     true
       when:                         backup_tenant_items | length > 0
 
-    - name:                         "Test Execution: Restore tenant '{{ db_item.name }}' to filesystem"
+    - name:                         "Test Execution: Restore tenant '{{ db_item.name | default('') }}' to filesystem"
       delegate_to:                  localhost
       azure_backup_hana:
         operation:                  "restore_to_filesystem"
@@ -531,7 +533,7 @@
                                     set -o pipefail
                                     source /usr/sap/{{ db_sid | upper }}/home/.sapenv.sh && \
                                     hdbnsutil -sr_register --online \
-                                      --name={{ backup_hsr_secondary_site | default('site2') }} \
+                                      --name={{ backup_secondary_site_name | default(cluster_status_pre.secondary_site_name | default(backup_hsr_secondary_site | default('site2')), true) }} \
                                       --remoteHost={{ backup_primary_node }} \
                                       --remoteInstance={{ db_instance_number }} \
                                       --replicationMode={{ cluster_status_pre.replication_mode | default(backup_hsr_replication_mode | default('syncmem')) }} \

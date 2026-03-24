@@ -33,6 +33,43 @@
 - name:                                 "Rescue: HSR - Re-establish replication"
   when:                                 database_high_availability | default(false) | bool
   block:
+    - name:                             "Rescue: HSR - Debug cluster_status_pre site names"
+      ansible.builtin.debug:
+        msg: >-
+          Rescue HSR re-establish: primary_site={{ cluster_status_pre.primary_site_name | default('UNSET') }},
+          secondary_site={{ cluster_status_pre.secondary_site_name | default('UNSET') }},
+          primary_node={{ backup_primary_node | default('UNSET') }},
+          secondary_node={{ backup_secondary_node | default('UNSET') }}
+      run_once:                         true
+
+    - name:                             "Rescue: HSR - Stop HANA on secondary"
+      become:                           true
+      become_user:                      "{{ db_sid | lower }}adm"
+      ansible.builtin.shell: |
+                                        set -o pipefail
+                                        source /usr/sap/{{ db_sid | upper }}/home/.sapenv.sh && \
+                                        HDB stop
+      args:
+        executable:                     /bin/bash
+      delegate_to:                      "{{ backup_secondary_node | default(inventory_hostname, true) }}"
+      run_once:                         true
+      failed_when:                      false
+      when:                             backup_secondary_node | default('') != ''
+
+    - name:                             "Rescue: HSR - Unregister secondary (clear stale state)"
+      become:                           true
+      become_user:                      "{{ db_sid | lower }}adm"
+      ansible.builtin.shell: |
+                                        set -o pipefail
+                                        source /usr/sap/{{ db_sid | upper }}/home/.sapenv.sh && \
+                                        hdbnsutil -sr_unregister --force
+      args:
+        executable:                     /bin/bash
+      delegate_to:                      "{{ backup_secondary_node | default(inventory_hostname, true) }}"
+      run_once:                         true
+      failed_when:                      false
+      when:                             backup_secondary_node | default('') != ''
+
     - name:                             "Rescue: HSR - Enable replication on primary"
       become:                           true
       become_user:                      "{{ db_sid | lower }}adm"
@@ -46,7 +83,36 @@
       run_once:                         true
       failed_when:                      false
 
-    - name:                             "Rescue: HSR - Start HANA on secondary"
+    - name:                             "Rescue: HSR - Register secondary for replication"
+      become:                           true
+      become_user:                      "{{ db_sid | lower }}adm"
+      ansible.builtin.shell: |
+                                        set -o pipefail
+                                        source /usr/sap/{{ db_sid | upper }}/home/.sapenv.sh && \
+                                        hdbnsutil -sr_register \
+                                          --name={{ backup_secondary_site_name | default(cluster_status_pre.secondary_site_name | default(backup_hsr_secondary_site | default('site2')), true) }} \
+                                          --remoteHost={{ backup_primary_node | default(ansible_hostname) }} \
+                                          --remoteInstance={{ db_instance_number }} \
+                                          --replicationMode={{ cluster_status_pre.replication_mode | default(backup_hsr_replication_mode | default('syncmem')) }} \
+                                          --operationMode={{ cluster_status_pre.operation_mode | default(backup_hsr_operation_mode | default('logreplay')) }}
+      args:
+        executable:                     /bin/bash
+      delegate_to:                      "{{ backup_secondary_node | default(inventory_hostname, true) }}"
+      run_once:                         true
+      register:                         rescue_hsr_register_result
+      failed_when:                      false
+      when:                             backup_secondary_node | default('') != ''
+
+    - name:                             "Rescue: HSR - Debug sr_register result"
+      ansible.builtin.debug:
+        msg: >-
+          sr_register rc={{ rescue_hsr_register_result.rc | default('N/A') }},
+          stdout={{ rescue_hsr_register_result.stdout | default('') }},
+          stderr={{ rescue_hsr_register_result.stderr | default('') }}
+      run_once:                         true
+      when:                             rescue_hsr_register_result is defined
+
+    - name:                             "Rescue: HSR - Start HANA on secondary after registration"
       become:                           true
       become_user:                      "{{ db_sid | lower }}adm"
       ansible.builtin.shell: |
@@ -60,25 +126,27 @@
       failed_when:                      false
       when:                             backup_secondary_node | default('') != ''
 
-    - name:                             "Rescue: HSR - Register secondary for replication"
+    - name:                             "Rescue: HSR - Validate replication state on secondary"
       become:                           true
       become_user:                      "{{ db_sid | lower }}adm"
       ansible.builtin.shell: |
                                         set -o pipefail
                                         source /usr/sap/{{ db_sid | upper }}/home/.sapenv.sh && \
-                                        hdbnsutil -sr_register \
-                                          --name={{ backup_hsr_secondary_site | default('site2') }} \
-                                          --remoteHost={{ backup_primary_node | default(ansible_hostname) }} \
-                                          --remoteInstance={{ db_instance_number }} \
-                                          --replicationMode={{ cluster_status_pre.replication_mode | default(backup_hsr_replication_mode | default('syncmem')) }} \
-                                          --operationMode={{ cluster_status_pre.operation_mode | default(backup_hsr_operation_mode | default('logreplay')) }} \
-                                          --online
+                                        hdbnsutil -sr_state
       args:
         executable:                     /bin/bash
       delegate_to:                      "{{ backup_secondary_node | default(inventory_hostname, true) }}"
       run_once:                         true
+      register:                         rescue_hsr_state_result
+      changed_when:                     false
       failed_when:                      false
       when:                             backup_secondary_node | default('') != ''
+
+    - name:                             "Rescue: HSR - Debug sr_state result"
+      ansible.builtin.debug:
+        msg: "{{ rescue_hsr_state_result.stdout_lines | default(['sr_state not available']) }}"
+      run_once:                         true
+      when:                             rescue_hsr_state_result is defined
 
 - name:                                 "Rescue: Take cluster out of maintenance mode"
   when:                                 database_high_availability | default(false) | bool
@@ -93,6 +161,33 @@
     executable:                         /bin/bash
   run_once:                             true
   changed_when:                         false
+  failed_when:                          false
+
+- name:                                 "Rescue: Cleanup pacemaker resources"
+  when:                                 database_high_availability | default(false) | bool
+  become:                               true
+  ansible.builtin.command:              crm_resource --cleanup
+  run_once:                             true
+  changed_when:                         false
+  failed_when:                          false
+
+- name:                                 "Rescue: Wait for cluster to stabilize"
+  when:                                 database_high_availability | default(false) | bool
+  become:                               true
+  get_cluster_status_db:
+    db_instance_number:                 "{{ db_instance_number }}"
+    operation_step:                     "pre_failover"
+    database_sid:                       "{{ db_sid | lower }}"
+    saphanasr_provider:                 "{{ saphanasr_provider | default('SAPHanaSR') }}"
+    hana_clone_resource_name:           "{{ hana_clone_resource_name | default('') }}"
+    hana_primitive_resource_name:       "{{ hana_primitive_resource_name | default('') }}"
+    hana_topology:                      "{{ hana_topology | default('scale_up') }}"
+  register:                             rescue_cluster_status
+  until:                                rescue_cluster_status.primary_node | default('') != "" and
+                                        rescue_cluster_status.secondary_node | default('') != ""
+  retries:                              "{{ default_retries | default(30) }}"
+  delay:                                "{{ default_delay | default(10) }}"
+  run_once:                             true
   failed_when:                          false
 
 - name:                                 "Post Telemetry Data"

@@ -122,6 +122,7 @@ class TestHanaClusterStatusChecker:
         assert result["operation_mode"] == "logreplay"
         assert result["replication_mode"] == "syncmem"
         assert result["primary_site_name"] == "site1"
+        assert result["secondary_site_name"] == ""
 
     def test_process_node_attributes_primary_only_angi(self, hana_checker_angi):
         """
@@ -150,6 +151,7 @@ class TestHanaClusterStatusChecker:
         assert result["primary_node"] == "node1"
         assert result["secondary_node"] == ""
         assert result["primary_site_name"] == "SITEA"
+        assert result["secondary_site_name"] == ""
 
     def test_process_node_attributes_both_nodes_angi(self, hana_checker_angi):
         """
@@ -183,6 +185,7 @@ class TestHanaClusterStatusChecker:
         assert result["primary_node"] == "node1"
         assert result["secondary_node"] == "node2"
         assert result["primary_site_name"] == "SITEA"
+        assert result["secondary_site_name"] == "SITEB"
 
     def test_process_node_attributes_both_nodes(self, hana_checker_classic):
         """
@@ -216,6 +219,7 @@ class TestHanaClusterStatusChecker:
         assert result["operation_mode"] == "logreplay"
         assert result["replication_mode"] == "syncmem"
         assert result["primary_site_name"] == "site1"
+        assert result["secondary_site_name"] == "site2"
 
     def test_is_cluster_ready(self, hana_checker_classic):
         """

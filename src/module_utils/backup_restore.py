@@ -9,6 +9,7 @@ import logging
 import time
 from datetime import datetime, timezone
 from typing import Any, Callable, cast, Dict, List, Optional
+from azure.core.exceptions import HttpResponseError
 from azure.mgmt.recoveryservicesbackup import RecoveryServicesBackupClient
 from azure.mgmt.recoveryservicesbackup.models import (
     RecoveryPointResource,
@@ -24,8 +25,10 @@ from azure.mgmt.recoveryservicesbackup.models import (
 
 try:
     from src.module_utils.enums import TestStatus
+    from src.module_utils.commands import AZURE_ERROR_HINTS
 except ImportError:
     from ansible.module_utils.enums import TestStatus
+    from ansible.module_utils.commands import AZURE_ERROR_HINTS
 
 
 class BackupRestoreHelper:
@@ -121,6 +124,28 @@ class BackupRestoreHelper:
             f"/VMAppContainer;Compute;{rg};{vm}"
         )
 
+    @staticmethod
+    def _format_azure_error(
+        exc: HttpResponseError,
+        source_resource_id: str = "",
+    ) -> str:
+        """Extract a clear error message from an Azure SDK HttpResponseError.
+
+        :param exc: The caught ``HttpResponseError``.
+        :param source_resource_id: ARM ID of the source VM (for context).
+        :returns: Human-readable error string with error code and remediation hint.
+        """
+        error_code = getattr(exc.error, "code", None) if exc.error else None
+        error_msg = getattr(exc.error, "message", str(exc)) if exc.error else str(exc)
+        hint = AZURE_ERROR_HINTS.get(error_code or "", "")
+
+        parts = [f"Azure Backup restore failed ({error_code or 'Unknown'}): {error_msg}"]
+        if hint:
+            parts.append(f"Hint: {hint}")
+        if source_resource_id:
+            parts.append(f"Source VM: {source_resource_id}")
+        return " | ".join(parts)
+
     def find_latest_restore_job_id(
         self,
         item_name: str,
@@ -136,7 +161,7 @@ class BackupRestoreHelper:
             jobs = self._client.backup_jobs.list(
                 vault_name=self._vault_name,
                 resource_group_name=self._vault_rg,
-                filter=f"backupManagementType eq '{BackupManagementType.AZURE_WORKLOAD}'",
+                filter=f"backupManagementType eq '{BackupManagementType.AZURE_WORKLOAD.value}'",
             )
             for job in jobs:
                 props = job.properties
@@ -365,17 +390,22 @@ class BackupRestoreHelper:
         )
 
         trigger_time = time.time()
-        self._client.restores.begin_trigger(
-            vault_name=self._vault_name,
-            resource_group_name=self._vault_rg,
-            fabric_name="Azure",
-            container_name=container_name,
-            protected_item_name=item_name,
-            recovery_point_id=self.rp_name_from_id(
-                rp_id,
-            ),
-            parameters=restore_request,
-        )
+        try:
+            self._client.restores.begin_trigger(
+                vault_name=self._vault_name,
+                resource_group_name=self._vault_rg,
+                fabric_name="Azure",
+                container_name=container_name,
+                protected_item_name=item_name,
+                recovery_point_id=self.rp_name_from_id(
+                    rp_id,
+                ),
+                parameters=restore_request,
+            )
+        except HttpResponseError as exc:
+            raise RuntimeError(
+                self._format_azure_error(exc, source_resource_id),
+            ) from exc
         time.sleep(5)
         job_id = self.find_latest_restore_job_id(item_name, trigger_time)
         if not job_id:
@@ -443,22 +473,27 @@ class BackupRestoreHelper:
         else:
             container_id = None
         trigger_time = time.time()
-        self._client.restores.begin_trigger(
-            vault_name=self._vault_name,
-            resource_group_name=self._vault_rg,
-            fabric_name="Azure",
-            container_name=container_name,
-            protected_item_name=item_name,
-            recovery_point_id=(self.rp_name_from_id(rp_id)),
-            parameters=(
-                self.build_filesystem_restore_request(
-                    rp_id,
-                    target_filesystem_path,
-                    container_id,
-                    source_resource_id,
-                )
-            ),
-        )
+        try:
+            self._client.restores.begin_trigger(
+                vault_name=self._vault_name,
+                resource_group_name=self._vault_rg,
+                fabric_name="Azure",
+                container_name=container_name,
+                protected_item_name=item_name,
+                recovery_point_id=(self.rp_name_from_id(rp_id)),
+                parameters=(
+                    self.build_filesystem_restore_request(
+                        rp_id,
+                        target_filesystem_path,
+                        container_id,
+                        source_resource_id,
+                    )
+                ),
+            )
+        except HttpResponseError as exc:
+            raise RuntimeError(
+                self._format_azure_error(exc, source_resource_id),
+            ) from exc
         time.sleep(5)
         job_id = self.find_latest_restore_job_id(item_name, trigger_time)
         if not job_id:
