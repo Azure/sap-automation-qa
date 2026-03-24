@@ -60,7 +60,7 @@ SAP_FUNCTIONAL_TEST_TYPE:   AzureBackupDatabase
 Add the following variables to your system's `sap-parameters.yaml` file (under `WORKSPACES/SYSTEM/<SYSTEM_CONFIG_NAME>/`):
 
 ```yaml
-# Recovery Services vault ARM resource ID
+# Recovery Services vault ARM resource ID (required)
 backup_vault_resource_id:         "/subscriptions/xxxx/resourceGroups/my-rg/providers/Microsoft.RecoveryServices/vaults/my-vault"
 
 # Whether to restore SYSTEMDB (set false to skip)
@@ -83,6 +83,19 @@ backup_restore_point_time:        ""
 # HANA userstore key (created as part of pre-registration for Azure Backup)
 hana_userstore_key:               "SYSTEM"
 ```
+
+#### Parameter Reference
+
+| Parameter | Default | Description |
+|-----------|---------|-------------|
+| `backup_vault_resource_id` | `""` | Full ARM resource ID of the Recovery Services vault (required) |
+| `backup_restore_systemdb` | `true` | Whether to include SYSTEMDB in restore operations |
+| `backup_restore_tenants` | `[]` | List of tenant DB names to restore; empty means all tenants |
+| `backup_target_filesystem_path` | `"/sapinstall/hana_backup/"` | Filesystem path for restore-as-files (test case 3) |
+| `backup_target_vm_name` | `""` | Target VM hostname for cross-VM restore (test case 5) |
+| `backup_target_vm_rg` | `""` | Target VM resource group; defaults to source VM's RG if empty |
+| `backup_restore_point_time` | `""` | Point-in-time for restore in ISO 8601 UTC; empty uses latest recovery point |
+| `hana_userstore_key` | `"SYSTEM"` | HANA hdbuserstore key for database connectivity |
 
 ### 3. User-Assigned Managed Identity (Optional)
 

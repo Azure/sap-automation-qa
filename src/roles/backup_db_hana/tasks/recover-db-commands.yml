@@ -290,7 +290,7 @@
                                         set -o pipefail
                                         source /usr/sap/{{ db_sid | upper }}/home/.sapenv.sh && \
                                         hdbnsutil -sr_register --online \
-                                          --name={{ backup_secondary_site_name | default(cluster_status_pre.secondary_site_name | default(backup_hsr_secondary_site | default('site2')), true) }} \
+                                          --name={{ backup_secondary_site_name | default(cluster_status_pre.secondary_site_name | default(backup_hsr_secondary_site | default('site2'), true), true) }} \
                                           --remoteHost={{ backup_primary_node }} \
                                           --remoteInstance={{ db_instance_number }} \
                                           --replicationMode={{ cluster_status_pre.replication_mode

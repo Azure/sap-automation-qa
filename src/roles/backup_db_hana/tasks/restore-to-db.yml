@@ -214,7 +214,11 @@
       changed_when:                 hsr_disable_result.rc == 0
       when:                         database_high_availability | default(false) | bool
 
-    - name:                         "Test Execution: Stop HANA DB before restore"
+    # NOTE: The stop→start cycle is intentional, not redundant.
+    # After HSR unregister + sr_disable above, HANA still runs with stale HSR
+    # metadata in memory. HDB stop clears that state; HDB start brings HANA
+    # back in clean standalone mode.
+    - name:                         "Test Execution: Stop HANA DB to clear HSR state"
       become:                       true
       become_user:                  "{{ db_sid | lower }}adm"
       ansible.builtin.shell: |
@@ -425,7 +429,7 @@
                                     set -o pipefail
                                     source /usr/sap/{{ db_sid | upper }}/home/.sapenv.sh && \
                                     hdbnsutil -sr_register \
-                                      --name={{ backup_secondary_site_name | default(cluster_status_pre.secondary_site_name | default(backup_hsr_secondary_site | default('site2')), true) }} \
+                                      --name={{ backup_secondary_site_name | default(cluster_status_pre.secondary_site_name | default(backup_hsr_secondary_site | default('site2'), true), true) }} \
                                       --remoteHost={{ backup_primary_node }} \
                                       --remoteInstance={{ db_instance_number }} \
                                       --replicationMode={{ cluster_status_pre.replication_mode | default(backup_hsr_replication_mode | default('syncmem')) }} \

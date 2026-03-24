@@ -85,7 +85,9 @@ class BackupDiscovery:
             if not lower_server:
                 return False
 
-            if self._source_vm in lower_server or lower_server in self._source_vm:
+            if min(len(self._source_vm), len(lower_server)) >= 5 and (
+                self._source_vm in lower_server or lower_server in self._source_vm
+            ):
                 return True
 
             parts = re.split(r"[-_]", self._source_vm)
