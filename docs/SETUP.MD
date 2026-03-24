@@ -159,6 +159,21 @@ To set up the framework locally on the management server, run the following setu
 ./scripts/setup.sh
 ```
 
+> [!IMPORTANT]
+> **Management servers with Python 3.6 as default**: Some management servers ship with Python 3.6 as the system default, which is **not supported**. The framework requires Python 3.10 or later. If Python 3.11 is installed alongside the system Python (common on SDAF deployer VMs), point the setup script to it explicitly:
+>
+> ```bash
+> # Check which Python versions are available
+> ls /usr/bin/python3*
+>
+> ./scripts/setup.sh --python /usr/bin/python3.11
+> ```
+>
+> You can also upgrade an existing virtual environment to a newer Python version:
+> ```bash
+> ./scripts/setup.sh --upgrade --python python3.11
+> ```
+
 Once the setup completes, activate the Python virtual environment:
 
 ```bash
