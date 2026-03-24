@@ -228,6 +228,21 @@
       run_once:                     true
       changed_when:                 hana_stop_result.rc == 0
 
+    - name:                         "Test Execution: Start HANA DB for SYSTEMDB restore"
+      become:                       true
+      become_user:                  "{{ db_sid | lower }}adm"
+      ansible.builtin.shell: |
+                                    set -o pipefail
+                                    source /usr/sap/{{ db_sid | upper }}/home/.sapenv.sh && \
+                                    HDB start
+      args:
+        executable:                 /bin/bash
+      register:                     hana_start_for_systemdb
+      delegate_to:                  "{{ backup_primary_node }}"
+      run_once:                     true
+      changed_when:                 hana_start_for_systemdb.rc == 0
+      when:                         backup_systemdb_items | length > 0
+
     - name:                         "Test Execution: Restore SYSTEMDB '{{ db_item.name | default('') }}'"
       delegate_to:                  localhost
       azure_backup_hana:
