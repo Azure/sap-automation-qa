@@ -314,6 +314,7 @@ class HanaClusterStatusChecker(BaseClusterStatusChecker):
             "operation_mode": "",
             "replication_mode": "",
             "primary_site_name": "",
+            "secondary_site_name": "",
         }
         node_attributes = cluster_status_xml.find("node_attributes")
         if node_attributes is None:
@@ -358,6 +359,10 @@ class HanaClusterStatusChecker(BaseClusterStatusChecker):
                 and sync_state == provider_config["secondary"]["sync"]
             ):
                 result["secondary_node"] = node_name
+                result["secondary_site_name"] = attrs.get(
+                    f"hana_{self.database_sid}_site",
+                    "",
+                )
                 result["cluster_status"]["secondary"] = attrs
 
         self.result.update(result)

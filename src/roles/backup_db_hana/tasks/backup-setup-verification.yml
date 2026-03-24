@@ -15,6 +15,30 @@
   run_once:                             true
 
 # /*---------------------------------------------------------------------------
+# |                     Resolve Source VM for Discovery                        |
+# +--------------------------------------------------------------------------*/
+- name:                                 "Resolve source VM name for HA systems"
+  when:
+                                        - node_tier == "hana"
+                                        - database_high_availability | default(false) | bool
+  block:
+    - name:                             "HA Setup: Run DB pre-validations to get cluster status"
+      ansible.builtin.include_tasks:    "roles/misc/tasks/pre-validations-db.yml"
+
+    - name:                             "HA Setup: Resolve primary node VM name"
+      ansible.builtin.set_fact:
+        backup_verify_vm_name:          "{{ hostvars[cluster_status_pre.primary_node].azure_instance_metadata.json.compute.name }}"
+      run_once:                         true
+
+- name:                                 "Resolve source VM name for standalone systems"
+  when:
+                                        - node_tier == "hana"
+                                        - not (database_high_availability | default(false) | bool)
+  ansible.builtin.set_fact:
+    backup_verify_vm_name:              "{{ azure_instance_metadata.json.compute.name }}"
+  run_once:                             true
+
+# /*---------------------------------------------------------------------------
 # |                          Test Execution                                   |
 # +--------------------------------------------------------------------------*/
 - name:                                 "Azure Backup Setup Verification"
@@ -34,7 +58,7 @@
         subscription_id:                "{{ azure_instance_metadata.json.compute.subscriptionId }}"
         msi_client_id:                  "{{ user_assigned_identity_client_id | default('') }}"
         database_sid:                   "{{ db_sid | upper }}"
-        source_vm_name:                 "{{ azure_instance_metadata.json.compute.name }}"
+        source_vm_name:                 "{{ backup_verify_vm_name }}"
         parameter_definitions:          "{{ backup_parameters | default([]) }}"
       register:                         backup_verification_result
       run_once:                         true
@@ -45,7 +69,7 @@
           - backup_verification_result.protected_items | length > 0
         fail_msg: >-
           No protected HANA databases found for VM
-          '{{ azure_instance_metadata.json.compute.name }}'
+          '{{ backup_verify_vm_name }}'
           in vault {{ backup_vault_resource_id }}
         success_msg:                    "Found {{ backup_verification_result.protected_items | length }} protected database(s)"
       run_once:                         true

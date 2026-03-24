@@ -9,6 +9,7 @@ and configuration.
 """
 
 from __future__ import absolute_import, division, print_function
+from typing import Dict
 
 try:
     from ansible.module_utils.enums import OperatingSystemFamily
@@ -88,5 +89,25 @@ RECOMMENDATION_MESSAGES = {
         "resources or initiate a clean failover before Azure maintenance impacts the node. "
         "For more details on the setup, check official cluster pacemaker configuration "
         "documentation in learn.microsoft.com"
+    ),
+}
+
+AZURE_ERROR_HINTS: Dict[str, str] = {
+    "LinkedAuthorizationFailed": (
+        "The managed identity lacks 'Microsoft.Compute/virtualMachines/write' "
+        "on the target VM. Assign 'Virtual Machine Contributor' on the VM or "
+        "its resource group."
+    ),
+    "BMSUserErrorInvalidInput": (
+        "Invalid input to the Backup API. Verify container_name, item_name, "
+        "and source_resource_id are correct for this vault."
+    ),
+    "UserErrorCrossRegionRestoreNotEnabled": (
+        "Cross-region restore is not enabled on this vault. Enable CRR in "
+        "vault settings or use the primary region."
+    ),
+    "UserErrorDatabaseAlreadyExists": (
+        "The target database already exists. Stop the database or use a "
+        "different target_database_name."
     ),
 }

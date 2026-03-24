@@ -84,7 +84,7 @@
     - name:                             "Pre Validation: Filter to tenant databases only (SYSTEMDB excluded for cross-VM)"
       ansible.builtin.set_fact:
         backup_tenant_items:            "{{ backup_source_items
-                                            | rejectattr('name','match','^(?i)systemdb$')
+                                            | rejectattr('name','match','(?i)^systemdb$')
                                             | list }}"
       run_once:                         true
 
@@ -168,7 +168,7 @@
       run_once:                         true
       changed_when:                     alr_hana_start_for_tenant.rc == 0
 
-    - name:                             "Test Execution: ALR - Restore tenant '{{ db_item.name }}' to {{ backup_target_vm_name }}"
+    - name:                             "Test Execution: ALR - Restore tenant '{{ db_item.name | default('') }}' to {{ backup_target_vm_name }}"
       delegate_to:                      localhost
       azure_backup_hana:
         operation:                      "restore_to_database"
@@ -186,7 +186,7 @@
              ~ '/providers/Microsoft.Compute/virtualMachines/' ~ backup_alr_target_arm_vm_name }}
       register:                         alr_tenant_results
       run_once:                         true
-      failed_when:                      alr_tenant_results.status | default('') == 'ERROR'
+      failed_when:                      alr_tenant_results.status | default('') == 'FAILED'
       loop:                             "{{ backup_tenant_items }}"
       loop_control:
         loop_var:                       db_item
