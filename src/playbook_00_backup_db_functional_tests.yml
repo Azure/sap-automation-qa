@@ -28,14 +28,26 @@
           - pandas
 
     - name:                            "Authenticate to Azure using Managed Identity"
-      ansible.builtin.command:
-        cmd:                            >-
+      block:
+        - name:                        "Authenticate with --username (az cli >= 2.61)"
+          ansible.builtin.command:
+            cmd:                        >-
+                                        az login --identity
+                                        {% if user_assigned_identity_client_id | default('') | length > 0
+                                        and user_assigned_identity_client_id != '00000000-0000-0000-0000-000000000000' %}
+                                        --username {{ user_assigned_identity_client_id }}
+                                        {% endif %}
+          changed_when:                 false
+      rescue:
+        - name:                        "Authenticate with --client-id (az cli < 2.61)"
+          ansible.builtin.command:
+            cmd:                        >-
                                         az login --identity
                                         {% if user_assigned_identity_client_id | default('') | length > 0
                                         and user_assigned_identity_client_id != '00000000-0000-0000-0000-000000000000' %}
                                         --client-id {{ user_assigned_identity_client_id }}
                                         {% endif %}
-      changed_when:                     false
+          changed_when:                 false
 
 - hosts:                               "{{ sap_sid | upper }}_DB"
   name:                                "Azure Backup Functional Tests for HANA DB"
