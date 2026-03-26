@@ -453,6 +453,25 @@
       run_once:                     true
       changed_when:                 hana_start_result.rc == 0
 
+    - name:                         "Test Execution: Wait for SYSTEMDB SQL connectivity after recovery"
+      become:                       true
+      become_user:                  "{{ db_sid | lower }}adm"
+      ansible.builtin.shell: |
+                                    set -o pipefail
+                                    source /usr/sap/{{ db_sid | upper }}/home/.sapenv.sh && \
+                                    hdbsql -U {{ hana_userstore_key | default('SYSTEM') }} -j \
+                                      "SELECT 'READY' FROM DUMMY"
+      args:
+        executable:                 /bin/bash
+      register:                     hana_sql_ready_result
+      delegate_to:                  "{{ backup_primary_node }}"
+      run_once:                     true
+      changed_when:                 false
+      retries:                      "{{ backup_sql_ready_retries | default(20) }}"
+      delay:                        "{{ backup_sql_ready_delay | default(15) }}"
+      until:                        hana_sql_ready_result.rc == 0
+      when:                         backup_tenant_items | length > 0
+
     - name:                         "Test Execution: Recover tenant DB from backup files"
       become:                       true
       become_user:                  "{{ db_sid | lower }}adm"

@@ -238,6 +238,24 @@
       run_once:                         true
       changed_when:                     alr_hana_start.rc == 0
 
+    - name:                             "Test Execution: Wait for HANA SQL connectivity on target VM"
+      become:                           true
+      become_user:                      "{{ db_sid | lower }}adm"
+      ansible.builtin.shell: |
+                                        set -o pipefail
+                                        source /usr/sap/{{ db_sid | upper }}/home/.sapenv.sh && \
+                                        hdbsql -U {{ hana_userstore_key | default('SYSTEM') }} -j \
+                                          "SELECT 'READY' FROM DUMMY"
+      args:
+        executable:                     /bin/bash
+      register:                         alr_sql_ready_result
+      delegate_to:                      "{{ backup_target_vm_name }}"
+      run_once:                         true
+      changed_when:                     false
+      retries:                          "{{ backup_sql_ready_retries | default(20) }}"
+      delay:                            "{{ backup_sql_ready_delay | default(15) }}"
+      until:                            alr_sql_ready_result.rc == 0
+
     - name:                             "Test Execution: Verify DB on target VM"
       become:                           true
       become_user:                      "{{ db_sid | lower }}adm"
