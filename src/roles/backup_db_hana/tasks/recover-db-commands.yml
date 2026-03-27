@@ -83,62 +83,10 @@
 
     - name:                             "Test Execution: Put cluster in maintenance mode"
       when:                             database_high_availability | default(false) | bool
-      ansible.builtin.shell: >-
-                                        set -o pipefail && {{ commands
-                                          | selectattr('name','equalto','cluster_maintenance_on')
-                                          | map(attribute=(ansible_os_family | upper))
-                                          | first
-                                        }}
-      args:
-        executable:                     /bin/bash
-      register:                         cluster_maintenance_on_result
-      run_once:                         true
-      changed_when:                     cluster_maintenance_on_result.rc == 0
-      failed_when:                      cluster_maintenance_on_result.rc != 0
+      ansible.builtin.include_tasks:    "roles/backup_db_hana/tasks/includes/cluster-maintenance-on.yml"
 
-    - name:                             "Test Execution: HSR - Stop HANA on secondary node"
-      become:                           true
-      become_user:                      "{{ db_sid | lower }}adm"
-      ansible.builtin.command:          /usr/sap/{{ db_sid | upper }}/HDB{{ db_instance_number }}/HDB stop
-      register:                         hsr_secondary_stop
-      delegate_to:                      "{{ backup_secondary_node | default(inventory_hostname, true) }}"
-      run_once:                         true
-      changed_when:                     hsr_secondary_stop.rc == 0
-      when:
-                                        - database_high_availability | default(false) | bool
-                                        - backup_secondary_node | default('') != ''
-
-    - name:                             "Test Execution: HSR - Unregister secondary from replication"
-      become:                           true
-      become_user:                      "{{ db_sid | lower }}adm"
-      ansible.builtin.shell: |
-                                        set -o pipefail
-                                        source /usr/sap/{{ db_sid | upper }}/home/.sapenv.sh && \
-                                        hdbnsutil -sr_unregister
-      args:
-        executable:                     /bin/bash
-      register:                         hsr_unregister_result
-      delegate_to:                      "{{ backup_secondary_node | default(inventory_hostname, true) }}"
-      run_once:                         true
-      changed_when:                     hsr_unregister_result.rc == 0
-      when:
-                                        - database_high_availability | default(false) | bool
-                                        - backup_secondary_node | default('') != ''
-
-    - name:                             "Test Execution: HSR - Disable replication on primary"
-      become:                           true
-      become_user:                      "{{ db_sid | lower }}adm"
-      ansible.builtin.shell: |
-                                        set -o pipefail
-                                        source /usr/sap/{{ db_sid | upper }}/home/.sapenv.sh && \
-                                        hdbnsutil -sr_disable
-      args:
-        executable:                     /bin/bash
-      register:                         hsr_disable_result
-      delegate_to:                      "{{ backup_primary_node }}"
-      run_once:                         true
-      changed_when:                     hsr_disable_result.rc == 0
-      when:                             database_high_availability | default(false) | bool
+    - name:                             "Test Execution: HSR - Teardown replication before recovery"
+      ansible.builtin.include_tasks:    "roles/backup_db_hana/tasks/includes/hsr-teardown.yml"
 
     - name:                             "Test Execution: Query backup catalog for latest full data backup"
       become:                           true
@@ -229,23 +177,10 @@
       run_once:                         true
       changed_when:                     hana_start_result.rc == 0
 
-    - name:                             "Test Execution: Wait for HANA SQL connectivity after recovery"
-      become:                           true
-      become_user:                      "{{ db_sid | lower }}adm"
-      ansible.builtin.shell: |
-                                        set -o pipefail
-                                        source /usr/sap/{{ db_sid | upper }}/home/.sapenv.sh && \
-                                        hdbsql -U {{ hana_userstore_key | default('SYSTEM') }} -j \
-                                          "SELECT 'READY' FROM DUMMY"
-      args:
-        executable:                     /bin/bash
-      register:                         hana_sql_ready_result
-      delegate_to:                      "{{ backup_primary_node }}"
-      run_once:                         true
-      changed_when:                     false
-      retries:                          "{{ backup_sql_ready_retries | default(20) }}"
-      delay:                            "{{ backup_sql_ready_delay | default(15) }}"
-      until:                            hana_sql_ready_result.rc == 0
+    - name:                             "Test Execution: Wait for SQL connectivity after recovery"
+      ansible.builtin.include_tasks:    "roles/backup_db_hana/tasks/includes/wait-for-sql.yml"
+      vars:
+        wait_sql_delegate_to:           "{{ backup_primary_node }}"
 
     - name:                             "Test Execution: Verify DB consistency post-recovery"
       become:                           true
@@ -264,125 +199,7 @@
 
     - name:                             "Test Execution: HSR - Re-establish replication"
       when:                             database_high_availability | default(false) | bool
-      block:
-        - name:                         "Test Execution: HSR - Enable replication on primary"
-          become:                       true
-          become_user:                  "{{ db_sid | lower }}adm"
-          ansible.builtin.shell: |
-                                        set -o pipefail
-                                        source /usr/sap/{{ db_sid | upper }}/home/.sapenv.sh && \
-                                        hdbnsutil -sr_enable \
-                                          --name={{ cluster_status_pre.primary_site_name
-                                                    | default(backup_hsr_primary_site
-                                                    | default('site1')) }}
-          args:
-            executable:                 /bin/bash
-          register:                     hsr_enable_result
-          delegate_to:                  "{{ backup_primary_node }}"
-          run_once:                     true
-          changed_when:                 hsr_enable_result.rc == 0
-          failed_when:                  hsr_enable_result.rc not in [0, 102]
-
-        - name:                         "Test Execution: HSR - Start HANA on secondary"
-          become:                       true
-          become_user:                  "{{ db_sid | lower }}adm"
-          ansible.builtin.shell: |
-                                        set -o pipefail
-                                        source /usr/sap/{{ db_sid | upper }}/home/.sapenv.sh && \
-                                        HDB start
-          args:
-            executable:                 /bin/bash
-          register:                     hsr_secondary_start
-          delegate_to:                  "{{ backup_secondary_node | default(inventory_hostname, true) }}"
-          run_once:                     true
-          changed_when:                 hsr_secondary_start.rc == 0
-          failed_when:                  false
-          when:
-                                        - hsr_enable_result.rc | default(1) in [0, 102]
-                                        - backup_secondary_node | default('') != ''
-
-        - name:                         "Test Execution: HSR - Register secondary for replication"
-          become:                       true
-          become_user:                  "{{ db_sid | lower }}adm"
-          ansible.builtin.shell: |
-                                        set -o pipefail
-                                        source /usr/sap/{{ db_sid | upper }}/home/.sapenv.sh && \
-                                        hdbnsutil -sr_register --online \
-                                          --name={{ backup_secondary_site_name | default(cluster_status_pre.secondary_site_name | default(backup_hsr_secondary_site | default('site2'), true), true) }} \
-                                          --remoteHost={{ backup_primary_node }} \
-                                          --remoteInstance={{ db_instance_number }} \
-                                          --replicationMode={{ cluster_status_pre.replication_mode
-                                                              | default(backup_hsr_replication_mode
-                                                              | default('syncmem')) }} \
-                                          --operationMode={{ cluster_status_pre.operation_mode
-                                                            | default(backup_hsr_operation_mode
-                                                            | default('logreplay')) }}
-          args:
-            executable:                 /bin/bash
-          register:                     hsr_register_result
-          delegate_to:                  "{{ backup_secondary_node | default(inventory_hostname, true) }}"
-          run_once:                     true
-          changed_when:                 hsr_register_result.rc == 0
-          failed_when:                  hsr_register_result.rc != 0
-          when:
-                                        - hsr_enable_result.rc | default(1) in [0, 102]
-                                        - backup_secondary_node | default('') != ''
-
-        - name:                         "Test Execution: HSR - Validate replication state"
-          become:                       true
-          become_user:                  "{{ db_sid | lower }}adm"
-          ansible.builtin.shell: |
-                                        set -o pipefail
-                                        source /usr/sap/{{ db_sid | upper }}/home/.sapenv.sh && \
-                                        hdbnsutil -sr_state
-          args:
-            executable:                 /bin/bash
-          register:                     hsr_state_result
-          delegate_to:                  "{{ backup_primary_node }}"
-          run_once:                     true
-          changed_when:                 false
-          failed_when:                  false
-          when:                         hsr_register_result.rc | default(1) == 0
-
-        - name:                         "Test Execution: HSR - Take cluster out of maintenance mode"
-          ansible.builtin.shell: >-
-                                        set -o pipefail && {{ commands
-                                          | selectattr('name','equalto','cluster_maintenance_off')
-                                          | map(attribute=(ansible_os_family | upper))
-                                          | first
-                                        }}
-          args:
-            executable:                 /bin/bash
-          register:                     cluster_maintenance_off_result
-          run_once:                     true
-          changed_when:                 cluster_maintenance_off_result.rc == 0
-          failed_when:                  false
-
-        - name:                         "Test Execution: HSR - Cleanup resources after maintenance"
-          become:                       true
-          ansible.builtin.command:      crm_resource --cleanup
-          run_once:                     true
-          changed_when:                 false
-          failed_when:                  false
-          when:                         cluster_maintenance_off_result.rc | default(1) == 0
-
-        - name:                         "Test Execution: HSR - Wait for cluster to stabilize"
-          become:                       true
-          get_cluster_status_db:
-            db_instance_number:         "{{ db_instance_number }}"
-            operation_step:             "pre_failover"
-            database_sid:               "{{ db_sid | lower }}"
-            saphanasr_provider:         "{{ saphanasr_provider | default('SAPHanaSR') }}"
-            hana_clone_resource_name:   "{{ hana_clone_resource_name | default('') }}"
-            hana_primitive_resource_name: "{{ hana_primitive_resource_name | default('') }}"
-            hana_topology:              "{{ hana_topology | default('scale_up') }}"
-          register:                     cluster_status_post_restore
-          until:                        cluster_status_post_restore.primary_node != "" and
-                                        cluster_status_post_restore.secondary_node != ""
-          retries:                      "{{ default_retries }}"
-          delay:                        "{{ default_delay }}"
-          run_once:                     true
-          when:                         cluster_maintenance_off_result.rc | default(1) == 0
+      ansible.builtin.include_tasks:    "roles/backup_db_hana/tasks/includes/hsr-reestablish.yml"
 
     - name:                             "Test Execution: Take cluster out of maintenance (standalone)"
       when:

@@ -1,0 +1,34 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+
+################################################################################
+#  Wait for HANA SQL port to accept connections after HDB start                #
+#                                                                              #
+#  Required variables:                                                         #
+#    - db_sid                                                                  #
+#    - wait_sql_delegate_to (target host to run hdbsql on)                     #
+#  Optional variables:                                                         #
+#    - hana_userstore_key (default: 'SYSTEM')                                  #
+#    - backup_sql_ready_retries (default: 20)                                  #
+#    - backup_sql_ready_delay (default: 15)                                    #
+#                                                                              #
+#  Registers: hana_sql_ready_result                                            #
+################################################################################
+
+- name:                                 "Wait for HANA SQL connectivity"
+  become:                               true
+  become_user:                          "{{ db_sid | lower }}adm"
+  ansible.builtin.shell: |
+                                        set -o pipefail
+                                        source /usr/sap/{{ db_sid | upper }}/home/.sapenv.sh && \
+                                        hdbsql -U {{ hana_userstore_key | default('SYSTEM') }} -j \
+                                          "SELECT 'READY' FROM DUMMY"
+  args:
+    executable:                         /bin/bash
+  register:                             hana_sql_ready_result
+  delegate_to:                          "{{ wait_sql_delegate_to }}"
+  run_once:                             true
+  changed_when:                         false
+  retries:                              "{{ backup_sql_ready_retries | default(20) }}"
+  delay:                                "{{ backup_sql_ready_delay | default(15) }}"
+  until:                                hana_sql_ready_result.rc == 0
