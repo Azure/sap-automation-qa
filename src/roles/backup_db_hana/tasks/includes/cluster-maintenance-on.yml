@@ -1,0 +1,24 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+
+################################################################################
+#  Put pacemaker cluster into maintenance mode                                 #
+#                                                                              #
+#  Required variables: commands, ansible_os_family                             #
+#  Registers: cluster_maintenance_on_result                                    #
+################################################################################
+
+- name:                                 "Cluster: Put cluster in maintenance mode"
+  become:                               true
+  ansible.builtin.shell: >-
+                                        set -o pipefail && {{ commands
+                                          | selectattr('name','equalto','cluster_maintenance_on')
+                                          | map(attribute=(ansible_os_family | upper))
+                                          | first
+                                        }}
+  args:
+    executable:                         /bin/bash
+  register:                             cluster_maintenance_on_result
+  run_once:                             true
+  changed_when:                         cluster_maintenance_on_result.rc == 0
+  failed_when:                          cluster_maintenance_on_result.rc != 0

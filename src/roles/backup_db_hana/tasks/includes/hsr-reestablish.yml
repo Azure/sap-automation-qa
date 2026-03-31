@@ -1,0 +1,131 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+
+################################################################################
+#  HSR Re-establish: enable primary, start secondary, register, validate,      #
+#                    maintenance off, cleanup, wait for cluster                 #
+#                                                                              #
+#  Required variables:                                                         #
+#    - db_sid, db_instance_number                                              #
+#    - backup_primary_node, backup_secondary_node                              #
+#    - cluster_status_pre (primary_site_name, secondary_site_name,             #
+#                          replication_mode, operation_mode)                    #
+#    - commands, ansible_os_family                                             #
+#    - default_retries, default_delay                                          #
+#    - saphanasr_provider, hana_clone_resource_name,                           #
+#      hana_primitive_resource_name, hana_topology                             #
+#                                                                              #
+#  Registers: hsr_enable_result, hsr_secondary_start, hsr_register_result,     #
+#             hsr_state_result, cluster_maintenance_off_result,                 #
+#             cluster_status_post_restore                                      #
+################################################################################
+
+- name:                                 "HSR Re-establish: Enable replication on primary"
+  become:                               true
+  become_user:                          "{{ db_sid | lower }}adm"
+  ansible.builtin.shell: |
+                                        set -o pipefail
+                                        source /usr/sap/{{ db_sid | upper }}/home/.sapenv.sh && \
+                                        hdbnsutil -sr_enable --name={{ cluster_status_pre.primary_site_name | default(backup_hsr_primary_site | default('site1')) }}
+  args:
+    executable:                         /bin/bash
+  register:                             hsr_enable_result
+  delegate_to:                          "{{ backup_primary_node }}"
+  run_once:                             true
+  changed_when:                         hsr_enable_result.rc == 0
+  failed_when:                          hsr_enable_result.rc not in [0, 102]
+
+- name:                                 "HSR Re-establish: Start HANA on secondary"
+  become:                               true
+  become_user:                          "{{ db_sid | lower }}adm"
+  ansible.builtin.shell: |
+                                        set -o pipefail
+                                        source /usr/sap/{{ db_sid | upper }}/home/.sapenv.sh && \
+                                        HDB start
+  args:
+    executable:                         /bin/bash
+  register:                             hsr_secondary_start
+  delegate_to:                          "{{ backup_secondary_node | default(inventory_hostname, true) }}"
+  run_once:                             true
+  changed_when:                         hsr_secondary_start.rc == 0
+  when:
+                                        - hsr_enable_result.rc | default(1) in [0, 102]
+                                        - backup_secondary_node | default('') != ''
+
+- name:                                 "HSR Re-establish: Register secondary for replication"
+  become:                               true
+  become_user:                          "{{ db_sid | lower }}adm"
+  ansible.builtin.shell: |
+                                        set -o pipefail
+                                        source /usr/sap/{{ db_sid | upper }}/home/.sapenv.sh && \
+                                        hdbnsutil -sr_register --online \
+                                          --name={{ backup_secondary_site_name | default(cluster_status_pre.secondary_site_name | default(backup_hsr_secondary_site | default('site2'), true), true) }} \
+                                          --remoteHost={{ backup_primary_node }} \
+                                          --remoteInstance={{ db_instance_number }} \
+                                          --replicationMode={{ cluster_status_pre.replication_mode | default(backup_hsr_replication_mode | default('syncmem')) }} \
+                                          --operationMode={{ cluster_status_pre.operation_mode | default(backup_hsr_operation_mode | default('logreplay')) }}
+  args:
+    executable:                         /bin/bash
+  register:                             hsr_register_result
+  delegate_to:                          "{{ backup_secondary_node | default(inventory_hostname, true) }}"
+  run_once:                             true
+  changed_when:                         hsr_register_result.rc == 0
+  failed_when:                          hsr_register_result.rc != 0
+  when:
+                                        - hsr_enable_result.rc | default(1) in [0, 102]
+                                        - backup_secondary_node | default('') != ''
+
+- name:                                 "HSR Re-establish: Validate replication state"
+  become:                               true
+  become_user:                          "{{ db_sid | lower }}adm"
+  ansible.builtin.shell: |
+                                        set -o pipefail
+                                        source /usr/sap/{{ db_sid | upper }}/home/.sapenv.sh && \
+                                        hdbnsutil -sr_state
+  args:
+    executable:                         /bin/bash
+  register:                             hsr_state_result
+  delegate_to:                          "{{ backup_primary_node }}"
+  run_once:                             true
+  changed_when:                         false
+  when:                                 hsr_register_result.rc | default(1) == 0
+
+- name:                                 "HSR Re-establish: Take cluster out of maintenance mode"
+  become:                               true
+  ansible.builtin.shell: >-
+                                        set -o pipefail && {{ commands
+                                          | selectattr('name','equalto','cluster_maintenance_off')
+                                          | map(attribute=(ansible_os_family | upper))
+                                          | first
+                                        }}
+  args:
+    executable:                         /bin/bash
+  register:                             cluster_maintenance_off_result
+  run_once:                             true
+  changed_when:                         cluster_maintenance_off_result.rc == 0
+
+- name:                                 "HSR Re-establish: Cleanup resources after maintenance"
+  become:                               true
+  ansible.builtin.command:              crm_resource --cleanup
+  run_once:                             true
+  changed_when:                         false
+  failed_when:                          false
+  when:                                 cluster_maintenance_off_result.rc | default(1) == 0
+
+- name:                                 "HSR Re-establish: Wait for cluster to stabilize"
+  become:                               true
+  get_cluster_status_db:
+    db_instance_number:                 "{{ db_instance_number }}"
+    operation_step:                     "pre_failover"
+    database_sid:                       "{{ db_sid | lower }}"
+    saphanasr_provider:                 "{{ saphanasr_provider | default('SAPHanaSR') }}"
+    hana_clone_resource_name:           "{{ hana_clone_resource_name | default('') }}"
+    hana_primitive_resource_name:       "{{ hana_primitive_resource_name | default('') }}"
+    hana_topology:                      "{{ hana_topology | default('scale_up') }}"
+  register:                             cluster_status_post_restore
+  until:                                cluster_status_post_restore.primary_node != "" and
+                                        cluster_status_post_restore.secondary_node != ""
+  retries:                              "{{ default_retries }}"
+  delay:                                "{{ default_delay }}"
+  run_once:                             true
+  when:                                 cluster_maintenance_off_result.rc | default(1) == 0

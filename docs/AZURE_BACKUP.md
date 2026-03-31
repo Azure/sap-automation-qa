@@ -18,31 +18,37 @@ The framework supports both **HA (two-node cluster)** and **Non-HA (single-node)
 
 ## Prerequisites
 
-### 1. Azure Backup Configuration
+### 1. Setup Configuration
+
+Follow the steps (1.1 - 1.5) in [Setup Guide for SAP Testing Automation Framework](./SETUP.MD) to set up the framework on a management server.
+
+### 2. System Configuration
+
+Update the `TEST_TYPE` parameter in [`vars.yaml`](./../vars.yaml) file to `SAPFunctionalTests` and `SAP_FUNCTIONAL_TEST_TYPE` to `AzureBackupDatabase` to enable the Azure Backup test scenarios.
+
+Follow the steps (2.1 - 2.2) in [Setup Guide for SAP Testing Automation Framework](./SETUP.MD#2-system-configuration) to configure your system details.
+
+### 3. Required Access and Permissions
+
+The management server's managed identity (system- or user-assigned) requires the following roles to perform backup restore operations and interact with Azure resources. For more details on configuring system assigned managed identity vs user assigned managed identity, see [Setup Guide for SAP Testing Automation Framework](./SETUP.MD#4-identity-and-authorization).
+
+1. Depending on the type of managed identity method you want to use, configure managed identity on management server
+   - [Configuring access using user-assigned managed identity](./SETUP.MD#option-1-user-assigned-managed-identity).
+   - [Configuring access using system-assigned managed identity](./SETUP.MD#option-2-system-assigned-managed-identity).
+2. Grant the managed identity (system- or user-assigned) the following roles:
+
+| Role | Scope | Purpose |
+|------|-------|---------|
+| **Backup Operator** | Recovery Services vault | Discover protected items, list restore points, trigger restore operations, monitor restore jobs |
+| **Virtual Machine Contributor** | Target VM(s) where restore is performed | Required for restore operations to interact with the target HANA VM (e.g., filesystem restores, cross-VM restores) |
+
+### 4. Azure Backup Configuration
 
 - A **Recovery Services vault** must exist with SAP HANA backup configured.
 - At least one HANA database must be **registered and protected** with a backup policy.
 - A recent backup (full or incremental) must have completed successfully so restore points are available.
 
 For setup guidance, see [Back up SAP HANA databases in Azure VMs](https://learn.microsoft.com/azure/backup/sap-hana-database-instances-backup).
-
-### 2. Managed Identity Permissions
-
-The management server's managed identity (system- or user-assigned) requires:
-
-| Role | Scope | Purpose |
-|------|-------|---------|
-| **Backup Operator** | Recovery Services vault | Discover protected items, list restore points, trigger restore operations, monitor restore jobs |
-| **Reader** | HANA VM resource group | Resolve target VM ARM IDs for cross-VM and filesystem restores |
-
-For identity setup, see [Setup Guide — Identity and Authorization](./SETUP.MD#4-identity-and-authorization).
-
-### 3. HANA Node Access
-
-- The management server must have SSH connectivity to all HANA DB hosts.
-- The `<sid>adm` user must be able to run `HDB stop`, `HDB start`, `sapcontrol`, and `hdbsql` commands.
-- For test case 3 (restore-to-filesystem), the target filesystem path must be writable.
-- For test case 5 (cross-VM restore), `backup_target_vm_name` must be set to the **hostname** of the target VM. This hostname must be **resolvable from the source VM** (e.g., via DNS or `/etc/hosts`). This test is **disabled by default** and must be explicitly enabled in `input-api.yaml`.
 
 ## Configuration
 

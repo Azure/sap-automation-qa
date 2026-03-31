@@ -1,0 +1,57 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+
+################################################################################
+#  HSR Teardown: stop secondary, unregister, disable replication               #
+#                                                                              #
+#  Required variables:                                                         #
+#    - db_sid, db_instance_number                                              #
+#    - backup_primary_node, backup_secondary_node                              #
+#    - database_high_availability                                              #
+#                                                                              #
+#  Registers: hsr_secondary_stop, hsr_unregister_result, hsr_disable_result    #
+################################################################################
+
+- name:                                 "HSR Teardown: Stop HANA on secondary node"
+  become:                               true
+  become_user:                          "{{ db_sid | lower }}adm"
+  ansible.builtin.command:              /usr/sap/{{ db_sid | upper }}/HDB{{ db_instance_number }}/HDB stop
+  register:                             hsr_secondary_stop
+  delegate_to:                          "{{ backup_secondary_node | default(inventory_hostname, true) }}"
+  run_once:                             true
+  changed_when:                         hsr_secondary_stop.rc == 0
+  when:
+                                        - database_high_availability | default(false) | bool
+                                        - backup_secondary_node | default('') != ''
+
+- name:                                 "HSR Teardown: Unregister secondary from replication"
+  become:                               true
+  become_user:                          "{{ db_sid | lower }}adm"
+  ansible.builtin.shell: |
+                                        set -o pipefail
+                                        source /usr/sap/{{ db_sid | upper }}/home/.sapenv.sh && \
+                                        hdbnsutil -sr_unregister
+  args:
+    executable:                         /bin/bash
+  register:                             hsr_unregister_result
+  delegate_to:                          "{{ backup_secondary_node | default(inventory_hostname, true) }}"
+  run_once:                             true
+  changed_when:                         hsr_unregister_result.rc == 0
+  when:
+                                        - database_high_availability | default(false) | bool
+                                        - backup_secondary_node | default('') != ''
+
+- name:                                 "HSR Teardown: Disable replication on primary"
+  become:                               true
+  become_user:                          "{{ db_sid | lower }}adm"
+  ansible.builtin.shell: |
+                                        set -o pipefail
+                                        source /usr/sap/{{ db_sid | upper }}/home/.sapenv.sh && \
+                                        hdbnsutil -sr_disable
+  args:
+    executable:                         /bin/bash
+  register:                             hsr_disable_result
+  delegate_to:                          "{{ backup_primary_node }}"
+  run_once:                             true
+  changed_when:                         hsr_disable_result.rc == 0
+  when:                                 database_high_availability | default(false) | bool
