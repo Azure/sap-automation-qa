@@ -151,7 +151,7 @@ class TestBlockNetworkTest(RolesTestingBaseDB):
                 assert task_result.get("rc") == 0
             elif task and "Pre Validation: Validate HANA DB" in task:
                 pre_status = task_result
-            elif task and "Test Execution: Validate HANA DB cluster status 2" in task:
+            elif task and "Test Execution: Validate HANA DB cluster status (post recovery)" in task:
                 post_status = task_result
             elif task and "Remove any location_constraints" in task:
                 assert task_result.get("changed")

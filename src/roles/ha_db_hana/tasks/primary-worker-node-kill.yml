@@ -1,0 +1,17 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+
+- name:                                 "Test Setup Tasks"
+  ansible.builtin.include_tasks:        "roles/misc/tasks/test-case-setup.yml"
+  run_once:                             true
+
+- name:                                 "Pre Validations: HANA DB Nodes"
+  ansible.builtin.include_tasks:        "roles/misc/tasks/pre-validations-db.yml"
+
+- name:                                 "Test Execution: Primary Worker Node Kill"
+  ansible.builtin.include_tasks:        "roles/ha_db_hana/tasks/includes/scaleout-worker-operation.yml"
+  vars:
+    hana_test_target_site_label:        "primary"
+    hana_test_target_worker_node:       "{{ primary_worker_nodes | first | default('') }}"
+    hana_test_action_command:           "/usr/sap/{{ db_sid | upper }}/HDB{{ db_instance_number }}/HDB kill-9"
+    hana_test_action_become_user:       "{{ db_sid | lower }}adm"

@@ -23,74 +23,40 @@
                                             - node_tier == "hana"
                                             - pre_validations_status == "PASSED"
                                             - cluster_status_pre.stonith_action == "reboot"
-                                            - cluster_status_pre.PRIORITY_FENCING_DELAY is defined
-                                            - cluster_status_pre.PRIORITY_FENCING_DELAY != ""
-                                            - cluster_status_pre.PRIORITY_FENCING_DELAY != "unknown"
+                                            - hana_topology == 'scale_out_hsr' or
+                                              (
+                                                cluster_status_pre.PRIORITY_FENCING_DELAY is defined and
+                                                cluster_status_pre.PRIORITY_FENCING_DELAY != "" and
+                                                cluster_status_pre.PRIORITY_FENCING_DELAY != "unknown"
+                                              )
   block:
-    - name:                                 "Test Execution: Block Network Communication"
+    - name:                                 "Test Execution: Start timer"
       when:                                 ansible_hostname == cluster_status_pre.primary_node
+      ansible.builtin.set_fact:
+        test_execution_start:               "{{ now(utc=true, fmt='%Y-%m-%d %H:%M:%S') }}"
+        test_execution_hostname:            "{{ hostvars[cluster_status_pre.primary_node].ansible_hostname }}"
+
+    - name:                                 "Test Execution: Block all network communication on primary site"
+      become:                               true
+      ansible.builtin.shell:                "sleep 3; iptables -P INPUT DROP; iptables -P OUTPUT DROP"
+      async:                                15
+      poll:                                 0
+      register:                             firewall_rule_created
+      when: >-
+                                            (hana_topology | default('scale_up') == 'scale_out_hsr' and
+                                             ansible_hostname in cluster_status_pre.primary_site_nodes)
+                                            or
+                                            (hana_topology | default('scale_up') != 'scale_out_hsr' and
+                                             ansible_hostname == cluster_status_pre.primary_node)
+
+    - name:                                 "Test Execution: Switch to secondary node"
+      when:                                 ansible_hostname == cluster_status_pre.secondary_node
       block:
-        - name:                             "Test Execution: Start timer"
-          ansible.builtin.set_fact:
-            test_execution_start:           "{{ now(utc=true, fmt='%Y-%m-%d %H:%M:%S') }}"
-            test_execution_hostname:        "{{ hostvars[cluster_status_pre.primary_node].ansible_hostname }}"
-
-        - name:                             "Test Execution: Get the IP address of the secondary node"
-          ansible.builtin.set_fact:
-            secondary_node_ip:              "{{ hostvars[cluster_status_pre.secondary_node].ansible_host }}"
-            primary_node_ip:                "{{ hostvars[cluster_status_pre.primary_node].ansible_host }}"
-
-        - name:                             "Test Execution: Create a firewall on primary node"
-          become:                           true
-          ansible.builtin.shell: |
-                                            iptables -A INPUT -s {{ secondary_node_ip }} -j DROP;
-                                            iptables -A OUTPUT -d {{ secondary_node_ip }} -j DROP
-          register:                         firewall_rule_created
-          changed_when:                     firewall_rule_created.rc == 0
-          failed_when:                      firewall_rule_created.rc != 0
-
         - name:                             "Test Execution: Wait for the cluster to be in a stable state"
           ansible.builtin.wait_for:
             timeout:                        "{{ default_timeout }}"
 
-    - name:                                 "Test Execution: Check node status on primary and secondary"
-      block:
-        - name:                             "Test Execution: Check node connectivity from controller"
-          delegate_to:                      localhost
-          ansible.builtin.shell: |
-                                            for i in $(seq 1 30); do
-                                              if ! nc -zv -w1 {{ ansible_host }} {{ sap_port_to_ping }}; then
-                                                echo "Connection failed on attempt $i"
-                                                exit 1
-                                              fi
-                                              sleep 1
-                                            done
-          register:                         node_status
-          ignore_errors:                    true
-
-        - name:                             "Set Node Status Facts"
-          ansible.builtin.set_fact:
-            primary_node_down:              "{{ hostvars[cluster_status_pre.primary_node].node_status is failed }}"
-            secondary_node_down:            "{{ hostvars[cluster_status_pre.secondary_node].node_status is failed }}"
-
-        - name:                             "Fail if both nodes are unavailable"
-          ansible.builtin.fail:
-            msg: |
-                                            "Error: Both primary and secondary nodes are unreachable.
-                                            This may be caused by a fence race condition triggered during the block network
-                                            test case execution, where both nodes potentially fenced each other.
-                                            Please verify if the priority-fencing-delay cluster property is configured.
-                                            If not, refer to the SAP on Azure high availability documentation for
-                                            instructions on how to configure it."
-          when:                             primary_node_down and secondary_node_down
-
-    - name:                                 "Test Execution: Check node status on primary and secondary"
-      when:
-                                            - not primary_node_down
-                                            - secondary_node_down
-                                            - ansible_hostname == cluster_status_pre.primary_node
-      block:
-        - name:                             "Test Execution: Validate HANA DB cluster status (Primary Node)"
+        - name:                             "Test Execution: Validate HANA DB cluster status (secondary takes over)"
           get_cluster_status_db:
             db_instance_number:             "{{ db_instance_number }}"
             operation_step:                 "test_execution"
@@ -99,94 +65,26 @@
             hana_clone_resource_name:       "{{ hana_clone_resource_name | default('') }}"
             hana_primitive_resource_name:   "{{ hana_primitive_resource_name | default('') }}"
             hana_topology:                  "{{ hana_topology | default('scale_up') }}"
-          register:                         cluster_status_test_execution_primary
+          register:                         cluster_status_test_execution
           retries:                          "{{ default_retries }}"
           delay:                            "{{ default_delay }}"
           until: >
-                                            cluster_status_test_execution_primary.primary_node != "" and
+                                            cluster_status_test_execution.primary_node != "" and
                                             (
                                               (hana_topology | default('scale_up') == 'scale_out_hsr' and
-                                               cluster_status_test_execution_primary.primary_node in cluster_status_pre.primary_site_nodes and
-                                               cluster_status_test_execution_primary.secondary_node == "")
+                                               cluster_status_test_execution.primary_node in cluster_status_pre.secondary_site_nodes and
+                                               cluster_status_test_execution.secondary_node == "")
                                               or
                                               (hana_topology | default('scale_up') != 'scale_out_hsr' and
-                                               cluster_status_test_execution_primary.primary_node == cluster_status_pre.primary_node and
-                                               cluster_status_test_execution_primary.secondary_node == "")
-                                            )
-
-        - name:                             "Test Execution: Remove the firewall rule on primary node."
-          become:                           true
-          ansible.builtin.shell: |
-                                            iptables -D INPUT -s {{ secondary_node_ip }} -j DROP;
-                                            iptables -D OUTPUT -d {{ secondary_node_ip }} -j DROP
-          register:                         firewall_rule_deleted
-          changed_when:                     firewall_rule_deleted.rc == 0
-          failed_when:                      firewall_rule_deleted.rc != 0
-
-        - name:                             "Test Execution: Wait for the cluster to be in a stable state"
-          ansible.builtin.wait_for:
-            timeout:                        "{{ default_timeout }}"
-
-        - name:                             "Test Execution: Validate HANA DB cluster status 2"
-          get_cluster_status_db:
-            db_instance_number:             "{{ db_instance_number }}"
-            operation_step:                 "test_execution"
-            database_sid:                   "{{ db_sid | lower }}"
-            saphanasr_provider:             "{{ saphanasr_provider | default('SAPHanaSR') }}"
-            hana_clone_resource_name:       "{{ hana_clone_resource_name | default('') }}"
-            hana_primitive_resource_name:   "{{ hana_primitive_resource_name | default('') }}"
-            hana_topology:                  "{{ hana_topology | default('scale_up') }}"
-          register:                         cluster_status_post_primary
-          retries:                          "{{ default_retries }}"
-          delay:                            "{{ default_delay }}"
-          until: >
-                                            cluster_status_post_primary.primary_node != "" and
-                                            cluster_status_post_primary.secondary_node != "" and
-                                            (
-                                              (hana_topology | default('scale_up') == 'scale_out_hsr' and
-                                               cluster_status_post_primary.primary_node in cluster_status_pre.primary_site_nodes and
-                                               cluster_status_post_primary.secondary_node in cluster_status_pre.secondary_site_nodes)
-                                              or
-                                              (hana_topology | default('scale_up') != 'scale_out_hsr' and
-                                               cluster_status_post_primary.primary_node == cluster_status_pre.primary_node and
-                                               cluster_status_post_primary.secondary_node == cluster_status_pre.secondary_node)
-                                            )
-
-    - name:                                 "Test Execution: Block Network Communication (Secondary Node)"
-      when:
-                                            - primary_node_down
-                                            - not secondary_node_down
-                                            - ansible_hostname == cluster_status_pre.secondary_node
-      block:
-        - name:                             "Test Execution: Validate HANA DB cluster status (Secondary Node)"
-          get_cluster_status_db:
-            db_instance_number:             "{{ db_instance_number }}"
-            operation_step:                 "test_execution"
-            database_sid:                   "{{ db_sid | lower }}"
-            saphanasr_provider:             "{{ saphanasr_provider | default('SAPHanaSR') }}"
-            hana_clone_resource_name:       "{{ hana_clone_resource_name | default('') }}"
-            hana_primitive_resource_name:   "{{ hana_primitive_resource_name | default('') }}"
-            hana_topology:                  "{{ hana_topology | default('scale_up') }}"
-          register:                         cluster_status_test_execution_secondary
-          retries:                          "{{ default_retries }}"
-          delay:                            "{{ default_delay }}"
-          until: >
-                                            cluster_status_test_execution_secondary.primary_node != "" and
-                                            (
-                                              (hana_topology | default('scale_up') == 'scale_out_hsr' and
-                                               cluster_status_test_execution_secondary.primary_node in cluster_status_pre.secondary_site_nodes and
-                                               cluster_status_test_execution_secondary.secondary_node == "")
-                                              or
-                                              (hana_topology | default('scale_up') != 'scale_out_hsr' and
-                                               cluster_status_test_execution_secondary.primary_node == cluster_status_pre.secondary_node and
-                                               cluster_status_test_execution_secondary.secondary_node == "")
+                                               cluster_status_test_execution.primary_node == cluster_status_pre.secondary_node and
+                                               cluster_status_test_execution.secondary_node == "")
                                             )
 
         - name:                             "Test Execution: Wait for the cluster to be in a stable state"
           ansible.builtin.wait_for:
             timeout:                        "{{ default_timeout }}"
 
-        - name:                             "Test Execution: Validate HANA DB cluster status 2"
+        - name:                             "Test Execution: Validate HANA DB cluster status (post recovery)"
           get_cluster_status_db:
             db_instance_number:             "{{ db_instance_number }}"
             operation_step:                 "test_execution"
@@ -195,49 +93,44 @@
             hana_clone_resource_name:       "{{ hana_clone_resource_name | default('') }}"
             hana_primitive_resource_name:   "{{ hana_primitive_resource_name | default('') }}"
             hana_topology:                  "{{ hana_topology | default('scale_up') }}"
-          register:                         cluster_status_post_secondary
+          register:                         cluster_status_post
           retries:                          "{{ default_retries }}"
           delay:                            "{{ default_delay }}"
           until: >
-                                            cluster_status_post_secondary.primary_node != "" and
-                                            cluster_status_post_secondary.secondary_node != "" and
+                                            cluster_status_post.primary_node != "" and
+                                            cluster_status_post.secondary_node != "" and
                                             (
                                               (hana_topology | default('scale_up') == 'scale_out_hsr' and
-                                               cluster_status_post_secondary.primary_node in cluster_status_pre.secondary_site_nodes and
-                                               cluster_status_post_secondary.primary_node != cluster_status_pre.primary_node)
+                                               cluster_status_post.primary_node in cluster_status_pre.secondary_site_nodes and
+                                               cluster_status_post.primary_node != cluster_status_pre.primary_node)
                                               or
                                               (hana_topology | default('scale_up') != 'scale_out_hsr' and
-                                               cluster_status_post_secondary.primary_node == cluster_status_pre.secondary_node and
-                                               cluster_status_post_secondary.secondary_node == cluster_status_pre.primary_node)
+                                               cluster_status_post.primary_node == cluster_status_pre.secondary_node and
+                                               cluster_status_post.secondary_node == cluster_status_pre.primary_node)
                                             )
 
-    - name:                                 "Test Execution: Block Network Communication"
+    - name:                                 "Test Execution: Switch back to primary node"
       when:                                 ansible_hostname == cluster_status_pre.primary_node
       block:
         - name:                             "Test Execution: Stop timer"
           ansible.builtin.set_fact:
             test_execution_end:             "{{ now(utc=true, fmt='%Y-%m-%d %H:%M:%S') }}"
-            cluster_status_post:            "{{ hostvars[cluster_status_pre.secondary_node].cluster_status_post_secondary
-                                            if (cluster_status_post_primary.skipped | default(false))
-                                            else cluster_status_post_primary }}"
-            cluster_status_test_execution:  "{{ hostvars[cluster_status_pre.secondary_node].cluster_status_test_execution_secondary
-                                            if (cluster_status_test_execution_primary.skipped | default(false))
-                                            else cluster_status_test_execution_primary }}"
+
+        - name:                             "Test Execution: Set cluster status from secondary"
+          ansible.builtin.set_fact:
+            cluster_status_post:            "{{ hostvars[cluster_status_pre.secondary_node].cluster_status_post }}"
+            cluster_status_test_execution:  "{{ hostvars[cluster_status_pre.secondary_node].cluster_status_test_execution }}"
 
         - name:                             "Test Execution: Determine test execution status"
           ansible.builtin.set_fact:
             test_execution_status:          "{{ 'PASSED' if (
-                                              (hana_topology | default('scale_up') == 'scale_out_hsr' and (
-                                                (cluster_status_post.primary_node in cluster_status_pre.secondary_site_nodes and
-                                                 cluster_status_post.primary_node != cluster_status_pre.primary_node) or
-                                                (cluster_status_post.primary_node in cluster_status_pre.primary_site_nodes and
-                                                 cluster_status_post.secondary_node in cluster_status_pre.secondary_site_nodes)))
+                                              (hana_topology | default('scale_up') == 'scale_out_hsr' and
+                                               cluster_status_post.primary_node in cluster_status_pre.secondary_site_nodes and
+                                               cluster_status_post.primary_node != cluster_status_pre.primary_node)
                                               or
-                                              (hana_topology | default('scale_up') != 'scale_out_hsr' and (
-                                                (cluster_status_post.primary_node == cluster_status_pre.secondary_node and
-                                                 cluster_status_post.secondary_node == cluster_status_pre.primary_node) or
-                                                (cluster_status_post.primary_node == cluster_status_pre.primary_node and
-                                                 cluster_status_post.secondary_node == cluster_status_pre.secondary_node)))
+                                              (hana_topology | default('scale_up') != 'scale_out_hsr' and
+                                               cluster_status_post.primary_node == cluster_status_pre.secondary_node and
+                                               cluster_status_post.secondary_node == cluster_status_pre.primary_node)
                                             ) else 'FAILED' }}"
 
         - name:                             "Set test case message and details"
@@ -251,9 +144,9 @@
                                             "Pre Validations: Remove any location_constraints": "{{ location_constraints_results }}",
                                             "Pre Validations: Validate HANA DB cluster status": "{{ cluster_status_pre }}",
                                             "Pre Validations: CleanUp any failed resource": "{{ cleanup_failed_resource_pre }}",
-                                            "Test Execution: Firewall Rule Created": "{{ firewall_rule_created }}",
+                                            "Test Execution: Network blocked on primary site": "{{ firewall_rule_created | default('iptables -P DROP applied') }}",
                                             "Test Execution: Cluster Status after the network blocked": "{{ cluster_status_test_execution }}",
-                                            "Test Execution: Firewall Rule Removed": "{{ firewall_rule_deleted | default('Primary Node rebooted') }}",
+                                            "Test Execution: Firewall removed by": "Primary site nodes rebooted by fencing",
                                             "Post Validations: Validate HANA DB cluster status": "{{ cluster_status_post }}",
                                             }
 
@@ -264,16 +157,19 @@
       ansible.builtin.include_tasks:        "roles/misc/tasks/post-validations.yml"
 
   rescue:
-    - name:                                 "Test Execution Failure: Remove the firewall rule on primary node."
+    - name:                                 "Test Execution Failure: Reset iptables policies on primary site nodes"
       become:                               true
-      ansible.builtin.shell: |
-                                            iptables -D INPUT -s {{ secondary_node_ip }} -j DROP;
-                                            iptables -D OUTPUT -d {{ secondary_node_ip }} -j DROP
+      ansible.builtin.shell:                "iptables -P INPUT ACCEPT; iptables -P OUTPUT ACCEPT"
       register:                             firewall_rule_deleted
       changed_when:                         firewall_rule_deleted.rc == 0
       failed_when:                          false
-      when:                                 ansible_hostname == cluster_status_pre.primary_node and
-                                            secondary_node_ip is defined
+      ignore_unreachable:                   true
+      when: >-
+                                            (hana_topology | default('scale_up') == 'scale_out_hsr' and
+                                             ansible_hostname in (cluster_status_pre.primary_site_nodes | default([])))
+                                            or
+                                            (hana_topology | default('scale_up') != 'scale_out_hsr' and
+                                             ansible_hostname == cluster_status_pre.primary_node)
 
     - name:                                 "Rescue operation"
       ansible.builtin.include_tasks:        "roles/misc/tasks/rescue.yml"

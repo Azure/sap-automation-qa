@@ -67,16 +67,8 @@
           delay:                        "{{ default_delay }}"
           until: >
                                         cluster_status_test_execution.primary_node != "" and
-                                        (
-                                          (hana_topology | default('scale_up') == 'scale_out_hsr' and
-                                           cluster_status_test_execution.primary_node in cluster_status_pre.secondary_site_nodes and
-                                           cluster_status_test_execution.primary_node != cluster_status_pre.primary_node and
-                                           cluster_status_test_execution.secondary_node != "")
-                                          or
-                                          (hana_topology | default('scale_up') != 'scale_out_hsr' and
-                                           cluster_status_test_execution.primary_node == cluster_status_pre.secondary_node and
-                                           cluster_status_test_execution.secondary_node == cluster_status_pre.primary_node)
-                                        )
+                                        cluster_status_test_execution.primary_node == cluster_status_pre.secondary_node and
+                                        cluster_status_test_execution.secondary_node == cluster_status_pre.primary_node
 
         - name:                         "Test Execution: Validate HANA DB cluster status (AUTOMATED_REGISTER=false)"
           when:                         cluster_status_pre.AUTOMATED_REGISTER | lower == "false"
@@ -93,15 +85,8 @@
           delay:                        "{{ default_delay }}"
           until: >
                                         cluster_status_test_execution.primary_node != "" and
-                                        (
-                                          (hana_topology | default('scale_up') == 'scale_out_hsr' and
-                                           cluster_status_test_execution.primary_node in cluster_status_pre.secondary_site_nodes and
-                                           cluster_status_test_execution.secondary_node == "")
-                                          or
-                                          (hana_topology | default('scale_up') != 'scale_out_hsr' and
-                                           cluster_status_test_execution.primary_node == cluster_status_pre.secondary_node and
-                                           cluster_status_test_execution.secondary_node == "")
-                                        )
+                                        cluster_status_test_execution.primary_node == cluster_status_pre.secondary_node and
+                                        cluster_status_test_execution.secondary_node == ""
 
     - name:                             "Test Execution: Manual re-registration of old primary"
       when:
@@ -149,26 +134,14 @@
           until: >
                                         cluster_status_post.primary_node != "" and
                                         cluster_status_post.secondary_node != "" and
-                                        (
-                                          (hana_topology | default('scale_up') == 'scale_out_hsr' and
-                                           cluster_status_post.primary_node in cluster_status_pre.secondary_site_nodes and
-                                           cluster_status_post.primary_node != cluster_status_pre.primary_node)
-                                          or
-                                          (hana_topology | default('scale_up') != 'scale_out_hsr' and
-                                           cluster_status_post.primary_node == cluster_status_pre.secondary_node and
-                                           cluster_status_post.secondary_node == cluster_status_pre.primary_node)
-                                        )
+                                        cluster_status_post.primary_node == cluster_status_pre.secondary_node and
+                                        cluster_status_post.secondary_node == cluster_status_pre.primary_node
 
         - name:                         "Test Execution: Determine test execution status"
           ansible.builtin.set_fact:
             test_execution_status:      "{{ 'PASSED' if (
-                                            (hana_topology | default('scale_up') == 'scale_out_hsr' and
-                                             cluster_status_post.primary_node in cluster_status_pre.secondary_site_nodes and
-                                             cluster_status_post.primary_node != cluster_status_pre.primary_node)
-                                            or
-                                            (hana_topology | default('scale_up') != 'scale_out_hsr' and
-                                             cluster_status_post.primary_node == cluster_status_pre.secondary_node and
-                                             cluster_status_post.secondary_node == cluster_status_pre.primary_node)
+                                            cluster_status_post.primary_node == cluster_status_pre.secondary_node and
+                                            cluster_status_post.secondary_node == cluster_status_pre.primary_node
                                           ) else 'FAILED' }}"
 
 

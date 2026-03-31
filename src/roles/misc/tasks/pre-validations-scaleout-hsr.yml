@@ -9,8 +9,14 @@
 - name:                             "Scale-out HSR: Set site and node facts"
   ansible.builtin.set_fact:
     master_nameserver_node:         "{{ cluster_status_pre.primary_node }}"
+    primary_master_node:            "{{ cluster_status_pre.primary_node }}"
+    secondary_master_node:          "{{ cluster_status_pre.secondary_node }}"
     primary_site_nodes:             "{{ cluster_status_pre.primary_site_nodes }}"
     secondary_site_nodes:           "{{ cluster_status_pre.secondary_site_nodes }}"
+    primary_worker_nodes:           "{{ cluster_status_pre.primary_site_nodes
+                                      | difference([cluster_status_pre.primary_node]) }}"
+    secondary_worker_nodes:         "{{ cluster_status_pre.secondary_site_nodes
+                                      | difference([cluster_status_pre.secondary_node]) }}"
     majority_maker_node:            "{{ cluster_status_pre.majority_maker_node }}"
     primary_site_name:              "{{ cluster_status_pre.primary_site_name }}"
     secondary_site_name:            "{{ cluster_status_pre.secondary_site_name }}"

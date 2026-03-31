@@ -83,6 +83,9 @@ When executed on secondary node, the test kills the index server process but mai
 3. Secondary automatically recovers and rejoins replication
 4. Final state matches initial state (same primary/secondary roles)
 
+**Scale-Out Worker Index Server Crash:**
+When executed on a non-master worker node, the test kills `hdbindexserver` on that worker but does not target a site master. The expected behavior is site-level role stability: the primary site remains primary, the secondary site remains secondary, and the cluster returns to a healthy replicated state after worker recovery.
+
 ## Scale-Out HSR Differences
 
 In a scale-out HSR topology, validation uses site membership checks instead of exact node matching.
@@ -138,12 +141,33 @@ FUNCTION SecondaryIndexServerCrashTest_ScaleOut():
 END FUNCTION
 ```
 
+### Worker Index Server Crash (Scale-Out HSR)
+
+```pseudocode
+FUNCTION WorkerIndexServerCrashTest_ScaleOut(target_site):
+    // target_site is either primary or secondary
+    // ... kill hdbindexserver on a non-master worker node ...
+
+    validate_cluster_status(
+        expect_primary IN old_primary_site_nodes,
+        expect_secondary IN old_secondary_site_nodes
+    )
+
+    wait_for_cluster_stability()
+    validate_final_status(
+        expect_primary IN old_primary_site_nodes,
+        expect_secondary IN old_secondary_site_nodes
+    )
+END FUNCTION
+```
+
 | Check Point | Scale-Up | Scale-Out HSR |
 |------------|----------|---------------|
 | Primary crash (auto-register) | `new_primary == old_secondary` and `new_secondary == old_primary` | `new_primary IN old_secondary_site_nodes` and `new_primary != old_primary` and `new_secondary != ""` |
 | Primary crash (manual) | `new_primary == old_secondary` and `new_secondary == ""` | `new_primary IN old_secondary_site_nodes` and `new_secondary == ""` |
 | Secondary crash (mid) | `primary == old_primary` and `secondary == ""` | `primary IN old_primary_site_nodes` and `secondary == ""` |
 | Secondary crash (final) | `primary == old_primary` and `secondary == old_secondary` | `primary IN old_primary_site_nodes` and `secondary IN old_secondary_site_nodes` |
+| Worker crash (primary or secondary site) | Not applicable | `primary IN old_primary_site_nodes` and `secondary IN old_secondary_site_nodes` |
 
 ## Implementation Flow
 

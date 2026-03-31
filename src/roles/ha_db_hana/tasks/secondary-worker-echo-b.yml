@@ -1,0 +1,20 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+
+- name:                                 "Test Setup Tasks"
+  ansible.builtin.include_tasks:        "roles/misc/tasks/test-case-setup.yml"
+  run_once:                             true
+
+- name:                                 "Pre Validations: HANA DB Nodes"
+  ansible.builtin.include_tasks:        "roles/misc/tasks/pre-validations-db.yml"
+
+- name:                                 "Test Execution: Secondary Worker Echo B"
+  ansible.builtin.include_tasks:        "roles/ha_db_hana/tasks/includes/scaleout-worker-operation.yml"
+  vars:
+    hana_test_target_site_label:        "secondary"
+    hana_test_target_worker_node:       "{{ secondary_worker_nodes | first | default('') }}"
+    hana_test_action_command:           "echo b > /proc/sysrq-trigger"
+    hana_test_action_async:             1
+    hana_test_action_poll:              0
+    hana_test_action_ignore_errors:     true
+    hana_test_requires_reboot:          true

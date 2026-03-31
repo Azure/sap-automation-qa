@@ -4,6 +4,11 @@
 
 This test supports both **Scale-Up** (two-node) and **Scale-Out HSR** (multi-node with sites) topologies.
 
+For scale-out HSR, the framework supports two origin variants:
+
+- **Primary master block-network**: Network isolation is injected from the current primary master node.
+- **Secondary master block-network**: Network isolation is injected from the current secondary master node.
+
 ## Prerequisites
 
 - Functioning HANA cluster
@@ -13,6 +18,9 @@ This test supports both **Scale-Up** (two-node) and **Scale-Out HSR** (multi-nod
 - STONITH configuration (stonith-enabled=true)
 - **Scale-Up**: Two active nodes (primary and secondary)
 - **Scale-Out HSR**: Multiple worker nodes across two sites, plus a majority maker node
+
+For **Scale-Up**, the network-partition scenario requires `PRIORITY_FENCING_DELAY` to avoid symmetric fencing races.
+For **Scale-Out HSR**, this requirement is not enforced by the framework.
 
 ## Validation
 
@@ -91,12 +99,12 @@ END FUNCTION
 
 ## Scale-Out HSR Differences
 
-In a scale-out HSR topology, the block-network test has **two possible outcomes** depending on which node survives the network partition. Validation uses site membership checks instead of exact node identity.
+In a scale-out HSR topology, the block-network scenarios use site membership checks instead of exact node identity. The behavior depends on which master node initiates the partition.
 
-### Validation Changes (Scale-Out HSR)
+### Primary Master Block-Network (Scale-Out HSR)
 
 ```pseudocode
-FUNCTION BlockNetworkTest_ScaleOut():
+FUNCTION PrimaryMasterBlockNetworkTest_ScaleOut():
     // ... same setup and iptables blocking ...
 
     // Outcome A: Primary site node survives
@@ -115,13 +123,36 @@ FUNCTION BlockNetworkTest_ScaleOut():
 END FUNCTION
 ```
 
+### Secondary Master Block-Network (Scale-Out HSR)
+
+```pseudocode
+FUNCTION SecondaryMasterBlockNetworkTest_ScaleOut():
+    // Inject the partition from the secondary master node
+    create_iptables_rules(primary_master_ip)
+
+    // Primary site should retain the primary role
+    WHILE timeout_not_reached DO
+        check_cluster_status()
+        IF new_primary IN old_primary_site_nodes AND
+           (new_secondary == "" OR new_secondary IN old_secondary_site_nodes) THEN
+            BREAK
+        WAIT 10_seconds
+    END WHILE
+
+    remove_iptables_rules(primary_master_ip)
+    validate_final_status(
+        expect_primary IN old_primary_site_nodes,
+        expect_secondary IN old_secondary_site_nodes
+    )
+END FUNCTION
+```
+
 | Check Point | Scale-Up | Scale-Out HSR |
 |------------|----------|---------------|
-| Primary survives (mid-test) | `primary == pre.primary` and `secondary == ""` | `primary IN pre.primary_site_nodes` and `secondary == ""` |
-| Primary survives (final) | `primary == pre.primary` and `secondary == pre.secondary` | `primary IN pre.primary_site_nodes` and `secondary IN pre.secondary_site_nodes` |
-| Secondary survives (mid-test) | `primary == pre.secondary` and `secondary == ""` | `primary IN pre.secondary_site_nodes` and `secondary == ""` |
-| Secondary survives (final) | `primary == pre.secondary` and `secondary == pre.primary` | `primary IN pre.secondary_site_nodes` and `primary != pre.primary_node` |
-| PASSED determination | Exact node swap or same nodes | Site membership: `(primary IN pre.secondary_site_nodes AND primary != pre.primary) OR (primary IN pre.primary_site_nodes AND secondary IN pre.secondary_site_nodes)` |
+| Primary-master partition: primary site survives | `primary == pre.primary` and `secondary == pre.secondary` | `primary IN pre.primary_site_nodes` and `secondary IN pre.secondary_site_nodes` |
+| Primary-master partition: failover outcome | `primary == pre.secondary` and `secondary == pre.primary` | `primary IN pre.secondary_site_nodes` and `primary != pre.primary_node` |
+| Secondary-master partition: mid-test | Not applicable | `primary IN pre.primary_site_nodes` and `(secondary == "" OR secondary IN pre.secondary_site_nodes)` |
+| Secondary-master partition: final | Not applicable | `primary IN pre.primary_site_nodes` and `secondary IN pre.secondary_site_nodes` |
 
 ## ASCS Block Network Test Case
 

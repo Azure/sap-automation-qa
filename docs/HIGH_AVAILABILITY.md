@@ -17,11 +17,6 @@ The framework supports the following HANA System Replication topologies for HA t
 | **Scale-Up** (default) | Classic two-node HSR with a single primary and secondary node. | `database_scale_out: false` |
 | **Scale-Out HSR** | Multi-node HSR with primary and secondary sites containing multiple worker nodes, plus a majority maker node for quorum. | `database_scale_out: true` |
 
-For scale-out HSR deployments, the framework automatically:
-- Discovers all worker nodes on each site (`primary_site_nodes`, `secondary_site_nodes`).
-- Identifies the majority maker node (required for quorum, does not run HANA).
-- Validates site membership during failover instead of exact node identity.
-- Runs additional pre-validation checks (site node counts, majority maker presence, master nameserver placement).
 
 See [DB High Availability Test Cases](./high_availability/DB_HIGH_AVAILABILITY.md) for detailed per-test topology documentation.
 

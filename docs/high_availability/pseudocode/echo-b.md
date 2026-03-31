@@ -90,6 +90,9 @@ When executed on secondary node, the test triggers immediate crash but maintains
 3. Secondary node reboots and auto-recovers
 4. Cluster returns to original state with same roles
 
+**Scale-Out Worker Echo B:**
+When executed on a non-master worker node, the test triggers an immediate crash on that worker only. The expected behavior is site-level stability: the primary master remains on the primary site, the secondary master remains on the secondary site, and the cluster returns to a healthy replicated state after the worker reboots.
+
 ## Scale-Out HSR Differences
 
 In a scale-out HSR topology, validation uses site membership checks instead of exact node matching.
@@ -144,12 +147,33 @@ FUNCTION SecondaryEchoBTest_ScaleOut():
 END FUNCTION
 ```
 
+### Worker Echo B (Scale-Out HSR)
+
+```pseudocode
+FUNCTION WorkerEchoBTest_ScaleOut(target_site):
+    // target_site is either primary or secondary
+    // ... same echo b on a non-master worker ...
+
+    validate_cluster_status(
+        expect_primary IN old_primary_site_nodes,
+        expect_secondary IN old_secondary_site_nodes
+    )
+
+    wait_for_cluster_stability()
+    validate_final_status(
+        expect_primary IN old_primary_site_nodes,
+        expect_secondary IN old_secondary_site_nodes
+    )
+END FUNCTION
+```
+
 | Check Point | Scale-Up | Scale-Out HSR |
 |------------|----------|---------------|
 | Primary echo-b (auto-register) | `new_primary == old_secondary` and `new_secondary == old_primary` | `new_primary IN old_secondary_site_nodes` and `new_primary != old_primary` and `new_secondary != ""` |
 | Primary echo-b (manual) | `new_primary == old_secondary` and `new_secondary == ""` | `new_primary IN old_secondary_site_nodes` and `new_secondary == ""` |
 | Secondary echo-b (mid) | `primary == old_primary` and `secondary == ""` | `primary IN old_primary_site_nodes` and `secondary == ""` |
 | Secondary echo-b (final) | `primary == old_primary` and `secondary == old_secondary` | `primary IN old_primary_site_nodes` and `secondary IN old_secondary_site_nodes` |
+| Worker echo-b (primary or secondary site) | Not applicable | `primary IN old_primary_site_nodes` and `secondary IN old_secondary_site_nodes` |
 
 ## Implementation Flow
 
