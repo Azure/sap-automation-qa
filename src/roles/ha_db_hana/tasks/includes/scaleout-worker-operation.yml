@@ -29,11 +29,11 @@
       ignore_errors:                    "{{ hana_test_action_ignore_errors | default(false) }}"
       register:                         action_result
       changed_when: >-
-                                        {{ hana_test_action_ignore_errors | default(false)
-                                           or action_result.rc == 0 }}
+                                        hana_test_action_ignore_errors | default(false)
+                                        or action_result.rc == 0
       failed_when: >-
-                                        {{ not (hana_test_action_ignore_errors | default(false))
-                                           and action_result.rc != 0 }}
+                                        not (hana_test_action_ignore_errors | default(false))
+                                        and action_result.rc != 0
 
     - name:                             "Test Execution: Validate worker operation cluster status"
       block:
@@ -63,11 +63,13 @@
                                         (
                                           (hana_test_target_site_label == "primary" and
                                            cluster_status_post.primary_node in cluster_status_pre.secondary_site_nodes and
-                                           cluster_status_post.secondary_node in cluster_status_pre.primary_site_nodes)
+                                           cluster_status_post.secondary_node in cluster_status_pre.primary_site_nodes and
+                                           hana_test_target_worker_node in cluster_status_post.secondary_site_nodes)
                                           or
                                           (hana_test_target_site_label == "secondary" and
                                            cluster_status_post.primary_node in cluster_status_pre.primary_site_nodes and
-                                           cluster_status_post.secondary_node in cluster_status_pre.secondary_site_nodes)
+                                           cluster_status_post.secondary_node in cluster_status_pre.secondary_site_nodes and
+                                           hana_test_target_worker_node in cluster_status_post.secondary_site_nodes)
                                         )
 
         - name:                         "Test Execution: Determine test execution status"
