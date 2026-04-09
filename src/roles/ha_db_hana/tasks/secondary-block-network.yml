@@ -127,7 +127,8 @@
       changed_when:                         firewall_rule_deleted.rc == 0
       failed_when:                          false
       ignore_unreachable:                   true
-      delegate_to:                          "{{ cluster_status_pre.secondary_node }}"
+      loop:                                 "{{ cluster_status_pre.secondary_site_nodes }}"
+      delegate_to:                          "{{ item }}"
 
     - name:                                 "Rescue operation"
       ansible.builtin.include_tasks:        "roles/misc/tasks/rescue.yml"
