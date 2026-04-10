@@ -444,7 +444,7 @@ sap_port_to_ping:                   "1128"
 # Default values for retries, delay, timeout
 default_retries:                    75
 default_delay:                      10
-default_timeout:                    60
+default_timeout:                    90
 ascs_stonith_timeout:               120
 
 # Default values for Azure Backup test cases
