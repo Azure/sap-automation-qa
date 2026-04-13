@@ -237,7 +237,7 @@ requests-oauthlib==2.0.0
     # via msrest
 resolvelib==1.0.1
     # via ansible-core
-rich==14.2.0
+rich==15.0.0
     # via -r requirements.in
 rpds-py==0.30.0
     # via
