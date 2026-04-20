@@ -10,6 +10,7 @@
 
 - name:                                 "Test Execution: Primary Worker Node Kill"
   ansible.builtin.include_tasks:        "roles/ha_db_hana/tasks/includes/scaleout-worker-operation.yml"
+  when:                                 saphanasr_provider | default('SAPHanaSR') == "SAPHanaSR-angi"
   vars:
     hana_test_target_site_label:        "primary"
     hana_test_target_worker_node:       "{{ primary_worker_nodes | first | default('') }}"

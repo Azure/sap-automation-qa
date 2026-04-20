@@ -35,7 +35,7 @@ author:
 notes:
     - This module requires access to the global.ini file in the SAP HANA installation path
     - The checks are specific to each operating system distribution
-    - For RedHat, it checks for ChkSrv provider configuration
+    - For RedHat, it checks for ChkSrv and susChkSrv provider configurations
     - For SUSE, it checks for susChkSrv provider configuration
 """
 
@@ -112,6 +112,12 @@ class IndexServerCheck(SapAutomationQA):
                         "path": "/hana/shared/myHooks",
                     }
                 },
+                {
+                    "[ha_dr_provider_suschksrv]": {
+                        "provider": "susChkSrv",
+                        "path": "/usr/share/SAPHanaSR-ScaleOut",
+                    }
+                },
             ],
             OperatingSystemFamily.SUSE: [
                 {
@@ -181,7 +187,7 @@ class IndexServerCheck(SapAutomationQA):
                     }
 
                     if all(
-                        extracted_properties.get(key) == value
+                        value in extracted_properties.get(key, "")
                         for key, value in os_props[section_title].items()
                     ):
                         self.result.update(
