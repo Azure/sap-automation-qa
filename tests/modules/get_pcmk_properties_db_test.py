@@ -355,6 +355,9 @@ DUMMY_CONSTANTS = {
         },
         "azure-fence-agent": {"priority": {"value": "10", "required": False}},
         "sbd": {"pcmk_delay_max": {"value": "30", "required": False}},
+        "scale_out_hsr": {
+            "migration-threshold": {"value": ["50"], "required": True},
+        },
     },
     "RSC_DEFAULTS": {
         "resource-stickiness": {"value": "1000", "required": False},
@@ -1234,3 +1237,13 @@ class TestHAClusterValidator:
         assert validator_scaleout.hana_topology == (HanaTopology.SCALE_OUT_HSR)
         defaults = validator_scaleout.constants["GLOBAL_INI"].get(validator_scaleout.os_type, {})
         assert "SAPHanaController" in defaults
+
+    def test_scaleout_migration_threshold_expected_value(self, validator_scaleout):
+        """
+        Test that scale-out HSR resolves migration-threshold to 50 via topology key.
+        """
+        result = validator_scaleout._get_expected_value("rsc_defaults", "migration-threshold")
+        assert result is not None
+        expected_value, is_required = result
+        assert expected_value == ["50"]
+        assert is_required is True
