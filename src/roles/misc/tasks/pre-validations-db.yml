@@ -182,3 +182,12 @@
                                     - cluster_status_pre.pacemaker_status | default('') == "running"
       ansible.builtin.set_fact:
         pre_validations_status:     "PASSED"
+
+  rescue:
+    - name:                         "Pre Validation: Set pre Validation status to FAILED on error"
+      ansible.builtin.set_fact:
+        pre_validations_status:     "FAILED"
+
+    - name:                         "Pre Validation: Log failure details"
+      ansible.builtin.debug:
+        msg:                        "Pre-validation failed. The test case will be skipped."
