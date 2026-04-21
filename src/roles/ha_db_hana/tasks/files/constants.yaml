@@ -114,7 +114,7 @@ VALID_CONFIGS:
     stonith-timeout:
       value:                        ["210", "210s"]
       required:                     true
-  angi_scale_out_hsr:
+  scale_out_hsr:
     migration-threshold:
       value:                        ["50"]
       required:                     true

@@ -100,8 +100,9 @@ class BaseHAClusterValidator(SapAutomationQA, ABC):
         provider_topology_key = (
             f"{provider.name.lower()}_{topology.value}" if provider and topology else None
         )
+        topology_key = topology.value if topology else None
 
-        lookup_keys = [self.fencing_mechanism, provider_topology_key, self.os_type]
+        lookup_keys = [self.fencing_mechanism, provider_topology_key, topology_key, self.os_type]
 
         for key in lookup_keys:
             if not key:
@@ -157,7 +158,8 @@ class BaseHAClusterValidator(SapAutomationQA, ABC):
         provider_topology_key = (
             f"{provider.name.lower()}_{topology.value}" if provider and topology else None
         )
-        for key in [self.fencing_mechanism, provider_topology_key, self.os_type]:
+        topology_key = topology.value if topology else None
+        for key in [self.fencing_mechanism, provider_topology_key, topology_key, self.os_type]:
             if not key:
                 continue
             override = self.constants["VALID_CONFIGS"].get(key, {}).get(param_name, {})
