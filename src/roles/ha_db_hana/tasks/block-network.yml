@@ -7,12 +7,14 @@
 - name:                                     "Test Setup Tasks"
   ansible.builtin.include_tasks:            "roles/misc/tasks/test-case-setup.yml"
   run_once:                                 true
+  tags:                                     [pre-validation]
 
 # /*---------------------------------------------------------------------------
 # |                          Pre Validations                                  |
 # +--------------------------------------------------------------------------*/
 - name:                                     "Pre Validations: HANA DB Nodes"
   ansible.builtin.include_tasks:            "roles/misc/tasks/pre-validations-db.yml"
+  tags:                                     [pre-validation]
 
 # /*---------------------------------------------------------------------------
 # |                          Test Execution                                   |
@@ -29,6 +31,7 @@
                                                 cluster_status_pre.PRIORITY_FENCING_DELAY != "" and
                                                 cluster_status_pre.PRIORITY_FENCING_DELAY != "unknown"
                                               )
+  tags:                                     [test-execution]
   block:
     - name:                                 "Test Execution: Start timer"
       when:                                 ansible_hostname == cluster_status_pre.primary_node
@@ -51,6 +54,7 @@
 
     - name:                                 "Test Execution: Switch to secondary node"
       when:                                 ansible_hostname == cluster_status_pre.secondary_node
+      tags:                                 [test-execution]
       block:
         - name:                             "Test Execution: Wait for the cluster to be in a stable state"
           ansible.builtin.wait_for:
@@ -111,6 +115,7 @@
 
     - name:                                 "Test Execution: Switch back to primary node"
       when:                                 ansible_hostname == cluster_status_pre.primary_node
+      tags:                                 [test-execution]
       block:
         - name:                             "Test Execution: Stop timer"
           ansible.builtin.set_fact:
@@ -155,6 +160,7 @@
       # +--------------------------------------------------------------------------*/
     - name:                                 "Post Validations Tasks"
       ansible.builtin.include_tasks:        "roles/misc/tasks/post-validations.yml"
+      tags:                                 [post-validation]
 
   rescue:
     - name:                                 "Test Execution Failure: Reset iptables policies on primary site nodes"
@@ -173,10 +179,12 @@
 
     - name:                                 "Rescue operation"
       ansible.builtin.include_tasks:        "roles/misc/tasks/rescue.yml"
+      tags:                                 [cleanup]
 
 - name:                                     "Test Execution: Block Network Communication"
   become:                                   true
   when:                                     pre_validations_status == "FAILED"
+  tags:                                     [test-execution]
   block:
     - name:                                 "Set test case message and details"
       ansible.builtin.set_fact:
@@ -191,3 +199,4 @@
 
     - name:                                 "Post Validations Tasks"
       ansible.builtin.include_tasks:        "roles/misc/tasks/post-validations.yml"
+      tags:                                 [post-validation]

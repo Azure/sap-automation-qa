@@ -11,6 +11,7 @@
 
 - name:                                 "Test Setup Tasks for {{ current_hostname }}"
   ansible.builtin.include_tasks:        "roles/misc/tasks/test-case-setup.yml"
+  tags:                                 [pre-validation]
 
 - name:                                 "Read CIB content for {{ current_hostname }}"
   ansible.builtin.slurp:
@@ -70,6 +71,7 @@
 
     - name:                             "Post Telemetry Data for {{ current_hostname }}"
       ansible.builtin.include_tasks:    "roles/misc/tasks/post-telemetry-data.yml"
+      tags:                             [telemetry]
 
   rescue:
     - name:                             "Test case failed for {{ current_hostname }}"
@@ -83,3 +85,4 @@
 
     - name:                             "Post Telemetry Data for failed {{ current_hostname }}"
       ansible.builtin.include_tasks:    "roles/misc/tasks/post-telemetry-data.yml"
+      tags:                             [telemetry]

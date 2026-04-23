@@ -8,12 +8,14 @@
 - name:                                 "Test Setup Tasks"
   ansible.builtin.include_tasks:        "roles/misc/tasks/test-case-setup.yml"
   run_once:                             true
+  tags:                                 [pre-validation]
 
 # /*---------------------------------------------------------------------------
 # |                          Pre Validations                                  |
 # +--------------------------------------------------------------------------*/
 - name:                                 "Pre Validations: SCS Nodes"
   ansible.builtin.include_tasks:        "roles/misc/tasks/pre-validations-scs.yml"
+  tags:                                 [pre-validation]
 
 # /*---------------------------------------------------------------------------
 # |                          Test Execution                                   |
@@ -21,10 +23,12 @@
 - name:                                 "Test Execution: Block Network Communication"
   become:                               true
   when:                                 pre_validations_status == "PASSED"
+  tags:                                 [test-execution]
   block:
     - name:                             "Test Execution: Block Network on ASCS Node"
       when:                             ansible_hostname == cluster_status_pre.ascs_node
       become:                           true
+      tags:                             [test-execution]
       block:
         - name:                         "Test Execution: Start timer"
           ansible.builtin.set_fact:
@@ -38,9 +42,15 @@
 
         - name:                         "Test Execution: Block network communication"
           ansible.builtin.shell: |
-                                        iptables -A INPUT -s {{ ers_ip }} -j DROP;
-                                        iptables -A OUTPUT -d {{ ers_ip }} -j DROP
+                                        set -o pipefail
+                                        iptables -C INPUT -s {{ ers_ip }} -j DROP 2>/dev/null || \
+                                          iptables -A INPUT -s {{ ers_ip }} -j DROP
+                                        iptables -C OUTPUT -d {{ ers_ip }} -j DROP 2>/dev/null || \
+                                          iptables -A OUTPUT -d {{ ers_ip }} -j DROP
+          args:
+            executable:                 /bin/bash
           register:                     block_network_result
+          changed_when:                 true
 
         - name:                         "Test Execution: Wait for the cluster to be in a stable state"
           ansible.builtin.wait_for:
@@ -48,6 +58,7 @@
 
 
     - name:                             "Test Execution: Check node status on primary and secondary"
+      tags:                             [test-execution]
       block:
         - name:                         "Test Execution: Check node connectivity from controller"
           delegate_to:                  localhost
@@ -60,7 +71,7 @@
                                           sleep 1
                                         done
           register:                     node_status
-          ignore_errors:                true
+          failed_when:                  false
 
         - name:                         "Set Node Status Facts"
           ansible.builtin.set_fact:
@@ -83,6 +94,7 @@
                                         - ansible_hostname == cluster_status_pre.ers_node
                                         - ascs_node_down and not ers_node_down
       become:                           true
+      tags:                             [test-execution]
       block:
         - name:                         "Test Execution: Validate SCS cluster status"
           get_cluster_status_scs:
@@ -99,6 +111,7 @@
                                         - ansible_hostname == cluster_status_pre.ascs_node
                                         - not ascs_node_down and ers_node_down
       become:                           true
+      tags:                             [test-execution]
       block:
         - name:                         "Test Execution: Restore network communication"
           ansible.builtin.shell: |
@@ -109,6 +122,7 @@
     - name:                             "Test Execution: Restore Network on ASCS Node"
       when:                             ansible_hostname == cluster_status_pre.ascs_node
       become:                           true
+      tags:                             [test-execution]
       block:
         - name:                         "Test Execution: Wait for the cluster to be in a stable state"
           ansible.builtin.wait_for:
@@ -160,10 +174,12 @@
 # +--------------------------------------------------------------------------*/
     - name:                             "Post Validations Tasks"
       ansible.builtin.include_tasks:    "roles/misc/tasks/post-validations.yml"
+      tags:                             [post-validation]
 
   rescue:
     - name:                             "Rescue operation"
       ansible.builtin.include_tasks:    "roles/misc/tasks/rescue.yml"
+      tags:                             [cleanup]
 
 - name:                                 "Pre Validations: Test Case Skipped"
   become:                               true
@@ -178,3 +194,4 @@
 
     - name:                             "Post Validations Tasks"
       ansible.builtin.include_tasks:    "roles/misc/tasks/post-validations.yml"
+      tags:                             [post-validation]

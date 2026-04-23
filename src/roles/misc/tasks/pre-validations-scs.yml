@@ -17,7 +17,6 @@
     - name:                         "Pre Validation: CleanUp any failed resource"
       become:                       true
       ansible.builtin.command:      crm_resource --cleanup
-      ignore_errors:                true
       register:                     cleanup_failed_resource_pre
       timeout:                      "{{ default_timeout }}"
       retries:                      3

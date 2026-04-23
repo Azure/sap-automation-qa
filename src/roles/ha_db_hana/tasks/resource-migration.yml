@@ -7,12 +7,14 @@
 - name:                                 "Test Setup Tasks"
   ansible.builtin.include_tasks:        "roles/misc/tasks/test-case-setup.yml"
   run_once:                             true
+  tags:                                 [pre-validation]
 
 # /*---------------------------------------------------------------------------
 # |                          Pre Validations                                  |
 # +--------------------------------------------------------------------------*/
 - name:                                 "Pre Validations: HANA DB Nodes"
   ansible.builtin.include_tasks:        "roles/misc/tasks/pre-validations-db.yml"
+  tags:                                 [pre-validation]
 
 # /*---------------------------------------------------------------------------
 # |                          Test Execution                                   |
@@ -20,11 +22,13 @@
 - name:                                 "Test Execution: Manual resource migration"
   become:                               true
   when:                                 node_tier == "hana"
+  tags:                                 [test-execution]
   block:
     - name:                             "Test Execution: Manual resource migration init"
       when:
                                         - pre_validations_status == "PASSED"
                                         - ansible_hostname == cluster_status_pre.primary_node
+      tags:                             [test-execution]
       block:
         - name:                         "Test Execution: Start timer"
           ansible.builtin.set_fact:
@@ -33,6 +37,7 @@
 
         - name:                         "Test Execution: Get HANA resource id for saphanasr_angi"
           when:                         saphanasr_provider | default('SAPHanaSR') in ["SAPHanaSR-angi", "SAPHanaSR-ScaleOut"]
+          tags:                         [test-execution]
           block:
             - name:                     "Test Execution: Get HANA resource id for saphanasr_angi"
               ansible.builtin.shell: >-
@@ -53,6 +58,7 @@
 
         - name:                         "Test Execution: Get HANA resource id"
           when:                         saphanasr_provider | default('SAPHanaSR') == "SAPHanaSR"
+          tags:                         [test-execution]
           block:
             - name:                     "Try master resource ID"
               ansible.builtin.shell: >-
@@ -121,6 +127,7 @@
 
         - name:                         "Test Execution: Register Failed Resource when automated_register is false"
           when:                         cluster_status_pre.AUTOMATED_REGISTER == "false"
+          tags:                         [test-execution]
           block:
             - name:                     "Test Execution: Set facts for the failed resource"
               ansible.builtin.set_fact:
@@ -208,10 +215,12 @@
 # +--------------------------------------------------------------------------*/
     - name:                             "Post Validations Tasks"
       ansible.builtin.include_tasks:    "roles/misc/tasks/post-validations.yml"
+      tags:                             [post-validation]
 
   rescue:
     - name:                             "Rescue operation"
       ansible.builtin.include_tasks:    "roles/misc/tasks/rescue.yml"
+      tags:                             [cleanup]
 
 - name:                                 "Pre Validations: Test Case Skipped"
   become:                               true
@@ -229,3 +238,4 @@
 
     - name:                             "Post Validations Tasks"
       ansible.builtin.include_tasks:    "roles/misc/tasks/post-validations.yml"
+      tags:                             [post-validation]

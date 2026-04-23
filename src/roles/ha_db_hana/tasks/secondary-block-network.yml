@@ -7,12 +7,14 @@
 - name:                                     "Test Setup Tasks"
   ansible.builtin.include_tasks:            "roles/misc/tasks/test-case-setup.yml"
   run_once:                                 true
+  tags:                                     [pre-validation]
 
 # /*---------------------------------------------------------------------------
 # |                          Pre Validations                                  |
 # +--------------------------------------------------------------------------*/
 - name:                                     "Pre Validations: HANA DB Nodes"
   ansible.builtin.include_tasks:            "roles/misc/tasks/pre-validations-db.yml"
+  tags:                                     [pre-validation]
 
 # /*---------------------------------------------------------------------------
 # |                          Test Execution                                   |
@@ -25,6 +27,7 @@
                                             - hana_topology == 'scale_out_hsr'
                                             - cluster_status_pre.stonith_action == "reboot"
                                             - ansible_hostname == primary_master_node
+  tags:                                     [test-execution]
   block:
     - name:                                 "Test Execution: Start timer on primary master"
       ansible.builtin.set_fact:
@@ -118,6 +121,7 @@
       # +--------------------------------------------------------------------------*/
     - name:                                 "Post Validations Tasks"
       ansible.builtin.include_tasks:        "roles/misc/tasks/post-validations.yml"
+      tags:                                 [post-validation]
 
   rescue:
     - name:                                 "Test Execution Failure: Reset iptables policies on secondary site nodes"
@@ -132,6 +136,7 @@
 
     - name:                                 "Rescue operation"
       ansible.builtin.include_tasks:        "roles/misc/tasks/rescue.yml"
+      tags:                                 [cleanup]
 
 - name:                                     "Pre Validations: Test Case Skipped"
   become:                                   true
@@ -153,3 +158,4 @@
 
     - name:                                 "Post Validations Tasks"
       ansible.builtin.include_tasks:        "roles/misc/tasks/post-validations.yml"
+      tags:                                 [post-validation]

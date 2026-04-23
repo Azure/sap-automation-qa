@@ -8,12 +8,14 @@
 - name:                                 "Test Setup Tasks"
   ansible.builtin.include_tasks:        "roles/misc/tasks/test-case-setup.yml"
   run_once:                             true
+  tags:                                 [pre-validation]
 
 # /*---------------------------------------------------------------------------
 # |                          Pre Validations                                  |
 # +--------------------------------------------------------------------------*/
 - name:                                 "Pre Validations: HANA DB Nodes"
   ansible.builtin.include_tasks:        "roles/misc/tasks/pre-validations-db.yml"
+  tags:                                 [pre-validation]
 
 # /*---------------------------------------------------------------------------
 # |                          Test Execution                                   |
@@ -23,6 +25,7 @@
   when:
                                         - node_tier == "hana"
                                         - pre_validations_status == "PASSED"
+  tags:                                 [test-execution]
   block:
     - name:                             "Test Execution: Get /hana/shared NFS server IP"
       ansible.builtin.shell: >-
@@ -41,6 +44,7 @@
 
     - name:                             "Test Execution: Block /hana/shared on primary master nameserver"
       when:                             ansible_hostname == cluster_status_pre.primary_node
+      tags:                             [test-execution]
       block:
         - name:                         "Test Execution: Start timer"
           ansible.builtin.set_fact:
@@ -66,6 +70,7 @@
                                           if hana_topology | default('scale_up') == 'scale_out_hsr'
                                           else cluster_status_pre.secondary_node
                                         )
+      tags:                             [test-execution]
       block:
         - name:                         "Test Execution: Validate HANA DB cluster status (failover)"
           get_cluster_status_db:
@@ -87,6 +92,7 @@
       when:
                                         - ansible_hostname == cluster_status_pre.primary_node
                                         - cluster_status_pre.AUTOMATED_REGISTER == "false"
+      tags:                             [test-execution]
       block:
         - name:                         "Test Execution: Register Failed Resource"
           become:                       true
@@ -118,6 +124,7 @@
 
     - name:                             "Test Execution: Cleanup and verify recovery"
       when:                             ansible_hostname == cluster_status_pre.secondary_node
+      tags:                             [test-execution]
       block:
         - name:                         "Test Execution: Validate HANA DB cluster status (post recovery)"
           get_cluster_status_db:
@@ -207,6 +214,7 @@
 
     - name:                             "Post Validations Tasks"
       ansible.builtin.include_tasks:    "roles/misc/tasks/post-validations.yml"
+      tags:                             [post-validation]
 
   rescue:
     - name:                             "Rescue: Remove iptables rule blocking /hana/shared NFS"
@@ -216,7 +224,7 @@
                                         iptables -D INPUT  -s {{ hana_shared_nfs_ip }} -j DROP 2>/dev/null;
                                         true
       register:                         rescue_firewall_cleanup
-      changed_when:                     true
+      changed_when:                     false
       failed_when:                      false
       ignore_unreachable:               true
       when:                             ansible_hostname == cluster_status_pre.primary_node and
@@ -234,6 +242,7 @@
 
     - name:                             "Rescue operation"
       ansible.builtin.include_tasks:    "roles/misc/tasks/rescue.yml"
+      tags:                             [cleanup]
 
 - name:                                 "Pre Validations: Test Case Skipped"
   become:                               true
@@ -253,3 +262,4 @@
 
     - name:                             "Post Validations Tasks"
       ansible.builtin.include_tasks:    "roles/misc/tasks/post-validations.yml"
+      tags:                             [post-validation]

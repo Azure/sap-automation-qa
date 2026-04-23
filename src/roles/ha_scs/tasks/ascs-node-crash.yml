@@ -8,12 +8,14 @@
 - name:                                 "Test Setup Tasks"
   ansible.builtin.include_tasks:        "roles/misc/tasks/test-case-setup.yml"
   run_once:                             true
+  tags:                                 [pre-validation]
 
 # /*---------------------------------------------------------------------------
 # |                          Pre Validations                                  |
 # +--------------------------------------------------------------------------*/
 - name:                                 "Pre Validations: SCS Nodes"
   ansible.builtin.include_tasks:        "roles/misc/tasks/pre-validations-scs.yml"
+  tags:                                 [pre-validation]
 
 # /*---------------------------------------------------------------------------
 # |                          Test Execution                                   |
@@ -21,10 +23,12 @@
 - name:                                 "Test Execution: ASCS Node Crash"
   become:                               true
   when:                                 pre_validations_status == "PASSED"
+  tags:                                 [test-execution]
   block:
     - name:                             "Test Execution: Simulate ASCS Node Crash"
       when:                             ansible_hostname == cluster_status_pre.ascs_node
       become:                           true
+      tags:                             [test-execution]
       block:
         - name:                         "Test Execution: Check for ENSA version"
           ansible.builtin.shell:        pgrep -f 'enq.sap{{ sap_sid | upper }}'
@@ -45,6 +49,7 @@
     - name:                             "Test Execution: Simulate ASCS Node Crash"
       when:                             ansible_hostname == cluster_status_pre.ers_node
       become:                           true
+      tags:                             [test-execution]
       block:
         - name:                         "Test Execution: Validate ASCS node has stopped"
           get_cluster_status_scs:
@@ -81,6 +86,7 @@
     - name:                             "Test Execution: Simulate ASCS Node Crash"
       when:                             ansible_hostname == cluster_status_pre.ascs_node
       become:                           true
+      tags:                             [test-execution]
       block:
         - name:                         "Test Execution: Cleanup resources"
           ansible.builtin.command:      crm_resource --cleanup
@@ -119,10 +125,12 @@
 # +--------------------------------------------------------------------------*/
     - name:                             "Post Validations Tasks"
       ansible.builtin.include_tasks:    "roles/misc/tasks/post-validations.yml"
+      tags:                             [post-validation]
 
   rescue:
     - name:                             "Rescue operation"
       ansible.builtin.include_tasks:    "roles/misc/tasks/rescue.yml"
+      tags:                             [cleanup]
 
 - name:                                 "Pre Validations: Test Case Skipped"
   become:                               true
@@ -137,3 +145,4 @@
 
     - name:                             "Post Validations Tasks"
       ansible.builtin.include_tasks:    "roles/misc/tasks/post-validations.yml"
+      tags:                             [post-validation]

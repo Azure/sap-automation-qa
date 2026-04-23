@@ -7,12 +7,14 @@
 - name:                                 "Test Setup Tasks"
   ansible.builtin.include_tasks:        "roles/misc/tasks/test-case-setup.yml"
   run_once:                             true
+  tags:                                 [pre-validation]
 
 # /*---------------------------------------------------------------------------
 # |                          Pre Validations                                  |
 # +--------------------------------------------------------------------------*/
 - name:                                 "Pre Validations: HANA DB Nodes"
   ansible.builtin.include_tasks:        "roles/misc/tasks/pre-validations-db.yml"
+  tags:                                 [pre-validation]
 
 - name:                                 "Pre Validations: Check if indexserver process is enabled"
   become:                               true
@@ -30,9 +32,11 @@
                                         - pre_validations_status == "PASSED"
                                         - cluster_status_pre.stonith_action == "reboot"
                                         - index_server_check.indexserver_enabled == "yes"
+  tags:                                 [test-execution]
   block:
     - name:                             "Test Execution: Crash Index Server init"
       when:                             ansible_hostname == cluster_status_pre.primary_node
+      tags:                             [test-execution]
       block:
         - name:                         "Test Execution: Start timer"
           ansible.builtin.set_fact:
@@ -41,6 +45,7 @@
 
     - name:                             "Test Execution: Validate HANA DB cluster status"
       when:                             ansible_hostname == cluster_status_pre.secondary_node
+      tags:                             [test-execution]
       block:
         - name:                         "Test Execution: Crash the index server on secondary node"
           ansible.builtin.command:      "killall -9 hdbindexserver"
@@ -50,6 +55,7 @@
 
     - name:                             "Test Execution: Crash the index server cont"
       when:                             ansible_hostname == cluster_status_pre.primary_node
+      tags:                             [test-execution]
       block:
         - name:                         "Test Execution: Validate HANA DB cluster status"
           get_cluster_status_db:
@@ -143,10 +149,12 @@
     # +--------------------------------------------------------------------------*/
     - name:                             "Post Validations Tasks"
       ansible.builtin.include_tasks:    "roles/misc/tasks/post-validations.yml"
+      tags:                             [post-validation]
 
   rescue:
     - name:                             "Rescue operation"
       ansible.builtin.include_tasks:    "roles/misc/tasks/rescue.yml"
+      tags:                             [cleanup]
 
 - name:                                 "Pre Validations: Test Case Skipped"
   become:                               true
@@ -164,3 +172,4 @@
 
     - name:                             "Post Validations Tasks"
       ansible.builtin.include_tasks:    "roles/misc/tasks/post-validations.yml"
+      tags:                             [post-validation]

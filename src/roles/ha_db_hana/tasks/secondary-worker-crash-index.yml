@@ -4,9 +4,11 @@
 - name:                                 "Test Setup Tasks"
   ansible.builtin.include_tasks:        "roles/misc/tasks/test-case-setup.yml"
   run_once:                             true
+  tags:                                 [pre-validation]
 
 - name:                                 "Pre Validations: HANA DB Nodes"
   ansible.builtin.include_tasks:        "roles/misc/tasks/pre-validations-db.yml"
+  tags:                                 [pre-validation]
 
 - name:                                 "Pre Validations: Check if indexserver process is enabled"
   become:                               true
@@ -17,6 +19,7 @@
 - name:                                 "Test Execution: Secondary Worker Crash Index"
   when:                                 index_server_check.indexserver_enabled == "yes"
   ansible.builtin.include_tasks:        "roles/ha_db_hana/tasks/includes/scaleout-worker-operation.yml"
+  tags:                                 [test-execution]
   vars:
     hana_test_target_site_label:        "secondary"
     hana_test_target_worker_node:       "{{ secondary_worker_nodes | first | default('') }}"

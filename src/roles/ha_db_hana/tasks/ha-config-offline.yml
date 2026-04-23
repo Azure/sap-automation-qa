@@ -40,6 +40,7 @@
 
 - name:                                 "Process HA Configuration for each DB host"
   ansible.builtin.include_tasks:        "./roles/misc/tasks/offline-validation.yml"
+  tags:                                 [pre-validation]
   loop:                                 "{{ db_cib_files | default([]) }}"
   loop_control:
     loop_var:                           offline_validation_host

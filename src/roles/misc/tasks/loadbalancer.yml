@@ -9,6 +9,7 @@
   block:
     - name:                             "Test Setup Tasks"
       ansible.builtin.include_tasks:    "roles/misc/tasks/test-case-setup.yml"
+      tags:                             [pre-validation]
 
     - name:                             "Pre Validations: Validate the Azure Load Balancer config"
       become:                           true
@@ -58,3 +59,4 @@
 
     - name:                             "Post Telemetry Data"
       ansible.builtin.include_tasks:    "roles/misc/tasks/post-telemetry-data.yml"
+      tags:                             [telemetry]

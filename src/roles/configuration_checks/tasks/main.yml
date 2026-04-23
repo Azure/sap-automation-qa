@@ -17,7 +17,7 @@
   retries:                          3
   delay:                           2
   until:                           compute_metadata is not failed
-  ignore_errors:                   true
+  failed_when:                     false
 
 - name:                             "{{ check_type.name }} - Handle IMDS failure gracefully"
   ansible.builtin.set_fact:

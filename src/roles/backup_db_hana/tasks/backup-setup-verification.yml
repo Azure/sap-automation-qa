@@ -8,6 +8,7 @@
 - name:                                 "Test Setup Tasks"
   ansible.builtin.include_tasks:        "roles/misc/tasks/test-case-setup.yml"
   run_once:                             true
+  tags:                                 [pre-validation]
 
 - name:                                 "Load backup parameter definitions"
   ansible.builtin.include_vars:
@@ -24,6 +25,7 @@
   block:
     - name:                             "HA Setup: Run DB pre-validations to get cluster status"
       ansible.builtin.include_tasks:    "roles/misc/tasks/pre-validations-db.yml"
+      tags:                             [pre-validation]
 
     - name:                             "HA Setup: Resolve primary node VM name"
       ansible.builtin.set_fact:
@@ -116,9 +118,11 @@
 
     - name:                             "Post Validations Tasks"
       ansible.builtin.include_tasks:    "roles/backup_db_hana/tasks/post-validations-backup.yml"
+      tags:                             [post-validation]
       run_once:                         true
 
   rescue:
     - name:                             "Rescue operation"
       ansible.builtin.include_tasks:    "roles/backup_db_hana/tasks/rescue-backup.yml"
+      tags:                             [cleanup]
       run_once:                         true

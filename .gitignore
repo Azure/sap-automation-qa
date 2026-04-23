@@ -418,3 +418,13 @@ data/
 
 # Environment configuration (may contain secrets)
 deploy/.env
+# Squad: ignore runtime state (logs, inbox, sessions)
+.squad/*
+# Squad: SubSquad activation file (local to this machine)
+.squad-workstream
+
+.copilot/*
+.github/agents/*
+.github/workflows/squad*
+.github/workflows/sync*
+

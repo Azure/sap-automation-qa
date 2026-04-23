@@ -7,3 +7,4 @@
 
 - name:                             Include Load Balancer tasks
   ansible.builtin.include_tasks:    "roles/misc/tasks/loadbalancer.yml"
+  tags:                             [pre-validation]

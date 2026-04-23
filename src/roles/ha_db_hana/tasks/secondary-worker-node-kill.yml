@@ -4,12 +4,15 @@
 - name:                                 "Test Setup Tasks"
   ansible.builtin.include_tasks:        "roles/misc/tasks/test-case-setup.yml"
   run_once:                             true
+  tags:                                 [pre-validation]
 
 - name:                                 "Pre Validations: HANA DB Nodes"
   ansible.builtin.include_tasks:        "roles/misc/tasks/pre-validations-db.yml"
+  tags:                                 [pre-validation]
 
 - name:                                 "Test Execution: Secondary Worker Node Kill"
   ansible.builtin.include_tasks:        "roles/ha_db_hana/tasks/includes/scaleout-worker-operation.yml"
+  tags:                                 [test-execution]
   when:                                 saphanasr_provider | default('SAPHanaSR') == "SAPHanaSR-angi"
   vars:
     hana_test_target_site_label:        "secondary"

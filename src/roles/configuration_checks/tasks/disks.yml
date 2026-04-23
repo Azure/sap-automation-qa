@@ -18,7 +18,7 @@
       register:                         disks_metadata
       retries:                          3
       delay:                            2
-      ignore_errors:                    true
+      failed_when:                      false
 
     - name:                             Collect mount information
       ansible.builtin.shell:

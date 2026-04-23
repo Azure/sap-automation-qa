@@ -192,6 +192,7 @@
 
 - name:                                 "Post Telemetry Data"
   ansible.builtin.include_tasks:        "roles/misc/tasks/post-telemetry-data.yml"
+  tags:                                 [telemetry]
   run_once:                             true
 
 - name:                                 "Clear the failed state of hosts for next test case"

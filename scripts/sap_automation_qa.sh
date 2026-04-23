@@ -57,6 +57,7 @@ export ANSIBLE_COLLECTIONS_PATH=/opt/ansible/collections:${ANSIBLE_COLLECTIONS_P
 export ANSIBLE_CONFIG="${cmd_dir}/../src/ansible.cfg"
 export ANSIBLE_MODULE_UTILS="${cmd_dir}/../src/module_utils:${ANSIBLE_MODULE_UTILS:+${ANSIBLE_MODULE_UTILS}}"
 export ANSIBLE_HOST_KEY_CHECKING=False
+log "INFO" "ANSIBLE_HOST_KEY_CHECKING: $ANSIBLE_HOST_KEY_CHECKING"
 set_output_context
 
 # Global variable to store the path of the temporary file.
@@ -118,8 +119,11 @@ validate_params() {
     fi
 
     for param in "${params[@]}"; do
-        # Use grep to find the line and awk to split the line and get the value
-        value=$(grep "^$param:" "$VARS_FILE" | awk '{split($0,a,": "); print a[2]}' | xargs)
+        if grep -q "^$param:" "$VARS_FILE"; then
+            value=$(grep "^$param:" "$VARS_FILE" | awk '{split($0,a,": "); print a[2]}' | xargs)
+        else
+            value=""
+        fi
 
         if [[ -z "$value" ]]; then
             missing_params+=("$param")
@@ -134,7 +138,11 @@ validate_params() {
         exit 1
     fi
 
-    WORKSPACES_DIR=$(grep "^WORKSPACES_DIR:" "$VARS_FILE" | awk '{split($0,a,": "); print a[2]}' | xargs)
+    if grep -q "^WORKSPACES_DIR:" "$VARS_FILE"; then
+        WORKSPACES_DIR=$(grep "^WORKSPACES_DIR:" "$VARS_FILE" | awk '{split($0,a,": "); print a[2]}' | xargs)
+    else
+        WORKSPACES_DIR=""
+    fi
     if [[ -z "$WORKSPACES_DIR" ]]; then
         WORKSPACES_DIR="WORKSPACES"
         log "INFO" "WORKSPACES_DIR not set in vars.yaml, using default: $WORKSPACES_DIR"

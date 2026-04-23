@@ -7,12 +7,14 @@
 - name:                                 "Test Setup Tasks"
   ansible.builtin.include_tasks:        "roles/misc/tasks/test-case-setup.yml"
   run_once:                             true
+  tags:                                 [pre-validation]
 
 # /*---------------------------------------------------------------------------
 # |                          Pre Validations                                  |
 # +--------------------------------------------------------------------------*/
 - name:                                 "Pre Validations: HANA DB Nodes"
   ansible.builtin.include_tasks:        "roles/misc/tasks/pre-validations-db.yml"
+  tags:                                 [pre-validation]
 
 # /*---------------------------------------------------------------------------
 # |                          Test Execution                                   |
@@ -20,11 +22,13 @@
 - name:                                 "Test Execution: Primary Node Crash"
   become:                               true
   when:                                 node_tier == "hana"
+  tags:                                 [test-execution]
   block:
     - name:                             "Test Execution: Crash the primary node."
       when:
                                         - pre_validations_status == "PASSED"
                                         - ansible_hostname == cluster_status_pre.primary_node
+      tags:                             [test-execution]
       block:
         - name:                         "Test Execution: Start timer"
           ansible.builtin.set_fact:
@@ -36,7 +40,7 @@
           become_user:                  "{{ db_sid | lower }}adm"
           ansible.builtin.command:      /usr/sap/{{ db_sid | upper }}/HDB{{ db_instance_number }}/HDB stop
           register:                     hana_db_stop_results
-          changed_when:                 hana_db_stop_results == 0
+          changed_when:                 hana_db_stop_results.rc == 0
           failed_when:                  hana_db_stop_results.rc != 0
 
         - name:                         "Test Execution: Validate HANA DB cluster status 1"
@@ -58,6 +62,7 @@
 
         - name:                         "Test Execution: Register Failed Resource when automated_register is false"
           when:                         cluster_status_pre.AUTOMATED_REGISTER == "false"
+          tags:                         [test-execution]
           block:
             - name:                     "Test Execution: Set facts for the failed resource"
               ansible.builtin.set_fact:
@@ -136,10 +141,12 @@
 # +--------------------------------------------------------------------------*/
     - name:                             "Post Validations Tasks"
       ansible.builtin.include_tasks:    "roles/misc/tasks/post-validations.yml"
+      tags:                             [post-validation]
 
   rescue:
     - name:                             "Rescue operation"
       ansible.builtin.include_tasks:    "roles/misc/tasks/rescue.yml"
+      tags:                             [cleanup]
 
 - name:                                 "Pre Validations: Test Case Skipped"
   become:                               true
@@ -157,3 +164,4 @@
 
     - name:                             "Post Validations Tasks"
       ansible.builtin.include_tasks:    "roles/misc/tasks/post-validations.yml"
+      tags:                             [post-validation]

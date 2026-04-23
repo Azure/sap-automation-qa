@@ -8,12 +8,14 @@
 - name:                                 "Test Setup Tasks"
   ansible.builtin.include_tasks:        "roles/misc/tasks/test-case-setup.yml"
   run_once:                             true
+  tags:                                 [pre-validation]
 
 # /*---------------------------------------------------------------------------
 # |                          Pre Validations                                  |
 # +--------------------------------------------------------------------------*/
 - name:                                 "Pre Validations: SCS Nodes"
   ansible.builtin.include_tasks:        "roles/misc/tasks/pre-validations-scs.yml"
+  tags:                                 [pre-validation]
 
 # /*---------------------------------------------------------------------------
 # |                          Test Execution                                   |
@@ -21,6 +23,7 @@
 - name:                                 "Test Execution: Manual ASCS Migration"
   become:                               true
   when:                                 pre_validations_status == "PASSED"
+  tags:                                 [test-execution]
   block:
     - name:                             "Test Execution: Start timer"
       ansible.builtin.set_fact:
@@ -30,6 +33,7 @@
     - name:                             "Test Execution: Move ASCS resource to other node"
       when:                             ansible_hostname == cluster_status_pre.ascs_node
       become:                           true
+      tags:                             [test-execution]
       block:
         - name:                         "Test Execution: Migrate ASCS resource"
           ansible.builtin.command:      "{{ commands | selectattr(
@@ -89,10 +93,12 @@
 # +--------------------------------------------------------------------------*/
     - name:                             "Post Validations Tasks"
       ansible.builtin.include_tasks:    "roles/misc/tasks/post-validations.yml"
+      tags:                             [post-validation]
 
   rescue:
     - name:                             "Rescue operation"
       ansible.builtin.include_tasks:    "roles/misc/tasks/rescue.yml"
+      tags:                             [cleanup]
 
 - name:                                 "Pre Validations: Test Case Skipped"
   become:                               true
@@ -107,3 +113,4 @@
 
     - name:                             "Post Validations Tasks"
       ansible.builtin.include_tasks:    "roles/misc/tasks/post-validations.yml"
+      tags:                             [post-validation]

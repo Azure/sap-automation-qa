@@ -6,6 +6,7 @@
 # +--------------------------------------------------------------------------*/
 - name:                                 "Test Setup Tasks"
   ansible.builtin.include_tasks:        "roles/misc/tasks/test-case-setup.yml"
+  tags:                                 [pre-validation]
 
 - name:                                 "Capture cluster configuration snapshot"
   become:                               true
@@ -79,3 +80,4 @@
 
 - name:                                 "Post Telemetry Data"
   ansible.builtin.include_tasks:        "roles/misc/tasks/post-telemetry-data.yml"
+  tags:                                 [telemetry]

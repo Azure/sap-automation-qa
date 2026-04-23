@@ -50,6 +50,7 @@
 
 - name:                                 "Process HA Configuration for each SCS and ERS host"
   ansible.builtin.include_tasks:        "./roles/misc/tasks/offline-validation.yml"
+  tags:                                 [pre-validation]
   loop:                                 "{{ scs_ers_cib_files | default([]) }}"
   loop_control:
     loop_var:                           offline_validation_host

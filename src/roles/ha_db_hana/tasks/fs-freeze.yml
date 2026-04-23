@@ -8,6 +8,7 @@
   when:                                 NFS_provider == "ANF"
   ansible.builtin.include_tasks:        "roles/misc/tasks/test-case-setup.yml"
   run_once:                             true
+  tags:                                 [pre-validation]
 
 # /*---------------------------------------------------------------------------
 # |                          Pre Validations                                  |
@@ -15,6 +16,7 @@
 - name:                                 "Pre Validations: HANA DB Nodes"
   when:                                 NFS_provider == "ANF"
   ansible.builtin.include_tasks:        "roles/misc/tasks/pre-validations-db.yml"
+  tags:                                 [pre-validation]
 
 # /*---------------------------------------------------------------------------
 # |                          Test Execution                                   |
@@ -27,9 +29,11 @@
                                         - NFS_provider == "ANF"
                                         - pre_validations_status == "PASSED"
                                         - cluster_status_pre.stonith_action == "reboot"
+  tags:                                 [test-execution]
   block:
     - name:                             "Test Execution: Freeze File System on Primary Node init"
       when:                             ansible_hostname == cluster_status_pre.primary_node
+      tags:                             [test-execution]
       block:
         - name:                         "Test Execution: Start timer"
           ansible.builtin.set_fact:
@@ -45,6 +49,7 @@
 
     - name:                             "Test Execution: Freeze File System on Primary Node init"
       when:                             ansible_hostname == cluster_status_pre.secondary_node
+      tags:                             [test-execution]
       block:
         - name:                         "Test Execution: CleanUp any failed resource"
           ansible.builtin.command:      "crm_resource --cleanup"
@@ -92,6 +97,7 @@
       when:
                                         - ansible_hostname == cluster_status_pre.primary_node
                                         - cluster_status_pre.AUTOMATED_REGISTER | lower == "false"
+      tags:                             [test-execution]
       block:
         - name:                         "Test Execution: Register Failed Resource"
           become:                       true
@@ -118,6 +124,7 @@
 
     - name:                             "Test Execution: Freeze File System on Primary Node init"
       when:                             ansible_hostname == cluster_status_pre.primary_node
+      tags:                             [test-execution]
       block:
         - name:                         "Test Execution: Validate HANA DB cluster status 2"
           get_cluster_status_db:
@@ -169,10 +176,12 @@
 # +--------------------------------------------------------------------------*/
     - name:                             "Post Validations Tasks"
       ansible.builtin.include_tasks:    "roles/misc/tasks/post-validations.yml"
+      tags:                             [post-validation]
 
   rescue:
     - name:                             "Rescue operation"
       ansible.builtin.include_tasks:    "roles/misc/tasks/rescue.yml"
+      tags:                             [cleanup]
 
 - name:                                 "Pre Validations: Test Case Skipped"
   become:                               true
@@ -190,3 +199,4 @@
 
     - name:                             "Post Validations Tasks"
       ansible.builtin.include_tasks:    "roles/misc/tasks/post-validations.yml"
+      tags:                             [post-validation]

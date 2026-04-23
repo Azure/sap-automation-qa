@@ -38,7 +38,7 @@
       changed_when:                     false
       register:                         copy_cluster_report
       ignore_errors:                    true
-      with_items:
+      loop:
                                         - "tar.bz2"
                                         - "tar.gz"
 
@@ -48,6 +48,6 @@
         path:                           "/tmp/{{ test_group_invocation_id }}.{{ item }}"
       register:                         remove_cluster_report
       ignore_errors:                    true
-      with_items:
+      loop:
                                         - "tar.bz2"
                                         - "tar.gz"
