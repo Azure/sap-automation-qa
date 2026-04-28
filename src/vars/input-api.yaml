@@ -447,6 +447,8 @@ default_delay:                      10
 default_timeout:                    90
 ascs_stonith_timeout:               120
 
+pre_validation_retries:             2
+
 # Default values for Azure Backup test cases
 backup_vault_resource_id:           ""
 backup_target_filesystem_path:      "/sapinstall/hana_backup/"

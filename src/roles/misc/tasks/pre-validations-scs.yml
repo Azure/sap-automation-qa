@@ -13,6 +13,10 @@
         sap_sid:                    "{{ sap_sid | lower }}"
       become:                       true
       register:                     cluster_status_pre
+      until:                        cluster_status_pre.ascs_node | default('') != "" and
+                                    cluster_status_pre.ers_node | default('') != ""
+      retries:                      "{{ pre_validation_retries | default(2) }}"
+      delay:                        "{{ default_delay }}"
 
     - name:                         "Pre Validation: CleanUp any failed resource"
       become:                       true

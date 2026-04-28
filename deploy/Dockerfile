@@ -50,6 +50,8 @@ ENV HOME=/app
 
 RUN chown -R appuser:appgroup /opt/venv /app
 
+RUN mkdir -p /app/data/logs/service && chown -R appuser:appgroup /app/data
+
 USER appuser
 
 HEALTHCHECK --interval=30s --timeout=10s --start-period=5s --retries=3 \
