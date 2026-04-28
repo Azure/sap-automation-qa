@@ -2,7 +2,7 @@
 # Licensed under the MIT License.
 
 # Stage 1: Build stage — resolve and install deps for Python 3.12
-FROM mcr.microsoft.com/azurelinux/base/python:3.12 AS builder
+FROM mcr.microsoft.com/azurelinux/base/python:3.12@sha256:8300706a0e644a7e260b6a464a1ae3967181ee9057a4accceaaf0ecdedb1d4a2 AS builder
 WORKDIR /build
 RUN tdnf update -y && tdnf install -y \
     gcc \
@@ -17,7 +17,7 @@ RUN python3 -m venv /opt/venv \
     && pip install --no-cache-dir -r requirements.lock
 
 # Stage 2: Startup stage
-FROM mcr.microsoft.com/azurelinux/base/python:3.12
+FROM mcr.microsoft.com/azurelinux/base/python:3.12@sha256:8300706a0e644a7e260b6a464a1ae3967181ee9057a4accceaaf0ecdedb1d4a2
 
 RUN tdnf update -y && tdnf install -y \
     openssh-clients \

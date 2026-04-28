@@ -28,9 +28,17 @@ _setup_local_env() {
     if ! command_exists az; then
 		log "INFO" "Azure CLI not found. Installing Azure CLI..."
 		if [[ "${DISTRO_FAMILY:-}" == "debian" ]]; then
-			curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash
+			local az_install_script
+			az_install_script="$(mktemp)"
+			curl -sL https://aka.ms/InstallAzureCLIDeb -o "$az_install_script"
+			sudo bash "$az_install_script"
+			rm -f "$az_install_script"
 		else
-			curl -sL https://aka.ms/InstallAzureCli | bash
+			local az_install_script
+			az_install_script="$(mktemp)"
+			curl -sL https://aka.ms/InstallAzureCli -o "$az_install_script"
+			bash "$az_install_script"
+			rm -f "$az_install_script"
 		fi
 		if command_exists az; then
 			log "INFO" "Azure CLI installed successfully."
