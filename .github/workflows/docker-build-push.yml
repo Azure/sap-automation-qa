@@ -14,6 +14,9 @@ on:
       - 'development-*'
   workflow_dispatch:
 
+permissions:
+  contents: read
+
 env:
   IMAGE_NAME: sap-automation-qa
 
@@ -26,10 +29,10 @@ jobs:
 
     steps:
       - name: Checkout repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@34e114876b0b11c390a56381ad16ebd13914f8d5 # v4.3.1
 
       - name: Set up Docker Buildx
-        uses: docker/setup-buildx-action@v3
+        uses: docker/setup-buildx-action@f7ce87c1d6bead3e36075b2ce75da1f6cc28aaca # v3.9.0
 
       - name: Check ACR configuration
         id: acr-check
@@ -47,7 +50,7 @@ jobs:
 
       - name: Azure Login (MSI/OIDC)
         if: steps.acr-check.outputs.acr_configured == 'true'
-        uses: azure/login@v2
+        uses: azure/login@eec3c95657c1536435858eda1f3ff5437fee8474 # v2.3.0
         with:
           client-id: ${{ secrets.AZURE_CLIENT_ID }}
           tenant-id: ${{ secrets.AZURE_TENANT_ID }}
@@ -60,7 +63,7 @@ jobs:
 
       - name: Extract metadata for Docker
         id: meta
-        uses: docker/metadata-action@v5
+        uses: docker/metadata-action@318604b99e75e41977312d83839a89be02ca4893 # v5.9.0
         with:
           images: ${{ secrets.ACR_NAME }}.azurecr.io/${{ env.IMAGE_NAME }}
           tags: |
@@ -71,7 +74,7 @@ jobs:
 
       - name: Build Docker image (validation only)
         if: steps.acr-check.outputs.acr_configured == 'false'
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25 # v5.4.0
         with:
           context: .
           file: ./deploy/Dockerfile
@@ -91,7 +94,7 @@ jobs:
 
       - name: Build and push Docker image to ACR
         if: steps.acr-check.outputs.acr_configured == 'true'
-        uses: docker/build-push-action@v5
+        uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25 # v5.4.0
         with:
           context: .
           file: ./deploy/Dockerfile
