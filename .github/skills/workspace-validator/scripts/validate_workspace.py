@@ -4,22 +4,9 @@
 
 """
 Validate SAP Testing Automation Framework workspace configurations.
-
-Checks sap-parameters.yaml, hosts.yaml, and SSH authentication readiness.
-
-Usage:
-    python3 validate_workspace.py [WORKSPACE_PATH]
-
-If WORKSPACE_PATH is not provided, discovers and validates all workspaces
-in WORKSPACES/SYSTEM/.
-
-Exit codes:
-    0 - All critical checks passed
-    1 - One or more critical checks failed
 """
 
 from __future__ import annotations
-
 import re
 import sys
 from dataclasses import dataclass, field
@@ -33,8 +20,6 @@ except ImportError:
     sys.exit(1)
 
 
-# --- Constants ---
-
 PASS = "✅"
 FAIL = "❌"
 WARN = "⚠️ "
@@ -44,9 +29,7 @@ VALID_NFS_PROVIDERS = {"AFS", "ANF"}
 VALID_CLUSTER_TYPES = {"AFA", "ISCSI", "ANF"}
 VALID_NODE_TIERS = {"hana", "scs", "ers", "pas", "app"}
 
-SSH_KEY_EXTENSIONS = {
-    "ppk", "pem", "key", "private", "rsa", "ed25519", "ecdsa", "dsa"
-}
+SSH_KEY_EXTENSIONS = {"ppk", "pem", "key", "private", "rsa", "ed25519", "ecdsa", "dsa"}
 
 REQUIRED_SAP_PARAMS = [
     "sap_sid",
@@ -77,14 +60,11 @@ SID_PATTERN = re.compile(r"^[A-Z][A-Z0-9]{2}$")
 INSTANCE_NUMBER_PATTERN = re.compile(r"^\d{2}$")
 
 
-# --- Data classes ---
-
-
 @dataclass
 class Finding:
     """A single validation finding."""
 
-    level: str  # "error", "warning", "pass"
+    level: str
     category: str
     message: str
 
@@ -124,9 +104,6 @@ class ValidationResult:
         return len(self.errors) == 0
 
 
-# --- Validation functions ---
-
-
 def load_yaml_file(path: Path) -> tuple[dict[str, Any] | None, str]:
     """Load and parse a YAML file.
 
@@ -153,8 +130,6 @@ def validate_files(workspace: Path, result: ValidationResult) -> tuple[Path | No
     :returns: Tuple of (sap_params_path, hosts_path) or None if missing.
     """
     cat = "File Checks"
-
-    # sap-parameters.yaml
     sap_params = workspace / "sap-parameters.yaml"
     if sap_params.exists():
         result.ok(cat, "sap-parameters.yaml found")
@@ -162,11 +137,15 @@ def validate_files(workspace: Path, result: ValidationResult) -> tuple[Path | No
         result.error(cat, "sap-parameters.yaml not found")
         sap_params = None
 
-    # hosts.yaml (or {SID}_hosts.yaml)
     hosts_file = workspace / "hosts.yaml"
     if not hosts_file.exists():
-        # Try SID-prefixed variant
-        candidates = list(workspace.glob("*_hosts.yaml"))
+        candidates = sorted(workspace.glob("*_hosts.yaml"), key=lambda p: p.name)
+        if len(candidates) > 1:
+            result.warn(
+                cat,
+                f"Multiple inventory files found: {[c.name for c in candidates]}. "
+                f"Using {candidates[0].name}",
+            )
         if candidates:
             hosts_file = candidates[0]
             result.ok(cat, f"Inventory found: {hosts_file.name}")
@@ -179,9 +158,7 @@ def validate_files(workspace: Path, result: ValidationResult) -> tuple[Path | No
     return sap_params, hosts_file
 
 
-def validate_sap_parameters(
-    path: Path, result: ValidationResult
-) -> dict[str, Any] | None:
+def validate_sap_parameters(path: Path, result: ValidationResult) -> dict[str, Any] | None:
     """Validate sap-parameters.yaml content.
 
     :param path: Path to sap-parameters.yaml.
@@ -194,14 +171,12 @@ def validate_sap_parameters(
         result.error(cat, err)
         return None
 
-    # Check required fields
     for field_name in REQUIRED_SAP_PARAMS:
         if field_name not in data or data[field_name] is None:
             result.error(cat, f"{field_name}: missing (required)")
         else:
             result.ok(cat, f"{field_name}: {data[field_name]}")
 
-    # Validate specific field values
     sap_sid = data.get("sap_sid", "")
     if sap_sid and not SID_PATTERN.match(str(sap_sid)):
         result.error(
@@ -217,7 +192,6 @@ def validate_sap_parameters(
     if nfs and nfs not in VALID_NFS_PROVIDERS:
         result.error(cat, f"NFS_provider '{nfs}' invalid (must be AFS or ANF)")
 
-    # Validate instance numbers are 2-digit strings
     for inst_field in ("db_instance_number", "scs_instance_number", "ers_instance_number"):
         val = data.get(inst_field)
         if val is not None and not INSTANCE_NUMBER_PATTERN.match(str(val)):
@@ -226,23 +200,30 @@ def validate_sap_parameters(
                 f"{inst_field} '{val}' invalid (must be 2-digit string, e.g. '00')",
             )
 
-    # Conditional: cluster types when HA is enabled
     if data.get("database_high_availability") is True:
         ct = data.get("database_cluster_type")
         if not ct:
-            result.error(cat, "database_cluster_type: missing (required when database_high_availability=true)")
+            result.error(
+                cat,
+                "database_cluster_type: missing (required when database_high_availability=true)",
+            )
         elif ct not in VALID_CLUSTER_TYPES:
             result.error(cat, f"database_cluster_type '{ct}' invalid (must be AFA, ISCSI, or ANF)")
 
     if data.get("scs_high_availability") is True:
         ct = data.get("scs_cluster_type")
         if not ct:
-            result.error(cat, "scs_cluster_type: missing (required when scs_high_availability=true)")
+            result.error(
+                cat, "scs_cluster_type: missing (required when scs_high_availability=true)"
+            )
         elif ct not in VALID_CLUSTER_TYPES:
             result.error(cat, f"scs_cluster_type '{ct}' invalid (must be AFA, ISCSI, or ANF)")
 
-    # Conditional: ANF fields
-    if nfs == "ANF" or data.get("database_cluster_type") == "ANF" or data.get("scs_cluster_type") == "ANF":
+    if (
+        nfs == "ANF"
+        or data.get("database_cluster_type") == "ANF"
+        or data.get("scs_cluster_type") == "ANF"
+    ):
         if not data.get("ANF_account_rg"):
             result.warn(cat, "ANF_account_rg: missing (needed when ANF is used)")
         if not data.get("ANF_account_name"):
@@ -251,9 +232,7 @@ def validate_sap_parameters(
     return data
 
 
-def validate_hosts(
-    path: Path, sap_sid: str, result: ValidationResult
-) -> None:
+def validate_hosts(path: Path, sap_sid: str, result: ValidationResult) -> None:
     """Validate hosts.yaml inventory structure.
 
     :param path: Path to hosts.yaml.
@@ -266,7 +245,6 @@ def validate_hosts(
         result.error(cat, err)
         return
 
-    # Expected groups
     expected_groups = {
         f"{sap_sid}_DB": ("hana", 2),
         f"{sap_sid}_SCS": ("scs", 1),
@@ -288,15 +266,14 @@ def validate_hosts(
             continue
 
         host_count = len(hosts)
-        if group_name.endswith("_DB") and host_count < 2:
+        if host_count < min_hosts:
             result.warn(
                 cat,
-                f"{group_name}: {host_count} host(s) found (2 expected for HA)",
+                f"{group_name}: {host_count} host(s) found " f"({min_hosts} expected for HA)",
             )
         else:
             result.ok(cat, f"{group_name} group: {host_count} host(s) found")
 
-        # Validate per-host fields
         for hostname, host_vars in hosts.items():
             if not isinstance(host_vars, dict):
                 result.error(cat, f"{group_name}/{hostname}: not a mapping")
@@ -308,7 +285,6 @@ def validate_hosts(
                         f"{group_name}/{hostname}: missing '{req_field}'",
                     )
 
-        # Validate group vars
         group_vars = group.get("vars", {})
         if group_vars:
             for gv in REQUIRED_GROUP_VARS:
@@ -335,14 +311,12 @@ def validate_ssh_auth(
     """
     cat = "SSH Authentication"
 
-    # Priority 1: Key Vault
     if sap_params and sap_params.get("secret_id"):
         result.ok(cat, "Key Vault auth configured (secret_id present)")
         if sap_params.get("key_vault_id"):
             result.ok(cat, "key_vault_id present")
         return
 
-    # Priority 2: Local SSH key files
     key_found = False
     for fpath in workspace.iterdir():
         if not fpath.is_file():
@@ -357,13 +331,14 @@ def validate_ssh_auth(
     if key_found:
         return
 
-    # Priority 3: Password file
     password_file = workspace / "password"
     if password_file.exists():
         result.ok(cat, "Password file found (VMPASSWORD auth)")
         return
 
-    result.error(cat, "No SSH authentication found (need Key Vault secret_id, key file, or password file)")
+    result.error(
+        cat, "No SSH authentication found (need Key Vault secret_id, key file, or password file)"
+    )
 
 
 def validate_workspace(workspace: Path) -> ValidationResult:
@@ -373,16 +348,10 @@ def validate_workspace(workspace: Path) -> ValidationResult:
     :returns: Validation result.
     """
     result = ValidationResult(workspace_name=workspace.name)
-
-    # Step 1: File checks
     sap_params_path, hosts_path = validate_files(workspace, result)
-
-    # Step 2: sap-parameters.yaml
     sap_params = None
     if sap_params_path:
         sap_params = validate_sap_parameters(sap_params_path, result)
-
-    # Step 3: hosts.yaml
     sap_sid = ""
     if sap_params:
         sap_sid = str(sap_params.get("sap_sid", ""))
@@ -390,8 +359,6 @@ def validate_workspace(workspace: Path) -> ValidationResult:
         validate_hosts(hosts_path, sap_sid, result)
     elif hosts_path:
         result.warn("hosts.yaml", "Cannot validate groups without sap_sid")
-
-    # Step 4: SSH authentication
     validate_ssh_auth(workspace, sap_params, result)
 
     return result
@@ -436,7 +403,6 @@ def discover_workspaces(base_dir: Path) -> list[Path]:
     """
     system_dir = base_dir / "WORKSPACES" / "SYSTEM"
     if not system_dir.exists():
-        # Maybe base_dir is already WORKSPACES/SYSTEM
         if base_dir.name == "SYSTEM" and base_dir.is_dir():
             system_dir = base_dir
         elif (base_dir / "SYSTEM").is_dir():
@@ -463,7 +429,6 @@ def main() -> int:
             return 1
         workspaces = [workspace_path]
     else:
-        # Discover from current directory or project root
         cwd = Path.cwd()
         workspaces = discover_workspaces(cwd)
         if not workspaces:

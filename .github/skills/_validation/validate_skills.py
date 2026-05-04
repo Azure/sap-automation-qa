@@ -12,7 +12,12 @@ import re
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
-import yaml
+
+try:
+    import yaml
+except ImportError:
+    print("Error: PyYAML is required. Install it with: pip install pyyaml")
+    sys.exit(1)
 
 MAX_NAME_LENGTH = 64
 MAX_DESCRIPTION_LENGTH = 1024
@@ -27,7 +32,7 @@ class Finding:
     """A single validation finding."""
 
     skill: str
-    level: str  # "error", "warning", "pass"
+    level: str
     message: str
 
 
@@ -172,14 +177,15 @@ def validate_line_count(skill_md: Path, result: ValidationResult, skill: str) ->
 def validate_scripts(
     skill_dir: Path, frontmatter: dict, result: ValidationResult, skill: str
 ) -> None:
-    """Check that shell scripts are executable and allowed-tools is set.
+    """Check that scripts are executable and allowed-tools is set.
 
     :param skill_dir: Path to the skill directory.
     :param frontmatter: Parsed frontmatter dict.
     :param result: Validation result to append findings to.
     :param skill: Skill identifier for reporting.
     """
-    scripts = list(skill_dir.rglob("*.sh"))
+    scripts = list(skill_dir.rglob("*.sh")) + list(skill_dir.rglob("*.py"))
+    scripts = [s for s in scripts if "__pycache__" not in str(s) and s.name != "__init__.py"]
 
     for script in scripts:
         if not os.access(script, os.X_OK):

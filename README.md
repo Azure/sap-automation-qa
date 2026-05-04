@@ -96,9 +96,9 @@ For support and questions, please:
 - [Configuration Checks Guide](./docs/CONFIGURATION_CHECKS.md)
 - [High Availability Testing Guide](./docs/HIGH_AVAILABILITY.md)
 
-## 🤖 Copilot CLI Skills
+## 🤖 Agent Skills
 
-This repo includes [Copilot CLI skills](https://docs.github.com/en/copilot/concepts/agents/about-agent-skills) that provide guided workflows when using [GitHub Copilot CLI](https://docs.github.com/en/copilot/concepts/agents/about-copilot-cli) in this repository.
+This repo includes [agent skills](https://docs.github.com/en/copilot/concepts/agents/about-agent-skills) that provide guided workflows when using [GitHub Copilot CLI](https://docs.github.com/en/copilot/concepts/agents/about-copilot-cli) in this repository.
 
 **Usage:** Launch `copilot` in the repo directory, then:
 - Skills activate automatically based on your prompt
