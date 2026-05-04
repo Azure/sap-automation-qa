@@ -484,6 +484,20 @@ This process will update your fork with all the latest features, bug fixes, and 
 > **NOTE**
 > If you've made local changes to your fork, you might encounter merge conflicts during step 4. In that case, you'll need to resolve these conflicts before proceeding with the push in step 5.
 
+## Copilot CLI Skills
+
+When using [GitHub Copilot CLI](https://docs.github.com/en/copilot/concepts/agents/about-copilot-cli) in this repository, the following skills are available to assist with common workflows:
+
+| Skill | What It Does |
+|-------|-------------|
+| `/setup-guide` | Guides through environment setup (local, Docker) |
+| `/workspace-validator` | Validates workspace `sap-parameters.yaml` and `hosts.yaml` |
+| `/workspace-creator` | Creates new workspace configurations from templates |
+| `/test-runner` | Executes tests using `sap_automation_qa.sh` (direct and API modes) |
+| `/test-result-analyzer` | Analyzes test results, matches known failure patterns |
+
+To use: run `copilot` in the project directory. Skills activate automatically based on your prompt, or invoke directly (e.g., "Use the /workspace-validator skill to check my config").
+
 ## Additional Resources
 
 - [Azure SAP Documentation](https://docs.microsoft.com/azure/sap)

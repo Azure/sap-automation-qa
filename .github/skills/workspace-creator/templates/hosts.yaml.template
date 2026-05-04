@@ -1,0 +1,99 @@
+---
+#################################################################################
+#Database Hosts (2 nodes HA scale up, 2+ HA scale out (even number of nodes)) #
+#################################################################################
+{{ sap_sid }}_DB:
+  hosts:
+    {{ db_host_1_name }}:
+      ansible_host        : {{ db_host_1_ip }}
+      ansible_user        : {{ ssh_user | default('azureadm') }}
+      ansible_connection  : ssh
+      connection_type     : key
+      virtual_host        : {{ db_host_1_virtual_host }}
+      become_user         : root
+      os_type             : linux
+      vm_name             : {{ db_host_1_vm_name }}
+    {{ db_host_2_name }}:
+      ansible_host        : {{ db_host_2_ip }}
+      ansible_user        : {{ ssh_user | default('azureadm') }}
+      ansible_connection  : ssh
+      connection_type     : key
+      virtual_host        : {{ db_host_2_virtual_host }}
+      become_user         : root
+      os_type             : linux
+      vm_name             : {{ db_host_2_vm_name }}
+  vars:
+    node_tier             : hana
+    supported_tiers       : [hana]
+
+#############################################################################
+#                         SCS Host (1)                                      #
+#############################################################################
+{{ sap_sid }}_SCS:
+  hosts:
+    {{ scs_host_name }}:
+      ansible_host        : {{ scs_host_ip }}
+      ansible_user        : {{ ssh_user | default('azureadm') }}
+      ansible_connection  : ssh
+      connection_type     : key
+      virtual_host        : {{ scs_host_virtual_host }}
+      become_user         : root
+      os_type             : linux
+      vm_name             : {{ scs_host_vm_name }}
+  vars:
+    node_tier             : scs
+    supported_tiers       : [scs]
+
+#############################################################################
+#                         ERS Host (1)                                      #
+#############################################################################
+{{ sap_sid }}_ERS:
+  hosts:
+    {{ ers_host_name }}:
+      ansible_host        : {{ ers_host_ip }}
+      ansible_user        : {{ ssh_user | default('azureadm') }}
+      ansible_connection  : ssh
+      connection_type     : key
+      virtual_host        : {{ ers_host_virtual_host }}
+      become_user         : root
+      os_type             : linux
+      vm_name             : {{ ers_host_vm_name }}
+  vars:
+    node_tier             : ers
+    supported_tiers       : [ers]
+
+#############################################################################
+#                         PAS Host (1)                                      #
+#############################################################################
+{{ sap_sid }}_PAS:
+  hosts:
+    {{ pas_host_name }}:
+      ansible_host        : {{ pas_host_ip }}
+      ansible_user        : {{ ssh_user | default('azureadm') }}
+      ansible_connection  : ssh
+      connection_type     : key
+      virtual_host        : {{ pas_host_virtual_host }}
+      become_user         : root
+      os_type             : linux
+      vm_name             : {{ pas_host_vm_name }}
+  vars:
+    node_tier             : pas
+    supported_tiers       : [pas]
+
+#############################################################################
+#                         APP Host(s) (1+)                                  #
+#############################################################################
+{{ sap_sid }}_APP:
+  hosts:
+    {{ app_host_name }}:
+      ansible_host        : {{ app_host_ip }}
+      ansible_user        : {{ ssh_user | default('azureadm') }}
+      ansible_connection  : ssh
+      connection_type     : key
+      virtual_host        : {{ app_host_virtual_host }}
+      become_user         : root
+      os_type             : linux
+      vm_name             : {{ app_host_vm_name }}
+  vars:
+    node_tier             : app
+    supported_tiers       : [app]

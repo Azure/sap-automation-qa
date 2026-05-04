@@ -96,6 +96,15 @@ For support and questions, please:
 - [Configuration Checks Guide](./docs/CONFIGURATION_CHECKS.md)
 - [High Availability Testing Guide](./docs/HIGH_AVAILABILITY.md)
 
+## 🤖 Copilot CLI Skills
+
+This repo includes [Copilot CLI skills](https://docs.github.com/en/copilot/concepts/agents/about-agent-skills) that provide guided workflows when using [GitHub Copilot CLI](https://docs.github.com/en/copilot/concepts/agents/about-copilot-cli) in this repository.
+
+**Usage:** Launch `copilot` in the repo directory, then:
+- Skills activate automatically based on your prompt
+- Or invoke directly: "Use the /test-runner skill to run HA tests"
+- List available skills: `/skills list`
+
 ## 🤝 Contributing
 
 This project welcomes contributions and suggestions.  Most contributions require you to agree to a Contributor License Agreement (CLA) declaring that you have the right to, and actually do, grant us the rights to use your contribution. For details, visit <https://cla.opensource.microsoft.com>.

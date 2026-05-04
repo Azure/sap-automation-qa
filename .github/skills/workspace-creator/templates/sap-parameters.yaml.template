@@ -1,0 +1,63 @@
+---
+#############################################################################
+#                           Application tier                                #
+#############################################################################
+sap_sid:                       {{ sap_sid }}
+
+scs_high_availability:         {{ scs_high_availability | default('true') }}
+scs_cluster_type:              {{ scs_cluster_type | default('AFA') }}
+scs_instance_number:           "{{ scs_instance_number | default('00') }}"
+ers_instance_number:           "{{ ers_instance_number | default('01') }}"
+
+#############################################################################
+#                              Database tier                                #
+#############################################################################
+db_sid:                        {{ db_sid }}
+db_instance_number:            "{{ db_instance_number | default('00') }}"
+platform:                      {{ platform }}
+database_high_availability:    {{ database_high_availability | default('true') }}
+database_cluster_type:         {{ database_cluster_type | default('AFA') }}
+database_scale_out:            {{ database_scale_out | default('false') }}
+
+#############################################################################
+#                              Storage Profile                              #
+#############################################################################
+NFS_provider:                  {{ nfs_provider | default('AFS') }}
+
+#############################################################################
+#                     Key Vault (optional - SSH credentials)                #
+#############################################################################
+{% if key_vault_id is defined %}
+key_vault_id:                  {{ key_vault_id }}
+{% endif %}
+{% if secret_id is defined %}
+secret_id:                     {{ secret_id }}
+{% endif %}
+
+#############################################################################
+#                     Managed Identity (optional)                           #
+#############################################################################
+{% if user_assigned_identity_client_id is defined %}
+user_assigned_identity_client_id: "{{ user_assigned_identity_client_id }}"
+{% endif %}
+
+#############################################################################
+#                     ANF Configuration (optional)                          #
+#############################################################################
+{% if anf_account_rg is defined %}
+ANF_account_rg:                "{{ anf_account_rg }}"
+ANF_account_name:              "{{ anf_account_name }}"
+{% endif %}
+
+#############################################################################
+#                     Azure Backup (optional - AzureBackupDatabase)         #
+#############################################################################
+{% if backup_vault_resource_id is defined %}
+backup_vault_resource_id:      "{{ backup_vault_resource_id }}"
+backup_container_name:         "{{ backup_container_name }}"
+backup_item_name:              "{{ backup_item_name }}"
+backup_target_filesystem_path: "{{ backup_target_filesystem_path | default('/hana/backup/restore') }}"
+backup_target_container_name:  "{{ backup_target_container_name | default('') }}"
+backup_target_database_name:   "{{ backup_target_database_name | default('SYSTEMDB') }}"
+backup_restore_point_time:     "{{ backup_restore_point_time | default('') }}"
+{% endif %}
