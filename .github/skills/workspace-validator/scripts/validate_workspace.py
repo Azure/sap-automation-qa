@@ -7,7 +7,9 @@ Validate SAP Testing Automation Framework workspace configurations.
 """
 
 from __future__ import annotations
+import os
 import re
+import subprocess
 import sys
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -341,6 +343,90 @@ def validate_ssh_auth(
     )
 
 
+def validate_ssh_connectivity(
+    workspace: Path,
+    hosts_data: dict[str, Any] | None,
+    sap_params: dict[str, Any] | None,
+    result: ValidationResult,
+) -> None:
+    """Test SSH connectivity to hosts defined in inventory.
+
+    :param workspace: Workspace directory path.
+    :param hosts_data: Parsed hosts.yaml data.
+    :param sap_params: Parsed sap-parameters.yaml data.
+    :param result: Result collector.
+    """
+    cat = "SSH Connectivity"
+
+    if os.environ.get("STAF_SKIP_SSH") or "--skip-ssh" in sys.argv:
+        result.ok(cat, "SSH connectivity check skipped (STAF_SKIP_SSH)")
+        return
+
+    if not hosts_data:
+        result.warn(cat, "No hosts data available for connectivity check")
+        return
+
+    key_path: Path | None = None
+    use_keyvault = sap_params and sap_params.get("secret_id")
+    if not use_keyvault:
+        for fpath in workspace.iterdir():
+            if not fpath.is_file():
+                continue
+            suffix = fpath.suffix.lstrip(".")
+            if suffix in SSH_KEY_EXTENSIONS or "ssh_key" in fpath.name:
+                key_path = fpath
+                break
+
+    targets: list[tuple[str, str, str]] = []
+    for group_data in hosts_data.values():
+        if not isinstance(group_data, dict):
+            continue
+        for hostname, host_vars in group_data.get("hosts", {}).items():
+            if not isinstance(host_vars, dict):
+                continue
+            ansible_host = host_vars.get("ansible_host")
+            if ansible_host:
+                user = host_vars.get("ansible_user", "root")
+                targets.append((hostname, str(ansible_host), str(user)))
+
+    if not targets:
+        result.warn(cat, "No hosts with ansible_host found in inventory")
+        return
+
+    for hostname, ansible_host, user in targets:
+        cmd = [
+            "ssh",
+            "-o", "ConnectTimeout=5",
+            "-o", "StrictHostKeyChecking=no",
+            "-o", "BatchMode=yes",
+        ]
+        if key_path:
+            cmd.extend(["-i", str(key_path)])
+        cmd.extend([f"{user}@{ansible_host}", "exit 0"])
+        try:
+            proc = subprocess.run(
+                cmd,
+                capture_output=True,
+                timeout=10,
+                check=False,
+            )
+            if proc.returncode == 0:
+                result.ok(
+                    cat,
+                    f"{hostname} ({ansible_host}): reachable",
+                )
+            else:
+                result.warn(
+                    cat,
+                    f"{hostname} ({ansible_host}): unreachable",
+                )
+        except subprocess.TimeoutExpired:
+            result.warn(
+                cat,
+                f"{hostname} ({ansible_host}): connection timed out",
+            )
+
+
 def validate_workspace(workspace: Path) -> ValidationResult:
     """Run full validation on a workspace directory.
 
@@ -360,6 +446,10 @@ def validate_workspace(workspace: Path) -> ValidationResult:
     elif hosts_path:
         result.warn("hosts.yaml", "Cannot validate groups without sap_sid")
     validate_ssh_auth(workspace, sap_params, result)
+    hosts_data = None
+    if hosts_path:
+        hosts_data, _ = load_yaml_file(hosts_path)
+    validate_ssh_connectivity(workspace, hosts_data, sap_params, result)
 
     return result
 

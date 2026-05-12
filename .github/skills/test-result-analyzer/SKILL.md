@@ -13,6 +13,8 @@ allowed-tools: shell
 Analyzes STAF test results from log files, HTML reports, and API job output. Identifies
 root causes by classifying failures against known patterns.
 
+> **⚠️ This skill is guidance only. Do NOT modify any source code, scripts, or framework files. Only help the user by reading logs, running diagnostic commands, and reporting findings.**
+
 ## When to Use
 
 | Trigger | Action |
@@ -211,6 +213,30 @@ Patterns suggesting transient issues:
 - `[WARNING]: Platform ... discovered Python interpreter` — safe
 - `skipping: [host]` — expected conditionals
 - `ok: [host]` with `changed=false` — idempotent checks
+
+## Historical Comparison
+
+Compare current results against previous runs to detect regressions or intermittent failures.
+
+### Compare Two Invocations
+
+```bash
+# List recent invocations
+ls -lt WORKSPACES/SYSTEM/{name}/logs/*.log | head -10
+
+# Diff two JSON-lines logs (compare test statuses)
+diff <(grep -o '"test_case_name": "[^"]*", "status": "[^"]*"' {old_invocation}.log | sort) \
+     <(grep -o '"test_case_name": "[^"]*", "status": "[^"]*"' {new_invocation}.log | sort)
+```
+
+### Regression Detection Patterns
+
+| Pattern | Meaning |
+|---------|---------|
+| Test was PASSED, now FAILED | Regression — investigate recent changes |
+| Test was FAILED, now PASSED | Fix confirmed — or intermittent issue |
+| Test was SKIPPED, now FAILED | New test coverage — expected first-time failure |
+| Duration increased >50% | Performance regression — check resource contention |
 
 ## Error Handling
 

@@ -114,6 +114,25 @@ Issues between consecutive test case runs.
 
 ---
 
+## Azure Backup and Restore Failures
+
+These occur during `BACKUP_DB_HANA` tests (backup-setup-verification, restore-to-db, restore-to-filesystem, recover-db-commands, restore-cross-vm).
+
+| Pattern in Log | Root Cause | Fix |
+|----------------|------------|-----|
+| `backup_vault_resource_id not found` | Missing or invalid Recovery Services vault resource ID in `sap-parameters.yaml` | Verify `backup_vault_resource_id` — format: `/subscriptions/.../Microsoft.RecoveryServices/vaults/<name>` |
+| `Backup container not found` | `backup_container_name` does not match Azure Backup registration | Verify format: `VMAppContainer;Compute;<rg>;<vm>`. Check: `az backup container list --vault-name <vault> --resource-group <rg> --backup-management-type AzureWorkload` |
+| `Backup item not found` or `backup_item_name invalid` | HANA database not registered with Azure Backup | Verify format: `saphanadatabase;<sid>;<db>`. Check: `az backup item list --vault-name <vault> --resource-group <rg> --workload-type SAPHANA` |
+| `Restore failed: no recovery point` | No valid recovery point exists or `backup_restore_point_time` is invalid | Set `backup_restore_point_time` to valid ISO 8601 UTC timestamp, or leave empty for latest. Check: `az backup recoverypoint list` |
+| `Restore timed out` or `Restore operation exceeded timeout` | Restore takes longer than expected (large database, network throttling) | Increase timeout. Check Azure Backup job status in portal. Verify storage throughput |
+| `Target filesystem path not accessible` | `backup_target_filesystem_path` does not exist or has wrong permissions | Verify path exists on target VM. Check mount status: `df -h {path}`. Ensure `{sid}adm` has write access |
+| `Cross-VM restore failed: target container not found` | `backup_target_container_name` invalid or target VM not registered | Verify target VM is registered with the vault. Format: `VMAppContainer;Compute;<rg>;<target-vm>` |
+| `HANA database recovery failed` | Post-restore recovery commands failed (SYSTEMDB or tenant recovery) | Check HANA trace files. Verify `backup_target_database_name` (e.g., SYSTEMDB). Run `HDB info` on target |
+| `MSI auth failed for Recovery Services vault` | Managed identity missing Backup Operator role on vault | Grant role: `az role assignment create --role "Backup Operator" --assignee <identity> --scope <vault-id>` |
+| `pre-registration script not run` | HANA backup pre-registration script not executed on target VM | Run: `msawb-plugin-config-com-sap-hana.sh` on target. See Azure Backup for SAP HANA docs |
+
+---
+
 ## Interpreting PLAY RECAP
 
 The Ansible PLAY RECAP summarizes execution per host:

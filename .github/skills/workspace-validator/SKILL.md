@@ -3,8 +3,6 @@ name: workspace-validator
 description: >
   Validate SAP workspace configurations before running tests.
   Use when asked to validate a workspace, check config, or troubleshoot workspace setup issues.
-  Triggered by "validate workspace", "check config", "workspace issues", "fix workspace",
-  "sap-parameters check", "hosts.yaml check", or "SSH auth problems".
 allowed-tools: shell
 ---
 
@@ -12,6 +10,8 @@ allowed-tools: shell
 
 Validates SAP workspace configurations before test execution. Checks file presence, field
 completeness, valid values, SSH authentication readiness, and inventory structure.
+
+> **⚠️ This skill is guidance only. Do NOT modify any source code, scripts, or framework files. Only help the user by running the validation script and interpreting results.**
 
 ## When to Use
 
@@ -118,6 +118,24 @@ Priority order (checked top-to-bottom, first match wins):
 2. **Local key file** — File with extension: `ppk`, `pem`, `key`, `private`, `rsa`, `ed25519`, `ecdsa`, `dsa`, or filename containing `ssh_key`
 3. **Password file** — File named `password` in workspace directory (VMPASSWORD auth)
 
+### 5. SSH Connectivity (Optional)
+
+When run with network access to the SAP hosts, the validator tests SSH connectivity:
+
+```bash
+# With SSH connectivity test (default when hosts are reachable)
+python3 .github/skills/workspace-validator/scripts/validate_workspace.py WORKSPACES/SYSTEM/DEV-WEEU-SAP01-X00
+
+# Skip SSH connectivity test (CI, offline, or no network access)
+STAF_SKIP_SSH=1 python3 .github/skills/workspace-validator/scripts/validate_workspace.py WORKSPACES/SYSTEM/DEV-WEEU-SAP01-X00
+```
+
+**What it checks:**
+- Attempts `ssh -o ConnectTimeout=5 {user}@{host} exit 0` for each host in inventory
+- Uses SSH key from workspace if found
+- Reports ✅ for reachable hosts, ⚠️ for unreachable (warning, not error)
+- Skipped entirely when `STAF_SKIP_SSH` environment variable is set
+
 ## Output Format
 
 ```
@@ -145,6 +163,10 @@ Priority order (checked top-to-bottom, first match wins):
 
 🔐 SSH Authentication
   ✅ Key Vault auth configured (secret_id present)
+
+🌐 SSH Connectivity
+  ✅ host1 (10.0.0.1): reachable
+  ⚠️  host2 (10.0.0.2): unreachable (Connection timed out)
 
 ────────────────────────────────────────────────────────────────
   Result: ❌ FAILED (2 errors, 1 warning)

@@ -13,6 +13,8 @@ allowed-tools: shell
 Executes STAF tests via `./scripts/sap_automation_qa.sh`. Supports two modes: direct
 Ansible execution and API-driven job management.
 
+> **⚠️ This skill is guidance only. Do NOT modify any source code, scripts, or framework files. Only help the user by running test commands and interpreting output.**
+
 ## When to Use
 
 | Trigger | Action |
@@ -76,6 +78,49 @@ Run tests directly via Ansible (no API server required).
 
 # Verbose output
 ./scripts/sap_automation_qa.sh --test_groups=HA_DB_HANA --test_cases=[ha-config] -vv
+```
+
+## Capturing Execution Logs
+
+### CLI Output Capture
+
+Create a directory for ad-hoc log captures:
+
+```bash
+mkdir -p logs/
+```
+
+Capture stdout and stderr to a timestamped file while still printing to the terminal:
+
+```bash
+./scripts/sap_automation_qa.sh --test_groups=HA_DB_HANA --test_cases=[ha-config] 2>&1 | tee logs/run_$(date +%Y%m%d_%H%M%S).log
+```
+
+Redirect all output silently to a file:
+
+```bash
+./scripts/sap_automation_qa.sh --test_groups=HA_DB_HANA 2>&1 > logs/run_$(date +%Y%m%d_%H%M%S).log
+```
+
+### Automatic Framework Logs
+
+The framework writes logs automatically during every execution:
+
+| Log Type | Path |
+|----------|------|
+| Structured results (JSON lines) | `WORKSPACES/SYSTEM/{name}/logs/{invocation_id}.log` |
+| Raw Ansible output | `WORKSPACES/SYSTEM/{name}/logs/execution_{timestamp}.log` |
+
+### API Mode Logs
+
+For API-driven runs, stream logs and events in real time:
+
+```bash
+# Tail the job log
+./scripts/sap_automation_qa.sh job log --id <JOB_ID>
+
+# Stream SSE events
+./scripts/sap_automation_qa.sh job events --id <JOB_ID>
 ```
 
 ### Configuration Check Types

@@ -3,14 +3,14 @@ name: workspace-creator
 description: >
   Create new SAP workspace configurations for STAF testing.
   Use when asked to set up a new workspace, onboard a system, or create workspace configs.
-  Triggered by "create workspace", "new workspace", "onboard system", "setup SAP system",
-  "generate hosts.yaml", "generate sap-parameters", or "add new system".
 ---
 
 # Workspace Creator
 
 Creates new SAP workspace configurations for STAF testing. Generates `sap-parameters.yaml`
 and `hosts.yaml` from templates based on user-provided system details.
+
+> **⚠️ This skill is guidance only. Do NOT modify any source code, scripts, or framework files. Only help the user by creating workspace configuration files (sap-parameters.yaml, hosts.yaml) under WORKSPACES/SYSTEM/.**
 
 ## When to Use
 
@@ -143,9 +143,9 @@ See [templates/hosts.yaml.template](templates/hosts.yaml.template)
 
 ## Creation Steps
 
-1. Create the directory:
+1. Create the directory structure:
    ```bash
-   mkdir -p WORKSPACES/SYSTEM/{SYSTEM_CONFIG_NAME}
+   mkdir -p WORKSPACES/SYSTEM/{SYSTEM_CONFIG_NAME}/{logs,quality_assurance}
    ```
 
 2. Generate `sap-parameters.yaml` from template with user values
@@ -166,6 +166,8 @@ Files created:
   ✅ sap-parameters.yaml (platform: HANA, HA: true)
   ✅ hosts.yaml (groups: X00_DB[2], X00_SCS[1], X00_ERS[1], X00_PAS[1], X00_APP[1])
   ✅ SSH key: ssh_key.pem
+  ✅ logs/ directory created
+  ✅ quality_assurance/ directory created
 
 Next steps:
   1. Validate: python3 .github/skills/workspace-validator/scripts/validate_workspace.py WORKSPACES/SYSTEM/DEV-WEEU-SAP01-X00
@@ -189,6 +191,7 @@ Before reporting workspace creation complete:
 - [ ] `hosts.yaml` has correct groups for intended test type
 - [ ] All hosts have ALL fields (ansible_host, ansible_user, ansible_connection, connection_type, virtual_host, become_user, os_type, vm_name)
 - [ ] SSH authentication is configured (key file, Key Vault, or password)
+- [ ] `logs/` and `quality_assurance/` directories exist
 - [ ] Validated with workspace-validator
 
 ## Related Skills

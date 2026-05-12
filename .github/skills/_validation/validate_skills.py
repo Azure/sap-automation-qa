@@ -25,6 +25,7 @@ MAX_SKILL_LINES = 500
 NAME_PATTERN = re.compile(r"^[a-z0-9]([a-z0-9-]*[a-z0-9])?$")
 CONSECUTIVE_HYPHENS = re.compile(r"--")
 REFERENCE_PATTERN = re.compile(r"\((?:scripts|references|assets|templates)/[^)]+\)")
+COMPATIBILITY_PATTERN = re.compile(r"^##\s+Compatibility", re.MULTILINE | re.IGNORECASE)
 
 
 @dataclass
@@ -227,6 +228,25 @@ def validate_references(
             )
 
 
+def validate_compatibility_section(
+    skill_md: Path, result: ValidationResult, skill: str
+) -> None:
+    """Check that SKILL.md contains a '## Compatibility' section.
+
+    :param skill_md: Path to SKILL.md.
+    :param result: Validation result to append findings to.
+    :param skill: Skill identifier for reporting.
+    """
+    text = skill_md.read_text(encoding="utf-8")
+    if COMPATIBILITY_PATTERN.search(text):
+        result.ok(skill, "Compatibility section present")
+    else:
+        result.warn(
+            skill,
+            "Missing '## Compatibility' section (recommended)",
+        )
+
+
 def validate_skill(skill_dir: Path, result: ValidationResult) -> None:
     """Validate a single skill directory.
 
@@ -254,6 +274,7 @@ def validate_skill(skill_dir: Path, result: ValidationResult) -> None:
     validate_line_count(skill_md, result, dir_name)
     validate_scripts(skill_dir, frontmatter, result, dir_name)
     validate_references(skill_md, skill_dir, result, dir_name)
+    validate_compatibility_section(skill_md, result, dir_name)
 
 
 def validate_skills_directory(skills_dir: Path) -> ValidationResult:
