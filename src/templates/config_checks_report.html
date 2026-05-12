@@ -1189,6 +1189,50 @@
       animation: slideDown 0.3s ease;
     }
 
+    .execution-log-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      margin-bottom: 12px;
+    }
+
+    .execution-log-header h2 {
+      margin-bottom: 0;
+    }
+
+    .copy-log-btn {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      background: #ffffff;
+      border: 1px solid #e1dfdd;
+      border-radius: var(--radius-sm);
+      padding: 8px 14px;
+      font-size: 13px;
+      font-weight: 600;
+      color: #605e5c;
+      cursor: pointer;
+      transition: var(--transition);
+      box-shadow: var(--shadow-sm);
+    }
+
+    .copy-log-btn:hover {
+      background: #f3f2f1;
+      color: var(--primary-color);
+      box-shadow: var(--shadow-md);
+    }
+
+    .copy-log-btn.copied {
+      color: #107c10;
+      border-color: #107c10;
+    }
+
+    .copy-log-btn svg {
+      width: 14px;
+      height: 14px;
+      fill: currentColor;
+    }
+
     /* Footer Styles */
     .footer {
       bottom: 0;
@@ -1258,13 +1302,23 @@
         </div>
         <div class="system-info-container">
           <h2 class="system-info-heading">Configuration Checks Summary</h2>
+          {% set ns = namespace(ha_failed=0) %}
+          {% for result in test_case_results %}
+            {% if result.check.report|default('') == 'table' and result.actual_value is iterable and result.actual_value is not string and result.actual_value is not mapping %}
+              {% for param in result.actual_value %}
+                {% if param is mapping and param.get('status', '')|upper == 'FAILED' %}
+                  {% set ns.ha_failed = ns.ha_failed + 1 %}
+                {% endif %}
+              {% endfor %}
+            {% endif %}
+          {% endfor %}
           <div class="summary-box">
             <div class="status-count passed" onclick="filterByStatus('passed')" data-status="passed">
               <h3>{{ test_case_results|selectattr('status', 'equalto', 'PASSED')|list|length }}</h3>
               <p>Passed</p>
             </div>
             <div class="status-count error" onclick="filterByStatus('error')" data-status="error">
-              <h3>{{ test_case_results|selectattr('status', 'equalto', 'FAILED')|list|length }}</h3>
+              <h3>{{ test_case_results|selectattr('status', 'equalto', 'FAILED')|list|length + ns.ha_failed }}</h3>
               <p>Error</p>
             </div>
             <div class="status-count warning" onclick="filterByStatus('warning')" data-status="warning">
@@ -1284,6 +1338,17 @@
             {% set host_checks = test_case_results|selectattr('hostname', 'equalto', hostname)|rejectattr('status',
             'equalto', 'SKIPPED')|list %}
             {% set error_count = host_checks|selectattr('status', 'equalto', 'FAILED')|list|length %}
+            {% set host_ha_ns = namespace(ha_errors=0) %}
+            {% for check in host_checks %}
+              {% if check.check.report|default('') == 'table' and check.actual_value is iterable and check.actual_value is not string and check.actual_value is not mapping %}
+                {% for param in check.actual_value %}
+                  {% if param is mapping and param.get('status', '')|upper == 'FAILED' %}
+                    {% set host_ha_ns.ha_errors = host_ha_ns.ha_errors + 1 %}
+                  {% endif %}
+                {% endfor %}
+              {% endif %}
+            {% endfor %}
+            {% set error_count = error_count + host_ha_ns.ha_errors %}
             {% set no_error_count = host_checks|rejectattr('status', 'equalto', 'FAILED')|list|length %}
             <button class="tab-button {% if loop.first %}active{% endif %}" onclick="openTab('host-{{ hostname }}')">
               {{ hostname }}
@@ -1465,7 +1530,13 @@
   </div>
   {% if execution_log %}
   <div class="execution-log-container">
-    <h2>Execution Log</h2>
+    <div class="execution-log-header">
+      <h2>Execution Log</h2>
+      <button class="copy-log-btn" onclick="copyExecutionLog(this)">
+        <svg viewBox="0 0 16 16" xmlns="http://www.w3.org/2000/svg"><path d="M4 4V1.5C4 .67 4.67 0 5.5 0h9C15.33 0 16 .67 16 1.5v9c0 .83-.67 1.5-1.5 1.5H12v2.5c0 .83-.67 1.5-1.5 1.5h-9C.67 16 0 15.33 0 14.5v-9C0 4.67.67 4 1.5 4H4zm1.5-2.5V4H5.5C4.67 4 4 4.67 4 5.5V10.5h-2.5v-9h9V4H5.5zM1.5 5.5v9h9v-9h-9z"/></svg>
+        <span>Copy</span>
+      </button>
+    </div>
     <div class="execution-log-toggle" onclick="toggleExecutionLog(this)">
       <span class="arrow">&#9654;</span>
       <span>Show Ansible Execution Log</span>
@@ -1690,6 +1761,40 @@
       const label = element.querySelector('span:last-child')
       label.textContent = content.classList.contains('visible')
         ? 'Hide Ansible Execution Log' : 'Show Ansible Execution Log'
+    }
+
+    function copyExecutionLog(button) {
+      const container = button.closest('.execution-log-container')
+      const pre = container.querySelector('.execution-log-content pre')
+      const text = pre.textContent
+
+      function onSuccess() {
+        button.classList.add('copied')
+        button.querySelector('span').textContent = 'Copied!'
+        setTimeout(() => {
+          button.classList.remove('copied')
+          button.querySelector('span').textContent = 'Copy'
+        }, 2000)
+      }
+
+      function onError() {
+        button.querySelector('span').textContent = 'Copy failed'
+        setTimeout(() => { button.querySelector('span').textContent = 'Copy' }, 2000)
+      }
+
+      if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(text).then(onSuccess).catch(onError)
+      } else {
+        const textarea = document.createElement('textarea')
+        textarea.value = text
+        textarea.style.position = 'fixed'
+        textarea.style.opacity = '0'
+        document.body.appendChild(textarea)
+        textarea.select()
+        try { document.execCommand('copy'); onSuccess() }
+        catch (e) { onError() }
+        finally { document.body.removeChild(textarea) }
+      }
     }
   </script>
 </body>

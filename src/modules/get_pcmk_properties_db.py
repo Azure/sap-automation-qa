@@ -175,7 +175,7 @@ class HAClusterValidator(BaseHAClusterValidator):
     """
 
     RESOURCE_CATEGORIES = {
-        "sbd_stonith": ".//primitive[@type='external/sbd']",
+        "sbd_stonith": [".//primitive[@type='external/sbd']", ".//primitive[@type='fence_sbd']"],
         "fence_agent": ".//primitive[@type='fence_azure_arm']",
         "topology": ".//clone/primitive[@type='SAPHanaTopology']",
         "angi_topology": ".//clone/primitive[@type='SAPHanaTopology']",
@@ -190,7 +190,7 @@ class HAClusterValidator(BaseHAClusterValidator):
         "azureevents": ".//primitive[@type='azure-events-az']",
     }
     SCALEOUT_RESOURCE_CATEGORIES = {
-        "sbd_stonith": ".//primitive[@type='external/sbd']",
+        "sbd_stonith": [".//primitive[@type='external/sbd']", ".//primitive[@type='fence_sbd']"],
         "fence_agent": ".//primitive[@type='fence_azure_arm']",
         "scaleout_topology": (".//clone/primitive[@type='SAPHanaTopology']"),
         "scaleout_topology_legacy": (".//clone/primitive[@type='SAPHanaTopologyScaleOut']"),
@@ -202,7 +202,7 @@ class HAClusterValidator(BaseHAClusterValidator):
         "azureevents": ".//primitive[@type='azure-events-az']",
     }
     ANGI_SCALEOUT_RESOURCE_CATEGORIES = {
-        "sbd_stonith": ".//primitive[@type='external/sbd']",
+        "sbd_stonith": [".//primitive[@type='external/sbd']", ".//primitive[@type='fence_sbd']"],
         "fence_agent": ".//primitive[@type='fence_azure_arm']",
         "angi_topology": ".//clone/primitive[@type='SAPHanaTopology']",
         "angi_scaleout_hana": ".//primitive[@type='SAPHanaController']",
@@ -383,7 +383,10 @@ class HAClusterValidator(BaseHAClusterValidator):
                 resource_categories.pop("scaleout_topology", None)
 
         for sub_category, xpath in resource_categories.items():
-            elements = root.findall(xpath)
+            xpaths = xpath if isinstance(xpath, list) else [xpath]
+            elements = []
+            for xp in xpaths:
+                elements.extend(root.findall(xp))
             for element in elements:
                 if (
                     sub_category == "nfs_attribute"
@@ -423,7 +426,10 @@ class HAClusterValidator(BaseHAClusterValidator):
                 if resource_config.get("required", False):
                     if resource_type in all_cats:
                         xpath = all_cats[resource_type]
-                        elements = resource_scope.findall(xpath)
+                        xpaths = xpath if isinstance(xpath, list) else [xpath]
+                        elements = []
+                        for xp in xpaths:
+                            elements.extend(resource_scope.findall(xp))
                         if not elements:
                             self.missing_required_items.append(
                                 {

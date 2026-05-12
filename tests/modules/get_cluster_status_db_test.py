@@ -364,6 +364,8 @@ class TestHanaClusterStatusCheckerScaleOutHSR:
                 <attribute name="hana_TEST_srmode" value="syncmem"/>
                 <attribute name="hana_TEST_roles"
                     value="master1:master:worker:master"/>
+                <attribute name="master-rsc_SAPHanaPrm_TEST_HDB00"
+                    value="150"/>
             </node>
             <node name="node2">
                 <attribute name="hana_TEST_clone_state" value="DEMOTED"/>
@@ -371,6 +373,8 @@ class TestHanaClusterStatusCheckerScaleOutHSR:
                 <attribute name="hana_TEST_site" value="SITEA"/>
                 <attribute name="hana_TEST_roles"
                     value="master1:slave:worker:slave"/>
+                <attribute name="master-rsc_SAPHanaPrm_TEST_HDB00"
+                    value="-10000"/>
             </node>
             <node name="node3">
                 <attribute name="hana_TEST_clone_state" value="DEMOTED"/>
@@ -378,6 +382,8 @@ class TestHanaClusterStatusCheckerScaleOutHSR:
                 <attribute name="hana_TEST_site" value="SITEB"/>
                 <attribute name="hana_TEST_roles"
                     value="master1:master:worker:master"/>
+                <attribute name="master-rsc_SAPHanaPrm_TEST_HDB00"
+                    value="100"/>
             </node>
             <node name="node4">
                 <attribute name="hana_TEST_clone_state" value="DEMOTED"/>
@@ -385,6 +391,8 @@ class TestHanaClusterStatusCheckerScaleOutHSR:
                 <attribute name="hana_TEST_site" value="SITEB"/>
                 <attribute name="hana_TEST_roles"
                     value="master1:slave:worker:slave"/>
+                <attribute name="master-rsc_SAPHanaPrm_TEST_HDB00"
+                    value="-12200"/>
             </node>
             <node name="node5">
             </node>
@@ -424,7 +432,7 @@ class TestHanaClusterStatusCheckerScaleOutHSR:
                 <attribute name="hana_hdb_site" value="SITEA"/>
                 <attribute name="hana_nfs_s1_active" value="true"/>
                 <attribute name="master-SAPHana_HDB_HDB00"
-                    value="100"/>
+                    value="101"/>
             </node>
             <node name="t02dhdb01l064">
                 <attribute name="NFS_HDB_SITE" value="S1"/>
@@ -436,7 +444,7 @@ class TestHanaClusterStatusCheckerScaleOutHSR:
                 <attribute name="hana_hdb_site" value="SITEA"/>
                 <attribute name="hana_nfs_s1_active" value="true"/>
                 <attribute name="master-SAPHana_HDB_HDB00"
-                    value="100"/>
+                    value="101"/>
             </node>
             <node name="t02dhdb01l164">
                 <attribute name="NFS_HDB_SITE" value="S2"/>
@@ -460,7 +468,7 @@ class TestHanaClusterStatusCheckerScaleOutHSR:
                 <attribute name="hana_hdb_site" value="SITEB"/>
                 <attribute name="hana_nfs_s2_active" value="true"/>
                 <attribute name="master-SAPHana_HDB_HDB00"
-                    value="100"/>
+                    value="-12200"/>
             </node>
             <node name="t02dhdb02l164">
                 <attribute name="NFS_HDB_SITE" value="S2"/>
@@ -472,7 +480,7 @@ class TestHanaClusterStatusCheckerScaleOutHSR:
                 <attribute name="hana_hdb_site" value="SITEB"/>
                 <attribute name="hana_nfs_s2_active" value="true"/>
                 <attribute name="master-SAPHana_HDB_HDB00"
-                    value="100"/>
+                    value="-12200"/>
             </node>
             <node name="t02observer00l649">
                 <attribute name="azName"

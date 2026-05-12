@@ -73,7 +73,7 @@ test_groups:
         applicability:
           topology:                 [scale_up]
 
-      - name:                       "HA Functional Test: [Primary Site] Node crash"
+      - name:                       "HA Functional Test: [Primary Site] Crash master node"
         task_name:                  primary-node-crash
         description: |
           The Primary Index Server Crash test simulates cluster behavior when the HANA index server
@@ -96,7 +96,7 @@ test_groups:
         applicability:
           topology:                 [scale_up, scale_out_hsr]
 
-      - name:                       "HA Functional Test: [Primary Site] Crash index server"
+      - name:                       "HA Functional Test: [Primary Site] Crash master node index server"
         task_name:                  primary-crash-index
         description: |
           The Primary Index Server Crash test validates high availability behavior by forcefully
@@ -108,7 +108,7 @@ test_groups:
         applicability:
           topology:                 [scale_up, scale_out_hsr]
 
-      - name:                       "HA Functional Test: [Primary Site] Kill SAP HANA instance"
+      - name:                       "HA Functional Test: [Primary Site] Kill master node"
         task_name:                  primary-node-kill
         description: |
           The Primary Node Kill test validates cluster behavior by forcefully terminating all HANA
@@ -119,7 +119,7 @@ test_groups:
         applicability:
           topology:                 [scale_up, scale_out_hsr]
 
-      - name:                       "HA Functional Test: [Primary Site] Kill SAP HANA instance on worker node"
+      - name:                       "HA Functional Test: [Primary Site] Kill worker node"
         task_name:                  primary-worker-node-kill
         description: |
           The Primary Worker Node Kill test validates scale-out HSR resilience by forcefully
@@ -130,7 +130,7 @@ test_groups:
         applicability:
           topology:                 [scale_out_hsr]
 
-      - name:                       "HA Functional Test: [Primary Site] Crash node (echo b)"
+      - name:                       "HA Functional Test: [Primary Site] Crash master node (echo b)"
         task_name:                  primary-echo-b
         description: |
           The Primary Echo B test simulates an immediate system crash on the primary HANA node by
@@ -141,7 +141,7 @@ test_groups:
         applicability:
           topology:                 [scale_up, scale_out_hsr]
 
-      - name:                       "HA Functional Test: [Primary Site] Crash worker node"
+      - name:                       "HA Functional Test: [Primary Site] Crash worker node (echo b)"
         task_name:                  primary-worker-echo-b
         description: |
           The Primary Worker Echo B test simulates an immediate system crash on a worker node in the
@@ -151,7 +151,7 @@ test_groups:
         applicability:
           topology:                 [scale_out_hsr]
 
-      - name:                       "HA Functional Test: [Secondary Site] Kill SAP HANA instance"
+      - name:                       "HA Functional Test: [Secondary Site] Kill master node"
         task_name:                  secondary-node-kill
         description: |
           The Secondary Node Kill test examines cluster resilience by forcefully terminating HANA
@@ -162,7 +162,7 @@ test_groups:
         applicability:
           topology:                 [scale_up, scale_out_hsr]
 
-      - name:                       "HA Functional Test: [Secondary Site] Block all network communication from master node"
+      - name:                       "HA Functional Test: [Secondary Site] Block all network communication"
         task_name:                  secondary-block-network
         description: |
           The Secondary Block Network test validates scale-out HSR behavior when network communication
@@ -174,7 +174,7 @@ test_groups:
           topology:                 [scale_out_hsr]
 
 
-      - name:                       "HA Functional Test: [Secondary Site] Kill SAP HANA instance on worker node"
+      - name:                       "HA Functional Test: [Secondary Site] Kill worker node"
         task_name:                  secondary-worker-node-kill
         description: |
           The Secondary Worker Node Kill test validates scale-out HSR resilience by forcefully
@@ -185,7 +185,7 @@ test_groups:
         applicability:
           topology:                 [scale_out_hsr]
 
-      - name:                       "HA Functional Test: [Secondary Site] Crash node (echo b)"
+      - name:                       "HA Functional Test: [Secondary Site] Crash master node (echo b)"
         task_name:                  secondary-echo-b
         description: |
           The Secondary Echo B test simulates an uncontrolled system crash on the secondary HANA node
@@ -196,7 +196,7 @@ test_groups:
         applicability:
           topology:                 [scale_up, scale_out_hsr]
 
-      - name:                       "HA Functional Test: [Secondary Site] Crash worker node"
+      - name:                       "HA Functional Test: [Secondary Site] Crash worker node (echo b)"
         task_name:                  secondary-worker-echo-b
         description: |
           The Secondary Worker Echo B test simulates an uncontrolled system crash on a worker node in
@@ -227,7 +227,7 @@ test_groups:
         applicability:
           topology:                 [scale_up, scale_out_hsr]
 
-      - name:                       "HA Functional Test: [Secondary Site] Crash index server"
+      - name:                       "HA Functional Test: [Secondary Site] Crash master node index server"
         task_name:                  secondary-crash-index
         description: |
           The Secondary Index Server Crash test simulates failure of the HANA index server process on
@@ -238,7 +238,7 @@ test_groups:
         applicability:
           topology:                 [scale_up, scale_out_hsr]
 
-      - name:                       "HA Functional Test: [Primary Site] Crash index server on worker node"
+      - name:                       "HA Functional Test: [Primary Site] Crash worker node index server"
         task_name:                  primary-worker-crash-index
         description: |
           The Primary Worker Index Server Crash test forcefully terminates the HANA index server on a
@@ -248,7 +248,7 @@ test_groups:
         applicability:
           topology:                 [scale_out_hsr]
 
-      - name:                       "HA Functional Test: [Secondary Site] Crash index server on worker node"
+      - name:                       "HA Functional Test: [Secondary Site] Crash worker node index server"
         task_name:                  secondary-worker-crash-index
         description: |
           The Secondary Worker Index Server Crash test forcefully terminates the HANA index server on a
@@ -259,7 +259,7 @@ test_groups:
         applicability:
           topology:                 [scale_out_hsr]
 
-      - name:                       "HA Functional Test: [Primary Site] Block HANA shared on master node"
+      - name:                       "HA Functional Test: [Primary Site] Block HANA shared"
         task_name:                  block-hana-shared
         description: |
           Simulates loss of the /hana/shared NFS mount on the primary master
@@ -473,7 +473,7 @@ commands:
     REDHAT:                         "cibadmin --query --xpath \"//primitive[@type='SAPHana']\" --node-path | grep -oP \"primitive\\[@id='\\K[^']+\""
 
   - name:                           get_hana_clone_resource_id
-    SUSE:                           "cibadmin --query --xpath \"//primitive[@type='SAPHana']\" --node-path | grep -oP \"primtive\\[@id='\\K[^']+\""
+    SUSE:                           "cibadmin --query --xpath \"//primitive[@type='SAPHana']\" --node-path | grep -oP \"primitive\\[@id='\\K[^']+\""
     REDHAT:                         "cibadmin --query --xpath \"//primitive[@type='SAPHana']\" --node-path | grep -oP \"clone\\[@id='\\K[^']+\""
 
   - name:                           get_hana_clone_resource_id_saphanasr_angi

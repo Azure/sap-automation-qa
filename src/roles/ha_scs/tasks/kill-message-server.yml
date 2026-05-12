@@ -108,7 +108,7 @@
                                         New ERS: {{ cluster_status_test_execution.ers_node }}
             test_case_details_from_test_case: {
                                         "Pre Validations: Validate SCS cluster status": "{{ cluster_status_pre }}",
-                                        "Pre Validations: CleanUp any failed resource": "{{ cleanup_failed_resource_pre }}",
+                                        "Pre Validations: CleanUp any failed resource": "{{ cleanup_failed_resource_pre | default('Not Executed') }}",
                                         "Test Execution: Kill Message Server Process": "{{ kill_ms_result }}",
                                         "Test Execution: Cleanup resources": "{{ cleanup_failed_resource_test_execution }}",
                                         "Post Validations Result": "{{ cluster_status_test_execution }}",

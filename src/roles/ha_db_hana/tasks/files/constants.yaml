@@ -187,7 +187,6 @@ RESOURCE_DEFAULTS:
             required:               false
 
     topology:
-      required:                     false
       meta_attributes:
         clone-node-max:
           value:                    "1"

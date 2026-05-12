@@ -94,7 +94,7 @@
                                         ERS Node: {{ cluster_status_pre.ers_node }}
             test_case_details_from_test_case: {
                                         "Pre Validations: Validate SCS cluster status": "{{ cluster_status_pre }}",
-                                        "Pre Validations: CleanUp any failed resource": "{{ cleanup_failed_resource_pre }}",
+                                        "Pre Validations: CleanUp any failed resource": "{{ cleanup_failed_resource_pre | default('Not Executed') }}",
                                         "Test Execution: ENSA Version Check": "{{ ensa2_check }}",
                                         "Test Execution: Kill Enqueue Replication Server Process (ENSA1)": "{{ kill_er_result | default(omit) }}",
                                         "Test Execution: Kill Enqueue Replication Server Process (ENSA2)": "{{ kill_enqr_result | default(omit) }}",

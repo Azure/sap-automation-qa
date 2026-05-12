@@ -209,9 +209,9 @@ checks:
     collector_type:                     *command
     collector_args:
       command:                          "corosync-cmapctl -g runtime.config.totem.token | awk -F'= ' '{print $2}'"
-    validator_type:                     *string
+    validator_type:                     *range
     validator_args:
-      expected_output:                  "30000"
+      min:                              "30000"
     report:                             *check
     references:
       microsoft:                        "https://learn.microsoft.com/en-us/azure/sap/workloads/high-availability-guide-suse-pacemaker"
@@ -329,7 +329,7 @@ checks:
       storage_type:                     *all_storage
       role:                             [*db_role, *ascs_role]
       database_type:                    [*hana]
-      high_availability:                *high_availability
+      high_availability:                [*scale_up]
       high_availability_agent:          *cluster_type
     collector_type:                     *command
     collector_args:
@@ -354,7 +354,7 @@ checks:
       storage_type:                     *all_storage
       role:                             [*db_role, *ascs_role]
       database_type:                    [*hana]
-      high_availability:                *high_availability
+      high_availability:                [*scale_up]
       high_availability_agent:          *cluster_type
     collector_type:                     *command
     collector_args:

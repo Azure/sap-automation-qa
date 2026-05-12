@@ -1018,7 +1018,10 @@ class TestHAClusterValidator:
         for category, xpath in HAClusterValidator.RESOURCE_CATEGORIES.items():
             xml_str = DUMMY_XML_RESOURCES
             root = ET.fromstring(xml_str)
-            elements = root.findall(xpath)
+            xpaths = xpath if isinstance(xpath, list) else [xpath]
+            elements = []
+            for xp in xpaths:
+                elements.extend(root.findall(xp))
             if elements:
                 params = validator._parse_resource(elements[0], category)
                 assert isinstance(params, list)

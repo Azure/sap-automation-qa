@@ -97,7 +97,7 @@
                                         New PID: {{ sapstartsrv_pid_after_kill.stdout }}
             test_case_details_from_test_case: {
                                         "Pre Validations: Validate SCS cluster status": "{{ cluster_status_pre }}",
-                                        "Pre Validations: CleanUp any failed resource": "{{ cleanup_failed_resource_pre }}",
+                                        "Pre Validations: CleanUp any failed resource": "{{ cleanup_failed_resource_pre | default('Not Executed') }}",
                                         "Test Execution: Find sapstartsrv PID": "{{ sapstartsrv_pid }}",
                                         "Test Execution: Find sapstartsrv PID after killing the process": "{{ sapstartsrv_pid_after_kill }}",
                                         "Post Validations Result": "{{ cluster_status_test_execution }}",

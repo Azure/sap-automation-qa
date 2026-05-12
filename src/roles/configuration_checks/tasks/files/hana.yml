@@ -189,7 +189,7 @@ checks:
       expected_output:                  "2500000"
     report:                             *check
     references:
-      microsoft:                        "https://docs.microsoft.com/en-us/azure/virtual-machines/workloads/sap/sap-hana-scale-out-standby-netapp-files-suse"
+      microsoft:                        "https://learn.microsoft.com/en-us/azure/sap/workloads/sap-hana-scale-out-standby-netapp-files-suse"
       sap:                              "3024346"
 
   - id:                                 "DB-HANA-0005"
@@ -214,7 +214,7 @@ checks:
       expected_output:                  "16777216"
     report:                             *check
     references:
-      microsoft:                        "https://docs.microsoft.com/en-us/azure/virtual-machines/workloads/sap/sap-hana-scale-out-standby-netapp-files-suse"
+      microsoft:                        "https://learn.microsoft.com/en-us/azure/sap/workloads/sap-hana-scale-out-standby-netapp-files-suse"
       sap:                              "3024346"
 
   - id:                                 "DB-HANA-0006"
@@ -239,7 +239,7 @@ checks:
       expected_output:                  "212992"
     report:                             *check
     references:
-      microsoft:                        "https://docs.microsoft.com/en-us/azure/virtual-machines/workloads/sap/sap-hana-scale-out-standby-netapp-files-suse"
+      microsoft:                        "https://learn.microsoft.com/en-us/azure/sap/workloads/sap-hana-scale-out-standby-netapp-files-suse"
       sap:                              "3024346"
 
   - id:                                 "DB-HANA-0007"
@@ -264,7 +264,7 @@ checks:
       expected_output:                  "16777216"
     report:                             *check
     references:
-      microsoft:                        "https://docs.microsoft.com/en-us/azure/virtual-machines/workloads/sap/sap-hana-scale-out-standby-netapp-files-suse"
+      microsoft:                        "https://learn.microsoft.com/en-us/azure/sap/workloads/sap-hana-scale-out-standby-netapp-files-suse"
       sap:                              "3024346"
 
   - id:                                 "DB-HANA-0008"
@@ -289,7 +289,7 @@ checks:
       expected_output:                  "4096 131072 6291456"
     report:                             *check
     references:
-      microsoft:                        "https://docs.microsoft.com/en-us/azure/virtual-machines/workloads/sap/sap-hana-scale-out-standby-netapp-files-suse"
+      microsoft:                        "https://learn.microsoft.com/en-us/azure/sap/workloads/sap-hana-scale-out-standby-netapp-files-suse"
       sap:                              "3024346"
 
   - id:                                 "DB-HANA-0009"
@@ -314,7 +314,7 @@ checks:
       expected_output:                  "4096 131072 16777216"
     report:                             *check
     references:
-      microsoft:                        "https://docs.microsoft.com/en-us/azure/virtual-machines/workloads/sap/sap-hana-scale-out-standby-netapp-files-suse"
+      microsoft:                        "https://learn.microsoft.com/en-us/azure/sap/workloads/sap-hana-scale-out-standby-netapp-files-suse"
       sap:                              "3024346"
 
   - id:                                 "DB-HANA-0010"
@@ -339,7 +339,7 @@ checks:
       expected_output:                  "4096 16384 4194304"
     report:                             *check
     references:
-      microsoft:                        "https://docs.microsoft.com/en-us/azure/virtual-machines/workloads/sap/sap-hana-scale-out-standby-netapp-files-suse"
+      microsoft:                        "https://learn.microsoft.com/en-us/azure/sap/workloads/sap-hana-scale-out-standby-netapp-files-suse"
       sap:                              "3024346"
 
   - id:                                 "DB-HANA-0011"
@@ -364,7 +364,7 @@ checks:
       expected_output:                  "4096 16384 16777216"
     report:                             *check
     references:
-      microsoft:                        "https://docs.microsoft.com/en-us/azure/virtual-machines/workloads/sap/sap-hana-scale-out-standby-netapp-files-suse"
+      microsoft:                        "https://learn.microsoft.com/en-us/azure/sap/workloads/sap-hana-scale-out-standby-netapp-files-suse"
       sap:                              "3024346"
 
   - id:                                 "DB-HANA-0012"
@@ -389,7 +389,7 @@ checks:
       expected_output:                  "300000"
     report:                             *check
     references:
-      microsoft:                        "https://docs.microsoft.com/en-us/azure/virtual-machines/workloads/sap/sap-hana-scale-out-standby-netapp-files-suse"
+      microsoft:                        "https://learn.microsoft.com/en-us/azure/sap/workloads/sap-hana-scale-out-standby-netapp-files-suse"
       sap:                              "3024346"
 
   - id:                                 "DB-HANA-0013"
@@ -414,7 +414,7 @@ checks:
       expected_output:                  "0"
     report:                             *check
     references:
-      microsoft:                        "https://docs.microsoft.com/en-us/azure/virtual-machines/workloads/sap/sap-hana-scale-out-standby-netapp-files-suse"
+      microsoft:                        "https://learn.microsoft.com/en-us/azure/sap/workloads/sap-hana-scale-out-standby-netapp-files-suse"
       sap:                              "3024346"
 
   - id:                                 "DB-HANA-0014"
@@ -439,7 +439,7 @@ checks:
       expected_output:                  "1"
     report:                             *check
     references:
-      microsoft:                        "https://docs.microsoft.com/en-us/azure/virtual-machines/workloads/sap/sap-hana-scale-out-standby-netapp-files-suse"
+      microsoft:                        "https://learn.microsoft.com/en-us/azure/sap/workloads/sap-hana-scale-out-standby-netapp-files-suse"
       sap:                              "3024346"
 
   - id:                                 "DB-HANA-0015"
@@ -464,7 +464,7 @@ checks:
       expected_output:                  "1"
     report:                             *check
     references:
-      microsoft:                        "https://docs.microsoft.com/en-us/azure/virtual-machines/workloads/sap/sap-hana-scale-out-standby-netapp-files-suse"
+      microsoft:                        "https://learn.microsoft.com/en-us/azure/sap/workloads/sap-hana-scale-out-standby-netapp-files-suse"
       sap:                              "3024346"
 
   - id:                                 "DB-HANA-0016"
@@ -490,7 +490,7 @@ checks:
       expected_output:                  "0"
     report:                             *check
     references:
-      microsoft:                        "https://docs.microsoft.com/en-us/azure/virtual-machines/workloads/sap/sap-hana-scale-out-standby-netapp-files-suse"
+      microsoft:                        "https://learn.microsoft.com/en-us/azure/sap/workloads/sap-hana-scale-out-standby-netapp-files-suse"
       sap:                              "3024346"
 
   - id:                                 "DB-HANA-0017"
@@ -516,7 +516,7 @@ checks:
       expected_output:                  "1"
     report:                             *check
     references:
-      microsoft:                        "https://docs.microsoft.com/en-us/azure/virtual-machines/workloads/sap/sap-hana-scale-out-standby-netapp-files-suse"
+      microsoft:                        "https://learn.microsoft.com/en-us/azure/sap/workloads/sap-hana-scale-out-standby-netapp-files-suse"
       sap:                              "3024346"
 
   - id:                                 "DB-HANA-0018"
@@ -541,7 +541,7 @@ checks:
       expected_output:                  "1"
     report:                             *check
     references:
-      microsoft:                        "https://docs.microsoft.com/en-us/azure/virtual-machines/workloads/sap/sap-hana-scale-out-standby-netapp-files-suse"
+      microsoft:                        "https://learn.microsoft.com/en-us/azure/sap/workloads/sap-hana-scale-out-standby-netapp-files-suse"
       sap:                              "3024346"
 
   - id:                                 "DB-HANA-0019"
@@ -554,7 +554,7 @@ checks:
       os_type:                          [*suse, *redhat]
       os_version:                       *all_versions
       hardware_type:                    *all_hardware
-      storage_type:                     *anf
+      storage_type:                     *all_storage
       role:                             [*db_role]
       database_type:                    [*hana]
     collector_type:                     *command
@@ -566,7 +566,7 @@ checks:
       expected_output:                  "1"
     report:                             *check
     references:
-      microsoft:                        "https://docs.microsoft.com/en-us/azure/virtual-machines/workloads/sap/sap-hana-scale-out-standby-netapp-files-suse"
+      microsoft:                        "https://learn.microsoft.com/en-us/azure/sap/workloads/sap-hana-scale-out-standby-netapp-files-suse"
       sap:                              "3024346"
 
   - id:                                 "DB-HANA-0020"
@@ -579,7 +579,7 @@ checks:
       os_type:                          [*suse, *redhat]
       os_version:                       *all_versions
       hardware_type:                    *all_hardware
-      storage_type:                     *anf
+      storage_type:                     *all_storage
       role:                             [*db_role]
       database_type:                    [*hana]
     collector_type:                     *command
@@ -588,17 +588,17 @@ checks:
       user:                             *root
     validator_type:                     *range
     validator_args:
-      min:                              "8192"
+      min:                              "16348"
     report:                             *check
     references:
-      microsoft:                        "https://docs.microsoft.com/en-us/azure/virtual-machines/workloads/sap/sap-hana-scale-out-standby-netapp-files-suse"
+      microsoft:                        "https://learn.microsoft.com/en-us/azure/sap/workloads/sap-hana-scale-out-standby-netapp-files-suse"
       sap:                              "3024346"
 
   - id:                                 "DB-HANA-0021"
     name:                               "sysctl net.ipv4.ip_local_port_range"
-    description:                        "SAP HANA sysctl net.ipv4.ip_local_port_range"
+    description:                        "SAP HANA ip_local_port_range - Azure docs recommend NOT setting explicitly (SAP note 2382421). SAP Host Agent manages port ranges."
     category:                           *os_check
-    severity:                           *high
+    severity:                           *info
     workload:                           *sap
     applicability:
       os_type:                          [*suse, *redhat]
@@ -611,13 +611,10 @@ checks:
     collector_args:
       command:                          "/sbin/sysctl net.ipv4.ip_local_port_range -n"
       user:                             *root
-    validator_type:                     *string
-    validator_args:
-      expected_output:                  "9000 65499"
     report:                             *check
     references:
-      microsoft:                        "https://docs.microsoft.com/en-us/azure/virtual-machines/workloads/sap/sap-hana-scale-out-standby-netapp-files-suse"
-      sap:                              "3024346"
+      microsoft:                        "https://learn.microsoft.com/en-us/azure/sap/workloads/sap-hana-scale-out-standby-netapp-files-suse"
+      sap:                              "2382421"
 
   - id:                                 "DB-HANA-0022"
     name:                               "sysctl net.ipv4.conf.all.rp_filter"
@@ -629,7 +626,7 @@ checks:
       os_type:                          [*suse, *redhat]
       os_version:                       *all_versions
       hardware_type:                    *all_hardware
-      storage_type:                     *anf
+      storage_type:                     *all_storage
       role:                             [*db_role]
       database_type:                    [*hana]
     collector_type:                     *command
@@ -641,7 +638,7 @@ checks:
       expected_output:                  "0"
     report:                             *check
     references:
-      microsoft:                        "https://docs.microsoft.com/en-us/azure/virtual-machines/workloads/sap/sap-hana-scale-out-standby-netapp-files-suse"
+      microsoft:                        "https://learn.microsoft.com/en-us/azure/sap/workloads/sap-hana-scale-out-standby-netapp-files-suse"
       sap:                              "3024346"
 
   - id:                                 "DB-HANA-0023"
@@ -666,7 +663,7 @@ checks:
       expected_output:                   "128"
     report:                             *check
     references:
-      microsoft:                        "https://docs.microsoft.com/en-us/azure/virtual-machines/workloads/sap/sap-hana-scale-out-standby-netapp-files-suse"
+      microsoft:                        "https://learn.microsoft.com/en-us/azure/sap/workloads/sap-hana-scale-out-standby-netapp-files-suse"
       sap:                              "3024346"
 
   - id:                                 "DB-HANA-0024"
@@ -691,7 +688,7 @@ checks:
       expected_output:                  "10"
     report:                             *check
     references:
-      microsoft:                        "https://docs.microsoft.com/en-us/azure/virtual-machines/workloads/sap/sap-hana-scale-out-standby-netapp-files-suse"
+      microsoft:                        "https://learn.microsoft.com/en-us/azure/sap/workloads/sap-hana-scale-out-standby-netapp-files-suse"
       sap:                              "3024346"
 
   - id:                                 "DB-HANA-0025"
@@ -937,7 +934,7 @@ checks:
     report:                             *check
     references:
       sap:                              "2972496"
-      microsoft:                        "https://docs.microsoft.com/en-us/azure/virtual-machines/workloads/sap/hana-vm-operations-storage"
+      microsoft:                        "https://learn.microsoft.com/en-us/azure/sap/workloads/hana-vm-operations-storage"
 
   - id:                                 "DB-HANA-0035"
     name:                               "Filesystem type for /hana/log"
@@ -987,7 +984,7 @@ checks:
     report:                             *check
     references:
       sap:                              "2972496"
-      microsoft:                        "https://docs.microsoft.com/en-us/azure/virtual-machines/workloads/sap/hana-vm-operations-storage"
+      microsoft:                        "https://learn.microsoft.com/en-us/azure/sap/workloads/hana-vm-operations-storage"
 
   - id:                                 "DB-HANA-0037"
     name:                               "Filesystem type for /hana/shared"
@@ -1109,7 +1106,7 @@ checks:
     report:                             *check
     references:
       sap:                              "2972496"
-      microsoft:                        "https://docs.microsoft.com/en-us/azure/virtual-machines/workloads/sap/hana-vm-operations-storage"
+      microsoft:                        "https://learn.microsoft.com/en-us/azure/sap/workloads/hana-vm-operations-storage"
 
   - id:                                 "DB-HANA-0042"
     name:                               "Disk performance for /hana/data (IOPS)"
@@ -1135,7 +1132,7 @@ checks:
     report:                             *check
     references:
       sap:                              "2972496"
-      microsoft:                        "https://docs.microsoft.com/en-us/azure/virtual-machines/workloads/sap/hana-vm-operations-storage"
+      microsoft:                        "https://learn.microsoft.com/en-us/azure/sap/workloads/hana-vm-operations-storage"
 
   - id:                                 "DB-HANA-0043"
     name:                               "Disk performance for /hana/log (MBPS)"
@@ -1161,7 +1158,7 @@ checks:
     report:                             *check
     references:
       sap:                              "2972496"
-      microsoft:                        "https://docs.microsoft.com/en-us/azure/virtual-machines/workloads/sap/hana-vm-operations-storage"
+      microsoft:                        "https://learn.microsoft.com/en-us/azure/sap/workloads/hana-vm-operations-storage"
 
   - id:                                 "DB-HANA-0044"
     name:                               "Disk performance for /hana/log (IOPS)"
@@ -1187,7 +1184,7 @@ checks:
     report:                             *check
     references:
       sap:                              "2972496"
-      microsoft:                        "https://docs.microsoft.com/en-us/azure/virtual-machines/workloads/sap/hana-vm-operations-storage"
+      microsoft:                        "https://learn.microsoft.com/en-us/azure/sap/workloads/hana-vm-operations-storage"
 
   - id:                                 "DB-HANA-0045"
     name:                               "Filesystem Mount Points"
@@ -1208,7 +1205,7 @@ checks:
     report:                             *table
     references:
       sap:                              "2972496"
-      microsoft:                        "https://docs.microsoft.com/en-us/azure/virtual-machines/workloads/sap/hana-vm-operations-storage"
+      microsoft:                        "https://learn.microsoft.com/en-us/azure/sap/workloads/hana-vm-operations-storage"
 
   - id:                                 "DB-HANA-0046"
     name:                               "Azure Disks"
@@ -1229,7 +1226,7 @@ checks:
     report:                             *table
     references:
       sap:                              "2972496"
-      microsoft:                        "https://docs.microsoft.com/en-us/azure/virtual-machines/workloads/sap/hana-vm-operations-storage"
+      microsoft:                        "https://learn.microsoft.com/en-us/azure/sap/workloads/hana-vm-operations-storage"
 
   - id:                                 "DB-HANA-0047"
     name:                               "LVM Groups"
@@ -1250,7 +1247,7 @@ checks:
     report:                             *table
     references:
       sap:                              "2972496"
-      microsoft:                        "https://docs.microsoft.com/en-us/azure/virtual-machines/workloads/sap/hana-vm-operations-storage"
+      microsoft:                        "https://learn.microsoft.com/en-us/azure/sap/workloads/hana-vm-operations-storage"
 
   - id:                                 "DB-HANA-0048"
     name:                               "LVM Volumes"
@@ -1271,7 +1268,7 @@ checks:
     report:                             *table
     references:
       sap:                              "2972496"
-      microsoft:                        "https://docs.microsoft.com/en-us/azure/virtual-machines/workloads/sap/hana-vm-operations-storage"
+      microsoft:                        "https://learn.microsoft.com/en-us/azure/sap/workloads/hana-vm-operations-storage"
 
   - id:                                 "DB-HANA-0049"
     name:                               "ANF Volumes"
@@ -1292,7 +1289,7 @@ checks:
     report:                             *table
     references:
       sap:                              "2972496"
-      microsoft:                        "https://docs.microsoft.com/en-us/azure/virtual-machines/workloads/sap/hana-vm-operations-storage"
+      microsoft:                        "https://learn.microsoft.com/en-us/azure/sap/workloads/hana-vm-operations-storage"
 
   - id:                                 "DB-HANA-0050"
     name:                               "Disk performance for /hana/data (MBPS)"
@@ -1318,7 +1315,7 @@ checks:
     report:                             *check
     references:
       sap:                              "2972496"
-      microsoft:                        "https://docs.microsoft.com/en-us/azure/virtual-machines/workloads/sap/hana-vm-operations-storage"
+      microsoft:                        "https://learn.microsoft.com/en-us/azure/sap/workloads/hana-vm-operations-storage"
 
   - id:                                 "DB-HANA-0051"
     name:                               "Disk performance for /hana/log (MBPS)"
@@ -1344,7 +1341,7 @@ checks:
     report:                             *check
     references:
       sap:                              "2972496"
-      microsoft:                        "https://docs.microsoft.com/en-us/azure/virtual-machines/workloads/sap/hana-vm-operations-storage"
+      microsoft:                        "https://learn.microsoft.com/en-us/azure/sap/workloads/hana-vm-operations-storage"
 
 
   - id:                                 "DB-HANA-0052"
@@ -1370,3 +1367,124 @@ checks:
     report:                             *check
     references:
       sap:                              "2814271"
+
+  - id:                                 "DB-HANA-0053"
+    name:                               "sysctl net.ipv4.tcp_no_metrics_save"
+    description:                        "SAP HANA sysctl tcp_no_metrics_save - required for NetApp NFS performance"
+    category:                           *os_check
+    severity:                           *high
+    workload:                           *sap
+    applicability:
+      os_type:                          [*suse, *redhat]
+      os_version:                       *all_versions
+      hardware_type:                    *all_hardware
+      storage_type:                     *anf
+      role:                             [*db_role]
+      database_type:                    [*hana]
+    collector_type:                     *command
+    collector_args:
+      command:                          "/sbin/sysctl net.ipv4.tcp_no_metrics_save -n"
+      user:                             *root
+    validator_type:                     *string
+    validator_args:
+      expected_output:                  "1"
+    report:                             *check
+    references:
+      microsoft:                        "https://learn.microsoft.com/en-us/azure/sap/workloads/sap-hana-high-availability-scale-out-hsr-suse"
+      sap:                              "3024346"
+
+  - id:                                 "DB-HANA-0054"
+    name:                               "NFS nfs4_disable_idmapping"
+    description:                        "NFSv4.1 ID mapping must be disabled for Azure NetApp Files"
+    category:                           *os_check
+    severity:                           *high
+    workload:                           *sap
+    applicability:
+      os_type:                          [*suse, *redhat]
+      os_version:                       *all_versions
+      hardware_type:                    *all_hardware
+      storage_type:                     *anf
+      role:                             [*db_role]
+      database_type:                    [*hana]
+    collector_type:                     *command
+    collector_args:
+      command:                          "cat /sys/module/nfs/parameters/nfs4_disable_idmapping 2>/dev/null || echo 'N/A'"
+      user:                             *root
+    validator_type:                     *string
+    validator_args:
+      expected_output:                  "Y"
+    report:                             *check
+    references:
+      microsoft:                        "https://learn.microsoft.com/en-us/azure/sap/workloads/sap-hana-high-availability-scale-out-hsr-suse"
+
+  - id:                                 "DB-HANA-0055"
+    name:                               "NFS idmapd.conf domain"
+    description:                        "NFS domain must be set to defaultv4iddomain.com for Azure NetApp Files NFSv4.1"
+    category:                           *os_check
+    severity:                           *high
+    workload:                           *sap
+    applicability:
+      os_type:                          [*suse, *redhat]
+      os_version:                       *all_versions
+      hardware_type:                    *all_hardware
+      storage_type:                     *anf
+      role:                             [*db_role]
+      database_type:                    [*hana]
+    collector_type:                     *command
+    collector_args:
+      command:                          "sed -n 's/^Domain *= *//p' /etc/idmapd.conf 2>/dev/null"
+      user:                             *root
+    validator_type:                     *string
+    validator_args:
+      expected_output:                  "defaultv4iddomain.com"
+    report:                             *check
+    references:
+      microsoft:                        "https://learn.microsoft.com/en-us/azure/sap/workloads/sap-hana-high-availability-scale-out-hsr-suse"
+
+  - id:                                 "DB-HANA-0056"
+    name:                               "DHCP hostname override disabled"
+    description:                        "DHCLIENT_SET_HOSTNAME must be 'no' to prevent unintended hostname changes on storage NIC"
+    category:                           *os_check
+    severity:                           *warning
+    workload:                           *sap
+    applicability:
+      os_type:                          [*suse]
+      os_version:                       *all_versions
+      hardware_type:                    *all_hardware
+      storage_type:                     *anf
+      role:                             [*db_role]
+      database_type:                    [*hana]
+    collector_type:                     *command
+    collector_args:
+      command:                          "source /etc/sysconfig/network/dhcp 2>/dev/null && echo $DHCLIENT_SET_HOSTNAME"
+      user:                             *root
+    validator_type:                     *string
+    validator_args:
+      expected_output:                  "no"
+    report:                             *check
+    references:
+      microsoft:                        "https://learn.microsoft.com/en-us/azure/sap/workloads/sap-hana-scale-out-standby-netapp-files-suse"
+
+  - id:                                 "DB-HANA-0057"
+    name:                               "NFSv4.1 protocol for /hana/shared"
+    description:                        "Azure NetApp Files volumes must be mounted with NFSv4.1 protocol"
+    category:                           *os_check
+    severity:                           *high
+    workload:                           *sap
+    applicability:
+      os_type:                          [*suse, *redhat]
+      os_version:                       *all_versions
+      hardware_type:                    *all_hardware
+      storage_type:                     *anf
+      role:                             [*db_role]
+      database_type:                    [*hana]
+    collector_type:                     *command
+    collector_args:
+      command:                          "mount -t nfs4 | grep /hana/shared | sed 's/.*vers=//' | sed 's/,.*//' || echo 'not mounted'"
+      user:                             *root
+    validator_type:                     *string
+    validator_args:
+      expected_output:                  "4.1"
+    report:                             *check
+    references:
+      microsoft:                        "https://learn.microsoft.com/en-us/azure/sap/workloads/sap-hana-high-availability-scale-out-hsr-suse"

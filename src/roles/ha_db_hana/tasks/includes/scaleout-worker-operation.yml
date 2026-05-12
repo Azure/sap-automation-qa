@@ -70,7 +70,8 @@
                                            cluster_status_post.primary_node in cluster_status_pre.primary_site_nodes and
                                            cluster_status_post.secondary_node in cluster_status_pre.secondary_site_nodes and
                                            hana_test_target_worker_node in cluster_status_post.secondary_site_nodes)
-                                        )
+                                        ) and
+                                        (cluster_status_post.worker_node_scores_valid | default(false))
 
         - name:                         "Test Execution: Determine test execution status"
           ansible.builtin.set_fact:
@@ -108,7 +109,7 @@
             test_case_details_from_test_case: {
                                         "Pre Validations: Remove any location_constraints": "{{ location_constraints_results }}",
                                         "Pre Validations: Validate HANA DB cluster status": "{{ cluster_status_pre }}",
-                                        "Pre Validations: CleanUp any failed resource": "{{ cleanup_failed_resource_pre }}",
+                                        "Pre Validations: CleanUp any failed resource": "{{ cleanup_failed_resource_pre | default('Not Executed') }}",
                                         "Test Execution: Worker operation": "{{ hostvars[hana_test_target_worker_node].action_result | default('N/A') }}",
                                         "Post Validations: CleanUp any failed resource": "{{ cleanup_failed_resource_post }}",
                                         "Post Validations: Validate HANA DB cluster status": "{{ cluster_status_post }}",
@@ -140,7 +141,7 @@
         test_case_details_from_test_case: {
                                           "Pre Validations: Remove any location_constraints": "{{ location_constraints_results }}",
                                           "Pre Validations: Validate HANA DB cluster status": "{{ cluster_status_pre }}",
-                                          "Pre Validations: CleanUp any failed resource": "{{ cleanup_failed_resource_pre }}",
+                                          "Pre Validations: CleanUp any failed resource": "{{ cleanup_failed_resource_pre | default('Not Executed') }}",
                                           "Primary worker nodes": "{{ primary_worker_nodes | default([]) }}",
                                           "Secondary worker nodes": "{{ secondary_worker_nodes | default([]) }}",
                                         }
