@@ -193,7 +193,7 @@ packaging==26.1
     #   ansible-runner
     #   black
     #   pytest
-pandas==2.3.3
+pandas==3.0.3
     # via -r requirements.in
 pathspec==1.0.4
     # via
