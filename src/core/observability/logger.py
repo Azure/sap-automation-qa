@@ -165,9 +165,10 @@ class ConsoleFormatter(LogFormatter):
         short_corr = corr_id[:8] if corr_id != "-" else "-"
         color = self.COLORS.get(record.levelname, "")
         reset = self.COLORS["RESET"]
-        timestamp = datetime.now().strftime("%H:%M:%S.%f")[:-3]
+        timestamp = datetime.utcfromtimestamp(record.created).strftime("%H:%M:%S.%f")[:-3]
         formatted = (
             f"{color}{record.levelname:5}{reset} "
+            f"[{timestamp}] cid={short_corr} "
             f"{record.name.split('.')[-1]} - {record.getMessage()}"
         )
         extras = []

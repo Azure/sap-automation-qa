@@ -54,15 +54,15 @@ class IContextProvider(Protocol):
 
     def get_context(self) -> ContextData:
         """Get current context data."""
-        ...
+        raise NotImplementedError
 
     def set_context(self, data: ContextData) -> Token:
         """Set context data, returning token for restoration."""
-        ...
+        raise NotImplementedError
 
     def reset(self, token: Token) -> None:
         """Reset context to previous state using token."""
-        ...
+        raise NotImplementedError
 
 
 class ContextVarProvider:

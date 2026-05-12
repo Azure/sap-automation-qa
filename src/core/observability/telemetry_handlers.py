@@ -252,7 +252,7 @@ class _BaseRemoteLogHandler(logging.Handler):
         :param batch: Non-empty list of log dicts
         :returns: True on success
         """
-        ...
+        raise NotImplementedError
 
 
 class LogAnalyticsHandler(_BaseRemoteLogHandler):

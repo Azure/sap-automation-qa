@@ -98,6 +98,16 @@ async def get_workspace(workspace_id: str) -> WorkspaceInfo:
         if ws.id == workspace_id:
             return ws
 
+    if _workspace_loader:
+        result = _workspace_loader(workspace_id)
+        if result:
+            return WorkspaceInfo(
+                id=workspace_id,
+                name=result.get("name", workspace_id),
+                environment=result.get("environment", ""),
+                path=result.get("path", ""),
+            )
+
     raise HTTPException(status_code=404, detail=f"Workspace {workspace_id} not found")
 
 
