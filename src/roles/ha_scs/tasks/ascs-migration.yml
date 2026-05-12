@@ -82,7 +82,7 @@
                                         New ERS: {{ cluster_status_test_execution.ers_node }}
             test_case_details_from_test_case: {
                                         "Pre Validations: Validate HANA DB cluster status": "{{ cluster_status_pre }}",
-                                        "Pre Validations: CleanUp any failed resource": "{{ cleanup_failed_resource_pre }}",
+                                        "Pre Validations: CleanUp any failed resource": "{{ cleanup_failed_resource_pre | default('Not Executed') }}",
                                         "Test Execution: Migrate ASCS resource": "{{ migration_result }}",
                                         "Test Execution: Clear Constraints": "{{ unmigrate_result }}",
                                         "Test Execution: Cleanup resources": "{{ cleanup_failed_resource_test_execution }}",

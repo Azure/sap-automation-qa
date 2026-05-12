@@ -175,6 +175,22 @@ cluster_status:
         secondary:
             description: Attributes of the secondary node (scale-up) or dict of nodes (scale-out)
             type: dict
+worker_node_scores_valid:
+    description: Whether all worker node scores match expected values (scale-out HSR only)
+    returned: when hana_topology is scale_out_hsr
+    type: bool
+    sample: true
+worker_node_score_details:
+    description: Per-worker-node score validation details (scale-out HSR only)
+    returned: when hana_topology is scale_out_hsr
+    type: list
+    elements: dict
+    sample:
+        - node: "hanadb2"
+          site_role: "primary"
+          actual_score: "150"
+          expected_score: "150"
+          valid: true
 """
 
 
@@ -214,6 +230,8 @@ class HanaClusterStatusChecker(BaseClusterStatusChecker):
                 "hana_topology": hana_topology.value,
                 "AUTOMATED_REGISTER": "false",
                 "PRIORITY_FENCING_DELAY": "",
+                "worker_node_scores_valid": True,
+                "worker_node_score_details": [],
             }
         )
 
@@ -258,38 +276,56 @@ class HanaClusterStatusChecker(BaseClusterStatusChecker):
             attribute names and expected primary/secondary values.
         :rtype: Dict[str, Any]
         """
+        scaleout_score_attr = (
+            f"master-{self.hana_primitive_resource_name}"
+            if self.hana_primitive_resource_name
+            else f"master-rsc_SAPHana_{self.database_sid.upper()}"
+            + f"_HDB{self.db_instance_number}"
+        )
+        angi_score_attr = (
+            f"master-{self.hana_primitive_resource_name}"
+            if self.hana_primitive_resource_name
+            else "master-rsc_SAPHanaCon_"
+            + f"{self.database_sid.upper()}"
+            + f"_HDB{self.db_instance_number}"
+        )
+
         providers = {
             HanaSRProvider.SAPHANASR: {
                 "clone_attr": (f"hana_{self.database_sid}_clone_state"),
                 "sync_attr": (f"hana_{self.database_sid}_sync_state"),
+                "score_attr": scaleout_score_attr,
                 "primary": {"clone": "PROMOTED", "sync": "PRIM"},
                 "secondary": {"clone": "DEMOTED", "sync": "SOK"},
+                "worker_scores": {
+                    "primary": "-10000",
+                    "secondary": "-12200",
+                },
             },
             HanaSRProvider.ANGI: {
                 "clone_attr": (f"hana_{self.database_sid}_clone_state"),
-                "sync_attr": (
-                    f"master-{self.hana_primitive_resource_name}"
-                    if self.hana_clone_resource_name
-                    else "master-rsc_SAPHanaCon_"
-                    + f"{self.database_sid.upper()}"
-                    + f"_HDB{self.db_instance_number}"
-                ),
+                "sync_attr": angi_score_attr,
+                "score_attr": angi_score_attr,
                 "primary": {"clone": "PROMOTED", "sync": "150"},
                 "secondary": {
                     "clone": "DEMOTED",
                     "sync": "100",
                 },
+                "worker_scores": {
+                    "primary": "101",
+                    "secondary": "-12200",
+                },
             },
             HanaSRProvider.SCALEOUT: {
                 "clone_attr": f"hana_{self.database_sid}_clone_state",
-                "sync_attr": (
-                    f"master-{self.hana_primitive_resource_name}"
-                    if self.hana_primitive_resource_name
-                    else f"master-rsc_SAPHana_{self.database_sid.upper()}"
-                    + f"_HDB{self.db_instance_number}"
-                ),
+                "sync_attr": scaleout_score_attr,
+                "score_attr": scaleout_score_attr,
                 "primary": {"clone": "PROMOTED", "sync": "150"},
                 "secondary": {"clone": "DEMOTED", "sync": "100"},
+                "worker_scores": {
+                    "primary": "-10000",
+                    "secondary": "-12200",
+                },
             },
         }
 
@@ -388,6 +424,8 @@ class HanaClusterStatusChecker(BaseClusterStatusChecker):
             "replication_mode": "",
             "primary_site_name": "",
             "secondary_site_name": "",
+            "worker_node_scores_valid": True,
+            "worker_node_score_details": [],
         }
         node_attributes = cluster_status_xml.find("node_attributes")
         if node_attributes is None:
@@ -445,6 +483,7 @@ class HanaClusterStatusChecker(BaseClusterStatusChecker):
             if site == primary_site:
                 result["primary_site_nodes"] = node_names
                 result["cluster_status"]["primary"] = node_attrs
+                self._validate_worker_scores(nodes, provider_config, "primary", result)
             else:
                 result["secondary_site_name"] = site
                 result["secondary_site_nodes"] = node_names
@@ -461,12 +500,89 @@ class HanaClusterStatusChecker(BaseClusterStatusChecker):
                     ):
                         result["secondary_node"] = node_name
                         break
+                self._validate_worker_scores(nodes, provider_config, "secondary", result)
 
         if majority_maker_candidates:
             result["majority_maker_node"] = majority_maker_candidates[0]
 
         self.result.update(result)
         return result
+
+    def _validate_worker_scores(
+        self,
+        nodes: List[tuple],
+        provider_config: Dict[str, Any],
+        site_role: str,
+        result: Dict[str, Any],
+    ) -> None:
+        """
+        Validates that worker node scores match expected values for the site role.
+
+        Workers are identified by exclusion: nodes whose roles attribute
+        4th field is NOT 'master' are treated as workers. This handles
+        formats like "slave::worker:" where the 4th field may be empty.
+        Scores are read from the master promotable score attribute (score_attr).
+
+        :param nodes: List of (node_name, attrs) tuples for a site.
+        :type nodes: List[tuple]
+        :param provider_config: Provider configuration dictionary.
+        :type provider_config: Dict[str, Any]
+        :param site_role: Either "primary" or "secondary".
+        :type site_role: str
+        :param result: Result dictionary to update with validation details.
+        :type result: Dict[str, Any]
+        """
+        worker_scores = provider_config.get("worker_scores")
+        if not worker_scores:
+            return
+
+        score_attr = provider_config["score_attr"]
+        expected_score = worker_scores[site_role]
+        roles_attr = f"hana_{self.database_sid}_roles"
+
+        for node_name, attrs in nodes:
+            roles = attrs.get(roles_attr, "")
+            role_parts = roles.split(":")
+            if len(role_parts) < 4 or role_parts[3] == "master":
+                continue
+
+            score = attrs.get(score_attr, "")
+            if not score:
+                result["worker_node_score_details"].append(
+                    {
+                        "node": node_name,
+                        "site_role": site_role,
+                        "actual_score": "missing",
+                        "expected_score": expected_score,
+                        "valid": False,
+                    }
+                )
+                result["worker_node_scores_valid"] = False
+                self.log(
+                    logging.WARNING,
+                    f"Worker node {node_name} on {site_role} site has "
+                    f"no score attribute '{score_attr}'",
+                )
+                continue
+
+            is_valid = score == expected_score
+            result["worker_node_score_details"].append(
+                {
+                    "node": node_name,
+                    "site_role": site_role,
+                    "actual_score": score,
+                    "expected_score": expected_score,
+                    "valid": is_valid,
+                }
+            )
+            if not is_valid:
+                result["worker_node_scores_valid"] = False
+                self.log(
+                    logging.WARNING,
+                    f"Worker node {node_name} on {site_role} site has "
+                    f"unexpected score: {score} (expected "
+                    f"{expected_score})",
+                )
 
     def _is_cluster_ready(self) -> bool:
         """
@@ -490,6 +606,7 @@ class HanaClusterStatusChecker(BaseClusterStatusChecker):
                 and self.result["secondary_node"] != ""
                 and len(self.result["secondary_site_nodes"]) > 0
                 and self.result["majority_maker_node"] != ""
+                and self.result["worker_node_scores_valid"]
             )
         return self.result["primary_node"] != "" and self.result["secondary_node"] != ""
 

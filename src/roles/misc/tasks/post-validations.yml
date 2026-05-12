@@ -3,6 +3,8 @@
 
 ###############################################################################
 # Description: This script will run post validations for the test cases       #
+#              Called from both success (always) and failure (rescue) paths.   #
+#              All variables are guarded with defaults for robustness.         #
 ###############################################################################
 
 - name:                                 "Read var log messages by importing role"
@@ -10,51 +12,49 @@
 
 - name:                                 "Determine cluster node roles"
   ansible.builtin.set_fact:
-    primary_node:                       "{{ cluster_status_pre.primary_node
-                                            | default(cluster_status_pre.ascs_node)
-                                            | default('')
-                                            }}"
-    secondary_node:                     "{{ cluster_status_pre.secondary_node
-                                            | default(cluster_status_pre.ers_node)
-                                            | default('')
-                                            }}"
+    primary_node:                       "{{ (cluster_status_pre.primary_node | default(cluster_status_pre.ascs_node | default(''))) if cluster_status_pre is defined else '' }}"
+    secondary_node:                     "{{ (cluster_status_pre.secondary_node | default(cluster_status_pre.ers_node | default(''))) if cluster_status_pre is defined else '' }}"
     is_primary_node: >-
                                         {{
-                                          (cluster_status_pre.primary_node is defined and
-                                            ansible_hostname == cluster_status_pre.primary_node) or
-                                          (cluster_status_pre.ascs_node is defined and
-                                            ansible_hostname == cluster_status_pre.ascs_node)
+                                          (cluster_status_pre is defined and
+                                           cluster_status_pre.primary_node is defined and
+                                           ansible_hostname == cluster_status_pre.primary_node) or
+                                          (cluster_status_pre is defined and
+                                           cluster_status_pre.ascs_node is defined and
+                                           ansible_hostname == cluster_status_pre.ascs_node) or
+                                          (cluster_status_pre is not defined and
+                                           inventory_hostname == ansible_play_hosts | first)
                                         }}
 
 - name:                                 "Post Validations: HA cluster status after test execution"
   when:
                                         - is_primary_node | bool
-                                        - cluster_status_pre is defined
   block:
     - name:                             "Merge and sort logs from all nodes by timestamp"
       log_parser:
         function:                       "merge_logs"
         logs:
-          - "{{ hostvars[primary_node]['var_log_messages_output'].filtered_logs | default('[]') }}"
-          - "{{ hostvars[secondary_node]['var_log_messages_output'].filtered_logs | default('[]') }}"
+          - "{{ hostvars[primary_node]['var_log_messages_output'].filtered_logs | default('[]') if primary_node else '[]' }}"
+          - "{{ hostvars[secondary_node]['var_log_messages_output'].filtered_logs | default('[]') if secondary_node else '[]' }}"
       register:                         merged_logs_output
+      failed_when:                      false
 
     - name:                             "Set combined logs variable"
       ansible.builtin.set_fact:
-        combined_logs:                  "{{ merged_logs_output.filtered_logs | from_json }}"
+        combined_logs:                  "{{ (merged_logs_output.filtered_logs | from_json) if (merged_logs_output is defined and merged_logs_output is not failed and merged_logs_output.filtered_logs is defined) else [] }}"
 
     - name:                             "Post Validations: Set test case status"
       delegate_to:                      localhost
       ansible.builtin.set_fact:
-        test_case_name:                 "{{ item.name }}: {{ test_execution_hostname | default(virtual_host) }}"
+        test_case_name:                 "{{ item.name }}: {{ test_execution_hostname | default(virtual_host | default(inventory_hostname)) }}"
         test_case_description:          "{{ item.description }}"
-        test_case_status:               "{{ 'SKIPPED' if pre_validations_status == 'FAILED' else (test_execution_status | default('FAILED')) }}"
+        test_case_status:               "{{ 'FAILED' if (test_case_status | default('')) == 'FAILED' else ('SKIPPED' if (pre_validations_status | default('PASSED')) == 'FAILED' else (test_execution_status | default('FAILED'))) }}"
         test_execution_start_time:      "{{ test_execution_start | default(now(utc=true, fmt='%Y-%m-%d %H:%M:%S')) }}"
-        test_case_hostname:             "{{ virtual_host }}"
+        test_case_hostname:             "{{ virtual_host | default(inventory_hostname) }}"
         test_execution_end_time:        "{{ test_execution_end | default(now(utc=true, fmt='%Y-%m-%d %H:%M:%S')) }}"
-        test_case_var_log_messages:     "{{ combined_logs }}"
+        test_case_var_log_messages:     "{{ combined_logs | default([]) }}"
         test_case_message:              "{{ test_case_message_from_test_case | default('Test execution status not set - possible execution failure') }}"
-        test_case_details:              "{{ test_case_details_from_test_case | default('')}}"
+        test_case_details:              "{{ test_case_details_from_test_case | default('') }}"
 
     - name:                             "Post Telemetry Data"
       ansible.builtin.include_tasks:    "roles/misc/tasks/post-telemetry-data.yml"

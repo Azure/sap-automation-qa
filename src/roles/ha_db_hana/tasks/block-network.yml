@@ -100,6 +100,7 @@
           register:                         cluster_status_post
           retries:                          "{{ default_retries }}"
           delay:                            "{{ default_delay }}"
+          ignore_errors:                    true
           until: >
                                             cluster_status_post.primary_node != "" and
                                             cluster_status_post.secondary_node != "" and
@@ -111,7 +112,59 @@
                                               (hana_topology | default('scale_up') != 'scale_out_hsr' and
                                                cluster_status_post.primary_node == cluster_status_pre.secondary_node and
                                                cluster_status_post.secondary_node == cluster_status_pre.primary_node)
-                                            )
+                                            ) and
+                                            (cluster_status_post.worker_node_scores_valid | default(false))
+
+        - name:                             "Test Execution: Set resource cleanup required flag"
+          ansible.builtin.set_fact:
+            cleanup_failed_resource_post_required: "{{ cluster_status_post is failed }}"
+
+        - name:                             "Test Execution: CleanUp failed SAPHanaController resource"
+          when:                             cleanup_failed_resource_post_required | bool
+          ansible.builtin.command:          crm_resource --cleanup
+          register:                         cleanup_failed_resource_post
+          retries:                          3
+          delay:                            "{{ default_delay }}"
+          until:                            cleanup_failed_resource_post.rc == 0
+          changed_when:                     cleanup_failed_resource_post.rc == 0
+          ignore_errors:                    true
+
+        - name:                             "Test Execution: Wait for cluster to recover after resource cleanup"
+          when:                             cleanup_failed_resource_post_required | bool
+          ansible.builtin.wait_for:
+            timeout:                        "{{ default_timeout }}"
+
+        - name:                             "Test Execution: Validate HANA DB cluster status (post cleanup)"
+          when:                             cleanup_failed_resource_post_required | bool
+          get_cluster_status_db:
+            db_instance_number:             "{{ db_instance_number }}"
+            operation_step:                 "test_execution"
+            database_sid:                   "{{ db_sid | lower }}"
+            saphanasr_provider:             "{{ saphanasr_provider | default('SAPHanaSR') }}"
+            hana_clone_resource_name:       "{{ hana_clone_resource_name | default('') }}"
+            hana_primitive_resource_name:   "{{ hana_primitive_resource_name | default('') }}"
+            hana_topology:                  "{{ hana_topology | default('scale_up') }}"
+          register:                         cluster_status_post_retry
+          retries:                          "{{ default_retries }}"
+          delay:                            "{{ default_delay }}"
+          until: >
+                                            cluster_status_post_retry.primary_node != "" and
+                                            cluster_status_post_retry.secondary_node != "" and
+                                            (
+                                              (hana_topology | default('scale_up') == 'scale_out_hsr' and
+                                               cluster_status_post_retry.primary_node in cluster_status_pre.secondary_site_nodes and
+                                               cluster_status_post_retry.primary_node != cluster_status_pre.primary_node)
+                                              or
+                                              (hana_topology | default('scale_up') != 'scale_out_hsr' and
+                                               cluster_status_post_retry.primary_node == cluster_status_pre.secondary_node and
+                                               cluster_status_post_retry.secondary_node == cluster_status_pre.primary_node)
+                                            ) and
+                                            (cluster_status_post_retry.worker_node_scores_valid | default(false))
+
+        - name:                             "Test Execution: Use retried post-recovery cluster status"
+          when:                             cleanup_failed_resource_post_required | bool
+          ansible.builtin.set_fact:
+            cluster_status_post:            "{{ cluster_status_post_retry }}"
 
     - name:                                 "Test Execution: Switch back to primary node"
       when:                                 ansible_hostname == cluster_status_pre.primary_node
@@ -125,6 +178,7 @@
           ansible.builtin.set_fact:
             cluster_status_post:            "{{ hostvars[cluster_status_pre.secondary_node].cluster_status_post }}"
             cluster_status_test_execution:  "{{ hostvars[cluster_status_pre.secondary_node].cluster_status_test_execution }}"
+            cleanup_failed_resource_post:   "{{ hostvars[cluster_status_pre.secondary_node].cleanup_failed_resource_post | default('Not Executed') }}"
 
         - name:                             "Test Execution: Determine test execution status"
           ansible.builtin.set_fact:
@@ -148,19 +202,13 @@
             test_case_details_from_test_case: {
                                             "Pre Validations: Remove any location_constraints": "{{ location_constraints_results }}",
                                             "Pre Validations: Validate HANA DB cluster status": "{{ cluster_status_pre }}",
-                                            "Pre Validations: CleanUp any failed resource": "{{ cleanup_failed_resource_pre }}",
+                                            "Pre Validations: CleanUp any failed resource": "{{ cleanup_failed_resource_pre | default('Not Executed') }}",
                                             "Test Execution: Network blocked on primary site": "{{ firewall_rule_created | default('iptables -P DROP applied') }}",
                                             "Test Execution: Cluster Status after the network blocked": "{{ cluster_status_test_execution }}",
                                             "Test Execution: Firewall removed by": "Primary site nodes rebooted by fencing",
+                                            "Test Execution: CleanUp failed resource (post recovery)": "{{ cleanup_failed_resource_post | default('Not Executed') }}",
                                             "Post Validations: Validate HANA DB cluster status": "{{ cluster_status_post }}",
                                             }
-
-      # /*---------------------------------------------------------------------------
-      # |                          Post Validations                                 |
-      # +--------------------------------------------------------------------------*/
-    - name:                                 "Post Validations Tasks"
-      ansible.builtin.include_tasks:        "roles/misc/tasks/post-validations.yml"
-      tags:                                 [post-validation]
 
   rescue:
     - name:                                 "Test Execution Failure: Reset iptables policies on primary site nodes"
@@ -181,6 +229,11 @@
       ansible.builtin.include_tasks:        "roles/misc/tasks/rescue.yml"
       tags:                                 [cleanup]
 
+  always:
+    - name:                                 "Post Validations Tasks"
+      ansible.builtin.include_tasks:        "roles/misc/tasks/post-validations.yml"
+      tags:                                 [post-validation]
+
 - name:                                     "Test Execution: Block Network Communication"
   become:                                   true
   when:                                     pre_validations_status == "FAILED"
@@ -193,7 +246,7 @@
                                             "Pre Validations: Remove any location_constraints": "{{ location_constraints_results }}",
                                             "Pre Validations: Validate HANA DB cluster status": "{{ cluster_status_pre }}",
                                             "Pre Validations: priority-fencing-delay": "{{ cluster_status_pre.PRIORITY_FENCING_DELAY | default('Not Configured') }}",
-                                            "Pre Validations: CleanUp any failed resource": "{{ cleanup_failed_resource_pre }}",
+                                            "Pre Validations: CleanUp any failed resource": "{{ cleanup_failed_resource_pre | default('Not Executed') }}",
                                             "Cluster Status": "{{ cluster_status_pre }}",
                                             }
 

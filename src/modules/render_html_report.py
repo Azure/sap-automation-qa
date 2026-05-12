@@ -248,7 +248,9 @@ class HTMLReportRenderer(SapAutomationQA):
                 f"{self.test_group_name}_{self.test_group_invocation_id}.html",
             )
             os.makedirs(os.path.dirname(report_path), exist_ok=True)
-            template = jinja2.Environment(autoescape=True).from_string(self.report_template)
+            env = jinja2.Environment(autoescape=True)
+            env.policies["json.dumps_kwargs"] = {"sort_keys": False}
+            template = env.from_string(self.report_template)
             sanitized_results = _sanitize_for_template(test_case_results)
             sanitized_system_info = _sanitize_for_template(self.system_info)
             execution_log = self.read_execution_log()

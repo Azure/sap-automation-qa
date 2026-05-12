@@ -14,7 +14,14 @@
     test_case_status:                   "Starting"
     test_case_details:                  {}
     test_case_message:                  "Test case execution started"
+    test_case_hostname:                 ""
     test_case_var_log_messages:         []
+    test_execution_start:               ""
+    test_execution_end:                 ""
+    test_execution_status:              ""
+    test_execution_hostname:            ""
+    test_case_message_from_test_case:   ""
+    test_case_details_from_test_case:   []
 
 - name:                                 "Ensure test_case_invocation_id is available on all nodes"
   ansible.builtin.set_fact:

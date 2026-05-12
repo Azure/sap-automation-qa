@@ -150,7 +150,8 @@
                                           (hana_topology | default('scale_up') != 'scale_out_hsr' and
                                            cluster_status_post.primary_node == cluster_status_pre.secondary_node and
                                            cluster_status_post.secondary_node == cluster_status_pre.primary_node)
-                                        )
+                                        ) and
+                                        (cluster_status_post.worker_node_scores_valid | default(false))
 
         - name:                         "Test Execution: CleanUp any failed resource"
           ansible.builtin.command:      "crm_resource --cleanup"
@@ -200,7 +201,7 @@
             test_case_details_from_test_case: {
                                         "Pre Validations: Remove any location_constraints": "{{ location_constraints_results }}",
                                         "Pre Validations: Validate HANA DB cluster status": "{{ cluster_status_pre }}",
-                                        "Pre Validations: CleanUp any failed resource": "{{ cleanup_failed_resource_pre }}",
+                                        "Pre Validations: CleanUp any failed resource": "{{ cleanup_failed_resource_pre | default('Not Executed') }}",
                                         "Test Execution: /hana/shared NFS IP": "{{ hana_shared_nfs_ip }}",
                                         "Test Execution: Firewall rule created": "{{ firewall_rule_created | default('N/A') }}",
                                         "Test Execution: Cluster status after block": "{{ cluster_status_test_execution | default('N/A') }}",
@@ -211,10 +212,6 @@
                                         "Post Validations: CleanUp any failed resource": "{{ cleanup_failed_resource_post }}",
                                         "Post Validations: Validate HANA DB cluster status": "{{ cluster_status_post }}",
                                         }
-
-    - name:                             "Post Validations Tasks"
-      ansible.builtin.include_tasks:    "roles/misc/tasks/post-validations.yml"
-      tags:                             [post-validation]
 
   rescue:
     - name:                             "Rescue: Remove iptables rule blocking /hana/shared NFS"
@@ -244,6 +241,11 @@
       ansible.builtin.include_tasks:    "roles/misc/tasks/rescue.yml"
       tags:                             [cleanup]
 
+  always:
+    - name:                             "Post Validations Tasks"
+      ansible.builtin.include_tasks:    "roles/misc/tasks/post-validations.yml"
+      tags:                             [post-validation]
+
 - name:                                 "Pre Validations: Test Case Skipped"
   become:                               true
   when:                                 pre_validations_status == "FAILED"
@@ -256,7 +258,7 @@
         test_case_details_from_test_case: {
                                           "Pre Validations: Remove any location_constraints": "{{ location_constraints_results }}",
                                           "Pre Validations: Validate HANA DB cluster status": "{{ cluster_status_pre }}",
-                                          "Pre Validations: CleanUp any failed resource": "{{ cleanup_failed_resource_pre }}",
+                                          "Pre Validations: CleanUp any failed resource": "{{ cleanup_failed_resource_pre | default('Not Executed') }}",
                                           "Cluster Status": "{{ cluster_status_pre }}",
                                         }
 

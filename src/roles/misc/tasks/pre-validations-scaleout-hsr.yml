@@ -74,6 +74,7 @@
 
 - name:                             "Scale-out HSR: Log cluster topology"
   ansible.builtin.debug:
+    verbosity:                      2
     msg:
       - "HANA Topology:         scale_out_hsr"
       - "Primary site:          {{ primary_site_name }} ({{ primary_site_nodes | length }} nodes: {{ primary_site_nodes | join(', ') }})"

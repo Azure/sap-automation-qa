@@ -89,6 +89,7 @@
           register:                     cluster_status_post
           retries:                      "{{ default_retries }}"
           delay:                        "{{ default_delay }}"
+          ignore_errors:                true
           until: >
                                         cluster_status_post.primary_node != "" and
                                         cluster_status_post.secondary_node != "" and
@@ -100,7 +101,59 @@
                                           (hana_topology | default('scale_up') != 'scale_out_hsr' and
                                            cluster_status_post.primary_node == cluster_status_pre.primary_node and
                                            cluster_status_post.secondary_node == cluster_status_pre.secondary_node)
-                                        )
+                                        ) and
+                                        (cluster_status_post.worker_node_scores_valid | default(false))
+
+        - name:                         "Test Execution: Set resource cleanup required flag"
+          ansible.builtin.set_fact:
+            cleanup_failed_resource_post_required: "{{ cluster_status_post is failed }}"
+
+        - name:                         "Test Execution: CleanUp failed SAPHanaController resource"
+          when:                         cleanup_failed_resource_post_required | bool
+          ansible.builtin.command:      crm_resource --cleanup
+          register:                     cleanup_failed_resource_post
+          retries:                      3
+          delay:                        "{{ default_delay }}"
+          until:                        cleanup_failed_resource_post.rc == 0
+          changed_when:                 cleanup_failed_resource_post.rc == 0
+          ignore_errors:                true
+
+        - name:                         "Test Execution: Wait for cluster to recover after resource cleanup"
+          when:                         cleanup_failed_resource_post_required | bool
+          ansible.builtin.wait_for:
+            timeout:                    "{{ default_timeout }}"
+
+        - name:                         "Test Execution: Validate HANA DB cluster status (post cleanup)"
+          when:                         cleanup_failed_resource_post_required | bool
+          get_cluster_status_db:
+            db_instance_number:         "{{ db_instance_number }}"
+            operation_step:             "post_failover"
+            database_sid:               "{{ db_sid | lower }}"
+            saphanasr_provider:         "{{ saphanasr_provider | default('SAPHanaSR') }}"
+            hana_clone_resource_name:   "{{ hana_clone_resource_name | default('') }}"
+            hana_primitive_resource_name: "{{ hana_primitive_resource_name | default('') }}"
+            hana_topology:              "{{ hana_topology | default('scale_up') }}"
+          register:                     cluster_status_post_retry
+          retries:                      "{{ default_retries }}"
+          delay:                        "{{ default_delay }}"
+          until: >
+                                        cluster_status_post_retry.primary_node != "" and
+                                        cluster_status_post_retry.secondary_node != "" and
+                                        (
+                                          (hana_topology | default('scale_up') == 'scale_out_hsr' and
+                                           cluster_status_post_retry.primary_node in cluster_status_pre.primary_site_nodes and
+                                           cluster_status_post_retry.secondary_node in cluster_status_pre.secondary_site_nodes)
+                                          or
+                                          (hana_topology | default('scale_up') != 'scale_out_hsr' and
+                                           cluster_status_post_retry.primary_node == cluster_status_pre.primary_node and
+                                           cluster_status_post_retry.secondary_node == cluster_status_pre.secondary_node)
+                                        ) and
+                                        (cluster_status_post_retry.worker_node_scores_valid | default(false))
+
+        - name:                         "Test Execution: Use retried post-recovery cluster status"
+          when:                         cleanup_failed_resource_post_required | bool
+          ansible.builtin.set_fact:
+            cluster_status_post:        "{{ cluster_status_post_retry }}"
 
         - name:                         "Test Execution: Determine test execution status"
           ansible.builtin.set_fact:
@@ -134,22 +187,20 @@
             test_case_details_from_test_case: {
                                         "Pre Validations: Remove any location_constraints": "{{ location_constraints_results }}",
                                         "Pre Validations: Validate HANA DB cluster status": "{{ cluster_status_pre }}",
-                                        "Pre Validations: CleanUp any failed resource": "{{ cleanup_failed_resource_pre }}",
+                                        "Pre Validations: CleanUp any failed resource": "{{ cleanup_failed_resource_pre | default('Not Executed') }}",
                                         "Test Execution: Echo b results": "{{ hostvars[cluster_status_pre.secondary_node].echo_b_result | default('N/A') }}",
                                         "Post Validations: Validate HANA DB cluster status": "{{ cluster_status_post }}",
                                         }
-
-      # /*---------------------------------------------------------------------------
-      # |                          Post Validations                                 |
-      # +--------------------------------------------------------------------------*/
-    - name:                             "Post Validations Tasks"
-      ansible.builtin.include_tasks:    "roles/misc/tasks/post-validations.yml"
-      tags:                             [post-validation]
 
   rescue:
     - name:                             "Rescue operation"
       ansible.builtin.include_tasks:    "roles/misc/tasks/rescue.yml"
       tags:                             [cleanup]
+
+  always:
+    - name:                             "Post Validations Tasks"
+      ansible.builtin.include_tasks:    "roles/misc/tasks/post-validations.yml"
+      tags:                             [post-validation]
 
 - name:                                 "Pre Validations: Test Case Skipped"
   become:                               true
@@ -161,7 +212,7 @@
         test_case_details_from_test_case: {
                                           "Pre Validations: Remove any location_constraints": "{{ location_constraints_results }}",
                                           "Pre Validations: Validate HANA DB cluster status": "{{ cluster_status_pre }}",
-                                          "Pre Validations: CleanUp any failed resource": "{{ cleanup_failed_resource_pre }}",
+                                          "Pre Validations: CleanUp any failed resource": "{{ cleanup_failed_resource_pre | default('Not Executed') }}",
                                           "Cluster Status": "{{ cluster_status_pre }}",
                                         }
 

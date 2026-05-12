@@ -104,7 +104,7 @@
                                         New ERS: {{ cluster_status_test_execution_2.ers_node }}
             test_case_details_from_test_case: {
                                         "Pre Validations: Validate SCS cluster status": "{{ cluster_status_pre }}",
-                                        "Pre Validations: CleanUp any failed resource": "{{ cleanup_failed_resource_pre }}",
+                                        "Pre Validations: CleanUp any failed resource": "{{ cleanup_failed_resource_pre | default('Not Executed') }}",
                                         "Test Execution: Stop ASCS Instance": "{{ stop_ascs_result }}",
                                         "Test Execution: Start ASCS Instance": "{{ start_ascs_result }}",
                                         "Test Execution: Cleanup resources": "{{ cleanup_failed_resource_test_execution }}",

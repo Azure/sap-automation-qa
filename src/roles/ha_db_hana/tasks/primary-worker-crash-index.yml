@@ -16,12 +16,67 @@
     database_sid:                       "{{ db_sid | upper }}"
   register:                             index_server_check
 
-- name:                                 "Test Execution: Primary Worker Crash Index"
+- name:                                 "Pre Validations: Check if indexserver is running on primary workers"
+  become:                               true
+  ansible.builtin.shell: >-
+    set -o pipefail && pgrep -x hdbindexserver | head -1
+  args:
+    executable:                         /bin/bash
+  register:                             worker_indexserver_results
+  delegate_to:                          "{{ worker_node }}"
+  changed_when:                         false
+  failed_when:                          false
+  run_once:                             true
+  loop:                                 "{{ primary_worker_nodes | default([]) }}"
+  loop_control:
+    loop_var:                           worker_node
+  when:
+    - index_server_check.indexserver_enabled == "yes"
+    - primary_worker_nodes | default([]) | length > 0
+
+- name:                                 "Pre Validations: Select first worker with indexserver running"
+  ansible.builtin.set_fact:
+    indexserver_target_worker:           "{{ ((worker_indexserver_results.results | default([])
+                                              | selectattr('rc', 'defined')
+                                              | selectattr('rc', 'equalto', 0)
+                                              | map(attribute='worker_node')
+                                              | list) or [''])[0] }}"
   when:                                 index_server_check.indexserver_enabled == "yes"
+
+- name:                                 "Test Execution: Primary Worker Crash Index"
+  when:
+    - index_server_check.indexserver_enabled == "yes"
+    - indexserver_target_worker | default('') != ''
   ansible.builtin.include_tasks:        "roles/ha_db_hana/tasks/includes/scaleout-worker-operation.yml"
   tags:                                 [test-execution]
   vars:
     hana_test_target_site_label:        "primary"
-    hana_test_target_worker_node:       "{{ primary_worker_nodes | first | default('') }}"
+    hana_test_target_worker_node:       "{{ indexserver_target_worker }}"
     hana_test_action_command:           "killall -9 hdbindexserver"
     hana_test_requires_reboot:          true
+
+- name:                                 "Test Execution: Skipped - No indexserver on worker nodes"
+  become:                               true
+  when:
+    - index_server_check.indexserver_enabled == "yes"
+    - indexserver_target_worker | default('') == ''
+  block:
+    - name:                             "Set test case message and details"
+      ansible.builtin.set_fact:
+        test_execution_start:           "{{ now(utc=true, fmt='%Y-%m-%d %H:%M:%S') }}"
+        test_execution_end:             "{{ now(utc=true, fmt='%Y-%m-%d %H:%M:%S') }}"
+        test_case_message_from_test_case: >-
+          Test skipped: No indexserver process running on any primary worker node.
+          Worker nodes checked: {{ primary_worker_nodes | default([]) | join(', ') }}.
+          The indexserver provider is configured but no hdbindexserver
+          process is active on any worker.
+        test_case_details_from_test_case: {
+                                          "Pre Validations: Indexserver configured": "{{ index_server_check.indexserver_enabled }}",
+                                          "Pre Validations: Indexserver on workers": "not running on any worker",
+                                          "Pre Validations: Validate HANA DB cluster status": "{{ cluster_status_pre }}",
+                                          "Primary worker nodes checked": "{{ primary_worker_nodes | default([]) }}",
+                                        }
+
+    - name:                             "Post Validations Tasks"
+      ansible.builtin.include_tasks:    "roles/misc/tasks/post-validations.yml"
+      tags:                             [post-validation]

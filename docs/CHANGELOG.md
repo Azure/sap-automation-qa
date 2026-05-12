@@ -2,8 +2,8 @@
 
 All notable changes to this project will be documented in this file.
 
-## 1.0.3
-Release Date: 04-25-2026
+## 1.1.0
+Release Date: 05-11-2026
 1. Add support for scale-out HANA System Replication (HSR) topology in HA functional tests
    - Support for SAPHanaSR-ScaleOut provider alongside SAPHanaSR and SAPHanaSR-angi.
    - Updated all HA DB test scenarios (resource migration, node crash/kill, echo-b, crash-index, block-network, fs-freeze, sbd-fencing) with scale-out HSR support.

@@ -41,29 +41,31 @@
       log_parser:
         function:                       "merge_logs"
         logs:
-          - "{{ hostvars[first_node]['var_log_messages_output'].filtered_logs | default('[]') }}"
-          - "{{ hostvars[second_node]['var_log_messages_output'].filtered_logs | default('[]') }}"
+          - "{{ hostvars[first_node]['var_log_messages_output'].filtered_logs | default('[]') if first_node in hostvars else '[]' }}"
+          - "{{ hostvars[second_node]['var_log_messages_output'].filtered_logs | default('[]') if second_node in hostvars else '[]' }}"
       register:                         merged_logs_output
+      failed_when:                      false
 
     - name:                           "Set combined logs variable"
       ansible.builtin.set_fact:
-        combined_logs:                "{{ merged_logs_output.filtered_logs | from_json }}"
+        combined_logs:                "{{ (merged_logs_output.filtered_logs | from_json) if (merged_logs_output is defined and merged_logs_output is not failed and merged_logs_output.filtered_logs is defined) else [] }}"
 
-    - name:                             "Post Validations: Rescure operation set test case status"
-      delegate_to:                      localhost
+  rescue:
+    - name:                             "Log merge failed - continuing with empty logs"
       ansible.builtin.set_fact:
-        test_case_name:                 "{{ item.name }}: {{ test_execution_hostname | default(inventory_hostname) }}"
-        test_case_hostname:             "{{ virtual_host | default(inventory_hostname) }}"
-        test_case_description:          "{{ item.description }}"
-        test_case_status:               "FAILED"
-        test_case_message:              "{{ ansible_failed_result | default('Unknown error occurred') }}"
-        test_case_details:              "{{ ansible_failed_result | default('No error details available')}}"
-        test_case_var_log_messages:     "{{ combined_logs | default([]) }}"
+        combined_logs:                  []
 
-- name:                                 "Post Telemetry Data"
-  ansible.builtin.include_tasks:        "roles/misc/tasks/post-telemetry-data.yml"
-  tags:                                 [telemetry]
-  run_once:                             true
+- name:                                 "Post Validations: Rescue operation set test case status"
+  delegate_to:                          localhost
+  ansible.builtin.set_fact:
+    test_case_name:                     "{{ item.name }}: {{ test_execution_hostname | default(virtual_host | default(inventory_hostname)) }}"
+    test_case_hostname:                 "{{ virtual_host | default(inventory_hostname) }}"
+    test_case_description:              "{{ item.description }}"
+    test_case_status:                   "FAILED"
+    test_case_message:                  "{{ ansible_failed_result | default('Unknown error occurred') }}"
+    test_case_details:                  "{{ ansible_failed_result | default('No error details available') }}"
+    test_case_var_log_messages:         "{{ combined_logs | default([]) }}"
+    test_execution_end:                 "{{ now(utc=true, fmt='%Y-%m-%d %H:%M:%S') }}"
 
 - name:                                 "Clear the failed state of hosts for next test case"
   ansible.builtin.meta:                 clear_host_errors

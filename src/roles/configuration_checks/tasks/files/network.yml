@@ -186,7 +186,7 @@ checks:
                                           status=$(az network nic show --resource-group {{ CONTEXT.resource_group_name }} --name "$nic" \
                                           --query "enableAcceleratedNetworking" -o tsv); \
                                           echo "$status"; \
-                                        done
+                                        done | sort -u
     validator_type:                   *string
     validator_args:
       expected_output:                "true"
