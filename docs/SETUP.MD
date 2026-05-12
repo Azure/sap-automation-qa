@@ -439,6 +439,67 @@ When using Azure Key Vault to store credentials, the framework retrieves authent
 
 **Important**: When using Key Vault authentication, do NOT create local credential files (`ssh_key.ppk` or `password` files).
 
+
+## Copilot CLI Skills
+
+The repository includes [GitHub Copilot CLI](https://docs.github.com/en/copilot/concepts/agents/about-copilot-cli) agent skills that provide guided, context-aware workflows for common STAF operations. Skills understand the project structure, configuration file formats, and test execution patterns, so they can walk you through tasks step by step.
+
+### Prerequisites
+
+- [GitHub Copilot CLI](https://docs.github.com/en/copilot/getting-started-with-github-copilot) must be installed and authenticated on the management server. See [GitHub Copilot CLI installation](https://docs.github.com/en/copilot/getting-started-with-github-copilot) for instructions.
+- Run the CLI from the root of this repository so skills can discover workspace files and scripts.
+
+### Available Skills
+
+| Skill | What It Does |
+|-------|-------------|
+| `/setup-guide` | Walks through environment setup — local install via `setup.sh`, Docker container deployment, and `vars.yaml` configuration. |
+| `/workspace-creator` | Generates a new workspace directory under `WORKSPACES/SYSTEM/` with `sap-parameters.yaml` and `hosts.yaml` populated from your system details. |
+| `/workspace-validator` | Checks an existing workspace for missing files, incomplete fields, invalid values, and SSH readiness before you run tests. |
+| `/test-runner` | Executes HA functional tests, configuration checks, or backup tests via `sap_automation_qa.sh` in direct Ansible or API mode. |
+| `/test-result-analyzer` | Reads test logs, HTML reports, and API job output, then classifies failures against known patterns to surface root causes. |
+
+### How to Use
+
+1. Open a terminal in the repository root and launch Copilot CLI:
+
+   ```bash
+   cd sap-automation-qa
+   copilot
+   ```
+
+2. Skills activate automatically based on your prompt. For example:
+
+   ```text
+   > Help me set up the framework on my management server
+   # Activates: setup-guide
+
+   > Create a workspace for my DEV system with SID X00
+   # Activates: workspace-creator
+
+   > Validate my workspace configuration
+   # Activates: workspace-validator
+
+   > Run HA database tests for my system
+   # Activates: test-runner
+
+   > Why did my last test fail?
+   # Activates: test-result-analyzer
+   ```
+
+3. You can also invoke a skill directly by name:
+
+   ```text
+   > Use the /test-runner skill to execute configuration checks on DEV-WEEU-SAP01-X00
+   ```
+
+4. To see all available skills:
+
+   ```text
+   > /skills list
+   ```
+
+
 ## Update the framework
 
 To ensure you have the latest features and fixes, it's important to keep your fork of the SAP Testing Automation Framework up to date. You can do this by pulling the latest changes from the original repository into your fork.
@@ -483,20 +544,6 @@ This process will update your fork with all the latest features, bug fixes, and 
 
 > **NOTE**
 > If you've made local changes to your fork, you might encounter merge conflicts during step 4. In that case, you'll need to resolve these conflicts before proceeding with the push in step 5.
-
-## Copilot CLI Skills
-
-When using [GitHub Copilot CLI](https://docs.github.com/en/copilot/concepts/agents/about-copilot-cli) in this repository, the following skills are available to assist with common workflows:
-
-| Skill | What It Does |
-|-------|-------------|
-| `/setup-guide` | Guides through environment setup (local, Docker) |
-| `/workspace-validator` | Validates workspace `sap-parameters.yaml` and `hosts.yaml` |
-| `/workspace-creator` | Creates new workspace configurations from templates |
-| `/test-runner` | Executes tests using `sap_automation_qa.sh` (direct and API modes) |
-| `/test-result-analyzer` | Analyzes test results, matches known failure patterns |
-
-To use: run `copilot` in the project directory. Skills activate automatically based on your prompt, or invoke directly (e.g., "Use the /workspace-validator skill to check my config").
 
 ## Additional Resources
 

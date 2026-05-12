@@ -17,6 +17,20 @@ The SAP Testing Automation Framework is an open-source orchestration tool design
 
 ![SAP Testing Automation Framework](./docs/images/sap-testing-automation-framework.png)
 
+
+## 🤖 Agent Skills &nbsp; ![New](https://img.shields.io/badge/NEW-brightgreen)
+
+> [!TIP]
+> This repository ships with **GitHub Copilot CLI agent skills** that guide you through setup, workspace creation, test execution, and result analysis — all from your terminal. Run `copilot` in the repo directory and ask naturally; skills activate automatically.
+>
+> **Quick start:**
+> ```bash
+> cd sap-automation-qa && copilot
+> ```
+> **Example prompts:** *"Help me set up the framework"* · *"Run HA tests for my system"* · *"Why did my last test fail?"*
+>
+> See the [setup guide](./docs/SETUP.MD#copilot-cli-skills) for the full list of skills and usage examples.
+
 ## 📊 Key Scenarios
 
 SAP Testing Automation is designed as a scalable framework to orchestrate and validate a wide spectrum of SAP landscape scenarios through repeatable, policy-driven test modules. The framework currently offers following scenarios -
@@ -95,15 +109,6 @@ For support and questions, please:
 - [Azure Backup Testing Guide](./docs/AZURE_BACKUP.md)
 - [Configuration Checks Guide](./docs/CONFIGURATION_CHECKS.md)
 - [High Availability Testing Guide](./docs/HIGH_AVAILABILITY.md)
-
-## 🤖 Agent Skills
-
-This repo includes [agent skills](https://docs.github.com/en/copilot/concepts/agents/about-agent-skills) that provide guided workflows when using [GitHub Copilot CLI](https://docs.github.com/en/copilot/concepts/agents/about-copilot-cli) in this repository.
-
-**Usage:** Launch `copilot` in the repo directory, then:
-- Skills activate automatically based on your prompt
-- Or invoke directly: "Use the /test-runner skill to run HA tests"
-- List available skills: `/skills list`
 
 ## 🤝 Contributing
 
