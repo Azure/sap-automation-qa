@@ -45,4 +45,4 @@ fastapi
 uvicorn
 pydantic
 apscheduler
-python-multipart
+python-multipart>=0.0.27
