@@ -119,22 +119,28 @@ def validate_name(name: str | None, dir_name: str, result: ValidationResult, ski
         result.error(skill, f"name '{name}' does not match directory name '{dir_name}'")
         return
 
+    has_error = False
+
     if len(name) > MAX_NAME_LENGTH:
         result.error(
             skill,
             f"name exceeds {MAX_NAME_LENGTH} characters ({len(name)})",
         )
+        has_error = True
 
     if not NAME_PATTERN.match(name):
         result.error(
             skill,
             f"name '{name}' has invalid format " "(must be lowercase a-z, 0-9, hyphens only)",
         )
+        has_error = True
 
     if CONSECUTIVE_HYPHENS.search(name):
         result.error(skill, f"name '{name}' contains consecutive hyphens")
+        has_error = True
 
-    result.ok(skill, f"name matches directory ({name})")
+    if not has_error:
+        result.ok(skill, f"name matches directory ({name})")
 
 
 def validate_description(description: str | None, result: ValidationResult, skill: str) -> None:
@@ -198,7 +204,7 @@ def validate_scripts(
     if scripts and not allowed_tools:
         result.warn(
             skill,
-            "Skill has .sh scripts but no 'allowed-tools' in frontmatter",
+            "Skill has scripts but no 'allowed-tools' in frontmatter",
         )
 
 

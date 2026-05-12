@@ -390,12 +390,13 @@ cd deploy && docker compose up -d
 ## Copilot CLI Skills
 
 This repo includes skills in `.github/skills/` that provide guided workflows.
-When a user's request matches a skill's trigger, prefer using the skill's instructions.
+Skills activate automatically based on prompt context, or can be invoked directly
+with the `/` prefix (e.g., `/test-runner`).
 
 | Skill | When to Use |
 |-------|-------------|
-| `setup-guide` | Setup, installation, Docker deployment, `vars.yaml` configuration |
-| `workspace-validator` | Validate workspace config, troubleshoot workspace issues |
-| `workspace-creator` | Create new workspace, onboard SAP system |
-| `test-runner` | Run tests, execute configuration checks, start HA tests |
-| `test-result-analyzer` | Analyze test failures, interpret results, find root causes |
+| `/setup-guide` | Setup, installation, Docker deployment, `vars.yaml` configuration |
+| `/workspace-validator` | Validate workspace config, troubleshoot workspace issues |
+| `/workspace-creator` | Create new workspace, onboard SAP system |
+| `/test-runner` | Run tests, execute configuration checks, start HA tests |
+| `/test-result-analyzer` | Analyze test failures, interpret results, find root causes |

@@ -28,7 +28,7 @@ WARN = "⚠️ "
 
 VALID_PLATFORMS = {"HANA", "DB2"}
 VALID_NFS_PROVIDERS = {"AFS", "ANF"}
-VALID_CLUSTER_TYPES = {"AFA", "ISCSI", "ANF"}
+VALID_CLUSTER_TYPES = {"AFA", "ISCSI", "ASD"}
 VALID_NODE_TIERS = {"hana", "scs", "ers", "pas", "app"}
 
 SSH_KEY_EXTENSIONS = {"ppk", "pem", "key", "private", "rsa", "ed25519", "ecdsa", "dsa"}
@@ -210,7 +210,7 @@ def validate_sap_parameters(path: Path, result: ValidationResult) -> dict[str, A
                 "database_cluster_type: missing (required when database_high_availability=true)",
             )
         elif ct not in VALID_CLUSTER_TYPES:
-            result.error(cat, f"database_cluster_type '{ct}' invalid (must be AFA, ISCSI, or ANF)")
+            result.error(cat, f"database_cluster_type '{ct}' invalid (must be AFA, ISCSI, or ASD)")
 
     if data.get("scs_high_availability") is True:
         ct = data.get("scs_cluster_type")
@@ -219,13 +219,9 @@ def validate_sap_parameters(path: Path, result: ValidationResult) -> dict[str, A
                 cat, "scs_cluster_type: missing (required when scs_high_availability=true)"
             )
         elif ct not in VALID_CLUSTER_TYPES:
-            result.error(cat, f"scs_cluster_type '{ct}' invalid (must be AFA, ISCSI, or ANF)")
+            result.error(cat, f"scs_cluster_type '{ct}' invalid (must be AFA, ISCSI, or ASD)")
 
-    if (
-        nfs == "ANF"
-        or data.get("database_cluster_type") == "ANF"
-        or data.get("scs_cluster_type") == "ANF"
-    ):
+    if nfs == "ANF":
         if not data.get("ANF_account_rg"):
             result.warn(cat, "ANF_account_rg: missing (needed when ANF is used)")
         if not data.get("ANF_account_name"):
@@ -259,7 +255,7 @@ def validate_hosts(path: Path, sap_sid: str, result: ValidationResult) -> None:
         group = data.get(group_name)
         if group is None:
             if tier in ("hana", "scs", "ers"):
-                result.warn(cat, f"{group_name} group: not found")
+                result.error(cat, f"{group_name} group: not found")
             continue
 
         hosts = group.get("hosts", {})
@@ -323,9 +319,7 @@ def validate_ssh_auth(
     for fpath in workspace.iterdir():
         if not fpath.is_file():
             continue
-        suffix = fpath.suffix.lstrip(".")
-        name = fpath.name
-        if suffix in SSH_KEY_EXTENSIONS or name == "ssh_key" or "ssh_key" in name:
+        if "ssh_key" in fpath.name:
             result.ok(cat, f"SSH key file found ({fpath.name})")
             key_found = True
             break
@@ -362,20 +356,26 @@ def validate_ssh_connectivity(
         result.ok(cat, "SSH connectivity check skipped (STAF_SKIP_SSH)")
         return
 
+    use_keyvault = sap_params and sap_params.get("secret_id")
+    if use_keyvault:
+        result.ok(
+            cat,
+            "SSH connectivity check skipped "
+            "(Key Vault auth — credentials retrieved at runtime)",
+        )
+        return
+
     if not hosts_data:
         result.warn(cat, "No hosts data available for connectivity check")
         return
 
     key_path: Path | None = None
-    use_keyvault = sap_params and sap_params.get("secret_id")
-    if not use_keyvault:
-        for fpath in workspace.iterdir():
-            if not fpath.is_file():
-                continue
-            suffix = fpath.suffix.lstrip(".")
-            if suffix in SSH_KEY_EXTENSIONS or "ssh_key" in fpath.name:
-                key_path = fpath
-                break
+    for fpath in workspace.iterdir():
+        if not fpath.is_file():
+            continue
+        if "ssh_key" in fpath.name:
+            key_path = fpath
+            break
 
     targets: list[tuple[str, str, str]] = []
     for group_data in hosts_data.values():
@@ -398,6 +398,7 @@ def validate_ssh_connectivity(
             "ssh",
             "-o", "ConnectTimeout=5",
             "-o", "StrictHostKeyChecking=no",
+            "-o", "UserKnownHostsFile=/dev/null",
             "-o", "BatchMode=yes",
         ]
         if key_path:
@@ -470,7 +471,14 @@ def print_result(result: ValidationResult) -> None:
     for finding in result.findings:
         if finding.category != current_cat:
             current_cat = finding.category
-            prefix = "📁" if "File" in current_cat else "📋" if "yaml" in current_cat else "🔐"
+            if "File" in current_cat:
+                prefix = "📁"
+            elif "yaml" in current_cat:
+                prefix = "📋"
+            elif "Connectivity" in current_cat:
+                prefix = "🌐"
+            else:
+                prefix = "🔐"
             print(f"{prefix} {current_cat}")
         icon = icons[finding.level]
         print(f"  {icon} {finding.message}")

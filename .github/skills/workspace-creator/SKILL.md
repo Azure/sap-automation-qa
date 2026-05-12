@@ -61,7 +61,7 @@ See [templates/sap-parameters.yaml.template](templates/sap-parameters.yaml.templ
 # ─── Application tier ─────────────────────────────────────────
 sap_sid:                       X00
 scs_high_availability:         true          # boolean
-scs_cluster_type:              AFA           # AFA, ISCSI, ANF
+scs_cluster_type:              AFA           # Fencing mechanism: AFA (Azure Fencing Agent), ISCSI, or ASD (Azure Shared Disks)
 scs_instance_number:           "00"          # 2-digit string
 ers_instance_number:           "01"          # 2-digit string
 
@@ -70,7 +70,7 @@ db_sid:                        HDB
 db_instance_number:            "00"          # 2-digit string
 platform:                      HANA          # HANA, DB2
 database_high_availability:    true          # boolean
-database_cluster_type:         AFA           # AFA, ISCSI, ANF
+database_cluster_type:         AFA           # Fencing mechanism: AFA (Azure Fencing Agent), ISCSI, or ASD (Azure Shared Disks)
 database_scale_out:            false         # boolean
 
 # ─── Storage ──────────────────────────────────────────────────
@@ -83,7 +83,7 @@ secret_id:                     https://<name>.vault.azure.net/secrets/<secret>/<
 # ─── Managed Identity (optional) ──────────────────────────────
 user_assigned_identity_client_id: "00000000-0000-0000-0000-000000000000"
 
-# ─── ANF (optional — when NFS_provider=ANF or cluster_type=ANF)
+# ─── ANF (optional — when NFS_provider=ANF) ───────────────────
 ANF_account_rg:                "ANF-RESOURCE-GROUP"
 ANF_account_name:              "ANF-ACCOUNT-NAME"
 

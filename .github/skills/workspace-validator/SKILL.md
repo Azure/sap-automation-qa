@@ -53,7 +53,7 @@ python3 .github/skills/workspace-validator/scripts/validate_workspace.py
 |------|--------|
 | `sap-parameters.yaml` | Required |
 | `hosts.yaml` or `{SID}_hosts.yaml` | Required |
-| SSH key file (extensions: ppk, pem, key, private, rsa, ed25519, ecdsa, dsa) | Conditional |
+| SSH key file (files with `ssh_key` in the filename, e.g., `ssh_key.ppk`, `ssh_key.pem`) | Conditional |
 | `password` file | Conditional (VMPASSWORD auth only) |
 
 ### 2. sap-parameters.yaml Validation
@@ -70,14 +70,14 @@ python3 .github/skills/workspace-validator/scripts/validate_workspace.py
 - `NFS_provider` — Valid values: `AFS`, `ANF`
 
 **Conditional fields:**
-- `database_cluster_type` — Required when `database_high_availability: true`. Values: `AFA`, `ISCSI`, `ANF`
-- `scs_cluster_type` — Required when `scs_high_availability: true`. Values: `AFA`, `ISCSI`, `ANF`
+- `database_cluster_type` — Required when `database_high_availability: true`. Fencing mechanism — values: `AFA` (Azure Fencing Agent), `ISCSI`, `ASD` (Azure Shared Disks)
+- `scs_cluster_type` — Required when `scs_high_availability: true`. Fencing mechanism — values: `AFA` (Azure Fencing Agent), `ISCSI`, `ASD` (Azure Shared Disks)
 - `database_scale_out` — Boolean, defaults to `false`
 - `key_vault_id` — Azure resource ID (if Key Vault auth)
 - `secret_id` — Key Vault secret URL (if Key Vault auth)
 - `user_assigned_identity_client_id` — UUID (if MSI auth)
-- `ANF_account_rg` — Required when `NFS_provider: ANF` or cluster_type includes ANF
-- `ANF_account_name` — Required when ANF is used
+- `ANF_account_rg` — Required when `NFS_provider: ANF`
+- `ANF_account_name` — Required when `NFS_provider: ANF`
 
 **Azure Backup fields (for AzureBackupDatabase tests):**
 - `backup_vault_resource_id` — Recovery Services vault resource ID
@@ -115,7 +115,7 @@ python3 .github/skills/workspace-validator/scripts/validate_workspace.py
 
 Priority order (checked top-to-bottom, first match wins):
 1. **Key Vault** — `secret_id` field in sap-parameters.yaml → MSI retrieves SSH key
-2. **Local key file** — File with extension: `ppk`, `pem`, `key`, `private`, `rsa`, `ed25519`, `ecdsa`, `dsa`, or filename containing `ssh_key`
+2. **Local key file** — File with `ssh_key` in the filename (e.g., `ssh_key.ppk`, `ssh_key.pem`), NOT any file with a `.pem` or `.key` extension
 3. **Password file** — File named `password` in workspace directory (VMPASSWORD auth)
 
 ### 5. SSH Connectivity (Optional)
