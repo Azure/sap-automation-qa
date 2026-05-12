@@ -168,6 +168,7 @@ class ConsoleFormatter(LogFormatter):
         timestamp = datetime.now().strftime("%H:%M:%S.%f")[:-3]
         formatted = (
             f"{color}{record.levelname:5}{reset} "
+            f"[{timestamp}] cid={short_corr} "
             f"{record.name.split('.')[-1]} - {record.getMessage()}"
         )
         extras = []

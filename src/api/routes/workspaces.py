@@ -92,6 +92,16 @@ async def get_workspace(workspace_id: str) -> WorkspaceInfo:
     :rtype: WorkspaceInfo
     :raises HTTPException: If workspace not found (404 error).
     """
+    if _workspace_loader:
+        result = _workspace_loader(workspace_id)
+        if result:
+            return WorkspaceInfo(
+                id=workspace_id,
+                name=result.get("name", workspace_id),
+                environment=result.get("environment", ""),
+                path=result.get("path", ""),
+            )
+
     workspaces = _load_workspaces_from_directory()
 
     for ws in workspaces:

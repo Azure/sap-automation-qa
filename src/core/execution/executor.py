@@ -120,7 +120,7 @@ class ExecutorProtocol(Protocol):
         :param ssh_password: SSH password for VMPASSWORD auth
         :returns: Execution result
         """
-        ...
+        raise NotImplementedError
 
     def terminate_process(
         self,
@@ -131,7 +131,7 @@ class ExecutorProtocol(Protocol):
         :param job_id: Job ID whose process to terminate.
         :returns: True if a process was terminated.
         """
-        ...
+        raise NotImplementedError
 
 
 class AnsibleExecutor:
