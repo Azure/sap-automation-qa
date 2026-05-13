@@ -214,11 +214,11 @@ ptyprocess==0.7.0
     # via pexpect
 pycparser==3.0
     # via cffi
-pydantic==2.13.1
+pydantic==2.13.4
     # via
     #   -r requirements.in
     #   fastapi
-pydantic-core==2.46.1
+pydantic-core==2.46.4
     # via pydantic
 pygments==2.20.0
     # via
