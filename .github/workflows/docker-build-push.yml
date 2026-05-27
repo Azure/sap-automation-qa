@@ -74,7 +74,7 @@ jobs:
 
       - name: Build Docker image (validation only)
         if: steps.acr-check.outputs.acr_configured == 'false' || github.event_name == 'pull_request'
-        uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25 # v5.4.0
+        uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7.2.0
         with:
           context: .
           file: ./deploy/Dockerfile
@@ -94,7 +94,7 @@ jobs:
 
       - name: Build and push Docker image to ACR
         if: steps.acr-check.outputs.acr_configured == 'true' && github.event_name != 'pull_request'
-        uses: docker/build-push-action@ca052bb54ab0790a636c9b5f226502c73d547a25 # v5.4.0
+        uses: docker/build-push-action@f9f3042f7e2789586610d6e8b85c8f03e5195baf # v7.2.0
         with:
           context: .
           file: ./deploy/Dockerfile
