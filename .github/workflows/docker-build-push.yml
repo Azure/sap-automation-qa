@@ -16,6 +16,7 @@ on:
 
 permissions:
   contents: read
+  packages: write
 
 env:
   IMAGE_NAME: sap-automation-qa
