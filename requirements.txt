@@ -252,6 +252,8 @@ python-multipart==0.0.29
     # via -r requirements.in
 pytokens==0.4.1
     # via black
+pytz==2026.2
+    # via pandas
 pyyaml==6.0.3
     # via
     #   -r requirements.in
@@ -289,7 +291,7 @@ ruamel-yaml-clib==0.2.15
     # via ansible-lint
 six==1.17.0
     # via python-dateutil
-starlette==1.0.0
+starlette==1.0.1
     # via fastapi
 subprocess-tee==0.4.2
     # via
@@ -322,6 +324,8 @@ typing-inspection==0.4.2
     # via
     #   fastapi
     #   pydantic
+tzdata==2026.2
+    # via pandas
 tzlocal==5.3.1
     # via apscheduler
 urllib3==2.7.0
