@@ -1,11 +1,35 @@
 
 name: Pull Request - Code Coverage
-on: [push, pull_request]
+on:
+  push:
+    branches: [main, development-*]
+  pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
 permissions:
   contents: read
 
 jobs:
+  check-labels:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@cb605e52c26070c328afc4562f0b4ada7618a84e # v2.10.4
+        with:
+          egress-policy: audit
+
+      - name: Verify PR has at least one label
+        if: github.event_name == 'pull_request'
+        env:
+          PR_LABELS: ${{ join(github.event.pull_request.labels.*.name, ',') }}
+        run: |
+          if [ -z "$PR_LABELS" ]; then
+            echo "::error::PR must have at least one label before merging."
+            exit 1
+          fi
+          echo "Labels found: $PR_LABELS"
+
   build:
+    needs: check-labels
     runs-on: ubuntu-latest
     steps:
       - name: Harden Runner
