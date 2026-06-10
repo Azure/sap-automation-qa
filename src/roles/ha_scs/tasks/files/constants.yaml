@@ -192,7 +192,7 @@ RESOURCE_DEFAULTS:
             value:                  ["600", "600s"]
             required:               false
           timeout:
-            value:                  ["15", "15s"]
+            value:                  ["120", "120s"]
             required:               false
 
     ascs:
@@ -481,7 +481,7 @@ RESOURCE_DEFAULTS:
             value:                  "600"
             required:               false
           timeout:
-            value:                  ["15", "15s"]
+            value:                  ["120", "120s"]
             required:               false
 
     ascs:
