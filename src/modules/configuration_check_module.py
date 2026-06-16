@@ -647,11 +647,24 @@ class ConfigurationCheckModule(SapAutomationQA):
                     "status": TestStatus.ERROR.value,
                     "details": "No disk data available for consistency check",
                 }
+            if str(collected_data).startswith("ERROR:"):
+                return {
+                    "status": TestStatus.ERROR.value,
+                    "details": f"Collection failed: {collected_data}",
+                }
             values = [v.strip() for v in str(collected_data).split(",") if v.strip()]
             if not values:
                 return {
                     "status": TestStatus.ERROR.value,
                     "details": "No disk property values found",
+                }
+            missing = [v for v in values if v == "MISSING"]
+            if missing:
+                return {
+                    "status": TestStatus.ERROR.value,
+                    "details": (
+                        f"{len(missing)} of {len(values)} disks missing " f"the requested property"
+                    ),
                 }
             unique_values = set(values)
             is_consistent = len(unique_values) == 1
