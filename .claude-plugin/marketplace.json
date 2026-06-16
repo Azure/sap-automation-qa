@@ -1,1 +1,14 @@
-../.github/plugin/marketplace.json
+{
+    "name": "sap-automation-qa",
+    "owner": {
+        "name": "Microsoft"
+    },
+    "plugins": [
+        {
+            "name": "staf",
+            "source": ".",
+            "description": "SAP Testing Automation Framework — HA functional testing, configuration validation, and backup testing for SAP on Azure",
+            "version": "1.0.0"
+        }
+    ]
+}

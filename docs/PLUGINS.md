@@ -74,7 +74,7 @@ Skills are maintained in `.github/skills/` as the single source of truth. Platfo
 │   └── workspace-validator/
 └── copilot-instructions.md          ← Project instructions
 
-.claude-plugin/marketplace.json      → symlink to .github/plugin/marketplace.json
+.claude-plugin/marketplace.json      ← Claude Code marketplace catalog
 .claude-plugin/plugin.json           ← Claude Code plugin manifest
 .claude/skills/*                     → symlinks to .github/skills/*
 .gemini/skills/*                     → symlinks to .github/skills/*
