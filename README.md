@@ -21,26 +21,15 @@ The SAP Testing Automation Framework is an open-source orchestration tool design
 ## 🤖 AI Assistant Plugins &nbsp; ![New](https://img.shields.io/badge/NEW-brightgreen)
 
 > [!TIP]
-> This repository ships with **agent skills** for **GitHub Copilot**, **Claude Code**, and **Gemini CLI**. Skills guide you through setup, workspace creation, test execution, and result analysis — all from your terminal.
+> STAF can now be used through AI assistant skills — no manual setup required. Install the plugin, bring your `WORKSPACES/` directory, and the skills handle environment setup, test execution, and result analysis.
 >
-> **Supported platforms:**
-> | Platform | Skills Path | Instructions |
-> |----------|------------|--------------|
-> | GitHub Copilot | `.github/skills/` | `.github/copilot-instructions.md` |
-> | Claude Code | `.claude/skills/` | `CLAUDE.md` |
-> | Gemini CLI | `.gemini/skills/` | `GEMINI.md` |
+> | Platform | Install |
+> |----------|---------|
+> | Copilot CLI | `copilot plugin install Azure/sap-automation-qa` |
+> | Claude Code | `/plugin marketplace add Azure/sap-automation-qa` → `/plugin install staf@sap-automation-qa` |
+> | Gemini CLI | `gemini skills install https://github.com/Azure/sap-automation-qa` |
 >
-> **Quick start — install skills and bring your WORKSPACES:**
-> ```bash
-> # GitHub Copilot CLI
-> copilot plugin install Azure/sap-automation-qa
->
-> # Gemini CLI
-> gemini skills install https://github.com/Azure/sap-automation-qa
-> ```
-> Then bring your `WORKSPACES/` directory and ask naturally.
->
-> See [docs/PLUGINS.md](./docs/PLUGINS.md) for installation options and full usage guide.
+> See [docs/PLUGINS.md](./docs/PLUGINS.md) for details.
 
 ## 📊 Key Scenarios
 

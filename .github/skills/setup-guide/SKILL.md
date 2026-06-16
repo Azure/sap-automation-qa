@@ -92,6 +92,20 @@ See `docs/TELEMETRY_SETUP.md` for Azure Log Analytics and Azure Data Explorer in
 
 ## Getting Started
 
+### Option A: Install via AI Assistant Plugin (Recommended)
+
+Install the STAF skills plugin for your AI assistant:
+
+| Platform | Command |
+|----------|---------|
+| **GitHub Copilot CLI** | `copilot plugin install Azure/sap-automation-qa` |
+| **Claude Code** | `/plugin marketplace add Azure/sap-automation-qa` then `/plugin install staf@sap-automation-qa` |
+| **Gemini CLI** | `gemini skills install https://github.com/Azure/sap-automation-qa` |
+
+Once installed, bring your `WORKSPACES/` directory and interact through natural language. The skills handle locating or cloning the framework automatically.
+
+### Option B: Manual Setup
+
 ### 1. Login to Management Server
 
 Ensure you are logged into the management server connected to the SAP system's virtual network.
