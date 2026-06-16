@@ -13,7 +13,7 @@ enums:
   os_type:
     - suse:                           &suse "SLES_SAP"
     - redhat:                         &redhat "REDHAT"
-    - oraclelinux:                    &oraclelinux "OracleLinux"
+    - oraclelinux:                    &oraclelinux "ORACLELINUX"
     - windows:                        &windows "Windows"
     - all_os:                         &os_type [*suse, *redhat, *oraclelinux, *windows]
 

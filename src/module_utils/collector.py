@@ -496,6 +496,8 @@ class AzureDataParser(Collector):
             for disk in matched_disks:
                 if property_name in disk:
                     values.append(str(disk.get(property_name, "unknown")))
+                else:
+                    values.append("MISSING")
             return ",".join(values) if values else "N/A"
         except Exception as ex:
             return f"ERROR: {str(ex)}"
