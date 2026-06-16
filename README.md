@@ -18,18 +18,29 @@ The SAP Testing Automation Framework is an open-source orchestration tool design
 ![SAP Testing Automation Framework](./docs/images/sap-testing-automation-framework.png)
 
 
-## 🤖 Agent Skills &nbsp; ![New](https://img.shields.io/badge/NEW-brightgreen)
+## 🤖 AI Assistant Plugins &nbsp; ![New](https://img.shields.io/badge/NEW-brightgreen)
 
 > [!TIP]
-> This repository ships with **GitHub Copilot CLI agent skills** that guide you through setup, workspace creation, test execution, and result analysis — all from your terminal. Run `copilot` in the repo directory and ask naturally; skills activate automatically.
+> This repository ships with **agent skills** for **GitHub Copilot**, **Claude Code**, and **Gemini CLI**. Skills guide you through setup, workspace creation, test execution, and result analysis — all from your terminal.
 >
-> **Quick start:**
+> **Supported platforms:**
+> | Platform | Skills Path | Instructions |
+> |----------|------------|--------------|
+> | GitHub Copilot | `.github/skills/` | `.github/copilot-instructions.md` |
+> | Claude Code | `.claude/skills/` | `CLAUDE.md` |
+> | Gemini CLI | `.gemini/skills/` | `GEMINI.md` |
+>
+> **Quick start — install skills and bring your WORKSPACES:**
 > ```bash
-> cd sap-automation-qa && copilot
-> ```
-> **Example prompts:** *"Help me set up the framework"* · *"Run HA tests for my system"* · *"Why did my last test fail?"*
+> # GitHub Copilot CLI
+> copilot plugin install Azure/sap-automation-qa
 >
-> See the [setup guide](./docs/SETUP.MD#copilot-cli-skills) for the full list of skills and usage examples.
+> # Gemini CLI
+> gemini skills install https://github.com/Azure/sap-automation-qa
+> ```
+> Then bring your `WORKSPACES/` directory and ask naturally.
+>
+> See [docs/PLUGINS.md](./docs/PLUGINS.md) for installation options and full usage guide.
 
 ## 📊 Key Scenarios
 
@@ -105,6 +116,7 @@ For support and questions, please:
 
 ## 📚 Additional Resources
 
+- [AI Assistant Plugins Guide](./docs/PLUGINS.md)
 - [Azure SAP Documentation](https://docs.microsoft.com/azure/sap)
 - [Azure Backup Testing Guide](./docs/AZURE_BACKUP.md)
 - [Configuration Checks Guide](./docs/CONFIGURATION_CHECKS.md)
