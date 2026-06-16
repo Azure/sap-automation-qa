@@ -767,3 +767,22 @@ checks:
     references:
       sap:                              "2972496"
       microsoft:                        "https://learn.microsoft.com/en-us/azure/virtual-machines/workloads/sap/dbms-guide-ibm"
+
+  - id:                                 "DB-Db2-0027"
+    name:                               "DB2 user dump"
+    description:                        "Collects Db2 user-level diagnostic information"
+    category:                           *sap_check
+    severity:                           *info
+    workload:                           *sap
+    applicability:
+      os_type:                          [*suse, *redhat]
+      os_version:                       *all_versions
+      hardware_type:                    *vm
+      storage_type:                     *all_storage
+      role:                             [*db_role]
+      database_type:                    [*db2]
+    collector_type:                     *command
+    collector_args:
+      command:                          ". ~/sqllib/db2profile && db2pd -alldbs -dump 2>/dev/null || echo 'DB2 user dump not available'"
+      user:                             *db2sid
+    report:                             *section

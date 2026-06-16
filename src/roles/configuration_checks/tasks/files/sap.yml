@@ -538,3 +538,335 @@ checks:
     report:                             *check
     references:
       microsoft:                        "https://learn.microsoft.com/en-us/azure/sap/workloads/high-availability-guide-rhel-pacemaker"
+
+  - id:                                 "SAP-0019"
+    name:                               "TCP KeepAliveTime"
+    description:                        "Windows TCP KeepAliveTime registry parameter for SAP HA"
+    category:                           *sap_check
+    severity:                           *high
+    workload:                           *sap
+    applicability:
+      os_type:                          [*windows]
+      os_version:                       *all_versions
+      hardware_type:                    *vm
+      storage_type:                     *all_storage
+      role:                             [*ascs_role]
+      database_type:                    [*hana, *mssql, *oracle]
+    collector_type:                     *command
+    collector_args:
+      command: |
+                                        powershell -NoProfile -Command "(Get-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters' -Name KeepAliveTime -ErrorAction SilentlyContinue).KeepAliveTime"
+    validator_type:                     *string
+    validator_args:
+      expected_output:                  "120000"
+    report:                             *check
+    references:
+      microsoft:                        "https://learn.microsoft.com/en-us/azure/sap/workloads/sap-high-availability-infrastructure-wsfc-shared-disk"
+
+  - id:                                 "SAP-0020"
+    name:                               "TCP KeepAliveInterval"
+    description:                        "Windows TCP KeepAliveInterval registry parameter for SAP HA"
+    category:                           *sap_check
+    severity:                           *high
+    workload:                           *sap
+    applicability:
+      os_type:                          [*windows]
+      os_version:                       *all_versions
+      hardware_type:                    *vm
+      storage_type:                     *all_storage
+      role:                             [*ascs_role]
+      database_type:                    [*mssql, *oracle]
+    collector_type:                     *command
+    collector_args:
+      command: |
+                                        powershell -NoProfile -Command "(Get-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Services\Tcpip\Parameters' -Name KeepAliveInterval -ErrorAction SilentlyContinue).KeepAliveInterval"
+    validator_type:                     *string
+    validator_args:
+      expected_output:                  "120000"
+    report:                             *check
+    references:
+      microsoft:                        "https://learn.microsoft.com/en-us/azure/sap/workloads/sap-high-availability-infrastructure-wsfc-shared-disk"
+
+  - id:                                 "SAP-0021"
+    name:                               "DisableCARetryOnInitialConnect"
+    description:                        "LanmanWorkStation DisableCARetryOnInitialConnect for SAP HA"
+    category:                           *sap_check
+    severity:                           *high
+    workload:                           *sap
+    applicability:
+      os_type:                          [*windows]
+      os_version:                       *all_versions
+      hardware_type:                    *vm
+      storage_type:                     *all_storage
+      role:                             [*ascs_role]
+      database_type:                    [*hana, *mssql, *oracle]
+    collector_type:                     *command
+    collector_args:
+      command: |
+                                        powershell -NoProfile -Command "(Get-ItemProperty 'HKLM:\SYSTEM\CurrentControlSet\Services\LanmanWorkStation\Parameters' -Name DisableCARetryOnInitialConnect -ErrorAction SilentlyContinue).DisableCARetryOnInitialConnect"
+    validator_type:                     *string
+    validator_args:
+      expected_output:                  "1"
+    report:                             *check
+    references:
+      sap:                              "1823833"
+
+  - id:                                 "SAP-0022"
+    name:                               "WSFC CrossSubNetDelay (ASCS)"
+    description:                        "Windows Failover Cluster CrossSubNetDelay for ASCS"
+    category:                           *sap_check
+    severity:                           *high
+    workload:                           *sap
+    applicability:
+      os_type:                          [*windows]
+      os_version:                       *all_versions
+      hardware_type:                    *vm
+      storage_type:                     *all_storage
+      role:                             [*ascs_role]
+      database_type:                    [*mssql, *oracle]
+      high_availability:                *high_availability
+    collector_type:                     *command
+    collector_args:
+      command: |
+                                        powershell -NoProfile -Command "(Get-Cluster).CrossSubNetDelay"
+    validator_type:                     *range
+    validator_args:
+      min:                              "1000"
+      max:                              "4000"
+    report:                             *check
+    references:
+      microsoft:                        "https://learn.microsoft.com/en-us/azure/sap/workloads/sap-high-availability-infrastructure-wsfc-shared-disk"
+
+  - id:                                 "SAP-0023"
+    name:                               "WSFC CrossSubNetThreshold (ASCS)"
+    description:                        "Windows Failover Cluster CrossSubNetThreshold for ASCS"
+    category:                           *sap_check
+    severity:                           *high
+    workload:                           *sap
+    applicability:
+      os_type:                          [*windows]
+      os_version:                       *all_versions
+      hardware_type:                    *vm
+      storage_type:                     *all_storage
+      role:                             [*ascs_role]
+      database_type:                    [*mssql, *oracle]
+      high_availability:                *high_availability
+    collector_type:                     *command
+    collector_args:
+      command: |
+                                        powershell -NoProfile -Command "(Get-Cluster).CrossSubNetThreshold"
+    validator_type:                     *range
+    validator_args:
+      min:                              "20"
+      max:                              "120"
+    report:                             *check
+    references:
+      microsoft:                        "https://learn.microsoft.com/en-us/azure/sap/workloads/sap-high-availability-infrastructure-wsfc-shared-disk"
+
+  - id:                                 "SAP-0024"
+    name:                               "WSFC SameSubNetDelay (ASCS)"
+    description:                        "Windows Failover Cluster SameSubNetDelay for ASCS"
+    category:                           *sap_check
+    severity:                           *high
+    workload:                           *sap
+    applicability:
+      os_type:                          [*windows]
+      os_version:                       *all_versions
+      hardware_type:                    *vm
+      storage_type:                     *all_storage
+      role:                             [*ascs_role]
+      database_type:                    [*mssql, *oracle]
+      high_availability:                *high_availability
+    collector_type:                     *command
+    collector_args:
+      command: |
+                                        powershell -NoProfile -Command "(Get-Cluster).SameSubNetDelay"
+    validator_type:                     *range
+    validator_args:
+      min:                              "2000"
+      max:                              "3000"
+    report:                             *check
+    references:
+      microsoft:                        "https://learn.microsoft.com/en-us/azure/sap/workloads/sap-high-availability-infrastructure-wsfc-shared-disk"
+
+  - id:                                 "SAP-0025"
+    name:                               "WSFC SameSubNetThreshold (ASCS)"
+    description:                        "Windows Failover Cluster SameSubNetThreshold for ASCS"
+    category:                           *sap_check
+    severity:                           *high
+    workload:                           *sap
+    applicability:
+      os_type:                          [*windows]
+      os_version:                       *all_versions
+      hardware_type:                    *vm
+      storage_type:                     *all_storage
+      role:                             [*ascs_role]
+      database_type:                    [*mssql, *oracle]
+      high_availability:                *high_availability
+    collector_type:                     *command
+    collector_args:
+      command: |
+                                        powershell -NoProfile -Command "(Get-Cluster).SameSubNetThreshold"
+    validator_type:                     *range
+    validator_args:
+      min:                              "20"
+      max:                              "30"
+    report:                             *check
+    references:
+      microsoft:                        "https://learn.microsoft.com/en-us/azure/sap/workloads/sap-high-availability-infrastructure-wsfc-shared-disk"
+
+  - id:                                 "SAP-0026"
+    name:                               "WSFC RouteHistoryLength (ASCS)"
+    description:                        "Windows Failover Cluster RouteHistoryLength for ASCS"
+    category:                           *sap_check
+    severity:                           *high
+    workload:                           *sap
+    applicability:
+      os_type:                          [*windows]
+      os_version:                       *all_versions
+      hardware_type:                    *vm
+      storage_type:                     *all_storage
+      role:                             [*ascs_role]
+      database_type:                    [*mssql, *oracle]
+      high_availability:                *high_availability
+    collector_type:                     *command
+    collector_args:
+      command: |
+                                        powershell -NoProfile -Command "(Get-Cluster).RouteHistoryLength"
+    validator_type:                     *range
+    validator_args:
+      min:                              "20"
+      max:                              "30"
+    report:                             *check
+    references:
+      microsoft:                        "https://learn.microsoft.com/en-us/azure/sap/workloads/sap-high-availability-infrastructure-wsfc-shared-disk"
+
+  - id:                                 "SAP-0027"
+    name:                               "WSFC CrossSubNetDelay (DB)"
+    description:                        "Windows Failover Cluster CrossSubNetDelay for DB"
+    category:                           *sap_check
+    severity:                           *high
+    workload:                           *sap
+    applicability:
+      os_type:                          [*windows]
+      os_version:                       *all_versions
+      hardware_type:                    *vm
+      storage_type:                     *all_storage
+      role:                             [*db_role]
+      database_type:                    [*mssql, *oracle]
+      high_availability:                *high_availability
+    collector_type:                     *command
+    collector_args:
+      command: |
+                                        powershell -NoProfile -Command "(Get-Cluster).CrossSubNetDelay"
+    validator_type:                     *range
+    validator_args:
+      min:                              "1000"
+      max:                              "4000"
+    report:                             *check
+    references:
+      microsoft:                        "https://learn.microsoft.com/en-us/azure/sap/workloads/sap-high-availability-infrastructure-wsfc-shared-disk"
+
+  - id:                                 "SAP-0028"
+    name:                               "WSFC CrossSubNetThreshold (DB)"
+    description:                        "Windows Failover Cluster CrossSubNetThreshold for DB"
+    category:                           *sap_check
+    severity:                           *high
+    workload:                           *sap
+    applicability:
+      os_type:                          [*windows]
+      os_version:                       *all_versions
+      hardware_type:                    *vm
+      storage_type:                     *all_storage
+      role:                             [*db_role]
+      database_type:                    [*mssql, *oracle]
+      high_availability:                *high_availability
+    collector_type:                     *command
+    collector_args:
+      command: |
+                                        powershell -NoProfile -Command "(Get-Cluster).CrossSubNetThreshold"
+    validator_type:                     *range
+    validator_args:
+      min:                              "20"
+      max:                              "120"
+    report:                             *check
+    references:
+      microsoft:                        "https://learn.microsoft.com/en-us/azure/sap/workloads/sap-high-availability-infrastructure-wsfc-shared-disk"
+
+  - id:                                 "SAP-0029"
+    name:                               "WSFC SameSubNetDelay (DB)"
+    description:                        "Windows Failover Cluster SameSubNetDelay for DB"
+    category:                           *sap_check
+    severity:                           *high
+    workload:                           *sap
+    applicability:
+      os_type:                          [*windows]
+      os_version:                       *all_versions
+      hardware_type:                    *vm
+      storage_type:                     *all_storage
+      role:                             [*db_role]
+      database_type:                    [*mssql, *oracle]
+      high_availability:                *high_availability
+    collector_type:                     *command
+    collector_args:
+      command: |
+                                        powershell -NoProfile -Command "(Get-Cluster).SameSubNetDelay"
+    validator_type:                     *range
+    validator_args:
+      min:                              "1000"
+      max:                              "2000"
+    report:                             *check
+    references:
+      microsoft:                        "https://learn.microsoft.com/en-us/azure/sap/workloads/sap-high-availability-infrastructure-wsfc-shared-disk"
+
+  - id:                                 "SAP-0030"
+    name:                               "WSFC SameSubNetThreshold (DB)"
+    description:                        "Windows Failover Cluster SameSubNetThreshold for DB"
+    category:                           *sap_check
+    severity:                           *high
+    workload:                           *sap
+    applicability:
+      os_type:                          [*windows]
+      os_version:                       *all_versions
+      hardware_type:                    *vm
+      storage_type:                     *all_storage
+      role:                             [*db_role]
+      database_type:                    [*hana, *mssql, *oracle]
+      high_availability:                *high_availability
+    collector_type:                     *command
+    collector_args:
+      command: |
+                                        powershell -NoProfile -Command "(Get-Cluster).SameSubNetThreshold"
+    validator_type:                     *range
+    validator_args:
+      min:                              "10"
+      max:                              "120"
+    report:                             *check
+    references:
+      microsoft:                        "https://learn.microsoft.com/en-us/azure/sap/workloads/sap-high-availability-infrastructure-wsfc-shared-disk"
+
+  - id:                                 "SAP-0031"
+    name:                               "WSFC RouteHistoryLength (DB)"
+    description:                        "Windows Failover Cluster RouteHistoryLength for DB"
+    category:                           *sap_check
+    severity:                           *high
+    workload:                           *sap
+    applicability:
+      os_type:                          [*windows]
+      os_version:                       *all_versions
+      hardware_type:                    *vm
+      storage_type:                     *all_storage
+      role:                             [*db_role]
+      database_type:                    [*mssql, *oracle]
+      high_availability:                *high_availability
+    collector_type:                     *command
+    collector_args:
+      command: |
+                                        powershell -NoProfile -Command "(Get-Cluster).RouteHistoryLength"
+    validator_type:                     *range
+    validator_args:
+      min:                              "20"
+      max:                              "30"
+    report:                             *check
+    references:
+      microsoft:                        "https://learn.microsoft.com/en-us/azure/sap/workloads/sap-high-availability-infrastructure-wsfc-shared-disk"

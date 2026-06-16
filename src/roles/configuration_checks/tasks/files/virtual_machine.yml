@@ -924,3 +924,140 @@ checks:
       command:                        "/bin/systemctl status kdump.service | grep -o 'Active:.*'"
       user:                           *root
     report:                           *check
+
+  - id:                               "IC-0049"
+    name:                             "HugePages Total"
+    description:                      "Checks the total number of HugePages configured on the system"
+    category:                         *vm_check
+    severity:                         *info
+    workload:                         *workload
+    applicability:
+      os_type:                        [*suse, *redhat, *oraclelinux]
+      os_version:                     *all_versions
+      hardware_type:                  *vm
+      role:                           *role
+      database_type:                  *db
+    collector_type:                   *command
+    collector_args:
+      command:                        "grep HugePages_Total /proc/meminfo | awk '{print $2}'"
+      user:                           *root
+    report:                           *check
+
+  - id:                               "IC-0042"
+    name:                             "Windows Server Time Zone"
+    description:                      "Checks the time zone configured on the Windows server"
+    category:                         *vm_check
+    severity:                         *info
+    workload:                         *workload
+    applicability:
+      os_type:                        *windows
+      os_version:                     *all_versions
+      hardware_type:                  *vm
+      role:                           *role
+      database_type:                  *db
+    collector_type:                   *command
+    collector_args:
+      command:                        "powershell -NoProfile -Command \"(Get-TimeZone).Id\""
+    report:                           *check
+
+  - id:                               "IC-0043"
+    name:                             "Windows OS Product"
+    description:                      "Checks the Windows OS product caption"
+    category:                         *vm_check
+    severity:                         *info
+    workload:                         *workload
+    applicability:
+      os_type:                        *windows
+      os_version:                     *all_versions
+      hardware_type:                  *vm
+      role:                           *role
+      database_type:                  *db
+    collector_type:                   *command
+    collector_args:
+      command:                        "powershell -NoProfile -Command \"(Get-CimInstance Win32_OperatingSystem).Caption\""
+    report:                           *check
+
+  - id:                               "IC-0044"
+    name:                             "Windows OS Edition"
+    description:                      "Checks the Windows edition (Standard, Datacenter, etc.)"
+    category:                         *vm_check
+    severity:                         *info
+    workload:                         *workload
+    applicability:
+      os_type:                        *windows
+      os_version:                     *all_versions
+      hardware_type:                  *vm
+      role:                           *role
+      database_type:                  *db
+    collector_type:                   *command
+    collector_args:
+      command:                        "powershell -NoProfile -Command \"(Get-CimInstance Win32_OperatingSystem).Caption -replace '.*?(Standard|Datacenter|Enterprise|Web).*','$1'\""
+    report:                           *check
+
+  - id:                               "IC-0045"
+    name:                             "Windows OS Version"
+    description:                      "Checks the Windows OS build version"
+    category:                         *vm_check
+    severity:                         *info
+    workload:                         *workload
+    applicability:
+      os_type:                        *windows
+      os_version:                     *all_versions
+      hardware_type:                  *vm
+      role:                           *role
+      database_type:                  *db
+    collector_type:                   *command
+    collector_args:
+      command:                        "powershell -NoProfile -Command \"[System.Environment]::OSVersion.Version.ToString()\""
+    report:                           *check
+
+  - id:                               "IC-0046"
+    name:                             "Windows Domain Name"
+    description:                      "Checks the Active Directory domain membership"
+    category:                         *vm_check
+    severity:                         *info
+    workload:                         *workload
+    applicability:
+      os_type:                        *windows
+      os_version:                     *all_versions
+      hardware_type:                  *vm
+      role:                           *role
+      database_type:                  *db
+    collector_type:                   *command
+    collector_args:
+      command:                        "powershell -NoProfile -Command \"(Get-CimInstance Win32_ComputerSystem).Domain\""
+    report:                           *check
+
+  - id:                               "IC-0047"
+    name:                             "Windows Hosts File"
+    description:                      "Checks the content of the Windows hosts file"
+    category:                         *vm_check
+    severity:                         *info
+    workload:                         *workload
+    applicability:
+      os_type:                        *windows
+      os_version:                     *all_versions
+      hardware_type:                  *vm
+      role:                           *role
+      database_type:                  *db
+    collector_type:                   *command
+    collector_args:
+      command:                        "powershell -NoProfile -Command \"Get-Content 'C:\\Windows\\System32\\drivers\\etc\\hosts'\""
+    report:                           *section
+
+  - id:                               "IC-0048"
+    name:                             "Windows MiniFilter Drivers"
+    description:                      "Lists filesystem minifilter driver instances (antivirus, backup)"
+    category:                         *vm_check
+    severity:                         *info
+    workload:                         *workload
+    applicability:
+      os_type:                        *windows
+      os_version:                     *all_versions
+      hardware_type:                  *vm
+      role:                           *role
+      database_type:                  *db
+    collector_type:                   *command
+    collector_args:
+      command:                        "powershell -NoProfile -Command \"fltmc instances\""
+    report:                           *section
