@@ -5,12 +5,35 @@ description: >
   Use when asked about installation, setup, Docker deployment, or Copilot integration.
   Triggered by "setup environment", "install staf", "how to get started", "container start",
   "setup.sh", "configure vars.yaml", "setup help", or "docker deployment".
+allowed-tools: shell
+license: MIT
 ---
 
 # SAP Testing Automation Framework (STAF) Setup Guide
 
 This skill guides you through setting up the STAF environment on a management server.
 For full details, see `docs/SETUP.MD`.
+
+## Locate Framework
+
+Before running any commands, locate the STAF framework directory:
+
+```bash
+# Check current directory first
+if [ -f "./scripts/sap_automation_qa.sh" ]; then
+  STAF_DIR="$(pwd)"
+# Check sibling directory
+elif [ -f "../sap-automation-qa/scripts/sap_automation_qa.sh" ]; then
+  STAF_DIR="$(cd ../sap-automation-qa && pwd)"
+# Not found — clone it
+else
+  git clone https://github.com/Azure/sap-automation-qa.git ../sap-automation-qa
+  STAF_DIR="$(cd ../sap-automation-qa && pwd)"
+fi
+cd "$STAF_DIR"
+```
+
+All commands below assume you are in the STAF framework directory.
 
 ## Local vs Container: When to Use Which
 
@@ -68,6 +91,20 @@ The framework needs a managed identity to access Azure resources. Choose **one**
 See `docs/TELEMETRY_SETUP.md` for Azure Log Analytics and Azure Data Explorer integration.
 
 ## Getting Started
+
+### Option A: Install via AI Assistant Plugin (Recommended)
+
+Install the STAF skills plugin for your AI assistant:
+
+| Platform | Command |
+|----------|---------|
+| **GitHub Copilot CLI** | `copilot plugin install Azure/sap-automation-qa` |
+| **Claude Code** | `/plugin marketplace add Azure/sap-automation-qa` then `/plugin install staf@sap-automation-qa` |
+| **Gemini CLI** | `gemini skills install https://github.com/Azure/sap-automation-qa` |
+
+Once installed, bring your `WORKSPACES/` directory and interact through natural language. The skills handle locating or cloning the framework automatically.
+
+### Option B: Manual Setup
 
 ### 1. Login to Management Server
 

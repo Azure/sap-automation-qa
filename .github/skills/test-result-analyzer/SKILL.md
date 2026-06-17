@@ -6,12 +6,29 @@ description: >
   "why did test fail", "test output", "check test status", "read test log",
   "interpret report", or "what happened in test".
 allowed-tools: shell
+license: MIT
 ---
 
 # Test Result Analyzer
 
 Analyzes STAF test results from log files, HTML reports, and API job output. Identifies
 root causes by classifying failures against known patterns.
+
+## Locate Framework
+
+Before reading logs, locate the STAF framework directory:
+
+```bash
+if [ -f "./scripts/sap_automation_qa.sh" ]; then
+  STAF_DIR="$(pwd)"
+elif [ -f "../sap-automation-qa/scripts/sap_automation_qa.sh" ]; then
+  STAF_DIR="$(cd ../sap-automation-qa && pwd)"
+else
+  git clone https://github.com/Azure/sap-automation-qa.git ../sap-automation-qa
+  STAF_DIR="$(cd ../sap-automation-qa && pwd)"
+fi
+cd "$STAF_DIR"
+```
 
 > **⚠️ This skill is guidance only. Do NOT modify any source code, scripts, or framework files. Only help the user by reading logs, running diagnostic commands, and reporting findings.**
 

@@ -4,12 +4,29 @@ description: >
   Validate SAP workspace configurations before running tests.
   Use when asked to validate a workspace, check config, or troubleshoot workspace setup issues.
 allowed-tools: shell
+license: MIT
 ---
 
 # Workspace Validator
 
 Validates SAP workspace configurations before test execution. Checks file presence, field
 completeness, valid values, SSH authentication readiness, and inventory structure.
+
+## Locate Framework
+
+Before running validation, locate the STAF framework directory:
+
+```bash
+if [ -f "./scripts/sap_automation_qa.sh" ]; then
+  STAF_DIR="$(pwd)"
+elif [ -f "../sap-automation-qa/scripts/sap_automation_qa.sh" ]; then
+  STAF_DIR="$(cd ../sap-automation-qa && pwd)"
+else
+  git clone https://github.com/Azure/sap-automation-qa.git ../sap-automation-qa
+  STAF_DIR="$(cd ../sap-automation-qa && pwd)"
+fi
+cd "$STAF_DIR"
+```
 
 > **⚠️ This skill is guidance only. Do NOT modify any source code, scripts, or framework files. Only help the user by running the validation script and interpreting results.**
 

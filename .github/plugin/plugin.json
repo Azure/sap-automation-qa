@@ -1,0 +1,8 @@
+{
+    "name": "staf",
+    "description": "SAP Testing Automation Framework — HA functional testing, configuration validation, and backup testing for SAP on Azure",
+    "version": "1.1.2",
+    "skills": [
+        ".github/skills/"
+    ]
+}
