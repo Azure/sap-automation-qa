@@ -3,6 +3,8 @@
 
 """Workspaces API routes."""
 
+import os
+import re
 from pathlib import Path
 from typing import Any, Callable, Dict, List, Optional
 import yaml
@@ -13,6 +15,32 @@ from src.core.models.workspace import WorkspaceInfo, WorkspaceListResponse
 logger = get_logger(__name__)
 router = APIRouter(prefix="/workspaces", tags=["workspaces"])
 _workspace_loader: Optional[Callable[[str], Dict[str, Any]]] = None
+
+_WORKSPACE_BASE_DIR = "WORKSPACES/SYSTEM"
+_VALID_WORKSPACE_ID_PATTERN = re.compile(r"^[a-zA-Z0-9][a-zA-Z0-9._-]*$")
+
+
+def _validate_workspace_id(workspace_id: str) -> Path:
+    """Validate workspace_id to prevent path traversal attacks.
+
+    :param workspace_id: The workspace identifier to validate.
+    :type workspace_id: str
+    :returns: Resolved safe path for the workspace directory.
+    :rtype: Path
+    :raises HTTPException: If the workspace_id is invalid (400 error).
+    """
+    if not workspace_id or "\x00" in workspace_id:
+        raise HTTPException(status_code=400, detail="Invalid workspace ID")
+
+    if not _VALID_WORKSPACE_ID_PATTERN.match(workspace_id):
+        raise HTTPException(status_code=400, detail="Invalid workspace ID")
+
+    base_path = os.path.realpath(_WORKSPACE_BASE_DIR)
+    fullpath = os.path.normpath(os.path.join(base_path, workspace_id))
+    if not fullpath.startswith(base_path + os.sep):
+        raise HTTPException(status_code=400, detail="Invalid workspace ID")
+
+    return Path(fullpath)
 
 
 def set_workspace_loader(loader: Callable[[str], Dict[str, Any]]) -> None:
@@ -90,8 +118,9 @@ async def get_workspace(workspace_id: str) -> WorkspaceInfo:
     :type workspace_id: str
     :returns: Workspace information.
     :rtype: WorkspaceInfo
-    :raises HTTPException: If workspace not found (404 error).
+    :raises HTTPException: If workspace not found (404) or invalid ID (400).
     """
+    _validate_workspace_id(workspace_id)
     workspaces = _load_workspaces_from_directory()
 
     for ws in workspaces:
@@ -118,8 +147,9 @@ def default_workspace_loader(workspace_id: str) -> Dict[str, Any]:
     :type workspace_id: str
     :returns: Workspace configuration dictionary.
     :rtype: Dict[str, Any]
+    :raises HTTPException: If the workspace_id is invalid (400 error).
     """
-    workspace_dir = Path("WORKSPACES/SYSTEM") / workspace_id
+    workspace_dir = _validate_workspace_id(workspace_id)
 
     if not workspace_dir.exists():
         return {}
