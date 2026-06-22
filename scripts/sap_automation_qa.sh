@@ -88,6 +88,9 @@ parse_arguments() {
                 EXTRA_VARS="$arg"
                 continue
             fi
+            log "ERROR" "Option '--extra-vars' requires a value."
+            show_sap_automation_qa_usage "$0"
+            exit 1
         fi
         case "$arg" in
             -v|-vv|-vvv|-vvvv|-vvvvv|-vvvvvv)
@@ -169,6 +172,12 @@ parse_arguments() {
                 ;;
         esac
     done
+
+    if [[ "$expect_extra_vars" == "true" ]]; then
+        log "ERROR" "Option '--extra-vars' requires a value."
+        show_sap_automation_qa_usage "$0"
+        exit 1
+    fi
 }
 
 log "INFO" "ANSIBLE_COLLECTIONS_PATH: $ANSIBLE_COLLECTIONS_PATH"

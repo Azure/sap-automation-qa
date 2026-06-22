@@ -49,10 +49,8 @@
                                           iptables -A OUTPUT -d {{ ers_ip }} -j DROP
           args:
             executable:                 /bin/bash
-          async:                        15
-          poll:                         0
           register:                     block_network_result
-          changed_when:                 true
+          changed_when:                 block_network_result.rc == 0
 
         - name:                         "Test Execution: {{ item.name | default('') }} - Wait for cluster to detect network disruption"
           ansible.builtin.wait_for:
