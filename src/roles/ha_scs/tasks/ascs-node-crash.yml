@@ -60,7 +60,7 @@
           until:                        cluster_status_test_execution_pre.ascs_node == ""
 
         - name:                         "Test Execution: {{ item.name | default('') }} - Validate SCS cluster status ENSA1"
-          when:                         hostvars[cluster_status_pre.ascs_node].ensa2_check.stdout == ""
+          when:                         ensa2_check.stdout == ""
           get_cluster_status_scs:
             sap_sid:                    "{{ sap_sid | lower }}"
           register:                     cluster_status_test_execution_ensa1
@@ -71,7 +71,7 @@
                                         and cluster_status_test_execution_ensa1.ers_node == cluster_status_pre.ascs_node
 
         - name:                         "Test Execution: {{ item.name | default('') }} - Validate SCS cluster status ENSA2"
-          when:                         hostvars[cluster_status_pre.ascs_node].ensa2_check.stdout != ""
+          when:                         ensa2_check.stdout != ""
           get_cluster_status_scs:
             sap_sid:                    "{{ sap_sid | lower }}"
           register:                     cluster_status_test_execution_ensa2
