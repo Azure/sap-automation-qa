@@ -106,6 +106,11 @@ parse_arguments() {
                 ;;
             --extra-vars=*)
                 EXTRA_VARS="${arg#*=}"
+                if [[ -z "$EXTRA_VARS" ]]; then
+                    log "ERROR" "Option '--extra-vars' requires a value."
+                    show_sap_automation_qa_usage "$0"
+                    exit 1
+                fi
                 ;;
             --extra-vars)
                 expect_extra_vars=true
