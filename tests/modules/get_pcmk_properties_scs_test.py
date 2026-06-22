@@ -10,216 +10,16 @@ import pytest
 from src.modules.get_pcmk_properties_scs import HAClusterValidator, main
 from src.module_utils.enums import OperatingSystemFamily, TestStatus
 
-DUMMY_XML_RSC = """<rsc_defaults>
-  <meta_attributes id="build-resource-defaults">
-    <nvpair id="build-resource-stickiness" name="resource-stickiness" value="1000"/>
-    <nvpair name="migration-threshold" value="5000"/>
-  </meta_attributes>
-</rsc_defaults>"""
-
-DUMMY_XML_OP = """<op_defaults>
-  <meta_attributes id="op-options">
-    <nvpair name="timeout" value="600"/>
-    <nvpair name="record-pending" value="true"/>
-  </meta_attributes>
-</op_defaults>"""
-
-DUMMY_XML_CRM = """<crm_config>
-  <cluster_property_set id="cib-bootstrap-options">
-    <nvpair name="stonith-enabled" value="true"/>
-    <nvpair name="cluster-name" value="scs_S4D"/>
-    <nvpair name="maintenance-mode" value="false"/>
-  </cluster_property_set>
-</crm_config>"""
-
-DUMMY_XML_CONSTRAINTS = """<constraints>
-  <rsc_colocation id="col_scs_ip" score="4000" rsc="g_ip_S4D_ASCS00" with-rsc="rsc_sap_S4D_ASCS00"/>
-  <rsc_order id="ord_SCS" kind="Optional" first="rsc_sap_S4D_ASCS00" then="rsc_sap_S4D_ERS10"/>
-  <rsc_location id="loc_test" score="INFINITY" rsc="test_resource"/>
-</constraints>"""
-
-DUMMY_XML_RESOURCES = """<resources>
-  <primitive id="stonith-sbd" class="stonith" type="external/sbd">
-    <instance_attributes id="stonith-sbd-instance_attributes">
-      <nvpair id="stonith-sbd-instance_attributes-pcmk_delay_max" name="pcmk_delay_max" value="30s"/>
-      <nvpair name="login" value="12345-12345-12345-12345-12345" id="rsc_st_azure-instance_attributes-login"/>
-      <nvpair name="password" value="********" id="rsc_st_azure-instance_attributes-password"/>
-    </instance_attributes>
-    <meta_attributes id="stonith-sbd-meta_attributes">
-      <nvpair name="target-role" value="Started"/>
-    </meta_attributes>
-    <operations id="stonith-sbd-operations">
-      <op name="monitor" interval="10" timeout="600" id="stonith-sbd-monitor"/>
-      <op name="start" interval="0" timeout="20" id="stonith-sbd-start"/>
-    </operations>
-  </primitive>
-  <primitive id="rsc_fence_azure" class="stonith" type="fence_azure_arm">
-    <instance_attributes>
-      <nvpair name="login" value="testuser"/>
-      <nvpair name="resourceGroup" value="test-rg"/>
-    </instance_attributes>
-    <meta_attributes>
-      <nvpair name="pcmk_delay_max" value="15"/>
-    </meta_attributes>
-    <operations>
-      <op name="monitor" interval="10" timeout="700"/>
-    </operations>
-  </primitive>
-  <primitive id="rsc_ip_S4D_ASCS00" class="ocf" provider="heartbeat" type="IPaddr2">
-    <instance_attributes>
-      <nvpair name="ip" value="10.0.1.100"/>
-    </instance_attributes>
-  </primitive>
-  <primitive id="rsc_azure_lb" class="ocf" provider="heartbeat" type="azure-lb">
-    <instance_attributes>
-      <nvpair name="port" value="62500"/>
-    </instance_attributes>
-  </primitive>
-  <primitive id="rsc_azure_events" class="ocf" provider="heartbeat" type="azure-events-az">
-    <instance_attributes>
-      <nvpair name="subscriptionId" value="12345"/>
-    </instance_attributes>
-  </primitive>
-  <group id="g_sap_S4D_ASCS00">
-    <primitive id="rsc_sap_S4D_ASCS00" class="ocf" provider="heartbeat" type="SAPInstance">
-      <instance_attributes>
-        <nvpair name="InstanceName" value="S4D_ASCS00_sapascs"/>
-        <nvpair name="START_PROFILE" value="/sapmnt/S4D/profile/S4D_ASCS00_sapascs"/>
-      </instance_attributes>
-      <meta_attributes>
-        <nvpair name="target-role" value="Started"/>
-      </meta_attributes>
-      <operations>
-        <op name="monitor" interval="10" timeout="600"/>
-      </operations>
-    </primitive>
-  </group>
-  <group id="g_sap_S4D_ERS10">
-    <primitive id="rsc_sap_S4D_ERS10" class="ocf" provider="heartbeat" type="SAPInstance">
-      <instance_attributes>
-        <nvpair name="InstanceName" value="S4D_ERS10_sapers"/>
-        <nvpair name="START_PROFILE" value="/sapmnt/S4D/profile/S4D_ERS10_sapers"/>
-      </instance_attributes>
-      <meta_attributes>
-        <nvpair name="target-role" value="Started"/>
-      </meta_attributes>
-      <operations>
-        <op name="monitor" interval="10" timeout="600"/>
-      </operations>
-    </primitive>
-  </group>
-</resources>"""
-
-DUMMY_XML_FULL_CIB = f"""<?xml version="1.0" encoding="UTF-8"?>
-<cib>
-  <configuration>
-    {DUMMY_XML_CRM}
-    {DUMMY_XML_RSC}
-    {DUMMY_XML_OP}
-    {DUMMY_XML_CONSTRAINTS}
-    {DUMMY_XML_RESOURCES}
-  </configuration>
-</cib>"""
-
-DUMMY_OS_COMMAND = """kernel.numa_balancing = 0"""
-
-DUMMY_CONSTANTS = {
-    "VALID_CONFIGS": {
-        "REDHAT": {
-            "stonith-enabled": {"value": "true", "required": False},
-            "cluster-name": {"value": "scs_S4D", "required": False},
-        },
-        "azure-fence-agent": {"priority": {"value": "10", "required": False}},
-        "sbd": {
-            "have-watchdog": {"value": "true", "required": True},
-            "stonith-timeout": {"value": "210", "required": True},
-        },
-    },
-    "RSC_DEFAULTS": {
-        "resource-stickiness": {"value": "1000", "required": False},
-        "migration-threshold": {"value": "5000", "required": False},
-    },
-    "OP_DEFAULTS": {
-        "timeout": {"value": "600", "required": False},
-        "record-pending": {"value": "true", "required": False},
-    },
-    "CRM_CONFIG_DEFAULTS": {
-        "stonith-enabled": {"value": "true", "required": False},
-        "maintenance-mode": {"value": "false", "required": False},
-    },
-    "RESOURCE_DEFAULTS": {
-        "REDHAT": {
-            "fence_agent": {
-                "meta_attributes": {
-                    "pcmk_delay_max": {"value": "15", "required": False},
-                    "target-role": {"value": "Started", "required": False},
-                },
-                "operations": {
-                    "monitor": {
-                        "timeout": {"value": ["700", "700s"], "required": False},
-                        "interval": {"value": "10", "required": False},
-                    },
-                    "start": {"timeout": {"value": "20", "required": False}},
-                },
-                "instance_attributes": {
-                    "login": {"value": "testuser", "required": False},
-                    "resourceGroup": {"value": "test-rg", "required": False},
-                },
-            },
-            "sbd_stonith": {
-                "meta_attributes": {
-                    "pcmk_delay_max": {"value": "30", "required": False},
-                    "target-role": {"value": "Started", "required": False},
-                },
-                "operations": {
-                    "monitor": {
-                        "timeout": {"value": ["30", "30s"], "required": False},
-                        "interval": {"value": "10", "required": False},
-                    },
-                    "start": {"timeout": {"value": "20", "required": False}},
-                },
-            },
-            "ascs": {
-                "meta_attributes": {"target-role": {"value": "Started", "required": False}},
-                "operations": {
-                    "monitor": {"timeout": {"value": ["600", "600s"], "required": False}}
-                },
-                "instance_attributes": {
-                    "InstanceName": {"value": "S4D_ASCS00_sapascs", "required": False}
-                },
-            },
-            "ers": {
-                "meta_attributes": {"target-role": {"value": "Started", "required": False}},
-                "operations": {
-                    "monitor": {"timeout": {"value": ["600", "600s"], "required": False}}
-                },
-                "instance_attributes": {
-                    "InstanceName": {"value": "S4D_ERS10_sapers", "required": False}
-                },
-            },
-            "ipaddr": {
-                "instance_attributes": {
-                    "ip": {
-                        "value": {"AFS": ["10.0.1.100"], "ANF": ["10.0.1.101"]},
-                        "required": False,
-                    }
-                }
-            },
-        }
-    },
-    "OS_PARAMETERS": {
-        "DEFAULTS": {
-            "sysctl": {
-                "kernel.numa_balancing": {"value": "kernel.numa_balancing = 0", "required": False}
-            }
-        }
-    },
-    "CONSTRAINTS": {
-        "rsc_location": {"score": {"value": "INFINITY", "required": False}},
-        "rsc_colocation": {"score": {"value": "4000", "required": False}},
-        "rsc_order": {"kind": {"value": "Optional", "required": False}},
-    },
-}
+from tests.modules.pcmk_constants import (
+    SCS_DUMMY_XML_RSC,
+    SCS_DUMMY_XML_OP,
+    SCS_DUMMY_XML_CRM,
+    SCS_DUMMY_XML_CONSTRAINTS,
+    SCS_DUMMY_XML_RESOURCES,
+    SCS_DUMMY_XML_FULL_CIB,
+    SCS_DUMMY_OS_COMMAND,
+    SCS_DUMMY_CONSTANTS,
+)
 
 
 class MockExecuteCommand:
@@ -233,7 +33,7 @@ class MockExecuteCommand:
     def __call__(self, command, shell_command=False):
         command_str = " ".join(command) if isinstance(command, list) else str(command)
         if "sysctl" in command_str:
-            return DUMMY_OS_COMMAND
+            return SCS_DUMMY_OS_COMMAND
         if len(command) >= 2 and command[-1] in self.mock_outputs:
             return self.mock_outputs[command[-1]]
         return ""
@@ -263,11 +63,11 @@ class TestHAClusterValidator:
         Fixture for providing mock XML outputs.
         """
         return {
-            "rsc_defaults": DUMMY_XML_RSC,
-            "crm_config": DUMMY_XML_CRM,
-            "op_defaults": DUMMY_XML_OP,
-            "constraints": DUMMY_XML_CONSTRAINTS,
-            "resources": DUMMY_XML_RESOURCES,
+            "rsc_defaults": SCS_DUMMY_XML_RSC,
+            "crm_config": SCS_DUMMY_XML_CRM,
+            "op_defaults": SCS_DUMMY_XML_OP,
+            "constraints": SCS_DUMMY_XML_CONSTRAINTS,
+            "resources": SCS_DUMMY_XML_RESOURCES,
         }
 
     @pytest.fixture
@@ -284,7 +84,7 @@ class TestHAClusterValidator:
             ers_instance_number="10",
             fencing_mechanism="sbd",
             virtual_machine_name="vmname",
-            constants=DUMMY_CONSTANTS,
+            constants=SCS_DUMMY_CONSTANTS,
             cib_output="",
             nfs_provider="AFS",
         )
@@ -303,7 +103,7 @@ class TestHAClusterValidator:
             ers_instance_number="10",
             fencing_mechanism="sbd",
             virtual_machine_name="vmname",
-            constants=DUMMY_CONSTANTS,
+            constants=SCS_DUMMY_CONSTANTS,
             cib_output="",
             nfs_provider="ANF",
         )
@@ -320,8 +120,8 @@ class TestHAClusterValidator:
             ers_instance_number="10",
             fencing_mechanism="sbd",
             virtual_machine_name="vmname",
-            constants=DUMMY_CONSTANTS,
-            cib_output=DUMMY_XML_FULL_CIB,
+            constants=SCS_DUMMY_CONSTANTS,
+            cib_output=SCS_DUMMY_XML_FULL_CIB,
         )
 
     def test_init(self, validator):
@@ -400,7 +200,7 @@ class TestHAClusterValidator:
         """
         Test _parse_resources_section method with ASCS/ERS groups.
         """
-        xml_str = DUMMY_XML_RESOURCES
+        xml_str = SCS_DUMMY_XML_RESOURCES
         root = ET.fromstring(xml_str)
         params = validator._parse_resources_section(root)
         assert len(params) > 0
@@ -414,7 +214,7 @@ class TestHAClusterValidator:
         """
         Test _parse_resources_section method covers all resource types.
         """
-        xml_str = DUMMY_XML_RESOURCES
+        xml_str = SCS_DUMMY_XML_RESOURCES
         root = ET.fromstring(xml_str)
         params = validator._parse_resources_section(root)
         categories = [p.get("category", "") for p in params]
@@ -448,7 +248,7 @@ class TestHAClusterValidator:
                     "ascs_instance_number": "00",
                     "ers_instance_number": "10",
                     "virtual_machine_name": "vmname",
-                    "pcmk_constants": DUMMY_CONSTANTS,
+                    "pcmk_constants": SCS_DUMMY_CONSTANTS,
                     "fencing_mechanism": "sbd",
                     "nfs_provider": "AFS",
                     "cib_output": "",
@@ -487,8 +287,8 @@ class TestHAClusterValidator:
             ers_instance_number="10",
             fencing_mechanism="sbd",
             virtual_machine_name="vmname",
-            constants=DUMMY_CONSTANTS,
-            cib_output=DUMMY_XML_FULL_CIB,
+            constants=SCS_DUMMY_CONSTANTS,
+            cib_output=SCS_DUMMY_XML_FULL_CIB,
         )
         result = validator.get_result()
         assert "status" in result

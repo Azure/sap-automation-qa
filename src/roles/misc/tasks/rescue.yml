@@ -58,7 +58,7 @@
 - name:                                 "Rescue: {{ test_case_name | default('') }} - Set Test Case Status"
   delegate_to:                          localhost
   ansible.builtin.set_fact:
-    test_case_name:                     "{{ item.name | default('') }}: {{ test_execution_hostname | default(virtual_host | default(inventory_hostname)) }}"
+    test_case_display_name:             "{{ item.name | default('') }}: {{ test_execution_hostname | default(virtual_host | default(inventory_hostname)) }}"
     test_case_hostname:                 "{{ virtual_host | default(inventory_hostname) }}"
     test_case_description:              "{{ item.description }}"
     test_case_status:                   "FAILED"

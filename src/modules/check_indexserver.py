@@ -113,6 +113,12 @@ class IndexServerCheck(SapAutomationQA):
                     }
                 },
                 {
+                    "[ha_dr_provider_chksrv]": {
+                        "provider": "ChkSrv",
+                        "path": "/usr/share/sap-hana-ha",
+                    }
+                },
+                {
                     "[ha_dr_provider_suschksrv]": {
                         "provider": "susChkSrv",
                         "path": "/usr/share/SAPHanaSR-ScaleOut",

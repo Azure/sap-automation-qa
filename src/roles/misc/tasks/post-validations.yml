@@ -46,7 +46,7 @@
     - name:                             "Post Validation: {{ test_case_name | default('') }} - Set Test Case Status"
       delegate_to:                      localhost
       ansible.builtin.set_fact:
-        test_case_name:                 "{{ item.name | default('') }}: {{ test_execution_hostname | default(virtual_host | default(inventory_hostname)) }}"
+        test_case_display_name:         "{{ item.name | default('') }}: {{ test_execution_hostname | default(virtual_host | default(inventory_hostname)) }}"
         test_case_description:          "{{ item.description }}"
         test_case_status:               "{{ 'FAILED' if (test_case_status | default('')) == 'FAILED' else ('SKIPPED' if (pre_validations_status | default('PASSED')) == 'FAILED' else (test_execution_status | default('FAILED'))) }}"
         test_execution_start_time:      "{{ test_execution_start | default(now(utc=true, fmt='%Y-%m-%d %H:%M:%S')) }}"
@@ -56,7 +56,7 @@
         test_case_message:              "{{ test_case_message_from_test_case | default('Test execution status not set - possible execution failure') }}"
         test_case_details:              "{{ test_case_details_from_test_case | default('') }}"
 
-    - name:                             "Telemetry: {{ test_case_name | default('') }} - Include Telemetry Tasks"
+    - name:                             "Telemetry: {{ test_case_display_name | default(test_case_name | default('')) }} - Include Telemetry Tasks"
       ansible.builtin.include_tasks:    "roles/misc/tasks/post-telemetry-data.yml"
       tags:                             [telemetry]
 

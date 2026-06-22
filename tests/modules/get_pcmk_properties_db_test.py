@@ -17,544 +17,26 @@ from src.module_utils.enums import (
     TestStatus,
 )
 
-DUMMY_XML_RSC = """<rsc_defaults>
-  <meta_attributes id="build-resource-defaults">
-    <nvpair id="build-resource-stickiness" name="resource-stickiness" value="1000"/>
-    <nvpair name="migration-threshold" value="5000"/>
-  </meta_attributes>
-</rsc_defaults>"""
-
-DUMMY_XML_OP = """<op_defaults>
-  <meta_attributes id="op-options">
-    <nvpair name="timeout" value="600"/>
-    <nvpair name="record-pending" value="true"/>
-  </meta_attributes>
-</op_defaults>"""
-
-DUMMY_XML_CRM = """<crm_config>
-  <cluster_property_set id="cib-bootstrap-options">
-    <nvpair name="stonith-enabled" value="true"/>
-    <nvpair name="cluster-name" value="hdb_HDB"/>
-    <nvpair name="maintenance-mode" value="false"/>
-  </cluster_property_set>
-</crm_config>"""
-
-DUMMY_XML_CONSTRAINTS = """<constraints>
-  <rsc_colocation id="col_saphana_ip" score="4000" rsc="g_ip_HDB_HDB00" with-rsc="msl_SAPHana_HDB_HDB00"/>
-  <rsc_order id="ord_SAPHana" kind="Optional" first="cln_SAPHanaTopology_HDB_HDB00" then="msl_SAPHana_HDB_HDB00"/>
-</constraints>"""
-
-DUMMY_XML_RESOURCES = """<resources>
-  <primitive id="stonith-sbd" class="stonith" type="external/sbd">
-    <instance_attributes id="stonith-sbd-instance_attributes">
-      <nvpair id="stonith-sbd-instance_attributes-pcmk_delay_max" name="pcmk_delay_max" value="30s"/>
-      <nvpair name="login" value="12345-12345-12345-12345-12345" id="rsc_st_azure-instance_attributes-login"/>
-      <nvpair name="passwd" value="********" id="rsc_st_azure-instance_attributes-passwd"/>
-    </instance_attributes>
-    <meta_attributes id="stonith-sbd-meta_attributes">
-      <nvpair name="target-role" value="Started"/>
-    </meta_attributes>
-    <operations id="stonith-sbd-operations">
-      <op name="monitor" interval="10" timeout="600" id="stonith-sbd-monitor"/>
-      <op name="start" interval="0" timeout="20" id="stonith-sbd-start"/>
-    </operations>
-  </primitive>
-  <clone id="cln_SAPHanaTopology_HDB_HDB00">
-    <meta_attributes id="cln_SAPHanaTopology_HDB_HDB00-meta_attributes">
-      <nvpair name="clone-node-max" value="1"/>
-      <nvpair name="target-role" value="Started"/>
-    </meta_attributes>
-    <primitive id="rsc_SAPHanaTopology_HDB_HDB00" class="ocf" provider="suse" type="SAPHanaTopology">
-      <operations id="rsc_sap2_HDB_HDB00-operations">
-        <op name="monitor" interval="10" timeout="600"/>
-      </operations>
-      <instance_attributes id="rsc_SAPHanaTopology_HDB_HDB00-instance_attributes">
-        <nvpair name="SID" value="HDB"/>
-        <nvpair name="InstanceNumber" value="00"/>
-      </instance_attributes>
-    </primitive>
-  </clone>
-  <master id="msl_SAPHana_HDB_HDB00">
-    <meta_attributes id="msl_SAPHana_HDB_HDB00-meta_attributes">
-      <nvpair name="clone-max" value="2"/>
-      <nvpair name="target-role" value="Started"/>
-    </meta_attributes>
-    <primitive id="rsc_SAPHana_HDB_HDB00" class="ocf" provider="suse" type="SAPHana">
-      <instance_attributes id="rsc_SAPHana_HDB_HDB00-instance_attributes">
-        <nvpair name="SID" value="HDB"/>
-        <nvpair name="InstanceNumber" value="00"/>
-      </instance_attributes>
-    </primitive>
-  </master>
-  <primitive id="rsc_ip_HDB_HDB00" class="ocf" provider="heartbeat" type="IPaddr2">
-    <instance_attributes>
-      <nvpair name="ip" value="127.0.0.1"/>
-    </instance_attributes>
-  </primitive>
-  <primitive id="rsc_azure_lb" class="ocf" provider="heartbeat" type="azure-lb">
-    <instance_attributes>
-      <nvpair name="port" value="62500"/>
-    </instance_attributes>
-  </primitive>
-  <primitive id="rsc_filesystem" class="ocf" provider="heartbeat" type="Filesystem">
-    <instance_attributes>
-      <nvpair name="device" value="/dev/sda1"/>
-    </instance_attributes>
-  </primitive>
-  <primitive id="rsc_fence_azure" class="stonith" type="fence_azure_arm">
-    <instance_attributes>
-      <nvpair name="login" value="testuser"/>
-    </instance_attributes>
-  </primitive>
-  <primitive id="rsc_angi_fs" class="ocf" provider="suse" type="SAPHanaFilesystem">
-    <instance_attributes>
-      <nvpair name="filesystem" value="/hana/data"/>
-    </instance_attributes>
-  </primitive>
-  <primitive id="rsc_angi_controller" class="ocf" provider="suse" type="SAPHanaController">
-    <instance_attributes>
-      <nvpair name="SID" value="HDB"/>
-    </instance_attributes>
-  </primitive>
-  <clone id="hana_nfs_s1_active-clone">
-    <meta_attributes id="hana_nfs_s1_active-clone-meta_attributes">
-      <nvpair name="clone-node-max" value="1"/>
-      <nvpair name="interleave" value="true"/>
-    </meta_attributes>
-    <primitive id="hana_nfs_s1_active" class="ocf" provider="pacemaker" type="attribute">
-      <instance_attributes id="hana_nfs_s1_active-instance_attributes">
-        <nvpair name="active_value" value="true"/>
-        <nvpair name="inactive_value" value="false"/>
-        <nvpair name="name" value="hana_nfs_s1_active"/>
-      </instance_attributes>
-    </primitive>
-  </clone>
-  <clone id="hana_nfs_s2_active-clone">
-    <meta_attributes id="hana_nfs_s2_active-clone-meta_attributes">
-      <nvpair name="clone-node-max" value="1"/>
-      <nvpair name="interleave" value="true"/>
-    </meta_attributes>
-    <primitive id="hana_nfs_s2_active" class="ocf" provider="pacemaker" type="attribute">
-      <instance_attributes id="hana_nfs_s2_active-instance_attributes">
-        <nvpair name="active_value" value="true"/>
-        <nvpair name="inactive_value" value="false"/>
-        <nvpair name="name" value="hana_nfs_s2_active"/>
-      </instance_attributes>
-    </primitive>
-  </clone>
-</resources>"""
-
-DUMMY_XML_FULL_CIB = f"""<?xml version="1.0" encoding="UTF-8"?>
-<cib>
-  <configuration>
-    {DUMMY_XML_CRM}
-    {DUMMY_XML_RSC}
-    {DUMMY_XML_OP}
-    {DUMMY_XML_CONSTRAINTS}
-    {DUMMY_XML_RESOURCES}
-  </configuration>
-</cib>"""
-
-DUMMY_XML_SCALEOUT_RESOURCES = """<resources>
-  <primitive id="stonith-sbd" class="stonith" type="external/sbd">
-    <instance_attributes id="stonith-sbd-instance_attributes">
-      <nvpair name="pcmk_delay_max" value="30s"/>
-    </instance_attributes>
-    <operations id="stonith-sbd-operations">
-      <op name="monitor" interval="10" timeout="600"/>
-    </operations>
-  </primitive>
-  <primitive id="rsc_fence_azure" class="stonith" type="fence_azure_arm">
-    <instance_attributes>
-      <nvpair name="login" value="testuser"/>
-    </instance_attributes>
-  </primitive>
-  <clone id="fs_hana_shared_s1-clone">
-    <meta_attributes id="fs_hana_shared_s1-clone-meta">
-      <nvpair name="clone-node-max" value="1"/>
-      <nvpair name="interleave" value="true"/>
-    </meta_attributes>
-    <primitive id="fs_hana_shared_s1" class="ocf" provider="heartbeat" type="Filesystem">
-      <instance_attributes id="fs_hana_shared_s1-instance_attributes">
-        <nvpair name="device" value="10.23.1.7:/HN1-shared-s1"/>
-        <nvpair name="directory" value="/hana/shared"/>
-        <nvpair name="fstype" value="nfs"/>
-        <nvpair name="fast_stop" value="no"/>
-      </instance_attributes>
-      <operations>
-        <op name="monitor" interval="20" timeout="120"/>
-        <op name="start" interval="0" timeout="120"/>
-        <op name="stop" interval="0" timeout="120"/>
-      </operations>
-    </primitive>
-  </clone>
-  <clone id="fs_hana_shared_s2-clone">
-    <meta_attributes id="fs_hana_shared_s2-clone-meta">
-      <nvpair name="clone-node-max" value="1"/>
-      <nvpair name="interleave" value="true"/>
-    </meta_attributes>
-    <primitive id="fs_hana_shared_s2" class="ocf" provider="heartbeat" type="Filesystem">
-      <instance_attributes id="fs_hana_shared_s2-instance_attributes">
-        <nvpair name="device" value="10.23.1.7:/HN1-shared-s2"/>
-        <nvpair name="directory" value="/hana/shared"/>
-        <nvpair name="fstype" value="nfs"/>
-        <nvpair name="fast_stop" value="no"/>
-      </instance_attributes>
-      <operations>
-        <op name="monitor" interval="20" timeout="120"/>
-        <op name="start" interval="0" timeout="120"/>
-        <op name="stop" interval="0" timeout="120"/>
-      </operations>
-    </primitive>
-  </clone>
-  <clone id="hana_nfs_s1_active-clone">
-    <meta_attributes id="hana_nfs_s1_active-clone-meta">
-      <nvpair name="clone-node-max" value="1"/>
-      <nvpair name="interleave" value="true"/>
-    </meta_attributes>
-    <primitive id="hana_nfs_s1_active" class="ocf" provider="pacemaker" type="attribute">
-      <instance_attributes id="hana_nfs_s1_active-instance_attributes">
-        <nvpair name="active_value" value="true"/>
-        <nvpair name="inactive_value" value="false"/>
-        <nvpair name="name" value="hana_nfs_s1_active"/>
-      </instance_attributes>
-    </primitive>
-  </clone>
-  <clone id="hana_nfs_s2_active-clone">
-    <meta_attributes id="hana_nfs_s2_active-clone-meta">
-      <nvpair name="clone-node-max" value="1"/>
-      <nvpair name="interleave" value="true"/>
-    </meta_attributes>
-    <primitive id="hana_nfs_s2_active" class="ocf" provider="pacemaker" type="attribute">
-      <instance_attributes id="hana_nfs_s2_active-instance_attributes">
-        <nvpair name="active_value" value="true"/>
-        <nvpair name="inactive_value" value="false"/>
-        <nvpair name="name" value="hana_nfs_s2_active"/>
-      </instance_attributes>
-    </primitive>
-  </clone>
-  <clone id="cln_SAPHanaTopology_HN1_HDB03-clone">
-    <meta_attributes id="cln_SAPHanaTopology_HN1_HDB03-clone-meta">
-      <nvpair name="clone-node-max" value="1"/>
-      <nvpair name="interleave" value="true"/>
-    </meta_attributes>
-    <primitive id="rsc_SAPHanaTopology_HN1_HDB03" class="ocf" provider="heartbeat" type="SAPHanaTopology">
-      <instance_attributes>
-        <nvpair name="SID" value="HN1"/>
-        <nvpair name="InstanceNumber" value="03"/>
-      </instance_attributes>
-      <operations>
-        <op name="monitor" interval="10" timeout="600"/>
-        <op name="start" interval="0" timeout="600"/>
-        <op name="stop" interval="0" timeout="300"/>
-      </operations>
-    </primitive>
-  </clone>
-  <primitive id="rsc_SAPHana_HN1_HDB03" class="ocf" provider="heartbeat" type="SAPHanaController">
-    <instance_attributes id="rsc_SAPHana_HN1_HDB03-instance_attributes">
-      <nvpair name="SID" value="HN1"/>
-      <nvpair name="InstanceNumber" value="03"/>
-      <nvpair name="PREFER_SITE_TAKEOVER" value="true"/>
-      <nvpair name="DUPLICATE_PRIMARY_TIMEOUT" value="7200"/>
-      <nvpair name="AUTOMATED_REGISTER" value="false"/>
-    </instance_attributes>
-    <operations>
-      <op name="start" interval="0" timeout="3600"/>
-      <op name="stop" interval="0" timeout="3600"/>
-      <op name="promote" interval="0" timeout="3600"/>
-      <op name="demote" interval="0" timeout="320"/>
-      <op name="monitor" interval="60" timeout="700"/>
-    </operations>
-  </primitive>
-  <primitive id="rsc_ip_HN1_HDB03" class="ocf" provider="heartbeat" type="IPaddr2">
-    <instance_attributes>
-      <nvpair name="ip" value="10.23.0.18"/>
-    </instance_attributes>
-  </primitive>
-  <primitive id="rsc_azure_lb" class="ocf" provider="heartbeat" type="azure-lb">
-    <instance_attributes>
-      <nvpair name="port" value="62503"/>
-    </instance_attributes>
-  </primitive>
-</resources>"""
-
-DUMMY_XML_SCALEOUT_CIB = f"""<?xml version="1.0" encoding="UTF-8"?>
-<cib>
-  <configuration>
-    {DUMMY_XML_CRM}
-    {DUMMY_XML_RSC}
-    {DUMMY_XML_OP}
-    {DUMMY_XML_CONSTRAINTS}
-    {DUMMY_XML_SCALEOUT_RESOURCES}
-  </configuration>
-</cib>"""
-
-DUMMY_GLOBAL_INI_SCALEOUT = """[DEFAULT]
-dummy1 = dummy2
-
-[ha_dr_provider_SAPHanaSR]
-provider = SAPHanaSR
-path = /usr/share/SAPHanaSR-ScaleOut
-execution_order = 1
-
-[ha_dr_provider_chksrv]
-provider = ChkSrv
-path = /usr/share/SAPHanaSR-ScaleOut
-execution_order = 2
-action_on_lost = kill
-
-[trace]
-ha_dr_saphanasr = info
-ha_dr_chksrv = info
-"""
-
-DUMMY_OS_COMMAND = """kernel.numa_balancing = 0"""
-
-DUMMY_GLOBAL_INI_SAPHANASR = """[DEFAULT]
-dummy1 = dummy2
-
-[ha_dr_provider_SAPHanaSR]
-provider = SAPHanaSR
-path = /usr/share/SAPHanaSR
-execution_order = 1
-
-[ha_dr_provider_suschksrv]
-provider = susChkSrv
-path = /usr/share/SAPHanaSR
-execution_order = 3
-action_on_host = fence
-
-[trace]
-ha_dr_sushanasr = info
-"""
-
-DUMMY_GLOBAL_INI_ANGI = """[DEFAULT]
-dummy1 = dummy2
-
-[ha_dr_provider_sushanasr]
-provider = susHanaSR
-path = /usr/share/SAPHanaSR-angi
-execution_order = 1
-
-[ha_dr_provider_suschksrv]
-provider = susChkSrv
-path = /usr/share/SAPHanaSR-angi
-execution_order = 3
-action_on_host = fence
-
-[trace]
-ha_dr_sushanasr = info
-ha_dr_suschksrv = info
-"""
-
-DUMMY_CONSTANTS = {
-    "VALID_CONFIGS": {
-        "REDHAT": {
-            "stonith-enabled": {"value": "true", "required": False},
-            "cluster-name": {"value": "hdb_HDB", "required": False},
-        },
-        "azure-fence-agent": {"priority": {"value": "10", "required": False}},
-        "sbd": {"pcmk_delay_max": {"value": "30", "required": False}},
-        "scale_out_hsr": {
-            "migration-threshold": {"value": ["50"], "required": True},
-        },
-    },
-    "RSC_DEFAULTS": {
-        "resource-stickiness": {"value": "1000", "required": False},
-        "migration-threshold": {"value": "5000", "required": False},
-    },
-    "OP_DEFAULTS": {
-        "timeout": {"value": "600", "required": False},
-        "record-pending": {"value": "true", "required": False},
-    },
-    "CRM_CONFIG_DEFAULTS": {
-        "stonith-enabled": {"value": "true", "required": False},
-        "maintenance-mode": {"value": "false", "required": False},
-    },
-    "RESOURCE_DEFAULTS": {
-        "REDHAT": {
-            "fence_agent": {
-                "meta_attributes": {
-                    "pcmk_delay_max": {"value": "15", "required": False},
-                    "target-role": {"value": "Started", "required": False},
-                },
-                "operations": {
-                    "monitor": {
-                        "timeout": {"value": ["700", "700s"], "required": False},
-                        "interval": {"value": "10", "required": False},
-                    },
-                    "start": {"timeout": {"value": "20", "required": False}},
-                },
-                "instance_attributes": {"login": {"value": "testuser", "required": False}},
-            },
-            "sbd_stonith": {
-                "meta_attributes": {
-                    "pcmk_delay_max": {"value": "30", "required": False},
-                    "target-role": {"value": "Started", "required": False},
-                },
-                "operations": {
-                    "monitor": {
-                        "timeout": {"value": ["30", "30s"], "required": False},
-                        "interval": {"value": "10", "required": False},
-                    },
-                    "start": {"timeout": {"value": "20", "required": False}},
-                },
-            },
-            "hana": {
-                "meta_attributes": {"clone-max": {"value": "2", "required": False}},
-                "operations": {
-                    "monitor": {"timeout": {"value": ["600", "600s"], "required": False}}
-                },
-                "instance_attributes": {"SID": {"value": "HDB", "required": False}},
-            },
-            "scaleout_filesystem": {
-                "instance_attributes": {
-                    "fast_stop": {"value": "no", "required": False},
-                },
-                "meta_attributes": {
-                    "clone-node-max": {"value": "1", "required": False},
-                    "interleave": {"value": "true", "required": False},
-                },
-                "operations": {
-                    "monitor": {
-                        "interval": {"value": ["20", "20s"], "required": False},
-                        "timeout": {"value": ["120", "120s"], "required": False},
-                    },
-                },
-            },
-            "nfs_attribute": {
-                "instance_attributes": {
-                    "active_value": {"value": "true", "required": False},
-                    "inactive_value": {"value": "false", "required": False},
-                },
-                "meta_attributes": {
-                    "clone-node-max": {"value": "1", "required": False},
-                    "interleave": {"value": "true", "required": False},
-                },
-            },
-            "scaleout_hana": {
-                "meta_attributes": {
-                    "notify": {"value": "true", "required": False},
-                    "clone-node-max": {"value": "1", "required": False},
-                },
-                "instance_attributes": {
-                    "SID": {"value": "HN1", "required": False},
-                    "PREFER_SITE_TAKEOVER": {"value": "true", "required": False},
-                    "AUTOMATED_REGISTER": {"value": "true", "required": False},
-                },
-                "operations": {
-                    "monitor": {
-                        "timeout": {"value": ["700", "700s"], "required": False},
-                    },
-                },
-            },
-            "scaleout_topology": {
-                "meta_attributes": {
-                    "clone-node-max": {"value": "1", "required": False},
-                    "interleave": {"value": "true", "required": False},
-                },
-                "operations": {
-                    "monitor": {
-                        "interval": {"value": ["10", "10s"], "required": False},
-                        "timeout": {"value": ["600", "600s"], "required": False},
-                    },
-                },
-            },
-        }
-    },
-    "OS_PARAMETERS": {
-        "DEFAULTS": {
-            "sysctl": {
-                "kernel.numa_balancing": {"value": "kernel.numa_balancing = 0", "required": False}
-            }
-        }
-    },
-    "GLOBAL_INI": {
-        "REDHAT": {
-            "SAPHanaSR": {
-                "ha_dr_provider_SAPHanaSR": {
-                    "provider": {"value": "SAPHanaSR", "required": True},
-                    "path": {
-                        "value": ["/usr/share/SAPHanaSR", "/hana/shared/myHooks"],
-                        "required": True,
-                    },
-                    "execution_order": {"value": "1", "required": True},
-                },
-                "ha_dr_provider_suschksrv": {
-                    "provider": {"value": "susChkSrv", "required": True},
-                    "path": {
-                        "value": ["/usr/share/SAPHanaSR", "/hana/shared/myHooks"],
-                        "required": True,
-                    },
-                    "execution_order": {"value": "3", "required": True},
-                    "action_on_host": {"value": "fence", "required": True},
-                },
-                "trace": {
-                    "ha_dr_sushanasr": {"required": False},
-                },
-            },
-            "SAPHanaController": {
-                "ha_dr_provider_SAPHanaSR": {
-                    "provider": {"value": "SAPHanaSR", "required": True},
-                    "path": {
-                        "value": [
-                            "/usr/share/SAPHanaSR-ScaleOut",
-                            "/hana/shared/myHooks",
-                        ],
-                        "required": True,
-                    },
-                    "execution_order": {"value": "1", "required": True},
-                },
-                "ha_dr_provider_chksrv": {
-                    "provider": {"value": "ChkSrv", "required": True},
-                    "path": {
-                        "value": [
-                            "/usr/share/SAPHanaSR-ScaleOut",
-                            "/hana/shared/myHooks",
-                        ],
-                        "required": True,
-                    },
-                    "execution_order": {"value": "2", "required": True},
-                    "action_on_lost": {"value": "kill", "required": True},
-                },
-                "trace": {
-                    "ha_dr_saphanasr": {"required": False},
-                    "ha_dr_chksrv": {"required": False},
-                },
-            },
-        },
-        "SUSE": {
-            "SAPHanaSR-angi": {
-                "ha_dr_provider_sushanasr": {
-                    "provider": {"value": "susHanaSR", "required": True},
-                    "path": {
-                        "value": ["/usr/share/SAPHanaSR-angi", "/hana/shared/myHooks"],
-                        "required": True,
-                    },
-                    "execution_order": {"value": "1", "required": True},
-                },
-                "ha_dr_provider_suschksrv": {
-                    "provider": {"value": "susChkSrv", "required": True},
-                    "path": {
-                        "value": ["/usr/share/SAPHanaSR-angi", "/hana/shared/myHooks"],
-                        "required": True,
-                    },
-                    "execution_order": {"value": "3", "required": True},
-                    "action_on_host": {"value": "fence", "required": True},
-                },
-                "trace": {
-                    "ha_dr_sushanasr": {"required": False},
-                    "ha_dr_suschksrv": {"required": False},
-                },
-            }
-        },
-    },
-    "CONSTRAINTS": {
-        "rsc_location": {"score": {"value": "INFINITY", "required": False}},
-        "rsc_colocation": {"score": {"value": "4000", "required": False}},
-        "rsc_order": {"kind": {"value": "Optional", "required": False}},
-    },
-}
+from tests.modules.pcmk_constants import (
+    DB_DUMMY_XML_RSC,
+    DB_DUMMY_XML_OP,
+    DB_DUMMY_XML_CRM,
+    DB_DUMMY_XML_CONSTRAINTS,
+    DB_DUMMY_XML_RESOURCES,
+    DB_DUMMY_XML_FULL_CIB,
+    DB_DUMMY_XML_SCALEOUT_RESOURCES,
+    DB_DUMMY_XML_SCALEOUT_CIB,
+    DB_DUMMY_GLOBAL_INI_SCALEOUT,
+    DB_DUMMY_XML_RHEL_ANGI_RESOURCES,
+    DB_DUMMY_XML_RHEL_ANGI_CIB,
+    DB_DUMMY_XML_RHEL_ANGI_SCALEOUT_RESOURCES,
+    DB_DUMMY_XML_RHEL_ANGI_SCALEOUT_CIB,
+    DB_DUMMY_GLOBAL_INI_RHEL_ANGI,
+    DB_DUMMY_OS_COMMAND,
+    DB_DUMMY_GLOBAL_INI_SAPHANASR,
+    DB_DUMMY_GLOBAL_INI_ANGI,
+    DB_DUMMY_CONSTANTS,
+)
 
 
 class MockExecuteCommand:
@@ -568,7 +50,7 @@ class MockExecuteCommand:
     def __call__(self, command, shell_command=False):
         command_str = " ".join(command) if isinstance(command, list) else str(command)
         if "sysctl" in command_str:
-            return DUMMY_OS_COMMAND
+            return DB_DUMMY_OS_COMMAND
         if len(command) >= 2 and command[-1] in self.mock_outputs:
             return self.mock_outputs[command[-1]]
         return ""
@@ -612,11 +94,11 @@ class TestHAClusterValidator:
         Fixture for providing mock XML outputs.
         """
         return {
-            "rsc_defaults": DUMMY_XML_RSC,
-            "crm_config": DUMMY_XML_CRM,
-            "op_defaults": DUMMY_XML_OP,
-            "constraints": DUMMY_XML_CONSTRAINTS,
-            "resources": DUMMY_XML_RESOURCES,
+            "rsc_defaults": DB_DUMMY_XML_RSC,
+            "crm_config": DB_DUMMY_XML_CRM,
+            "op_defaults": DB_DUMMY_XML_OP,
+            "constraints": DB_DUMMY_XML_CONSTRAINTS,
+            "resources": DB_DUMMY_XML_RESOURCES,
         }
 
     @pytest.fixture
@@ -625,7 +107,7 @@ class TestHAClusterValidator:
         Fixture for creating a TestableHAClusterValidator instance.
         """
         mock_execute = MockExecuteCommand(mock_xml_outputs)
-        mock_open = MockOpen(DUMMY_GLOBAL_INI_SAPHANASR)
+        mock_open = MockOpen(DB_DUMMY_GLOBAL_INI_SAPHANASR)
         original_open = builtins.open
         builtins.open = mock_open
         try:
@@ -637,7 +119,7 @@ class TestHAClusterValidator:
                 instance_number="00",
                 fencing_mechanism="sbd",
                 virtual_machine_name="vmname",
-                constants=DUMMY_CONSTANTS,
+                constants=DB_DUMMY_CONSTANTS,
                 saphanasr_provider=HanaSRProvider.SAPHANASR,
                 cib_output="",
             )
@@ -651,7 +133,7 @@ class TestHAClusterValidator:
         Fixture for creating a TestableHAClusterValidator instance with ANGI provider.
         """
         mock_execute = MockExecuteCommand(mock_xml_outputs)
-        mock_open = MockOpen(DUMMY_GLOBAL_INI_ANGI)
+        mock_open = MockOpen(DB_DUMMY_GLOBAL_INI_ANGI)
         original_open = builtins.open
         builtins.open = mock_open
         try:
@@ -663,7 +145,7 @@ class TestHAClusterValidator:
                 instance_number="00",
                 fencing_mechanism="sbd",
                 virtual_machine_name="vmname",
-                constants=DUMMY_CONSTANTS,
+                constants=DB_DUMMY_CONSTANTS,
                 saphanasr_provider=HanaSRProvider.ANGI,
                 cib_output="",
             )
@@ -677,7 +159,7 @@ class TestHAClusterValidator:
         Fixture for creating a TestableHAClusterValidator instance with SCALEOUT provider.
         """
         mock_execute = MockExecuteCommand(mock_xml_outputs)
-        mock_open = MockOpen(DUMMY_GLOBAL_INI_SAPHANASR)
+        mock_open = MockOpen(DB_DUMMY_GLOBAL_INI_SAPHANASR)
         original_open = builtins.open
         builtins.open = mock_open
         try:
@@ -689,7 +171,7 @@ class TestHAClusterValidator:
                 instance_number="00",
                 fencing_mechanism="sbd",
                 virtual_machine_name="vmname",
-                constants=DUMMY_CONSTANTS,
+                constants=DB_DUMMY_CONSTANTS,
                 saphanasr_provider=HanaSRProvider.SCALEOUT,
                 cib_output="",
             )
@@ -708,9 +190,9 @@ class TestHAClusterValidator:
             instance_number="00",
             fencing_mechanism="sbd",
             virtual_machine_name="vmname",
-            constants=DUMMY_CONSTANTS,
+            constants=DB_DUMMY_CONSTANTS,
             saphanasr_provider=HanaSRProvider.SAPHANASR,
-            cib_output=DUMMY_XML_FULL_CIB,
+            cib_output=DB_DUMMY_XML_FULL_CIB,
         )
 
     @pytest.fixture
@@ -719,9 +201,9 @@ class TestHAClusterValidator:
         Fixture for creating a scale-out HSR validator.
         """
         scaleout_outputs = mock_xml_outputs.copy()
-        scaleout_outputs["resources"] = DUMMY_XML_SCALEOUT_RESOURCES
+        scaleout_outputs["resources"] = DB_DUMMY_XML_SCALEOUT_RESOURCES
         mock_execute = MockExecuteCommand(scaleout_outputs)
-        mock_open = MockOpen(DUMMY_GLOBAL_INI_SCALEOUT)
+        mock_open = MockOpen(DB_DUMMY_GLOBAL_INI_SCALEOUT)
         original_open = builtins.open
         builtins.open = mock_open
         try:
@@ -733,7 +215,7 @@ class TestHAClusterValidator:
                 instance_number="03",
                 fencing_mechanism="sbd",
                 virtual_machine_name="hana-s1-db1",
-                constants=DUMMY_CONSTANTS,
+                constants=DB_DUMMY_CONSTANTS,
                 saphanasr_provider=HanaSRProvider.SAPHANASR,
                 hana_topology=HanaTopology.SCALE_OUT_HSR,
                 cib_output="",
@@ -753,10 +235,146 @@ class TestHAClusterValidator:
             instance_number="03",
             fencing_mechanism="sbd",
             virtual_machine_name="hana-s1-db1",
-            constants=DUMMY_CONSTANTS,
+            constants=DB_DUMMY_CONSTANTS,
             saphanasr_provider=HanaSRProvider.SAPHANASR,
             hana_topology=HanaTopology.SCALE_OUT_HSR,
-            cib_output=DUMMY_XML_SCALEOUT_CIB,
+            cib_output=DB_DUMMY_XML_SCALEOUT_CIB,
+        )
+
+    @pytest.fixture
+    def validator_rhel_angi(self):
+        """
+        Fixture for creating a RHEL + SAPHanaSR-angi scale-up validator with CIB output.
+        """
+        return HAClusterValidator(
+            os_type=OperatingSystemFamily.REDHAT,
+            sid="HDB",
+            instance_number="00",
+            fencing_mechanism="AFA",
+            virtual_machine_name="rh7dhdb00l043",
+            constants=DB_DUMMY_CONSTANTS,
+            saphanasr_provider=HanaSRProvider.ANGI,
+            hana_topology=HanaTopology.SCALE_UP,
+            cib_output=DB_DUMMY_XML_RHEL_ANGI_CIB,
+        )
+
+    def test_rhel_angi_active_categories(self, validator_rhel_angi):
+        """
+        RHEL angi scale-up must use angi categories and drop SAPHanaSR/master ones.
+        """
+        categories = validator_rhel_angi._get_active_resource_categories()
+        assert "angi_topology" in categories
+        assert "angi_hana" in categories
+        assert "angi_filesystem" in categories
+        assert "angi_topology_meta" in categories
+        assert "angi_hana_meta" in categories
+        assert "angi_filesystem_meta" in categories
+        assert "topology" not in categories
+        assert "topology_meta" not in categories
+        assert "hana" not in categories
+        assert "hana_meta" not in categories
+
+    def test_rhel_angi_resources_parsed(self, validator_rhel_angi):
+        """
+        RHEL angi resources (controller/topology/filesystem) and clone-level
+        metadata (promotable, clone-max) must validate as SUCCESS.
+        """
+        root = ET.fromstring(DB_DUMMY_XML_RHEL_ANGI_RESOURCES)
+        params = validator_rhel_angi._parse_resources_section(root)
+        assert len(params) > 0
+        categories = {p.get("category", "") for p in params}
+        assert any(cat.startswith("angi_hana") for cat in categories)
+        assert any(cat.startswith("angi_topology") for cat in categories)
+        assert any(cat.startswith("angi_filesystem") for cat in categories)
+
+        promotable = [p for p in params if p.get("name") == "promotable"]
+        assert promotable, "clone-level promotable meta must be validated for angi controller"
+        assert promotable[0].get("status") == TestStatus.SUCCESS.value
+
+        non_info = [p for p in params if p.get("status") not in ("", TestStatus.INFO.value)]
+        assert all(
+            p.get("status") == TestStatus.SUCCESS.value
+            for p in non_info
+            if p.get("category", "").startswith("angi_")
+        )
+
+    def test_rhel_angi_global_ini(self, validator_rhel_angi):
+        """
+        RHEL angi global.ini (HanaSR + ChkSrv hooks) must validate.
+        """
+        original_open = builtins.open
+        builtins.open = MockOpen(DB_DUMMY_GLOBAL_INI_RHEL_ANGI)
+        try:
+            params = validator_rhel_angi._parse_global_ini_parameters()
+        finally:
+            builtins.open = original_open
+        assert len(params) > 0
+        names = {(p.get("category", ""), p.get("name", ""), p.get("value", "")) for p in params}
+        assert any(name == "HanaSR" for _, _, name in names)
+        assert any(
+            p.get("status") == TestStatus.SUCCESS.value
+            for p in params
+            if p.get("name") == "provider"
+        )
+
+    @pytest.fixture
+    def validator_rhel_angi_scaleout(self):
+        """
+        Fixture for creating a RHEL + SAPHanaSR-angi scale-out (HSR) validator.
+        """
+        return HAClusterValidator(
+            os_type=OperatingSystemFamily.REDHAT,
+            sid="HN1",
+            instance_number="03",
+            fencing_mechanism="AFA",
+            virtual_machine_name="rhel10-db01-s1",
+            constants=DB_DUMMY_CONSTANTS,
+            saphanasr_provider=HanaSRProvider.ANGI,
+            hana_topology=HanaTopology.SCALE_OUT_HSR,
+            cib_output=DB_DUMMY_XML_RHEL_ANGI_SCALEOUT_CIB,
+        )
+
+    def test_rhel_angi_scaleout_active_categories(self, validator_rhel_angi_scaleout):
+        """
+        RHEL angi scale-out must use the ANGI scale-out resource categories.
+        """
+        categories = validator_rhel_angi_scaleout._get_active_resource_categories()
+        assert "angi_topology" in categories
+        assert "angi_scaleout_hana" in categories
+        assert "angi_filesystem" in categories
+        assert "scaleout_filesystem" in categories
+        assert "nfs_attribute" in categories
+        assert "scaleout_hana" not in categories
+        assert "angi_hana" not in categories
+
+    def test_rhel_angi_scaleout_resources_parsed(self, validator_rhel_angi_scaleout):
+        """
+        RHEL angi scale-out controller/topology/filesystem resources must validate
+        as SUCCESS, including the SAPHanaController primitive-level priority meta.
+        """
+        root = ET.fromstring(DB_DUMMY_XML_RHEL_ANGI_SCALEOUT_RESOURCES)
+        params = validator_rhel_angi_scaleout._parse_resources_section(root)
+        assert len(params) > 0
+        categories = {p.get("category", "") for p in params}
+        assert any(cat.startswith("angi_scaleout_hana") for cat in categories)
+        assert any(cat.startswith("angi_topology") for cat in categories)
+        assert any(cat.startswith("angi_filesystem") for cat in categories)
+
+        priority = [
+            p
+            for p in params
+            if p.get("category", "").startswith("angi_scaleout_hana")
+            and p.get("name") == "priority"
+        ]
+        assert priority, "SAPHanaController priority meta must be validated for angi scale-out"
+        assert priority[0].get("value") == "100"
+        assert priority[0].get("status") == TestStatus.SUCCESS.value
+
+        non_info = [p for p in params if p.get("status") not in ("", TestStatus.INFO.value)]
+        assert all(
+            p.get("status") == TestStatus.SUCCESS.value
+            for p in non_info
+            if p.get("category", "").startswith("angi_scaleout_hana")
         )
 
     def test_init(self, validator):
@@ -772,7 +390,7 @@ class TestHAClusterValidator:
         """
         Test _parse_resources_section method with SAPHanaSR provider.
         """
-        xml_str = DUMMY_XML_RESOURCES
+        xml_str = DB_DUMMY_XML_RESOURCES
         root = ET.fromstring(xml_str)
         params = validator._parse_resources_section(root)
         assert len(params) > 0
@@ -783,7 +401,7 @@ class TestHAClusterValidator:
         """
         Test _parse_resources_section method with ANGI provider.
         """
-        xml_str = DUMMY_XML_RESOURCES
+        xml_str = DB_DUMMY_XML_RESOURCES
         root = ET.fromstring(xml_str)
         params = validator_angi._parse_resources_section(root)
         assert len(params) > 0
@@ -795,7 +413,7 @@ class TestHAClusterValidator:
         """
         Test _parse_resources_section method with SCALEOUT provider.
         """
-        xml_str = DUMMY_XML_RESOURCES
+        xml_str = DB_DUMMY_XML_RESOURCES
         root = ET.fromstring(xml_str)
         params = validator_scaleout._parse_resources_section(root)
         assert len(params) > 0
@@ -808,7 +426,7 @@ class TestHAClusterValidator:
         """
         Test NFS attribute resource parameters are parsed and validated.
         """
-        xml_str = DUMMY_XML_RESOURCES
+        xml_str = DB_DUMMY_XML_RESOURCES
         root = ET.fromstring(xml_str)
         params = validator_scaleout._parse_resources_section(root)
         nfs_params = [p for p in params if "nfs_attribute" in p.get("category", "")]
@@ -892,7 +510,7 @@ class TestHAClusterValidator:
         """
         Test all resource categories are parsed correctly.
         """
-        xml_str = DUMMY_XML_RESOURCES
+        xml_str = DB_DUMMY_XML_RESOURCES
         root = ET.fromstring(xml_str)
         params = validator._parse_resources_section(root)
         categories = [p.get("category", "") for p in params]
@@ -933,7 +551,7 @@ class TestHAClusterValidator:
                     "instance_number": "00",
                     "virtual_machine_name": "vmname",
                     "fencing_mechanism": "sbd",
-                    "pcmk_constants": DUMMY_CONSTANTS,
+                    "pcmk_constants": DB_DUMMY_CONSTANTS,
                     "saphanasr_provider": "SAPHanaSR",
                     "hana_topology": "scale_up",
                     "cib_output": "",
@@ -954,7 +572,7 @@ class TestHAClusterValidator:
         original_open = builtins.open
         module_under_test.AnsibleModule = MockAnsibleModule
         module_under_test.ansible_facts = mock_ansible_facts
-        builtins.open = MockOpen(DUMMY_GLOBAL_INI_SAPHANASR)
+        builtins.open = MockOpen(DB_DUMMY_GLOBAL_INI_SAPHANASR)
 
         try:
             main()
@@ -978,7 +596,7 @@ class TestHAClusterValidator:
                     "instance_number": "00",
                     "virtual_machine_name": "vmname",
                     "fencing_mechanism": "sbd",
-                    "pcmk_constants": DUMMY_CONSTANTS,
+                    "pcmk_constants": DB_DUMMY_CONSTANTS,
                     "saphanasr_provider": "SAPHanaSR",
                     "hana_topology": "scale_up",
                     "cib_output": "",
@@ -1003,7 +621,7 @@ class TestHAClusterValidator:
         original_ansible_module = module_under_test.AnsibleModule
         original_open = builtins.open
         module_under_test.AnsibleModule = mock_ansible_module_factory
-        builtins.open = MockOpen(DUMMY_GLOBAL_INI_SAPHANASR)
+        builtins.open = MockOpen(DB_DUMMY_GLOBAL_INI_SAPHANASR)
         try:
             main()
             assert "status" in mock_result
@@ -1016,7 +634,7 @@ class TestHAClusterValidator:
         Test that all defined resource categories can be parsed.
         """
         for category, xpath in HAClusterValidator.RESOURCE_CATEGORIES.items():
-            xml_str = DUMMY_XML_RESOURCES
+            xml_str = DB_DUMMY_XML_RESOURCES
             root = ET.fromstring(xml_str)
             xpaths = xpath if isinstance(xpath, list) else [xpath]
             elements = []
@@ -1112,7 +730,7 @@ class TestHAClusterValidator:
         """
         Test that scale-out resource parsing finds NFS filesystem clones.
         """
-        root = ET.fromstring(DUMMY_XML_SCALEOUT_RESOURCES)
+        root = ET.fromstring(DB_DUMMY_XML_SCALEOUT_RESOURCES)
         params = validator_scaleout._parse_resources_section(root)
         categories = [p.get("category", "") for p in params]
         assert any("scaleout_filesystem" in cat for cat in categories)
@@ -1121,7 +739,7 @@ class TestHAClusterValidator:
         """
         Test that scale-out resource parsing finds SAPHanaController.
         """
-        root = ET.fromstring(DUMMY_XML_SCALEOUT_RESOURCES)
+        root = ET.fromstring(DB_DUMMY_XML_SCALEOUT_RESOURCES)
         params = validator_scaleout._parse_resources_section(root)
         categories = [p.get("category", "") for p in params]
         assert any("scaleout_hana" in cat for cat in categories)
@@ -1130,7 +748,7 @@ class TestHAClusterValidator:
         """
         Test that scale-out resource parsing finds SAPHanaTopology.
         """
-        root = ET.fromstring(DUMMY_XML_SCALEOUT_RESOURCES)
+        root = ET.fromstring(DB_DUMMY_XML_SCALEOUT_RESOURCES)
         params = validator_scaleout._parse_resources_section(root)
         categories = [p.get("category", "") for p in params]
         assert any("scaleout_topology" in cat for cat in categories)
@@ -1139,7 +757,7 @@ class TestHAClusterValidator:
         """
         Test that scale-out resource parsing finds NFS attribute resources.
         """
-        root = ET.fromstring(DUMMY_XML_SCALEOUT_RESOURCES)
+        root = ET.fromstring(DB_DUMMY_XML_SCALEOUT_RESOURCES)
         params = validator_scaleout._parse_resources_section(root)
         categories = [p.get("category", "") for p in params]
         assert any("nfs_attribute" in cat for cat in categories)
@@ -1148,7 +766,7 @@ class TestHAClusterValidator:
         """
         Test that scale-out does not use scale-up specific categories.
         """
-        root = ET.fromstring(DUMMY_XML_SCALEOUT_RESOURCES)
+        root = ET.fromstring(DB_DUMMY_XML_SCALEOUT_RESOURCES)
         params = validator_scaleout._parse_resources_section(root)
         categories = [p.get("category", "") for p in params]
         assert not any(cat == "hana" for cat in categories)

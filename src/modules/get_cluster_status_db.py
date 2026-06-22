@@ -312,7 +312,7 @@ class HanaClusterStatusChecker(BaseClusterStatusChecker):
                     "sync": "100",
                 },
                 "worker_scores": {
-                    "primary": "101",
+                    "primary": ["101", "-10000"],
                     "secondary": "-12200",
                 },
             },
@@ -538,6 +538,12 @@ class HanaClusterStatusChecker(BaseClusterStatusChecker):
 
         score_attr = provider_config["score_attr"]
         expected_score = worker_scores[site_role]
+        accepted_scores = (
+            [str(s) for s in expected_score]
+            if isinstance(expected_score, (list, tuple))
+            else [str(expected_score)]
+        )
+        expected_display = " or ".join(accepted_scores)
         roles_attr = f"hana_{self.database_sid}_roles"
 
         for node_name, attrs in nodes:
@@ -553,7 +559,7 @@ class HanaClusterStatusChecker(BaseClusterStatusChecker):
                         "node": node_name,
                         "site_role": site_role,
                         "actual_score": "missing",
-                        "expected_score": expected_score,
+                        "expected_score": expected_display,
                         "valid": False,
                     }
                 )
@@ -565,13 +571,13 @@ class HanaClusterStatusChecker(BaseClusterStatusChecker):
                 )
                 continue
 
-            is_valid = score == expected_score
+            is_valid = score in accepted_scores
             result["worker_node_score_details"].append(
                 {
                     "node": node_name,
                     "site_role": site_role,
                     "actual_score": score,
-                    "expected_score": expected_score,
+                    "expected_score": expected_display,
                     "valid": is_valid,
                 }
             )
@@ -581,7 +587,7 @@ class HanaClusterStatusChecker(BaseClusterStatusChecker):
                     logging.WARNING,
                     f"Worker node {node_name} on {site_role} site has "
                     f"unexpected score: {score} (expected "
-                    f"{expected_score})",
+                    f"{expected_display})",
                 )
 
     def _is_cluster_ready(self) -> bool:
@@ -643,8 +649,7 @@ class HanaClusterStatusChecker(BaseClusterStatusChecker):
         except Exception as exc:
             self.log(
                 logging.WARNING,
-                "Failed to query hdbnsutil -sr_state: %s",
-                str(exc),
+                f"Failed to query hdbnsutil -sr_state: {exc!s}",
             )
             return
 

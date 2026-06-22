@@ -27,7 +27,7 @@
                                           'TestCaseStartTime': lookup('vars', 'test_case_start_time_epoch', default=''),
                                           'TestCaseEndTime': now(utc=true, fmt='%Y-%m-%d %H:%M:%S'),
                                           'TestCaseStatus': lookup('vars', 'test_case_status', default='FAILED'),
-                                          'TestCaseName': lookup('vars', 'test_case_name', default=''),
+                                          'TestCaseName': lookup('vars', 'test_case_display_name', default=lookup('vars', 'test_case_name', default='')),
                                           'TestCaseDescription': lookup('vars', 'test_case_description', default=''),
                                           'TestGroupInvocationId': lookup('vars', 'group_invocation_id', default=''),
                                           'TestGroupStartTime': lookup('vars', 'group_start_time', default=''),

@@ -39,6 +39,32 @@ class TestIndexServerCheck:
     Class to test the IndexServerCheck class and main function.
     """
 
+    def test_redhat_indexserver_angi_success(self, monkeypatch):
+        """
+        Simulate a global.ini with the RHEL SAPHanaSR-angi ChkSrv hook
+        (provider=ChkSrv, path=/usr/share/sap-hana-ha) on RedHat.
+
+        :param monkeypatch: Monkeypatch fixture for modifying built-in functions.
+        :type monkeypatch: pytest.MonkeyPatch
+        """
+        file_lines = [
+            "[ha_dr_provider_chksrv]",
+            "provider=ChkSrv",
+            "path=/usr/share/sap-hana-ha/",
+            "action_on_lost=stop",
+        ]
+        with monkeypatch.context() as monkey_patch:
+            monkey_patch.setattr("builtins.open", fake_open_factory(file_lines))
+            checker = IndexServerCheck(
+                database_sid="TEST", os_distribution=OperatingSystemFamily.REDHAT
+            )
+            checker.check_indexserver()
+            result = checker.get_result()
+
+            assert result["status"] == TestStatus.SUCCESS.value
+            assert result["message"] == "Indexserver is configured."
+            assert result["indexserver_enabled"] == "yes"
+
     def test_redhat_indexserver_success(self, monkeypatch):
         """
         Simulate a global.ini file with correct redhat configuration.
