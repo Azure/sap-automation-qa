@@ -111,6 +111,7 @@ cryptography==46.0.7
     #   msal
     #   pyjwt
     #   pyspnego
+    #   requests-credssp
     #   requests-ntlm
 dill==0.4.1
     # via pylint
@@ -233,7 +234,9 @@ pyjwt[crypto]==2.12.1
 pylint==4.0.5
     # via -r requirements.in
 pyspnego==0.12.1
-    # via requests-ntlm
+    # via
+    #   requests-credssp
+    #   requests-ntlm
 pytest==9.0.3
     # via
     #   -r requirements.in
@@ -256,7 +259,7 @@ python-multipart==0.0.29
     # via -r requirements.in
 pytokens==0.4.1
     # via black
-pywinrm==0.5.0
+pywinrm[credssp]==0.5.0
     # via -r requirements.in
 pyyaml==6.0.3
     # via
@@ -279,8 +282,11 @@ requests==2.33.1
     #   msal
     #   msrest
     #   pywinrm
+    #   requests-credssp
     #   requests-ntlm
     #   requests-oauthlib
+requests-credssp==2.0.0
+    # via pywinrm
 requests-ntlm==1.3.0
     # via pywinrm
 requests-oauthlib==2.0.0

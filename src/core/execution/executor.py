@@ -235,7 +235,7 @@ class AnsibleExecutor:
             all_vars["TEST_TYPE"] = "SAPFunctionalTests"
 
         if ssh_password:
-            all_vars["ansible_ssh_pass"] = ssh_password
+            all_vars["ansible_password"] = ssh_password
         if test_id:
             all_vars["test_id"] = test_id
             input_api = self.playbook_dir / "vars" / "input-api.yaml"
