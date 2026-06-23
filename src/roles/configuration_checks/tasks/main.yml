@@ -171,7 +171,7 @@
 
 - name:                             "{{ check_type.name }} - Run Windows command-based collectors"
   no_log:                           true
-  ansible.windows.win_shell:        "{{ item.collector_args.command }}"
+  ansible.windows.win_shell:        "{{ item.collector_args.windows_command | default(item.collector_args.command) }}"
   loop:                             "{{ command_checks | default([]) }}"
   register:                         windows_command_collector_results
   changed_when:                     false
@@ -180,37 +180,10 @@
                                     - ansible_os_family == "Windows"
                                     - command_checks is defined
                                     - command_checks | length > 0
-                                    - item.collector_args.command | default('', true) | length > 0
-                                    - "'Windows' in (item.get('applicability', {}).get('os_type', []))"
+                                    - (item.collector_args.windows_command | default('', true) | length > 0) or
+                                      (item.collector_args.command | default('', true) | length > 0)
 
-- name:                             "{{ check_type.name }} - Initialize Windows command output map"
-  ansible.builtin.set_fact:
-    precollected_command_outputs:   {}
-  when:
-                                    - ansible_os_family == "Windows"
-                                    - command_checks is defined
-                                    - command_checks | length > 0
-
-- name:                             "{{ check_type.name }} - Add Windows IMDS command outputs"
-  no_log:                           true
-  ansible.builtin.set_fact:
-    precollected_command_outputs: >-
-                                    {{
-                                      precollected_command_outputs | default({})
-                                      | combine({
-                                          'IC-0001': compute_metadata.json.compute.name | default(inventory_hostname),
-                                          'IC-0002': compute_metadata.json.compute.resourceGroupName | default('unknown'),
-                                          'IC-0003': compute_metadata.json.compute.location | default('unknown'),
-                                          'IC-0004': compute_metadata.json.compute.zone | default('unknown')
-                                        })
-                                    }}
-  when:
-                                    - ansible_os_family == "Windows"
-                                    - command_checks is defined
-                                    - command_checks | length > 0
-                                    - check_type.file_name == "virtual_machine"
-
-- name:                             "{{ check_type.name }} - Build Windows command output map"
+- name:                             "{{ check_type.name }} - Build Windows precollected output map"
   no_log:                           true
   ansible.builtin.set_fact:
     precollected_command_outputs: >-
@@ -232,7 +205,7 @@
                                     - not (item.skipped | default(false) | bool)
                                     - item.item.id is defined
 
-- name:                             "{{ check_type.name }} - Add Windows command outputs to system context"
+- name:                             "{{ check_type.name }} - Add Windows precollected outputs to system context"
   no_log:                           true
   ansible.builtin.set_fact:
     system_context:                 "{{ system_context | combine({'precollected_command_outputs': precollected_command_outputs | default({})}) }}"

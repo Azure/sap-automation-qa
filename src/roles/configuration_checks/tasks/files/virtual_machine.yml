@@ -104,6 +104,7 @@ checks:
     collector_type:                   *command
     collector_args:
       command:                        "curl -H 'Metadata: true' 'http://169.254.169.254/metadata/instance/compute/name?api-version=2021-02-01&format=text' -s"
+      windows_command:                "Invoke-RestMethod -Uri 'http://169.254.169.254/metadata/instance/compute/name?api-version=2021-02-01&format=text' -Headers @{Metadata='true'}"
     report:                           *check
 
   - id:                               "IC-0002"
@@ -115,6 +116,7 @@ checks:
     collector_type:                   *command
     collector_args:
       command:                        "curl -H 'Metadata: true' 'http://169.254.169.254/metadata/instance/compute/resourceGroupName?api-version=2021-02-01&format=text' -s"
+      windows_command:                "Invoke-RestMethod -Uri 'http://169.254.169.254/metadata/instance/compute/resourceGroupName?api-version=2021-02-01&format=text' -Headers @{Metadata='true'}"
     report:                           *check
 
   - id:                               "IC-0003"
@@ -126,6 +128,7 @@ checks:
     collector_type:                   *command
     collector_args:
       command:                        "curl -H 'Metadata: true' 'http://169.254.169.254/metadata/instance/compute/location?api-version=2021-02-01&format=text' -s"
+      windows_command:                "Invoke-RestMethod -Uri 'http://169.254.169.254/metadata/instance/compute/location?api-version=2021-02-01&format=text' -Headers @{Metadata='true'}"
     report:                           *check
 
   - id:                               "IC-0004"
@@ -137,6 +140,7 @@ checks:
     collector_type:                   *command
     collector_args:
       command:                        "curl -H 'Metadata: true' 'http://169.254.169.254/metadata/instance/compute/zone?api-version=2021-02-01&format=text' -s"
+      windows_command:                "Invoke-RestMethod -Uri 'http://169.254.169.254/metadata/instance/compute/zone?api-version=2021-02-01&format=text' -Headers @{Metadata='true'}"
     report:                           *check
 
   - id:                               "IC-0005"

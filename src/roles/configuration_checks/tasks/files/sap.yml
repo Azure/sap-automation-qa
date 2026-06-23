@@ -110,6 +110,7 @@ checks:
     collector_type:                   *command
     collector_args:
       command:                        curl -s --noproxy '*' -H Metadata:true 'http://169.254.169.254/metadata/instance/compute/vmSize?api-version=2021-02-01&format=text'
+      windows_command:                "Invoke-RestMethod -Uri 'http://169.254.169.254/metadata/instance/compute/vmSize?api-version=2021-02-01&format=text' -Headers @{Metadata='true'}"
     validator_type:                   *check_support
     validator_args:
       validation_rules:               "SupportedVMs"
@@ -134,6 +135,7 @@ checks:
     collector_type:                   *command
     collector_args:
       command:                        curl -s --noproxy '*' -H Metadata:true 'http://169.254.169.254/metadata/instance/compute/storageProfile/imageReference/publisher?api-version=2021-02-01&format=text'
+      windows_command:                "Invoke-RestMethod -Uri 'http://169.254.169.254/metadata/instance/compute/storageProfile/imageReference/publisher?api-version=2021-02-01&format=text' -Headers @{Metadata='true'}"
     validator_type:                   *check_support
     validator_args:
       validation_rules:               "SupportedOSDBCombinations"
