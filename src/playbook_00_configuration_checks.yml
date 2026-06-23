@@ -21,6 +21,7 @@
           - azure-mgmt-network
           - azure-storage-blob
           - azure-storage-queue
+          - pywinrm
 
     - name:                             "Init: Authenticate to Azure Using Managed Identity"
       block:

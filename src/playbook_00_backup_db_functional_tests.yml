@@ -104,7 +104,7 @@
     - name:                            "Orchestration: Validate Required Variables"
       ansible.builtin.assert:
         that:
-          - backup_vault_resource_id | default('') | length > 0
+          - backup_vault_resource_id | default('', true) | length > 0
         fail_msg: >-
           backup_vault_resource_id is not set.
           Provide the full ARM resource ID of the Recovery Services vault
