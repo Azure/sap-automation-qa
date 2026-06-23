@@ -385,7 +385,8 @@ db_instance_number: "00"
 # The type of database. Supported values are:
 # - HANA
 # - SQLSERVER
-# - DB2
+# - Oracle
+# - Db2
 platform: "SQLSERVER"
 
 # The NFS provider used for shared storage. Supported values are:

@@ -704,6 +704,11 @@ class ConfigurationCheckModule(SapAutomationQA):
                     "status": TestStatus.ERROR.value,
                     "details": "No storage type data collected",
                 }
+            if raw.startswith("ERROR:"):
+                return {
+                    "status": TestStatus.ERROR.value,
+                    "details": f"Collection failed: {raw}",
+                }
 
             values = [v.strip() for v in raw.split(",") if v.strip()]
             if not values:
@@ -751,7 +756,7 @@ class ConfigurationCheckModule(SapAutomationQA):
             if is_valid:
                 detail_msg = (
                     f"All {len(values)} disk(s) have supported storage "
-                    f"type for {mount_role}: {set(values)}"
+                    f"type for {mount_role}: {sorted(set(values))}"
                 )
             else:
                 detail_msg = (
