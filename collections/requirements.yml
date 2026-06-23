@@ -1,0 +1,4 @@
+---
+collections:
+  - name: ansible.windows
+    version: ">=2.5.0,<4.0.0"

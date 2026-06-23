@@ -126,6 +126,18 @@ _setup_local_env() {
         log "ERROR" "Failed to install Python packages."
     fi
 
+    if [[ -f collections/requirements.yml ]]; then
+        log "INFO" "Installing Ansible collections..."
+        mkdir -p .ansible/collections
+        export ANSIBLE_COLLECTIONS_PATH="$PROJECT_ROOT/.ansible/collections:/opt/ansible/collections:${ANSIBLE_COLLECTIONS_PATH:+${ANSIBLE_COLLECTIONS_PATH}}"
+        if ansible-galaxy collection install -r collections/requirements.yml -p .ansible/collections; then
+            log "INFO" "Ansible collections installed successfully."
+        else
+            log "ERROR" "Failed to install Ansible collections."
+            exit 1
+        fi
+    fi
+
     log "INFO" "Which Python: $(which python)"
 
     export ANSIBLE_HOST_KEY_CHECKING=False

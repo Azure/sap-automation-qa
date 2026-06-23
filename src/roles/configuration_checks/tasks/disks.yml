@@ -7,6 +7,7 @@
 
 - name:                                 Disks Collector Tasks
   become:                               true
+  when:                                 ansible_os_family != "Windows"
   block:
     - name:                             Collect azure disks data
       ansible.builtin.uri:

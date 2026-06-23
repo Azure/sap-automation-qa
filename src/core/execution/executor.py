@@ -261,7 +261,16 @@ class AnsibleExecutor:
         if all_vars:
             cmd.extend(["-e", json.dumps(all_vars)])
 
-        env = {"ANSIBLE_CONFIG": str(self.ansible_cfg)}
+        collection_paths = [
+            str(self.playbook_dir.parent / ".ansible" / "collections"),
+            "/opt/ansible/collections",
+        ]
+        if os.environ.get("ANSIBLE_COLLECTIONS_PATH"):
+            collection_paths.append(os.environ["ANSIBLE_COLLECTIONS_PATH"])
+        env = {
+            "ANSIBLE_CONFIG": str(self.ansible_cfg),
+            "ANSIBLE_COLLECTIONS_PATH": ":".join(collection_paths),
+        }
 
         if log_file:
             env["ANSIBLE_LOG_PATH"] = str(Path(log_file).with_suffix(".ansible.log"))

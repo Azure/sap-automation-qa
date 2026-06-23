@@ -339,7 +339,10 @@ The file includes the following details:
 
 - **ansible_host**: The IP address of the host.
 - **ansible_user**: The user for connecting to the host.
-- **ansible_connection**: The connection type (usually "ssh").
+- **ansible_connection**: The connection type (usually "ssh"; use "winrm" for Windows hosts).
+- **ansible_winrm_transport**: Windows-only WinRM authentication transport. Use "credssp" for password-based Windows configuration checks.
+- **ansible_port**: Windows-only WinRM port. Use 5986 for HTTPS WinRM.
+- **ansible_winrm_server_cert_validation**: Windows-only certificate validation mode. Use "ignore" when the Windows host uses a self-signed WinRM certificate.
 - **connection_type**: The connection type, used when connecting via SSH key (not needed for password-based connections).
 - **virtual_host**: The virtual host name of the SCS/DB host.
 - **become_user**: The user with root privileges. For example, user "azureadm" must be able to change to root without password.
@@ -417,9 +420,12 @@ The required credential files depend on the authentication method used to connec
 1. **Password Authentication**: If connecting using a username and password, create a password file by running the following command. It takes the username from hosts.yaml file. 
 
    ```bash
-   echo "password" > WORKSPACES/SYSTEM/<DIRECTORY>/password
+   echo -n "password" > WORKSPACES/SYSTEM/<DIRECTORY>/password
    chmod 600 WORKSPACES/SYSTEM/<DIRECTORY>/password
    ```
+
+   For Windows configuration checks over WinRM/CredSSP, use `--auth-type=VMPASSWORD`
+   and ensure the `hosts.yaml` entries include the Windows WinRM variables listed above.
 
 > [!NOTE]
 >

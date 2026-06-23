@@ -104,6 +104,15 @@ class CommandCollector(Collector):
         :return: The output of the command
         :rtype: str
         """
+        precollected = context.get("precollected_command_outputs")
+        check_id = getattr(check, "id", None)
+        if isinstance(precollected, dict) and check_id in precollected:
+            self.parent.log(
+                logging.INFO,
+                f"Using pre-collected command output for check {check_id}",
+            )
+            return str(precollected[check_id]).strip()
+
         try:
             command = check.collector_args.get("command", "")
             user = check.collector_args.get("user", "")
