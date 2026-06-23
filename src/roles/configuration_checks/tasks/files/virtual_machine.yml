@@ -798,7 +798,7 @@ checks:
                                       if command -v az >/dev/null 2>&1; then
                                         security_type=$(az vm show --resource-group {{ CONTEXT.resource_group_name }} --name {{ CONTEXT.vm_name }} --query "securityProfile.securityType" -o tsv 2>/dev/null);
                                         if [ $? -eq 0 ]; then
-                                          if [ -z "$security_type" ] || [ "$security_type" == "null" ]; then
+                                          if [ -z "$security_type" ] || [ "$security_type" = "null" ]; then
                                             echo "Standard";
                                           else
                                             echo "$security_type";
@@ -874,7 +874,7 @@ checks:
                                       if command -v az >/dev/null 2>&1; then
                                         vmss_id=$(az vm show --resource-group {{ CONTEXT.resource_group_name }} --name {{ CONTEXT.vm_name }} --query "virtualMachineScaleSet.id" -o tsv 2>/dev/null);
                                         if [ $? -eq 0 ]; then
-                                          if [ -z "$vmss_id" ] || [ "$vmss_id" == "null" ]; then
+                                          if [ -z "$vmss_id" ] || [ "$vmss_id" = "null" ]; then
                                             echo "No VMSS defined";
                                           else
                                             echo "$vmss_id";
