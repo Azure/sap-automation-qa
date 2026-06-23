@@ -65,13 +65,7 @@ jobs:
 
       - name: Install Ansible Collections
         run: |
-          ansible-galaxy collection install ansible.windows --force
-          ansible-galaxy collection install ansible.posix --force
-          ansible-galaxy collection install ansible.utils --force
-          ansible-galaxy collection install ansible.netcommon:5.1.2 --force
-          ansible-galaxy collection install community.windows --force
-          ansible-galaxy collection install community.general --force
-          ansible-galaxy collection install microsoft.ad --force
+          ansible-galaxy collection install -r collections/requirements.yml --force
 
       - name: Run ansible-lint
         run: |
