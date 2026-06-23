@@ -37,6 +37,7 @@ Jinja2
 PyYAML
 requests
 pywinrm[credssp]
+cryptography>=48.0.1
 
 # CLI tools
 click

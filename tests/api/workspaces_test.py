@@ -7,6 +7,7 @@ import tempfile
 from pathlib import Path
 from typing import Generator
 import pytest
+from fastapi import HTTPException
 from fastapi.testclient import TestClient
 from src.api.routes import workspaces
 from src.api.routes.workspaces import (
@@ -231,3 +232,49 @@ class TestWorkspacesApi:
             assert workspaces._workspace_loader is mock_loader
         finally:
             workspaces._workspace_loader = original
+
+    def test_rejects_path_traversal(self, client: TestClient) -> None:
+        """Rejects workspace_id with dot-dot prefix pattern."""
+        response = client.get("/api/v1/workspaces/..passwd")
+        assert response.status_code == 400
+
+    def test_rejects_dot_dot(self, client: TestClient) -> None:
+        """Rejects workspace_id starting with '..'."""
+        response = client.get("/api/v1/workspaces/..secret")
+        assert response.status_code == 400
+
+    def test_rejects_backslash(self, client: TestClient) -> None:
+        """Rejects workspace_id containing backslash."""
+        response = client.get("/api/v1/workspaces/foo%5Cbar")
+        assert response.status_code == 400
+
+    def test_rejects_null_byte(self, client: TestClient) -> None:
+        """Rejects workspace_id containing null byte."""
+        response = client.get("/api/v1/workspaces/foo%00bar")
+        assert response.status_code == 400
+
+    def test_rejects_special_characters(self, client: TestClient) -> None:
+        """Rejects workspace_id with special characters."""
+        response = client.get("/api/v1/workspaces/foo;bar")
+        assert response.status_code == 400
+
+    def test_rejects_space_only(self, client: TestClient) -> None:
+        """Rejects workspace_id that is only whitespace."""
+        response = client.get("/api/v1/workspaces/%20")
+        assert response.status_code == 400
+
+    def test_accepts_valid_workspace_id(self, client: TestClient) -> None:
+        """Accepts a valid alphanumeric workspace_id (returns 404 since it doesn't exist)."""
+        response = client.get("/api/v1/workspaces/DEV-EUS2-SAP01")
+        assert response.status_code == 404
+
+    def test_accepts_workspace_id_with_dots(self, client: TestClient) -> None:
+        """Accepts workspace_id with dots (single dot is ok, not '..')."""
+        response = client.get("/api/v1/workspaces/ws.v2.test")
+        assert response.status_code == 404
+
+    def test_default_loader_rejects_traversal(self) -> None:
+        """default_workspace_loader raises HTTPException 400 for path traversal."""
+        with pytest.raises(HTTPException) as exc_info:
+            default_workspace_loader("..")
+        assert exc_info.value.status_code == 400

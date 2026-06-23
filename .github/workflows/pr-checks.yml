@@ -1,0 +1,118 @@
+name: PR Checks
+
+on:
+  push:
+    branches: [main, development-*]
+  pull_request:
+    types: [opened, synchronize, reopened, labeled, unlabeled]
+
+permissions:
+  contents: read
+
+jobs:
+  check-labels:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@cb605e52c26070c328afc4562f0b4ada7618a84e # v2.10.4
+        with:
+          egress-policy: audit
+
+      - name: Verify PR has at least one label
+        if: github.event_name == 'pull_request'
+        env:
+          PR_LABELS: ${{ join(github.event.pull_request.labels.*.name, ',') }}
+        run: |
+          if [ -z "$PR_LABELS" ]; then
+            echo "::error::PR must have at least one label before merging."
+            exit 1
+          fi
+          echo "Labels found: $PR_LABELS"
+
+  code-quality:
+    needs: check-labels
+    runs-on: ubuntu-latest
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@cb605e52c26070c328afc4562f0b4ada7618a84e # v2.10.4
+        with:
+          egress-policy: audit
+
+      - name: Checkout the code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Setup Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: '3.10'
+
+      - name: Install dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install --require-hashes -r requirements.txt
+
+      - name: Run pytest with coverage
+        run: |
+          pytest --cov=src/ --cov-fail-under=85 --cov-report=xml tests/
+
+      - name: Run pylint
+        run: |
+          pylint --load-plugins=pylint.extensions.docparams --fail-under=9 --disable=R $(git ls-files '*.py') --rcfile=./pyproject.toml
+
+      - name: Check code formatting with black
+        run: |
+          black --check src/ tests/ --config pyproject.toml
+
+      - name: Install Ansible Collections
+        run: |
+          ansible-galaxy collection install ansible.windows --force
+          ansible-galaxy collection install ansible.posix --force
+          ansible-galaxy collection install ansible.utils --force
+          ansible-galaxy collection install ansible.netcommon:5.1.2 --force
+          ansible-galaxy collection install community.windows --force
+          ansible-galaxy collection install community.general --force
+          ansible-galaxy collection install microsoft.ad --force
+
+      - name: Run ansible-lint
+        run: |
+          ansible-lint src/ -c .ansible-lint
+
+      - name: Validate Copilot CLI skills
+        run: python .github/skills/_validation/validate_skills.py .github/skills
+
+
+  security:
+    needs: check-labels
+    runs-on: ubuntu-latest
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@cb605e52c26070c328afc4562f0b4ada7618a84e # v2.10.4
+        with:
+          egress-policy: audit
+
+      - name: Checkout the code
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+
+      - name: Setup Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: '3.10'
+
+      - name: Verify requirements.txt has hashes
+        run: |
+          if ! grep -q "\-\-hash=" requirements.txt; then
+            echo "::error::requirements.txt must contain --hash entries."
+            echo "Run: pip-compile --generate-hashes requirements.in --output-file=requirements.txt"
+            exit 1
+          fi
+
+      - name: Run pip-audit
+        run: |
+          python -m pip install --upgrade pip
+          pip install pip-audit
+          pip-audit -r requirements.txt --strict
+
+      - name: Run bandit
+        run: |
+          pip install "bandit[toml]"
+          bandit -r src/ -c pyproject.toml --severity-level medium

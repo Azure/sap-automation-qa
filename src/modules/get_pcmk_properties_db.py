@@ -187,6 +187,9 @@ class HAClusterValidator(BaseHAClusterValidator):
         "azurelb": ".//primitive[@type='azure-lb']",
         "angi_filesystem": ".//primitive[@type='SAPHanaFilesystem']",
         "angi_hana": ".//primitive[@type='SAPHanaController']",
+        "angi_topology_meta": ".//clone/primitive[@type='SAPHanaTopology']/../meta_attributes",
+        "angi_hana_meta": ".//clone/primitive[@type='SAPHanaController']/../meta_attributes",
+        "angi_filesystem_meta": ".//clone/primitive[@type='SAPHanaFilesystem']/../meta_attributes",
         "azureevents": ".//primitive[@type='azure-events-az']",
     }
     SCALEOUT_RESOURCE_CATEGORIES = {
@@ -256,10 +259,16 @@ class HAClusterValidator(BaseHAClusterValidator):
         categories = self.RESOURCE_CATEGORIES.copy()
         if self.saphanasr_provider == HanaSRProvider.ANGI:
             categories.pop("topology", None)
+            categories.pop("topology_meta", None)
+            categories.pop("hana", None)
+            categories.pop("hana_meta", None)
         else:
             categories.pop("angi_topology", None)
             categories.pop("angi_filesystem", None)
             categories.pop("angi_hana", None)
+            categories.pop("angi_topology_meta", None)
+            categories.pop("angi_hana_meta", None)
+            categories.pop("angi_filesystem_meta", None)
         return categories
 
     def _get_expected_value_for_category(self, category, subcategory, name, op_name):

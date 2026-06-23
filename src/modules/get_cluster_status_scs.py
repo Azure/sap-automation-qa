@@ -225,9 +225,10 @@ class SCSClusterStatusChecker(BaseClusterStatusChecker):
                     failed = resource.attrib.get("failed", "false").lower() == "true"
                     active = resource.attrib.get("active", "false").lower() == "true"
                     role = resource.attrib.get("role", "unknown").lower()
+                    unclean = resource.attrib.get("unclean", "false").lower() == "true"
                     role_status = role == "started"
 
-                    if not failed and active and role_status:
+                    if not failed and not unclean and active and role_status:
                         result[node_type] = (
                             node_name if result[node_type] == "" else result[node_type]
                         )

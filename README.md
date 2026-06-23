@@ -18,18 +18,18 @@ The SAP Testing Automation Framework is an open-source orchestration tool design
 ![SAP Testing Automation Framework](./docs/images/sap-testing-automation-framework.png)
 
 
-## 🤖 Agent Skills &nbsp; ![New](https://img.shields.io/badge/NEW-brightgreen)
+## 🤖 AI Assistant Plugins &nbsp; ![New](https://img.shields.io/badge/NEW-brightgreen)
 
 > [!TIP]
-> This repository ships with **GitHub Copilot CLI agent skills** that guide you through setup, workspace creation, test execution, and result analysis — all from your terminal. Run `copilot` in the repo directory and ask naturally; skills activate automatically.
+> STAF can now be used through AI assistant skills — no manual setup required. Install the plugin, bring your `WORKSPACES/` directory, and the skills handle environment setup, test execution, and result analysis.
 >
-> **Quick start:**
-> ```bash
-> cd sap-automation-qa && copilot
-> ```
-> **Example prompts:** *"Help me set up the framework"* · *"Run HA tests for my system"* · *"Why did my last test fail?"*
+> | Platform | Install |
+> |----------|---------|
+> | Copilot CLI | `copilot plugin install Azure/sap-automation-qa` |
+> | Claude Code | `/plugin marketplace add Azure/sap-automation-qa` → `/plugin install staf@sap-automation-qa` |
+> | Gemini CLI | `gemini skills install https://github.com/Azure/sap-automation-qa` |
 >
-> See the [setup guide](./docs/SETUP.MD#copilot-cli-skills) for the full list of skills and usage examples.
+> See [docs/PLUGINS.md](./docs/PLUGINS.md) for details.
 
 ## 📊 Key Scenarios
 
@@ -105,6 +105,7 @@ For support and questions, please:
 
 ## 📚 Additional Resources
 
+- [AI Assistant Plugins Guide](./docs/PLUGINS.md)
 - [Azure SAP Documentation](https://docs.microsoft.com/azure/sap)
 - [Azure Backup Testing Guide](./docs/AZURE_BACKUP.md)
 - [Configuration Checks Guide](./docs/CONFIGURATION_CHECKS.md)

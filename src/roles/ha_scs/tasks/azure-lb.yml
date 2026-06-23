@@ -5,6 +5,10 @@
   ansible.builtin.set_fact:
     all_constants:                  "{{ lookup('file', 'constants.yaml') | from_yaml }}"
 
-- name:                             "Pre Validation: {{ item.name | default('') }} - Include Load Balancer Tasks"
-  ansible.builtin.include_tasks:    "roles/misc/tasks/loadbalancer.yml"
+- name:                             "Pre Validation: {{ item.name | default('') }} - SCS Nodes"
+  ansible.builtin.include_tasks:    "roles/misc/tasks/pre-validations-scs.yml"
   tags:                             [pre-validation]
+
+- name:                             "Test Execution: {{ item.name | default('') }} - Include Load Balancer tasks"
+  ansible.builtin.include_tasks:    "roles/misc/tasks/loadbalancer.yml"
+  tags:                             [test-execution]

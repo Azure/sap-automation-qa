@@ -1,0 +1,496 @@
+name: Release Documentation Sync
+
+on:
+  release:
+    types: [published]
+  workflow_dispatch:
+    inputs:
+      base_ref:
+        description: "Base ref for the release diff (default: previous published release)"
+        required: false
+        type: string
+      head_ref:
+        description: "Head ref for the release diff (default: latest published release)"
+        required: false
+        type: string
+      dry_run:
+        description: "Dry run: build docs + artifacts but do not push or open a PR"
+        required: false
+        type: boolean
+        default: true
+      user_instructions:
+        description: "Custom instructions for the docs sync run (injected into the agent prompts)"
+        required: false
+        type: string
+      source_repo:
+        description: "Repo whose releases/refs to analyze (default: Azure/sap-automation-qa)."
+        required: false
+        type: string
+
+permissions:
+  contents: read
+
+concurrency:
+  group: release-docs-sync
+  cancel-in-progress: false
+
+env:
+  DOCS_FORK: devanshjainms/azure-docs-pr
+  DOCS_UPSTREAM: MicrosoftDocs/azure-docs-pr
+  DOCS_PATH: articles/sap/automation
+  FORK_DIR: /tmp/azure-docs-pr
+  CONTEXT_REL: .copilot-tracking/release-context
+  PLAN_MODEL: claude-opus-4.6
+  IMPL_MODEL: gpt-5.5
+
+jobs:
+  sync-docs:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    if: ${{ github.event_name != 'release' || github.event.release.prerelease == false }}
+    env:
+      SRC_REPO: ${{ inputs.source_repo || 'Azure/sap-automation-qa' }}
+      SRC_DIR: source-repo
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@4d991eb9b905ef189e4c376166672c3f2f230481 # v2.11.0
+        with:
+          egress-policy: audit
+
+      - name: Checkout workflow repo
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          persist-credentials: false
+
+      - name: Checkout source repo to analyze
+        uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
+        with:
+          repository: ${{ inputs.source_repo || 'Azure/sap-automation-qa' }}
+          path: source-repo
+          fetch-depth: 0
+          fetch-tags: true
+          token: ${{ secrets.AZURE_DOCS_PAT }}
+          persist-credentials: false
+
+      - name: Resolve release range
+        id: range
+        env:
+          GH_TOKEN: ${{ secrets.AZURE_DOCS_PAT }}
+          EVENT_NAME: ${{ github.event_name }}
+          RELEASE_TAG: ${{ github.event.release.tag_name }}
+          IN_BASE: ${{ inputs.base_ref }}
+          IN_HEAD: ${{ inputs.head_ref }}
+        run: |
+          set -euo pipefail
+          cd "${GITHUB_WORKSPACE}/${SRC_DIR}"
+          if [ "$EVENT_NAME" = "release" ] && [ -n "${RELEASE_TAG:-}" ]; then
+            HEAD_REF="$RELEASE_TAG"
+          elif [ -n "${IN_HEAD:-}" ]; then
+            HEAD_REF="$IN_HEAD"
+          else
+            HEAD_REF=$(gh release view --repo "$SRC_REPO" --json tagName --jq '.tagName')
+          fi
+
+          if [ -n "${IN_BASE:-}" ]; then
+            BASE_REF="$IN_BASE"
+          else
+            export HEAD_REF
+            BASE_REF=$(gh release list --repo "$SRC_REPO" --limit 100 \
+              --json tagName,publishedAt,isDraft,isPrerelease \
+              --jq '[.[] | select(.isDraft==false and .isPrerelease==false)]
+                    | sort_by(.publishedAt) | reverse
+                    | map(.tagName)
+                    | if (index(env.HEAD_REF)) == null then ""
+                      else (.[(index(env.HEAD_REF)) + 1] // "") end')
+          fi
+
+          if [ -z "${BASE_REF:-}" ]; then
+            echo "::error::Could not resolve a base ref for head '${HEAD_REF:-?}' (head not found among stable releases, or no previous release exists). Provide base_ref input to override."
+            exit 1
+          fi
+
+          git rev-parse -q --verify "refs/tags/${HEAD_REF}" >/dev/null 2>&1 \
+            || git rev-parse -q --verify "$HEAD_REF" >/dev/null 2>&1 \
+            || { echo "::error::head ref '$HEAD_REF' not found"; exit 1; }
+          git rev-parse -q --verify "refs/tags/${BASE_REF}" >/dev/null 2>&1 \
+            || git rev-parse -q --verify "$BASE_REF" >/dev/null 2>&1 \
+            || { echo "::error::base ref '$BASE_REF' not found"; exit 1; }
+
+          SHORT_SHA=$(git rev-parse --short "refs/tags/${HEAD_REF}^{commit}" 2>/dev/null \
+            || git rev-parse --short "${HEAD_REF}^{commit}" 2>/dev/null \
+            || git rev-parse --short "$HEAD_REF")
+          DATE=$(date -u +%Y%m%d)
+
+          {
+            echo "base_ref=${BASE_REF}"
+            echo "head_ref=${HEAD_REF}"
+            echo "branch=docs/release-${HEAD_REF}-${DATE}-${SHORT_SHA}"
+          } >> "$GITHUB_OUTPUT"
+          echo "Release range: ${BASE_REF}..${HEAD_REF}"
+      - name: Build code-change context
+        id: context
+        env:
+          BASE_REF: ${{ steps.range.outputs.base_ref }}
+          HEAD_REF: ${{ steps.range.outputs.head_ref }}
+          SERVER_URL: ${{ github.server_url }}
+        run: |
+          set -euo pipefail
+          cd "${GITHUB_WORKSPACE}/${SRC_DIR}"
+
+          CTX="${RUNNER_TEMP}/release-context"
+          mkdir -p "$CTX"
+
+          PATHSPEC=(
+            'src/' 'scripts/' 'vars.yaml' 'docs/'
+            'playbook_*.yml' ':!tests/' ':!**/tests/**'
+          )
+
+          git diff --stat "${BASE_REF}..${HEAD_REF}" -- "${PATHSPEC[@]}" \
+            > "${CTX}/diff-stat.txt" || true
+          git diff "${BASE_REF}..${HEAD_REF}" -- "${PATHSPEC[@]}" \
+            > "${CTX}/code-diff.patch" || true
+          git diff --name-status "${BASE_REF}..${HEAD_REF}" -- "${PATHSPEC[@]}" \
+            > "${CTX}/changed-files.txt" || true
+          git log --no-merges --pretty='- %s (%h)' "${BASE_REF}..${HEAD_REF}" \
+            > "${CTX}/commit-log.txt" || true
+
+          if [ -f docs/CHANGELOG.md ]; then
+            awk -v tag="$HEAD_REF" '
+              $0 ~ "^#+ .*" tag { capture=1; print; next }
+              capture && /^#+ / && $0 !~ tag { exit }
+              capture { print }
+            ' docs/CHANGELOG.md > "${CTX}/changelog-excerpt.md" || true
+          fi
+          [ -s "${CTX}/changelog-excerpt.md" ] || \
+            echo "_No CHANGELOG section found for ${HEAD_REF}._" > "${CTX}/changelog-excerpt.md"
+
+          {
+            echo "repo: ${SRC_REPO}"
+            echo "base_ref: ${BASE_REF}"
+            echo "head_ref: ${HEAD_REF}"
+            echo "release_url: ${SERVER_URL}/${SRC_REPO}/releases/tag/${HEAD_REF}"
+            echo "compare_url: ${SERVER_URL}/${SRC_REPO}/compare/${BASE_REF}...${HEAD_REF}"
+          } > "${CTX}/release-meta.txt"
+
+          CHANGED=$(grep -cve '^$' "${CTX}/changed-files.txt" || true)
+          echo "changed_count=${CHANGED}" >> "$GITHUB_OUTPUT"
+          echo "ctx_dir=${CTX}" >> "$GITHUB_OUTPUT"
+          echo "Captured ${CHANGED} changed user-facing file(s)."
+
+          git checkout -q --detach "$HEAD_REF" 2>/dev/null \
+            || git checkout -q --detach "refs/tags/${HEAD_REF}" 2>/dev/null || true
+
+      - name: Setup Node.js
+        uses: actions/setup-node@48b55a011bda9f5d6aeb4c2d9c7362e8dae4041e # v6.4.0
+        with:
+          node-version: "22"
+
+      - name: Install GitHub Copilot CLI + hve-core agents
+        env:
+          COPILOT_GITHUB_TOKEN: ${{ secrets.AZURE_DOCS_PAT }}
+        run: |
+          set -euo pipefail
+          npm install -g @github/copilot
+          copilot --version
+          copilot plugin marketplace add microsoft/hve-core
+          copilot plugin install hve-core-all@hve-core
+          echo "Installed plugins:"
+          copilot plugin list
+
+      - name: Sync docs fork with upstream and clone
+        env:
+          GH_TOKEN: ${{ secrets.AZURE_DOCS_PAT }}
+        run: |
+          set -euo pipefail
+
+          if SYNC=$(gh api --method POST "repos/${DOCS_FORK}/merge-upstream" \
+              -f branch=main 2>&1); then
+            echo "Fork main synced (merge_type: $(printf '%s' "$SYNC" \
+              | jq -r '.merge_type // "unknown"' 2>/dev/null || echo unknown))."
+          else
+            echo "::warning::Fork sync via merge-upstream failed; continuing with the fork's current main:"
+            printf '%s\n' "$SYNC"
+          fi
+
+          AUTH=$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)
+          git -c "http.https://github.com/.extraheader=AUTHORIZATION: basic ${AUTH}" \
+            clone --no-tags --depth 1 --filter=blob:none --sparse \
+            --branch main "https://github.com/${DOCS_FORK}.git" "$FORK_DIR"
+          cd "$FORK_DIR"
+          git config --local http.https://github.com/.extraheader "AUTHORIZATION: basic ${AUTH}"
+          git sparse-checkout set "$DOCS_PATH"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: Prepare release branch and context
+        id: prep
+        env:
+          BRANCH: ${{ steps.range.outputs.branch }}
+          CTX_DIR: ${{ steps.context.outputs.ctx_dir }}
+        run: |
+          set -euo pipefail
+          cd "$FORK_DIR"
+          git checkout -B "$BRANCH" main
+          mkdir -p "${FORK_DIR}/${CONTEXT_REL}"
+          cp -a "${CTX_DIR}/." "${FORK_DIR}/${CONTEXT_REL}/"
+          grep -qxF '.copilot-tracking/' .git/info/exclude 2>/dev/null \
+            || echo '.copilot-tracking/' >> .git/info/exclude
+
+          git config --local --unset-all http.https://github.com/.extraheader 2>/dev/null || true
+
+      - name: Run hve-core RPI pipeline (headless)
+        id: agent
+        env:
+          COPILOT_GITHUB_TOKEN: ${{ secrets.AZURE_DOCS_PAT }}
+          USER_INSTRUCTIONS: ${{ inputs.user_instructions }}
+        run: |
+          set -euo pipefail
+
+          RAW_LOG_DIR="${RUNNER_TEMP}/copilot-raw-logs"
+          STAGE_LOG_DIR="${RUNNER_TEMP}/pipeline-logs"
+          mkdir -p "$RAW_LOG_DIR" "$STAGE_LOG_DIR"
+
+          PROMPT_FILE="${GITHUB_WORKSPACE}/.github/prompts/release-docs-sync.md"
+          TRACK="${FORK_DIR}/.copilot-tracking"
+
+          EXTRA=""
+          if [ -n "${USER_INSTRUCTIONS:-}" ]; then
+            EXTRA=$'\n\nAdditional user instructions for this run (authoritative):\n'"${USER_INSTRUCTIONS}"
+          fi
+
+          run_stage() {
+            local name="$1" agent="$2" model="$3" prompt="$4"
+            local log="${STAGE_LOG_DIR}/stage-${name}.log"
+            local margs=()
+            [ -n "$model" ] && margs+=(--model "$model")
+            echo "::group::Stage ${name} (agent=${agent}, model=${model:-default})"
+            if ! copilot \
+                -C "$FORK_DIR" \
+                --add-dir "${GITHUB_WORKSPACE}/${SRC_DIR}" \
+                --add-dir "${GITHUB_WORKSPACE}/.github/prompts" \
+                --agent "$agent" \
+                --allow-all \
+                --no-ask-user \
+                --no-color \
+                --secret-env-vars=COPILOT_GITHUB_TOKEN \
+                --log-dir "$RAW_LOG_DIR" \
+                "${margs[@]}" \
+                -p "${prompt}${EXTRA}" > "$log" 2>&1; then
+              echo "::endgroup::"
+              echo "::error::Pipeline stage '${name}' failed:"
+              tail -n 60 "$log" || true
+              return 1
+            fi
+            tail -n 25 "$log" || true
+            echo "::endgroup::"
+          }
+
+          latest_rel() {
+            local f
+            f=$(find "${TRACK}/$1" -maxdepth 1 -type f -name '*.md' -printf '%T@ %p\n' 2>/dev/null \
+                | sort -nr | head -1 | cut -d' ' -f2- || true)
+            [ -n "$f" ] && printf '%s' "${f#"$FORK_DIR"/}" || printf '%s' ".copilot-tracking/$1/"
+          }
+
+          BASE="Follow the overarching instructions in ${PROMPT_FILE}. The working directory is the docs fork; create or edit documentation ONLY under ${DOCS_PATH}/ (and tracking files under .copilot-tracking/). The release context is under ${CONTEXT_REL}/ and the analyzed source code (checked out at the head release) is at ${GITHUB_WORKSPACE}/${SRC_DIR}."
+
+          # 1. Research
+          run_stage research hve-core-all:task-researcher "" \
+            "${BASE} Research which user-visible changes in this release require documentation updates under ${DOCS_PATH}. Produce a research document in .copilot-tracking/research/. Do not edit any docs yet."
+          RESEARCH_REL="$(latest_rel research)"
+
+          # 2. Plan
+          run_stage plan hve-core-all:task-planner "$PLAN_MODEL" \
+            "${BASE} Using the research at ${RESEARCH_REL}, create an implementation plan for the documentation updates strictly within ${DOCS_PATH}. Write plan and details files under .copilot-tracking/plans/ and .copilot-tracking/details/. Do not edit any docs yet."
+          PLAN_REL="$(latest_rel plans)"
+
+          # 3. Validate the plan — task-planner runs its Plan Validator subagent
+          #    (Plan Validator is user-invocable:false, so it is reached via task-planner).
+          run_stage validate-plan hve-core-all:task-planner "$PLAN_MODEL" \
+            "${BASE} Do NOT rewrite the plan. Using the Plan Validator, validate the implementation PLAN at ${PLAN_REL} against the research for completeness and accuracy, and record severity-graded discrepancies in the plan's Planning Log (Discrepancy Log section). Do not edit any docs."
+
+          # 4. Fix the plan
+          run_stage fix-plan hve-core-all:task-planner "$PLAN_MODEL" \
+            "${BASE} Revise the plan at ${PLAN_REL} IN PLACE to resolve the discrepancies recorded in its Planning Log (Discrepancy Log section). Update the existing plan and details files; do not create a new dated plan. Do not edit any docs yet."
+          PLAN_REL="$(latest_rel plans)"
+
+          # 5. Implement
+          run_stage implement hve-core-all:task-implementor "$IMPL_MODEL" \
+            "${BASE} Implement the plan at ${PLAN_REL}, creating/editing docs strictly within ${DOCS_PATH}. Track changes in .copilot-tracking/changes/. Also write a concise impact summary to ${CONTEXT_REL}/impact-summary.md beginning with a line '## Impact: DOCS_NEEDED' or '## Impact: NO_DOCS_NEEDED', followed by the user-visible changes and the docs files created/edited."
+
+          # 6. Review the implementation
+          run_stage review hve-core-all:task-reviewer "" \
+            "${BASE} Review the implemented documentation changes under ${DOCS_PATH} against the plan at ${PLAN_REL} and the research. Write findings to .copilot-tracking/reviews/. Do not modify any docs."
+          IMPL_REVIEW_REL="$(latest_rel reviews)"
+
+          # 7. Fix
+          run_stage fix hve-core-all:task-implementor "$IMPL_MODEL" \
+            "${BASE} Address the review findings at ${IMPL_REVIEW_REL}, updating docs within ${DOCS_PATH} and the impact summary at ${CONTEXT_REL}/impact-summary.md as needed. If there are no actionable findings, make no changes."
+
+          echo "agent_rc=0" >> "$GITHUB_OUTPUT"
+          echo "stage_log_dir=${STAGE_LOG_DIR}" >> "$GITHUB_OUTPUT"
+          echo "Pipeline completed all stages."
+
+      - name: Evaluate changes and guardrails
+        id: eval
+        run: |
+          set -euo pipefail
+          cd "$FORK_DIR"
+
+          STRAY=$(git status --porcelain -- ":!${DOCS_PATH}" ":!.copilot-tracking")
+          if [ -n "$STRAY" ]; then
+            echo "::error::Agent modified files outside ${DOCS_PATH}:"
+            echo "$STRAY"
+            exit 1
+          fi
+
+          git add -A -- "$DOCS_PATH"
+          if git diff --cached --quiet; then
+            echo "has_changes=false" >> "$GITHUB_OUTPUT"
+            echo "No documentation changes were produced."
+          else
+            echo "has_changes=true" >> "$GITHUB_OUTPUT"
+            git diff --cached --name-status -- "$DOCS_PATH"
+            git diff --cached -- "$DOCS_PATH" > "${RUNNER_TEMP}/docs-changes.patch"
+          fi
+
+      - name: Commit and push branch to fork
+        id: push
+        if: steps.eval.outputs.has_changes == 'true'
+        env:
+          GH_TOKEN: ${{ secrets.AZURE_DOCS_PAT }}
+          BRANCH: ${{ steps.range.outputs.branch }}
+          HEAD_REF: ${{ steps.range.outputs.head_ref }}
+          SERVER_URL: ${{ github.server_url }}
+        run: |
+          set -euo pipefail
+          cd "$FORK_DIR"
+
+          # Re-add the push credential (removed before the agent run) and push the
+          # branch to the fork. This is fork-scoped, so it runs in dry-run too,
+          # letting you review the generated docs as a branch/diff without a PR.
+          AUTH=$(printf 'x-access-token:%s' "$GH_TOKEN" | base64 -w0)
+          git config --local http.https://github.com/.extraheader "AUTHORIZATION: basic ${AUTH}"
+
+          git commit -m "docs: SAP automation updates for ${SRC_REPO} ${HEAD_REF}"
+          git push --force-with-lease origin "$BRANCH"
+
+          BRANCH_URL="${SERVER_URL}/${DOCS_FORK}/tree/${BRANCH}"
+          echo "branch_url=${BRANCH_URL}" >> "$GITHUB_OUTPUT"
+          echo "Pushed branch to fork: ${BRANCH_URL}"
+
+      - name: Create or update draft PR
+        id: pr
+        if: steps.eval.outputs.has_changes == 'true' && inputs.dry_run != true
+        env:
+          GH_TOKEN: ${{ secrets.AZURE_DOCS_PAT }}
+          BRANCH: ${{ steps.range.outputs.branch }}
+          HEAD_REF: ${{ steps.range.outputs.head_ref }}
+          BASE_REF: ${{ steps.range.outputs.base_ref }}
+          SERVER_URL: ${{ github.server_url }}
+        run: |
+          set -euo pipefail
+
+          # The branch was already pushed to the fork in the previous step; here we
+          # only open (or update) the cross-fork draft PR into the MS upstream.
+          FORK_OWNER="${DOCS_FORK%%/*}"
+          HEAD_SPEC="${FORK_OWNER}:${BRANCH}"
+
+          BODY_FILE="${RUNNER_TEMP}/pr-body.md"
+          {
+            echo "Automated documentation sync for **${SRC_REPO}** release **${HEAD_REF}**."
+            echo ""
+            echo "- Release: ${SERVER_URL}/${SRC_REPO}/releases/tag/${HEAD_REF}"
+            echo "- Code changes: ${SERVER_URL}/${SRC_REPO}/compare/${BASE_REF}...${HEAD_REF}"
+            echo ""
+            echo "Generated by the microsoft/hve-core RPI agents via the"
+            echo "\`release-docs-sync\` workflow. Review carefully before publishing."
+            echo ""
+            if [ -f "${FORK_DIR}/${CONTEXT_REL}/impact-summary.md" ]; then
+              echo "<details><summary>Impact summary</summary>"
+              echo ""
+              cat "${FORK_DIR}/${CONTEXT_REL}/impact-summary.md"
+              echo ""
+              echo "</details>"
+            fi
+          } > "$BODY_FILE"
+
+          TITLE="docs: SAP automation updates for ${HEAD_REF}"
+          COMPARE_URL="${SERVER_URL}/${DOCS_UPSTREAM}/compare/main...${FORK_OWNER}:${DOCS_FORK##*/}:${BRANCH}?expand=1"
+          EXISTING=$(gh pr list --repo "$DOCS_UPSTREAM" --head "$BRANCH" \
+            --state open --json number --jq '.[0].number // empty' 2>/dev/null || true)
+          if [ -n "$EXISTING" ]; then
+            if gh pr edit "$EXISTING" --repo "$DOCS_UPSTREAM" --title "$TITLE" --body-file "$BODY_FILE" \
+               && PR_URL=$(gh pr view "$EXISTING" --repo "$DOCS_UPSTREAM" --json url --jq '.url' 2>/dev/null); then
+              :
+            else
+              PR_URL="$COMPARE_URL"
+            fi
+          elif PR_URL=$(gh pr create --repo "$DOCS_UPSTREAM" --draft \
+              --base main --head "$HEAD_SPEC" \
+              --title "$TITLE" --body-file "$BODY_FILE" 2>/dev/null); then
+            :
+          else
+            echo "::warning::Could not create the PR on ${DOCS_UPSTREAM} with the fork-scoped token. Open it manually via the compare URL below."
+            PR_URL="$COMPARE_URL"
+          fi
+          echo "pr_url=${PR_URL}" >> "$GITHUB_OUTPUT"
+          echo "PR / compare URL: ${PR_URL}"
+
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@bbbca2ddaa5d8feaa63e36b76fdaad77386f024f # v7.0.0
+        with:
+          name: release-docs-sync-${{ steps.range.outputs.head_ref || github.run_id }}
+          retention-days: 14
+          if-no-files-found: ignore
+          path: |
+            ${{ steps.context.outputs.ctx_dir }}
+            ${{ env.FORK_DIR }}/.copilot-tracking
+            ${{ runner.temp }}/docs-changes.patch
+            ${{ steps.agent.outputs.stage_log_dir }}
+
+      - name: Job summary
+        if: always()
+        env:
+          BASE_REF: ${{ steps.range.outputs.base_ref }}
+          HEAD_REF: ${{ steps.range.outputs.head_ref }}
+          CHANGED_COUNT: ${{ steps.context.outputs.changed_count }}
+          HAS_CHANGES: ${{ steps.eval.outputs.has_changes }}
+          AGENT_RC: ${{ steps.agent.outputs.agent_rc }}
+          BRANCH_URL: ${{ steps.push.outputs.branch_url }}
+          PR_URL: ${{ steps.pr.outputs.pr_url }}
+          DRY_RUN: ${{ inputs.dry_run }}
+        run: |
+          set -euo pipefail
+          {
+            echo "## Release Documentation Sync"
+            echo ""
+            echo "| Field | Value |"
+            echo "|-------|-------|"
+            echo "| Release range | \`${BASE_REF:-?}..${HEAD_REF:-?}\` |"
+            echo "| Changed source files | ${CHANGED_COUNT:-0} |"
+            echo "| Plan model | ${PLAN_MODEL} |"
+            echo "| Implement model | ${IMPL_MODEL} |"
+            echo "| Pipeline completed | ${AGENT_RC:-n/a (failed mid-pipeline)} |"
+            echo "| Docs changes produced | ${HAS_CHANGES:-false} |"
+            echo "| Dry run | ${DRY_RUN:-false} |"
+            echo "| Pushed branch | ${BRANCH_URL:-none} |"
+            echo "| Draft PR / compare URL | ${PR_URL:-none} |"
+            echo ""
+            SUMMARY="${FORK_DIR}/${CONTEXT_REL}/impact-summary.md"
+            if [ -f "$SUMMARY" ]; then
+              echo "### Impact Summary"
+              echo ""
+              cat "$SUMMARY"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+      - name: Cleanup credentials
+        if: always()
+        run: |
+          set -euo pipefail
+          if [ -d "$FORK_DIR/.git" ]; then
+            git -C "$FORK_DIR" config --local --unset-all http.https://github.com/.extraheader 2>/dev/null || true
+          fi
+          rm -rf "$FORK_DIR" 2>/dev/null || true

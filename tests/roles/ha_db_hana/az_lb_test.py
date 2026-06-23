@@ -32,6 +32,33 @@ class TestAzLBConfigValidation(RolesTestingBaseDB):
         :ytype: str
         """
 
+        task_counter_file = "/tmp/get_cluster_status_counter_azure-lb"
+        if os.path.exists(task_counter_file):
+            os.remove(task_counter_file)
+
+        commands = [
+            {
+                "name": "get_hana_clone_resource_id",
+                "SUSE": "cibadmin --query --scope resources",
+                "REDHAT": "cibadmin --query --scope resources",
+            },
+            {
+                "name": "get_hana_primitive_resource_id",
+                "SUSE": "cibadmin --query --scope resources",
+                "REDHAT": "cibadmin --query --scope resources",
+            },
+            {
+                "name": "get_hana_clone_resource_id_saphanasr_angi",
+                "SUSE": "cibadmin --query --scope resources",
+                "REDHAT": "cibadmin --query --scope resources",
+            },
+            {
+                "name": "get_hana_primitive_resource_id_saphanasr_angi",
+                "SUSE": "cibadmin --query --scope resources",
+                "REDHAT": "cibadmin --query --scope resources",
+            },
+        ]
+
         temp_dir = self.setup_test_environment(
             role_type="ha_db_hana",
             ansible_inventory=ansible_inventory,
@@ -42,9 +69,13 @@ class TestAzLBConfigValidation(RolesTestingBaseDB):
                 "project/library/log_parser",
                 "project/library/send_telemetry_data",
                 "project/library/get_package_list",
+                "project/library/get_cluster_status_db",
+                "project/library/location_constraints",
+                "bin/cibadmin",
                 "bin/crm_resource",
+                "bin/SAPHanaSR-manageProvider",
             ],
-            extra_vars_override={"node_tier": "hana"},
+            extra_vars_override={"commands": commands, "node_tier": "hana"},
         )
 
         os.makedirs(f"{temp_dir}/project/roles/ha_db_hana/tasks/files", exist_ok=True)
@@ -81,7 +112,9 @@ class TestAzLBConfigValidation(RolesTestingBaseDB):
         :type ansible_inventory: str
         """
         result = self.run_ansible_playbook(
-            test_environment=test_environment, inventory_file_name="inventory_db.txt"
+            test_environment=test_environment,
+            inventory_file_name="inventory_db.txt",
+            task_type="azure-lb",
         )
 
         assert result.rc == 0, (

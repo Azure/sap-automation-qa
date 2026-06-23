@@ -954,8 +954,8 @@
           if (keys.length === 0) return '{}'
           return keys.map(function (key) {
             var val = obj[key]
-            var k = /[:{}\[\]&*!|>'"%@`#]/.test(key)
-              ? '"' + key.replace(/"/g, '\\"') + '"' : key
+            var k = /[:{}\[\]&*!|>'"%@`#\\]/.test(key)
+              ? '"' + key.replace(/\\/g, '\\\\').replace(/"/g, '\\"') + '"' : key
             var v = toYaml(val, indent + 1)
             if ((typeof val === 'object' && val !== null) &&
                 ((Array.isArray(val) && val.length > 0) ||

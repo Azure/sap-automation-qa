@@ -65,6 +65,7 @@
       ansible.builtin.set_fact:
         test_execution_start:           "{{ now(utc=true, fmt='%Y-%m-%d %H:%M:%S') }}"
         test_execution_end:             "{{ now(utc=true, fmt='%Y-%m-%d %H:%M:%S') }}"
+        test_execution_status:          "SKIPPED"
         test_case_message_from_test_case: >-
           Test skipped: No indexserver process running on any primary worker node.
           Worker nodes checked: {{ primary_worker_nodes | default([]) | join(', ') }}.

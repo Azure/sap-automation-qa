@@ -3,12 +3,30 @@ name: workspace-creator
 description: >
   Create new SAP workspace configurations for STAF testing.
   Use when asked to set up a new workspace, onboard a system, or create workspace configs.
+allowed-tools: shell
+license: MIT
 ---
 
 # Workspace Creator
 
 Creates new SAP workspace configurations for STAF testing. Generates `sap-parameters.yaml`
 and `hosts.yaml` from templates based on user-provided system details.
+
+## Locate Framework
+
+Before creating workspaces, locate the STAF framework directory:
+
+```bash
+if [ -f "./scripts/sap_automation_qa.sh" ]; then
+  STAF_DIR="$(pwd)"
+elif [ -f "../sap-automation-qa/scripts/sap_automation_qa.sh" ]; then
+  STAF_DIR="$(cd ../sap-automation-qa && pwd)"
+else
+  git clone https://github.com/Azure/sap-automation-qa.git ../sap-automation-qa
+  STAF_DIR="$(cd ../sap-automation-qa && pwd)"
+fi
+cd "$STAF_DIR"
+```
 
 > **⚠️ This skill is guidance only. Do NOT modify any source code, scripts, or framework files. Only help the user by creating workspace configuration files (sap-parameters.yaml, hosts.yaml) under WORKSPACES/SYSTEM/.**
 

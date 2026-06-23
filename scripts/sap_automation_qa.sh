@@ -80,21 +80,40 @@ parse_arguments() {
 
     CLI_ANSIBLE_OVERRIDES=()
 
+    local expect_extra_vars=false
     for arg in "$@"; do
+        if [[ "$expect_extra_vars" == "true" ]]; then
+            expect_extra_vars=false
+            if [[ "$arg" != -* ]]; then
+                EXTRA_VARS="$arg"
+                continue
+            fi
+            log "ERROR" "Option '--extra-vars' requires a value."
+            show_sap_automation_qa_usage "$0"
+            exit 1
+        fi
         case "$arg" in
             -v|-vv|-vvv|-vvvv|-vvvvv|-vvvvvv)
                 ANSIBLE_VERBOSE="$arg"
                 ;;
-            --test-groups=*|--test-groups=*)
+            --test-groups=*)
                 TEST_GROUPS="${arg#*=}"
                 ;;
-            --test-cases=*|--test-cases=*)
+            --test-cases=*)
                 TEST_CASES="${arg#*=}"
                 TEST_CASES="${TEST_CASES#[}"
                 TEST_CASES="${TEST_CASES%]}"
                 ;;
             --extra-vars=*)
                 EXTRA_VARS="${arg#*=}"
+                if [[ -z "$EXTRA_VARS" ]]; then
+                    log "ERROR" "Option '--extra-vars' requires a value."
+                    show_sap_automation_qa_usage "$0"
+                    exit 1
+                fi
+                ;;
+            --extra-vars)
+                expect_extra_vars=true
                 ;;
             --offline)
                 OFFLINE_MODE="true"
@@ -151,8 +170,19 @@ parse_arguments() {
                 show_sap_automation_qa_usage "$0"
                 exit 0
                 ;;
+            *)
+                log "ERROR" "Unknown argument: '$arg'"
+                show_sap_automation_qa_usage "$0"
+                exit 1
+                ;;
         esac
     done
+
+    if [[ "$expect_extra_vars" == "true" ]]; then
+        log "ERROR" "Option '--extra-vars' requires a value."
+        show_sap_automation_qa_usage "$0"
+        exit 1
+    fi
 }
 
 log "INFO" "ANSIBLE_COLLECTIONS_PATH: $ANSIBLE_COLLECTIONS_PATH"
