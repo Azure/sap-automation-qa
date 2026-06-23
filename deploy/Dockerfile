@@ -8,6 +8,7 @@ RUN tdnf update -y && tdnf install -y \
     gcc \
     libffi-devel \
     ca-certificates \
+    && update-ca-trust extract \
     && tdnf clean all
 COPY requirements.in .
 COPY collections/requirements.yml collections/requirements.yml
