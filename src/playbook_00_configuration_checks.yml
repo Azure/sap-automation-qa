@@ -114,8 +114,8 @@
     - name:                             "Orchestration: Set Role From Inventory Group"
       ansible.builtin.set_fact:
         role:                           "{{ (group_names
-                                        | select('match', sap_sid + '_.*')
-                                        | map('regex_replace', sap_sid + '_(.*)', '\\1')
+                                        | select('match', (sap_sid | upper) + '_.*')
+                                        | map('regex_replace', (sap_sid | upper) + '_(.*)', '\\1')
                                         | list)[0] | default('UNKNOWN') }}"
 
     - name:                             "Report: Debug Host Role Assignment"

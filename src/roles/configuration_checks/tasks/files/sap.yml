@@ -37,11 +37,11 @@ enums:
 
   db:
     - hana:                           &hana "HANA"
-    - mssql:                          &mssql "MSSQL"
+    - sqlserver:                      &sqlserver "SQLSERVER"
     - oracle:                         &oracle "Oracle"
     - db2:                            &db2 "Db2"
     - ase:                            &ase "ASE"
-    - all_db:                         &db [*hana, *mssql, *oracle, *db2, *ase]
+    - all_db:                         &db [*hana, *sqlserver, *oracle, *db2, *ase]
 
   role:
     - db:                             &db_role "DB"
@@ -551,7 +551,7 @@ checks:
       hardware_type:                    *vm
       storage_type:                     *all_storage
       role:                             [*ascs_role]
-      database_type:                    [*hana, *mssql, *oracle]
+      database_type:                    [*hana, *sqlserver, *oracle]
     collector_type:                     *command
     collector_args:
       command: |
@@ -575,7 +575,7 @@ checks:
       hardware_type:                    *vm
       storage_type:                     *all_storage
       role:                             [*ascs_role]
-      database_type:                    [*mssql, *oracle]
+      database_type:                    [*sqlserver, *oracle]
     collector_type:                     *command
     collector_args:
       command: |
@@ -599,7 +599,7 @@ checks:
       hardware_type:                    *vm
       storage_type:                     *all_storage
       role:                             [*ascs_role]
-      database_type:                    [*hana, *mssql, *oracle]
+      database_type:                    [*hana, *sqlserver, *oracle]
     collector_type:                     *command
     collector_args:
       command: |
@@ -623,7 +623,7 @@ checks:
       hardware_type:                    *vm
       storage_type:                     *all_storage
       role:                             [*ascs_role]
-      database_type:                    [*mssql, *oracle]
+      database_type:                    [*sqlserver, *oracle]
       high_availability:                *high_availability
     collector_type:                     *command
     collector_args:
@@ -649,7 +649,7 @@ checks:
       hardware_type:                    *vm
       storage_type:                     *all_storage
       role:                             [*ascs_role]
-      database_type:                    [*mssql, *oracle]
+      database_type:                    [*sqlserver, *oracle]
       high_availability:                *high_availability
     collector_type:                     *command
     collector_args:
@@ -675,7 +675,7 @@ checks:
       hardware_type:                    *vm
       storage_type:                     *all_storage
       role:                             [*ascs_role]
-      database_type:                    [*mssql, *oracle]
+      database_type:                    [*sqlserver, *oracle]
       high_availability:                *high_availability
     collector_type:                     *command
     collector_args:
@@ -701,7 +701,7 @@ checks:
       hardware_type:                    *vm
       storage_type:                     *all_storage
       role:                             [*ascs_role]
-      database_type:                    [*mssql, *oracle]
+      database_type:                    [*sqlserver, *oracle]
       high_availability:                *high_availability
     collector_type:                     *command
     collector_args:
@@ -727,7 +727,7 @@ checks:
       hardware_type:                    *vm
       storage_type:                     *all_storage
       role:                             [*ascs_role]
-      database_type:                    [*mssql, *oracle]
+      database_type:                    [*sqlserver, *oracle]
       high_availability:                *high_availability
     collector_type:                     *command
     collector_args:
@@ -753,7 +753,7 @@ checks:
       hardware_type:                    *vm
       storage_type:                     *all_storage
       role:                             [*db_role]
-      database_type:                    [*mssql, *oracle]
+      database_type:                    [*sqlserver, *oracle]
       high_availability:                *high_availability
     collector_type:                     *command
     collector_args:
@@ -779,7 +779,7 @@ checks:
       hardware_type:                    *vm
       storage_type:                     *all_storage
       role:                             [*db_role]
-      database_type:                    [*mssql, *oracle]
+      database_type:                    [*sqlserver, *oracle]
       high_availability:                *high_availability
     collector_type:                     *command
     collector_args:
@@ -805,7 +805,7 @@ checks:
       hardware_type:                    *vm
       storage_type:                     *all_storage
       role:                             [*db_role]
-      database_type:                    [*mssql, *oracle]
+      database_type:                    [*sqlserver, *oracle]
       high_availability:                *high_availability
     collector_type:                     *command
     collector_args:
@@ -831,7 +831,7 @@ checks:
       hardware_type:                    *vm
       storage_type:                     *all_storage
       role:                             [*db_role]
-      database_type:                    [*hana, *mssql, *oracle]
+      database_type:                    [*hana, *sqlserver, *oracle]
       high_availability:                *high_availability
     collector_type:                     *command
     collector_args:
@@ -857,7 +857,7 @@ checks:
       hardware_type:                    *vm
       storage_type:                     *all_storage
       role:                             [*db_role]
-      database_type:                    [*mssql, *oracle]
+      database_type:                    [*sqlserver, *oracle]
       high_availability:                *high_availability
     collector_type:                     *command
     collector_args:

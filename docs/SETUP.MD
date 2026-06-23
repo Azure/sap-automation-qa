@@ -380,7 +380,9 @@ db_instance_number: "00"
 
 # The type of database. Supported values are:
 # - HANA
-platform: "HANA"
+# - SQLSERVER
+# - DB2
+platform: "SQLSERVER"
 
 # The NFS provider used for shared storage. Supported values are:
 # - ANF (for Azure NetApp Files)

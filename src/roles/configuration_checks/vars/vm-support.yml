@@ -17,7 +17,7 @@ SupportedOSDBCombinations:
     ERS:                         [*windows, *redhat, *suse]
     APP:                         [*windows, *redhat, *suse]
     PAS:                         [*windows, *redhat, *suse]
-  MSSQL:
+  SQLSERVER:
     DB:                          [*windows]
     SCS:                         [*windows, *redhat, *suse]
     ERS:                         [*windows, *redhat, *suse]
@@ -45,9 +45,9 @@ SupportedOSDBCombinations:
 
 # Database configurations
 db_types:
-  non_hana_dbs:                &db_type_non_hana ["MSSQL", "Oracle", "Db2", "ASE"]
-  non_hana_dbs_ase:            &db_type_non_hana_ase ["MSSQL", "Oracle", "Db2"]
-  all_dbs:                     &db_type_all ["MSSQL", "Oracle", "Db2", "HANA", "ASE"]
+  non_hana_dbs:                &db_type_non_hana ["SQLSERVER", "Oracle", "Db2", "ASE"]
+  non_hana_dbs_ase:            &db_type_non_hana_ase ["SQLSERVER", "Oracle", "Db2"]
+  all_dbs:                     &db_type_all ["SQLSERVER", "Oracle", "Db2", "HANA", "ASE"]
 
 # Storage configurations
 storage_types:
@@ -120,9 +120,9 @@ vm_patterns:
     DB:
       SupportedDB:             *db_type_non_hana
     APP:
-      SupportedDB:             ["MSSQL", "Oracle", "Db2", "HANA"]
+      SupportedDB:             ["SQLSERVER", "Oracle", "Db2", "HANA"]
     PAS:
-      SupportedDB:             ["MSSQL", "Oracle", "Db2", "HANA"]
+      SupportedDB:             ["SQLSERVER", "Oracle", "Db2", "HANA"]
     SCS:
       SupportedDB:             *db_type_all
     ERS:

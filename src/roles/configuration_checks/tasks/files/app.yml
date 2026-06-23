@@ -28,11 +28,11 @@ enums:
 
   db:
     - hana:                           &hana "HANA"
-    - mssql:                          &mssql "MSSQL"
+    - sqlserver:                      &sqlserver "SQLSERVER"
     - oracle:                         &oracle "Oracle"
     - db2:                            &db2 "Db2"
     - ase:                            &ase "ASE"
-    - all_db:                         &all_db [*hana, *mssql, *oracle, *db2, *ase]
+    - all_db:                         &all_db [*hana, *sqlserver, *oracle, *db2, *ase]
 
   role:
     - db:                             &db_role "DB"
@@ -102,7 +102,7 @@ checks:
       hardware_type:                    *vm
       storage_type:                     *all_storage
       role:                             [*pas, *app_role]
-      database_type:                    [*hana, *mssql, *oracle, *db2]
+      database_type:                    [*hana, *sqlserver, *oracle, *db2]
       high_availability:                *scale_up
       high_availability_agent:          [*sbd, *fencing_agent]
     collector_type:                     *command
@@ -128,7 +128,7 @@ checks:
       hardware_type:                    *vm
       storage_type:                     *all_storage
       role:                             [*pas, *app_role]
-      database_type:                    [*hana, *mssql, *oracle, *db2]
+      database_type:                    [*hana, *sqlserver, *oracle, *db2]
       high_availability:                *scale_up
       high_availability_agent:          [*sbd, *fencing_agent]
     collector_type:                     *command
@@ -155,7 +155,7 @@ checks:
       hardware_type:                    *vm
       storage_type:                     *all_storage
       role:                             [*pas, *app_role]
-      database_type:                    [*hana, *mssql, *oracle, *db2]
+      database_type:                    [*hana, *sqlserver, *oracle, *db2]
     collector_type:                     *command
     collector_args:
       command:                          "/sbin/sysctl net.ipv4.tcp_keepalive_intvl"
@@ -179,7 +179,7 @@ checks:
       hardware_type:                    *vm
       storage_type:                     *all_storage
       role:                             [*pas, *app_role]
-      database_type:                    [*hana, *mssql, *oracle, *db2]
+      database_type:                    [*hana, *sqlserver, *oracle, *db2]
     collector_type:                     *command
     collector_args:
       command:                          "/sbin/sysctl net.ipv4.tcp_keepalive_probes"
@@ -203,7 +203,7 @@ checks:
       hardware_type:                    *vm
       storage_type:                     *all_storage
       role:                             [*pas, *app_role]
-      database_type:                    [*hana, *mssql, *oracle, *db2]
+      database_type:                    [*hana, *sqlserver, *oracle, *db2]
       high_availability:                *scale_up
       high_availability_agent:          [*sbd, *fencing_agent]
     collector_type:                     *command
@@ -229,7 +229,7 @@ checks:
       hardware_type:                    *vm
       storage_type:                     *all_storage
       role:                             [*app_role, *pas]
-      database_type:                    [*hana, *mssql, *oracle, *db2]
+      database_type:                    [*hana, *sqlserver, *oracle, *db2]
       high_availability:                *scale_up
       high_availability_agent:          [*sbd, *fencing_agent]
     collector_type:                     *command
@@ -255,7 +255,7 @@ checks:
       hardware_type:                    *vm
       storage_type:                     *all_storage
       role:                             [*pas, *app_role]
-      database_type:                    [*hana, *mssql, *oracle, *db2]
+      database_type:                    [*hana, *sqlserver, *oracle, *db2]
       high_availability:                *scale_up
       high_availability_agent:          [*sbd, *fencing_agent]
     collector_type:                     *command
