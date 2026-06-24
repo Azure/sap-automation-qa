@@ -50,7 +50,7 @@
           args:
             executable:                 /bin/bash
           register:                     block_network_result
-          changed_when:                 true
+          changed_when:                 block_network_result.rc == 0
 
         - name:                         "Test Execution: {{ item.name | default('') }} - Wait for cluster to detect network disruption"
           ansible.builtin.wait_for:
@@ -62,7 +62,7 @@
         - name:                         "Test Execution: {{ item.name | default('') }} - Check node connectivity from controller"
           delegate_to:                  localhost
           ansible.builtin.shell: |
-                                        for i in $(seq 1 30); do
+                                        for i in $(seq 1 60); do
                                           if ! nc -zv -w1 {{ ansible_host }} {{ sap_port_to_ping }}; then
                                             echo "Connection failed on attempt $i"
                                             exit 1
@@ -74,8 +74,8 @@
 
         - name:                         "Test Execution: {{ item.name | default('') }} - Set Node Status Facts"
           ansible.builtin.set_fact:
-            ascs_node_down:             "{{ hostvars[cluster_status_pre.ascs_node].node_status is failed }}"
-            ers_node_down:              "{{ hostvars[cluster_status_pre.ers_node].node_status is failed }}"
+            ascs_node_down:             "{{ hostvars[cluster_status_pre.ascs_node].node_status is defined and hostvars[cluster_status_pre.ascs_node].node_status is failed }}"
+            ers_node_down:              "{{ hostvars[cluster_status_pre.ers_node].node_status is defined and hostvars[cluster_status_pre.ers_node].node_status is failed }}"
 
         - name:                         "Test Execution: {{ item.name | default('') }} - Fail if both nodes are unavailable"
           ansible.builtin.fail:
@@ -108,7 +108,7 @@
     - name:                             "Test Execution: {{ item.name | default('') }} - Restore Network on ASCS Node"
       when:
                                         - ansible_hostname == cluster_status_pre.ascs_node
-                                        - not ascs_node_down and ers_node_down
+                                        - not ascs_node_down
       become:                           true
       tags:                             [test-execution]
       block:
@@ -171,14 +171,30 @@
 # /*---------------------------------------------------------------------------
 # |                          Post Validations                                 |
 # +--------------------------------------------------------------------------*/
-    - name:                             "Post Validation: {{ item.name | default('') }} - Validate Results"
-      ansible.builtin.include_tasks:    "roles/misc/tasks/post-validations.yml"
-      tags:                             [post-validation]
-
   rescue:
+    - name:                             "Rescue: {{ item.name | default('') }} - Restore network on ASCS node"
+      become:                           true
+      ansible.builtin.shell: |
+                                        iptables -D INPUT -s {{ ers_ip }} -j DROP 2>/dev/null || true
+                                        iptables -D OUTPUT -d {{ ers_ip }} -j DROP 2>/dev/null || true
+      args:
+        executable:                     /bin/bash
+      register:                         rescue_unblock_network_result
+      changed_when:                     rescue_unblock_network_result.rc == 0
+      failed_when:                      false
+      ignore_unreachable:               true
+      when:
+                                        - ansible_hostname == cluster_status_pre.ascs_node | default('')
+                                        - ers_ip is defined
+
     - name:                             "Rescue: {{ item.name | default('') }} - Handle Failure"
       ansible.builtin.include_tasks:    "roles/misc/tasks/rescue.yml"
       tags:                             [cleanup]
+
+  always:
+    - name:                             "Post Validation: {{ item.name | default('') }} - Validate Results"
+      ansible.builtin.include_tasks:    "roles/misc/tasks/post-validations.yml"
+      tags:                             [post-validation]
 
 - name:                                 "Pre Validation: {{ item.name | default('') }} - Test Case Skipped"
   become:                               true

@@ -15,11 +15,11 @@ enums:
     - all_os:                         &os_type [*suse, *redhat, *oraclelinux, *windows]
 
   os_version:
-    - suse_12_3:                      &suse_12_3 "SUSE 12 SP3"
-    - suse_12_4:                      &suse_12_4 "SUSE 12 SP4"
-    - suse_12_5:                      &suse_12_5 "SUSE 12 SP5"
-    - suse_15_0:                      &suse_15_0 "SUSE 15 SP0"
-    - suse_15_1:                      &suse_15_1 "SUSE 15 SP1"
+    - suse_12_3:                      &suse_12_3 "12.3"
+    - suse_12_4:                      &suse_12_4 "12.4"
+    - suse_12_5:                      &suse_12_5 "12.5"
+    - suse_15_0:                      &suse_15_0 "15"
+    - suse_15_1:                      &suse_15_1 "15.1"
     - all_versions:                   &all_versions "all"
 
   hardware_type:
@@ -38,11 +38,11 @@ enums:
 
   db:
     - hana:                           &hana "HANA"
-    - mssql:                          &mssql "MSSQL"
+    - sqlserver:                      &sqlserver "SQLSERVER"
     - oracle:                         &oracle "Oracle"
     - db2:                            &db2 "Db2"
     - ase:                            &ase "ASE"
-    - all_db:                         &db [*hana, *mssql, *oracle, *db2, *ase]
+    - all_db:                         &db [*hana, *sqlserver, *oracle, *db2, *ase]
 
   role:
     - db:                             &db_role "DB"
@@ -648,7 +648,7 @@ checks:
       database_type:                    [*db2]
     collector_type:                     *azure
     collector_args:
-      resource_type:                    "disk"
+      resource_type:                    "azure_disks"
     report:                             *table
     references:
       microsoft:                        "https://learn.microsoft.com/azure/virtual-machines/workloads/sap/dbms-guide-ibm"
@@ -715,3 +715,74 @@ checks:
     references:
       sap:                              "2972496"
       microsoft:                        "https://docs.microsoft.com/en-us/azure/virtual-machines/workloads/sap/hana-vm-operations-storage"
+
+  - id:                                 "DB-Db2-0025"
+    name:                               "Stripe size for /db2/data"
+    description:                        "The stripe size for /db2/data should be 256k for optimal Db2 performance"
+    category:                           *sap_check
+    severity:                           *high
+    workload:                           *sap
+    applicability:
+      os_type:                          [*suse, *redhat]
+      os_version:                       *all_versions
+      hardware_type:                    *vm
+      storage_type:                     *premium_storage
+      role:                             [*db_role]
+      database_type:                    [*db2]
+    collector_type:                     *azure
+    collector_args:
+      resource_type:                    "disks"
+      property:                         "stripe_size"
+      mount_point:                      "/db2/data"
+    validator_type:                     *string
+    validator_args:
+      expected:                         "256.00k"
+    report:                             *check
+    references:
+      sap:                              "2972496"
+      microsoft:                        "https://learn.microsoft.com/en-us/azure/virtual-machines/workloads/sap/dbms-guide-ibm"
+
+  - id:                                 "DB-Db2-0026"
+    name:                               "Stripe size for /db2/log"
+    description:                        "The stripe size for /db2/log should be 64k for optimal Db2 performance"
+    category:                           *sap_check
+    severity:                           *high
+    workload:                           *sap
+    applicability:
+      os_type:                          [*suse, *redhat]
+      os_version:                       *all_versions
+      hardware_type:                    *vm
+      storage_type:                     *premium_storage
+      role:                             [*db_role]
+      database_type:                    [*db2]
+    collector_type:                     *azure
+    collector_args:
+      resource_type:                    "disks"
+      property:                         "stripe_size"
+      mount_point:                      "/db2/log"
+    validator_type:                     *string
+    validator_args:
+      expected:                         "64.00k"
+    report:                             *check
+    references:
+      sap:                              "2972496"
+      microsoft:                        "https://learn.microsoft.com/en-us/azure/virtual-machines/workloads/sap/dbms-guide-ibm"
+
+  - id:                                 "DB-Db2-0027"
+    name:                               "DB2 user dump"
+    description:                        "Collects Db2 user-level diagnostic information"
+    category:                           *sap_check
+    severity:                           *info
+    workload:                           *sap
+    applicability:
+      os_type:                          [*suse, *redhat]
+      os_version:                       *all_versions
+      hardware_type:                    *vm
+      storage_type:                     *all_storage
+      role:                             [*db_role]
+      database_type:                    [*db2]
+    collector_type:                     *command
+    collector_args:
+      command:                          ". ~/sqllib/db2profile && db2pd -alldbs -dump 2>/dev/null || echo 'DB2 user dump not available'"
+      user:                             *db2sid
+    report:                             *section

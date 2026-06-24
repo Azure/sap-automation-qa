@@ -104,6 +104,15 @@ class CommandCollector(Collector):
         :return: The output of the command
         :rtype: str
         """
+        precollected = context.get("precollected_command_outputs")
+        check_id = getattr(check, "id", None)
+        if isinstance(precollected, dict) and check_id in precollected:
+            self.parent.log(
+                logging.INFO,
+                f"Using pre-collected command output for check {check_id}",
+            )
+            return str(precollected[check_id]).strip()
+
         try:
             command = check.collector_args.get("command", "")
             user = check.collector_args.get("user", "")
@@ -131,6 +140,8 @@ class CommandCollector(Collector):
             if user and user != "root":
                 if user == "db2sid":
                     user = f"db2{context.get('database_sid', '').lower()}"
+                elif user == "orasid":
+                    user = f"ora{context.get('database_sid', '').lower()}"
                 command = f"su - {user} -c {shlex.quote(command)}"
                 self.parent.log(logging.INFO, f"Executing command as user {user} {command}")
 
@@ -303,6 +314,81 @@ class AzureDataParser(Collector):
         """
         return context.get("formatted_filesystem_info", "N/A")
 
+    def _resolve_mount_disks(self, check, context):
+        """
+        Resolve a mount point to its backing Azure disk metadata entries.
+
+        :param check: Check object with collector arguments (mount_point)
+        :type check: Check
+        :param context: Context object containing filesystems and azure_disks_metadata
+        :type context: Dict[str, Any]
+        :return: Tuple of (matched_disks, fs_entry, parsed_disks) or None on failure
+        :rtype: tuple or None
+        """
+        filesystem_data = context.get("filesystems", [])
+        disks_metadata = context.get("azure_disks_metadata", [])
+        mount_point = check.collector_args.get("mount_point", "")
+
+        if isinstance(disks_metadata, dict):
+            disks_metadata = list(disks_metadata.values())
+
+        parsed_disks = []
+        for disk in disks_metadata:
+            if isinstance(disk, str):
+                try:
+                    parsed_disks.append(json.loads(disk))
+                except json.JSONDecodeError:
+                    self.parent.log(
+                        logging.WARNING,
+                        f"Failed to parse disk metadata JSON string: {str(disk)[:100]}",
+                    )
+                    continue
+            elif isinstance(disk, dict):
+                parsed_disks.append(disk)
+
+        fs_entry = None
+        for fs in filesystem_data:
+            if fs.get("target") in (
+                mount_point,
+                f"{mount_point}/{context.get('database_sid', '').upper()}",
+                f"{mount_point}/{context.get('sap_sid', '').upper()}",
+            ):
+                fs_entry = fs
+                break
+
+        if not fs_entry:
+            self.parent.log(
+                logging.WARNING,
+                f"Mount point {mount_point} not found in filesystem data",
+            )
+            return None
+
+        matched = []
+        if "azure_disk_names" in fs_entry and fs_entry["azure_disk_names"]:
+            for disk_name in fs_entry["azure_disk_names"]:
+                disk = next(
+                    (d for d in parsed_disks if d.get("name") == disk_name),
+                    None,
+                )
+                if disk:
+                    matched.append(disk)
+        else:
+            disk_name = fs_entry.get("source", "")
+            disk = next(
+                (d for d in parsed_disks if d.get("name") == disk_name),
+                None,
+            )
+            if not disk:
+                device_name = disk_name.split("/")[-1] if "/" in disk_name else disk_name
+                disk = next(
+                    (d for d in parsed_disks if device_name in d.get("name", "")),
+                    None,
+                )
+            if disk:
+                matched.append(disk)
+
+        return matched, fs_entry, parsed_disks
+
     def parse_disks_vars(self, check, context) -> str:
         """
         Parse the required property for given mount point from filesystem data and disks metadata.
@@ -317,43 +403,15 @@ class AzureDataParser(Collector):
         :return: Aggregated property value or "N/A" if not found
         :rtype: str
         """
-        filesystem_data = context.get("filesystems", [])
-        disks_metadata = context.get("azure_disks_metadata", {})
         mount_point = check.collector_args.get("mount_point", "")
         property = check.collector_args.get("property", "")
         value = "N/A"
         try:
-            parsed_disks = []
-            for disk in disks_metadata:
-                if isinstance(disk, str):
-                    try:
-                        parsed_disks.append(json.loads(disk))
-                    except json.JSONDecodeError:
-                        self.parent.log(
-                            logging.WARNING,
-                            f"Failed to parse disk metadata JSON string: {disk[:100]}",
-                        )
-                        continue
-                elif isinstance(disk, dict):
-                    parsed_disks.append(disk)
-                else:
-                    self.parent.log(logging.WARNING, f"Unexpected disk metadata type: {type(disk)}")
-
-            fs_entry = None
-            for fs in filesystem_data:
-                if fs.get("target") in (
-                    mount_point,
-                    f"{mount_point}/{context.get('database_sid', '').upper()}",
-                    f"{mount_point}/{context.get('sap_sid', '').upper()}",
-                ):
-                    fs_entry = fs
-                    break
-
-            if not fs_entry:
-                self.parent.log(
-                    logging.WARNING, f"Mount point {mount_point} not found in filesystem data"
-                )
+            result = self._resolve_mount_disks(check, context)
+            if result is None:
                 return value
+            matched_disks, fs_entry, parsed_disks = result
+
             if property in fs_entry and fs_entry.get(property) is not None:
                 value = str(fs_entry[property])
                 self.parent.log(
@@ -365,49 +423,45 @@ class AzureDataParser(Collector):
                 self.parent.log(logging.WARNING, "No valid disk metadata found")
                 return value
 
-            if "azure_disk_names" in fs_entry and fs_entry["azure_disk_names"]:
-                total_value, matched_disks = 0, 0
-
-                for disk_name in fs_entry["azure_disk_names"]:
-                    disk = next((d for d in parsed_disks if d.get("name") == disk_name), None)
-                    if disk and property in disk:
+            if matched_disks and "azure_disk_names" in fs_entry:
+                total_value, count = 0, 0
+                for disk in matched_disks:
+                    if property in disk:
                         disk_value = disk.get(property, 0)
                         try:
                             total_value += float(disk_value) if disk_value else 0
-                            matched_disks += 1
+                            count += 1
                         except (ValueError, TypeError):
                             self.parent.log(
                                 logging.WARNING,
-                                f"Could not convert {property}={disk_value} to number for disk {disk_name}",
+                                f"Could not convert {property}={disk_value} "
+                                f"to number for disk {disk.get('name')}",
                             )
-
-                if matched_disks > 0:
+                if count > 0:
                     value = str(int(total_value))
                     self.parent.log(
                         logging.INFO,
-                        f"Aggregated {property} for {mount_point}: {value} (from {matched_disks} disks)",
+                        f"Aggregated {property} for {mount_point}: "
+                        f"{value} (from {count} disks)",
                     )
                 else:
                     self.parent.log(
                         logging.WARNING,
-                        f"No matching disks found for {mount_point} with property {property}",
+                        f"No matching disks found for {mount_point} " f"with property {property}",
                     )
-            else:
-                disk_name = fs_entry.get("source")
-                disk = next((d for d in parsed_disks if d.get("name") == disk_name), None)
-                if not disk:
-                    device_name = disk_name.split("/")[-1] if "/" in disk_name else disk_name
-                    disk = next((d for d in parsed_disks if device_name in d.get("name", "")), None)
-                if disk and property in disk:
+            elif matched_disks:
+                disk = matched_disks[0]
+                if property in disk:
                     value = str(disk.get(property, "N/A"))
                     self.parent.log(
                         logging.INFO,
-                        f"Found {property}={value} for {mount_point} from disk {disk.get('name')}",
+                        f"Found {property}={value} for {mount_point} "
+                        f"from disk {disk.get('name')}",
                     )
                 else:
                     self.parent.log(
                         logging.WARNING,
-                        f"Property '{property}' not found for mount point '{mount_point}' (source: {disk_name})",
+                        f"Property '{property}' not found for mount " f"point '{mount_point}'",
                     )
 
         except Exception as ex:
@@ -415,6 +469,38 @@ class AzureDataParser(Collector):
             value = f"ERROR: Parsing failed: {str(ex)}"
 
         return value
+
+    def parse_disk_consistency_vars(self, check, context) -> str:
+        """
+        Collect a property value from each disk backing a mount point.
+
+        :param check: Check object with collector arguments
+        :type check: Check
+        :param context: Context object containing all required data
+        :type context: Dict[str, Any]
+        :return: Comma-separated property values or ``N/A``
+        :rtype: str
+        """
+        property_name = check.collector_args.get("property", "")
+
+        try:
+            result = self._resolve_mount_disks(check, context)
+            if result is None:
+                return "N/A"
+            matched_disks, fs_entry, parsed_disks = result
+
+            if not matched_disks:
+                return "N/A"
+
+            values = []
+            for disk in matched_disks:
+                if property_name in disk:
+                    values.append(str(disk.get(property_name, "unknown")))
+                else:
+                    values.append("MISSING")
+            return ",".join(values) if values else "N/A"
+        except Exception as ex:
+            return f"ERROR: {str(ex)}"
 
     def collect(self, check, context) -> Any:
         """

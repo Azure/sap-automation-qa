@@ -8,6 +8,10 @@ The SAP Testing Automation Framework allows you to execute:
 
 Execution is driven by Ansible-based playbooks and Python helpers, using metadata defined in YAML files under a per‑system workspace.
 
+## AI Assistant Skills
+
+As an alternative to the manual setup steps below, the framework can be operated through AI assistant skills available for GitHub Copilot CLI, Claude Code, and Gemini CLI. Skills provide guided workflows for environment setup, workspace management, test execution, and result analysis. See [docs/PLUGINS.md](./PLUGINS.md) for installation and usage instructions.
+
 ## Pre-requisites
 
 ### 1. SAP System Deployment on Microsoft Azure
@@ -331,6 +335,68 @@ X00_DB:
     node_tier: "hana"  # or "ers", "scs"
 ```
 
+**Windows hosts.yaml example:**
+
+For Windows-based SAP systems (e.g., SQL Server on Windows), use the following format.
+Windows hosts use WinRM instead of SSH and require additional connection parameters:
+
+```yaml
+WI6_DB:
+  hosts:
+    wi6db00w0f68:
+      ansible_host              : 172.234.13.5
+      ansible_user              : azureadm
+      ansible_connection        : winrm
+      virtual_host              : wi6db00w0f68
+      os_type                   : windows
+      vm_name                   : WIN-NOEU-SAP04-WI6_wi6db00w0f68
+      resource_group_name       : WIN-NOEU-SAP04-WI6
+      subscription_id           : 80d5ed43-1465-432b-8914-xxxxxxxxxxxx
+      ansible_winrm_transport   : credssp
+      ansible_winrm_server_cert_validation : ignore
+      ansible_winrm_operation_timeout_sec  : 120
+      ansible_winrm_read_timeout_sec       : 150
+
+    wi6db00w1f68:
+      ansible_host              : 172.234.13.8
+      ansible_user              : azureadm
+      ansible_connection        : winrm
+      virtual_host              : wi6db00w1f68
+      os_type                   : windows
+      vm_name                   : WIN-NOEU-SAP04-WI6_wi6db00w1f68
+      resource_group_name       : WIN-NOEU-SAP04-WI6
+      subscription_id           : 80d5ed43-1465-432b-8914-xxxxxxxxxxxx
+      ansible_winrm_transport   : credssp
+      ansible_winrm_server_cert_validation : ignore
+      ansible_winrm_operation_timeout_sec  : 120
+      ansible_winrm_read_timeout_sec       : 150
+
+  vars:
+    node_tier                   : sqlserver
+    supported_tiers             : [sqlserver]
+```
+
+**Key differences for Windows hosts:**
+
+| Property | Linux | Windows |
+|----------|-------|---------|
+| `ansible_connection` | `ssh` | `winrm` |
+| `os_type` | `linux` | `windows` |
+| `connection_type` | `key` | Not used |
+| `become_user` | Required (root-capable user) | Not used |
+| `ansible_winrm_transport` | Not used | `credssp` |
+| `ansible_winrm_server_cert_validation` | Not used | `ignore` (for self-signed certs) |
+| `ansible_winrm_operation_timeout_sec` | Not used | `120` (recommended) |
+| `ansible_winrm_read_timeout_sec` | Not used | `150` (recommended) |
+| `resource_group_name` | Not required | Required (used for Azure API queries) |
+| `subscription_id` | Not required | Required (used for Azure API queries) |
+| `node_tier` | `hana`, `scs`, `ers` | `sqlserver`, `scs`, `ers` |
+
+> [!NOTE]
+>
+> Windows hosts require a `password` file for authentication (see Credential Files below).
+> Use `--auth-type=VMPASSWORD` when running configuration checks against Windows systems.
+
 In the file:
 
 - X00 represents the SAP SID (System ID) of the SAP system, followed by the host type (e.g., DB, ASCS, PAS). You must provide the SAP SID of the system, regardless of whether you are testing Database High Availability or Central Services High Availability.
@@ -339,13 +405,19 @@ The file includes the following details:
 
 - **ansible_host**: The IP address of the host.
 - **ansible_user**: The user for connecting to the host.
-- **ansible_connection**: The connection type (usually "ssh").
-- **connection_type**: The connection type, used when connecting via SSH key (not needed for password-based connections).
+- **ansible_connection**: The connection type (`ssh` for Linux, `winrm` for Windows).
+- **connection_type**: Linux-only. The authentication method when connecting via SSH key.
 - **virtual_host**: The virtual host name of the SCS/DB host.
-- **become_user**: The user with root privileges. For example, user "azureadm" must be able to change to root without password.
-- **os_type**: The operating system type (e.g., Linux or Windows).
-- **vm_name**: The computer name of the Azure VM.
-- **node_tier**: The type of node tier. Supported values: hana, ers, scs.
+- **become_user**: Linux-only. The user with root privileges (e.g., `azureadm` must be able to `sudo` without password).
+- **os_type**: The operating system type (`linux` or `windows`).
+- **vm_name**: The Azure VM resource name (as shown in Azure Portal).
+- **resource_group_name**: Windows-only. The Azure resource group containing the VM. Used for Azure API queries during configuration checks.
+- **subscription_id**: Windows-only. The Azure subscription ID containing the VM. Used for Azure API queries during configuration checks.
+- **node_tier**: The type of node tier. Supported values: `hana`, `sqlserver`, `scs`, `ers`, `app`, `pas`.
+- **ansible_winrm_transport**: Windows-only. WinRM authentication transport (`credssp` for password-based auth).
+- **ansible_winrm_server_cert_validation**: Windows-only. Set to `ignore` when the Windows host uses a self-signed WinRM HTTPS certificate.
+- **ansible_winrm_operation_timeout_sec**: Windows-only. WinRM operation timeout in seconds (recommended: `120`).
+- **ansible_winrm_read_timeout_sec**: Windows-only. WinRM read timeout in seconds (recommended: `150`, must be greater than operation timeout).
 
 2.2.2. **sap-parameters.yaml** - SAP Configuration (required)
 
@@ -377,7 +449,10 @@ db_instance_number: "00"
 
 # The type of database. Supported values are:
 # - HANA
-platform: "HANA"
+# - SQLSERVER
+# - Oracle
+# - Db2
+platform: "SQLSERVER"
 
 # The NFS provider used for shared storage. Supported values are:
 # - ANF (for Azure NetApp Files)
@@ -417,9 +492,12 @@ The required credential files depend on the authentication method used to connec
 1. **Password Authentication**: If connecting using a username and password, create a password file by running the following command. It takes the username from hosts.yaml file. 
 
    ```bash
-   echo "password" > WORKSPACES/SYSTEM/<DIRECTORY>/password
+   echo -n "password" > WORKSPACES/SYSTEM/<DIRECTORY>/password
    chmod 600 WORKSPACES/SYSTEM/<DIRECTORY>/password
    ```
+
+   For Windows configuration checks over WinRM/CredSSP, use `--auth-type=VMPASSWORD`
+   and ensure the `hosts.yaml` entries include the Windows WinRM variables listed above.
 
 > [!NOTE]
 >
@@ -441,66 +519,6 @@ When using Azure Key Vault to store credentials, the framework retrieves authent
   2. Configure `key_vault_id` and `secret_id` parameters in `sap-parameters.yaml` as shown in section 2.2.2.
 
 **Important**: When using Key Vault authentication, do NOT create local credential files (`ssh_key.ppk` or `password` files).
-
-
-## Copilot CLI Skills
-
-The repository includes [GitHub Copilot CLI](https://docs.github.com/en/copilot/concepts/agents/about-copilot-cli) agent skills that provide guided, context-aware workflows for common STAF operations. Skills understand the project structure, configuration file formats, and test execution patterns, so they can walk you through tasks step by step.
-
-### Prerequisites
-
-- [GitHub Copilot CLI](https://docs.github.com/en/copilot/getting-started-with-github-copilot) must be installed and authenticated on the management server. See [GitHub Copilot CLI installation](https://docs.github.com/en/copilot/getting-started-with-github-copilot) for instructions.
-- Run the CLI from the root of this repository so skills can discover workspace files and scripts.
-
-### Available Skills
-
-| Skill | What It Does |
-|-------|-------------|
-| `/setup-guide` | Walks through environment setup — local install via `setup.sh`, Docker container deployment, and `vars.yaml` configuration. |
-| `/workspace-creator` | Generates a new workspace directory under `WORKSPACES/SYSTEM/` with `sap-parameters.yaml` and `hosts.yaml` populated from your system details. |
-| `/workspace-validator` | Checks an existing workspace for missing files, incomplete fields, invalid values, and SSH readiness before you run tests. |
-| `/test-runner` | Executes HA functional tests, configuration checks, or backup tests via `sap_automation_qa.sh` in direct Ansible or API mode. |
-| `/test-result-analyzer` | Reads test logs, HTML reports, and API job output, then classifies failures against known patterns to surface root causes. |
-
-### How to Use
-
-1. Open a terminal in the repository root and launch Copilot CLI:
-
-   ```bash
-   cd sap-automation-qa
-   copilot
-   ```
-
-2. Skills activate automatically based on your prompt. For example:
-
-   ```text
-   > Help me set up the framework on my management server
-   # Activates: setup-guide
-
-   > Create a workspace for my DEV system with SID X00
-   # Activates: workspace-creator
-
-   > Validate my workspace configuration
-   # Activates: workspace-validator
-
-   > Run HA database tests for my system
-   # Activates: test-runner
-
-   > Why did my last test fail?
-   # Activates: test-result-analyzer
-   ```
-
-3. You can also invoke a skill directly by name:
-
-   ```text
-   > Use the /test-runner skill to execute configuration checks on DEV-WEEU-SAP01-X00
-   ```
-
-4. To see all available skills:
-
-   ```text
-   > /skills list
-   ```
 
 
 ## Update the framework

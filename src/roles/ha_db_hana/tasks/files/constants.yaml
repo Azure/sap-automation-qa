@@ -121,6 +121,13 @@ VALID_CONFIGS:
     pcmk_action_limit:
       value:                        ["-1"]
       required:                     false
+  angi_scale_up:
+    node-health-strategy:
+      value:                        "custom"
+      required:                     true
+    concurrent-fencing:
+      value:                        "true"
+      required:                     false
 
 # === Resource Defaults ===
 # cibadmin --query --scope resources
@@ -183,7 +190,7 @@ RESOURCE_DEFAULTS:
             value:                  ["600", "600s"]
             required:               false
           timeout:
-            value:                  ["15", "15s"]
+            value:                  ["120", "120s"]
             required:               false
 
     topology:
@@ -719,7 +726,7 @@ RESOURCE_DEFAULTS:
             value:                  ["600", "600s"]
             required:               false
           timeout:
-            value:                  ["15", "15s"]
+            value:                  ["120", "120s"]
             required:               false
 
     topology:
@@ -775,6 +782,55 @@ RESOURCE_DEFAULTS:
             required:               false
           interval:
             value:                  ["0", "0s"]
+            required:               false
+
+    angi_topology:
+      required:                     false
+      meta_attributes:
+        clone-max:
+          value:                    "2"
+          required:                 false
+        clone-node-max:
+          value:                    "1"
+          required:                 false
+        interleave:
+          value:                    "true"
+          required:                 false
+      operations:
+        monitor:
+          interval:
+            value:                  ["30", "30s"]
+            required:               false
+          timeout:
+            value:                  ["300", "300s"]
+            required:               false
+        start:
+          interval:
+            value:                  ["0", "0s"]
+            required:               false
+          timeout:
+            value:                  ["600", "600s"]
+            required:               false
+        stop:
+          interval:
+            value:                  ["0", "0s"]
+            required:               false
+          timeout:
+            value:                  ["300", "300s"]
+            required:               false
+        methods:
+          interval:
+            value:                  ["0", "0s"]
+            required:               false
+          timeout:
+            value:                  ["5", "5s"]
+            required:               false
+        reload:
+          interval:
+            value:                  ["0", "0s"]
+            required:               false
+          timeout:
+            value:                  ["5", "5s"]
             required:               false
 
     hana:
@@ -833,6 +889,164 @@ RESOURCE_DEFAULTS:
         monitor:
           timeout:
             value:                  ["700", "700s"]
+            required:               false
+
+    angi_hana:
+      required:                     false
+      meta_attributes:
+        clone-max:
+          value:                    "2"
+          required:                 false
+        clone-node-max:
+          value:                    "1"
+          required:                 false
+        interleave:
+          value:                    "true"
+          required:                 false
+        promotable:
+          value:                    "true"
+          required:                 false
+        priority:
+          value:                    "10"
+          required:                 false
+      instance_attributes:
+        PREFER_SITE_TAKEOVER:
+          value:                    "true"
+          required:                 false
+        DUPLICATE_PRIMARY_TIMEOUT:
+          value:                    "7200"
+          required:                 false
+        AUTOMATED_REGISTER:
+          value:                    "true"
+          required:                 false
+      operations:
+        start:
+          interval:
+            value:                  ["0", "0s"]
+            required:               false
+          timeout:
+            value:                  ["3600", "3600s"]
+            required:               false
+        stop:
+          interval:
+            value:                  ["0", "0s"]
+            required:               false
+          timeout:
+            value:                  ["3600", "3600s"]
+            required:               false
+        promote:
+          interval:
+            value:                  ["0", "0s"]
+            required:               false
+          timeout:
+            value:                  ["900", "900s"]
+            required:               false
+        demote:
+          interval:
+            value:                  ["0", "0s"]
+            required:               false
+          timeout:
+            value:                  ["320", "320s"]
+            required:               false
+        monitor:
+          interval:
+            value:                  ["59", "59s", "61", "61s"]
+            required:               false
+          timeout:
+            value:                  ["700", "700s"]
+            required:               false
+        methods:
+          interval:
+            value:                  ["0", "0s"]
+            required:               false
+          timeout:
+            value:                  ["5", "5s"]
+            required:               false
+        reload:
+          interval:
+            value:                  ["0", "0s"]
+            required:               false
+          timeout:
+            value:                  ["5", "5s"]
+            required:               false
+
+    angi_scaleout_hana:
+      required:                     false
+      meta_attributes:
+        clone-node-max:
+          value:                    "1"
+          required:                 false
+        master-max:
+          value:                    "1"
+          required:                 false
+        interleave:
+          value:                    "true"
+          required:                 false
+        promotable:
+          value:                    "true"
+          required:                 false
+        priority:
+          value:                    "100"
+          required:                 false
+      instance_attributes:
+        PREFER_SITE_TAKEOVER:
+          value:                    "true"
+          required:                 false
+        DUPLICATE_PRIMARY_TIMEOUT:
+          value:                    "7200"
+          required:                 false
+        AUTOMATED_REGISTER:
+          value:                    "true"
+          required:                 false
+      operations:
+        start:
+          interval:
+            value:                  ["0", "0s"]
+            required:               false
+          timeout:
+            value:                  ["3600", "3600s"]
+            required:               false
+        stop:
+          interval:
+            value:                  ["0", "0s"]
+            required:               false
+          timeout:
+            value:                  ["3600", "3600s"]
+            required:               false
+        promote:
+          interval:
+            value:                  ["0", "0s"]
+            required:               false
+          timeout:
+            value:                  ["900", "900s", "3600", "3600s"]
+            required:               false
+        demote:
+          interval:
+            value:                  ["0", "0s"]
+            required:               false
+          timeout:
+            value:                  ["320", "320s"]
+            required:               false
+        monitor:
+          interval:
+            value:                  ["59", "59s", "60", "60s", "61", "61s"]
+            required:               false
+          timeout:
+            value:                  ["700", "700s"]
+            required:               false
+        methods:
+          interval:
+            value:                  ["0", "0s"]
+            required:               false
+          timeout:
+            value:                  ["5", "5s"]
+            required:               false
+        reload:
+          interval:
+            value:                  ["0", "0s"]
+            required:               false
+          timeout:
+            value:                  ["5", "5s"]
             required:               false
 
     scaleout_hana:
@@ -960,6 +1174,28 @@ RESOURCE_DEFAULTS:
           timeout:
             value:                  ["120", "120s"]
             required:               false
+
+    angi_filesystem:
+      required:                     false
+      instance_attributes:
+        ON_FAIL_ACTION:
+          value:                    "fence"
+          required:                 false
+      meta_attributes:
+        clone-node-max:
+          value:                    "1"
+          required:                 false
+        interleave:
+          value:                    "true"
+          required:                 false
+      operations:
+        monitor:
+          interval:
+            value:                  ["120", "120s"]
+            required:               false
+          timeout:
+            value:                  ["120", "120s"]
+            required:               false
         start:
           interval:
             value:                  ["0", "0s"]
@@ -973,6 +1209,20 @@ RESOURCE_DEFAULTS:
             required:               false
           timeout:
             value:                  ["120", "120s"]
+            required:               false
+        methods:
+          interval:
+            value:                  ["0", "0s"]
+            required:               false
+          timeout:
+            value:                  ["5", "5s"]
+            required:               false
+        reload:
+          interval:
+            value:                  ["0", "0s"]
+            required:               false
+          timeout:
+            value:                  ["5", "5s"]
             required:               false
 
     azurelb:
@@ -1319,6 +1569,35 @@ GLOBAL_INI:
           required:                   true
       trace:
         ha_dr_saphanasr:
+          required:                   false
+        ha_dr_chksrv:
+          required:                   false
+    SAPHanaSR-angi:
+      ha_dr_provider_hanasr:
+        provider:
+          value:                      "HanaSR"
+          required:                   true
+        path:
+          value:                      ["/usr/share/sap-hana-ha", "/hana/shared/myHooks"]
+          required:                   true
+        execution_order:
+          value:                      "1"
+          required:                   true
+      ha_dr_provider_chksrv:
+        provider:
+          value:                      "ChkSrv"
+          required:                   true
+        path:
+          value:                      ["/usr/share/sap-hana-ha", "/hana/shared/myHooks"]
+          required:                   true
+        execution_order:
+          value:                      "2"
+          required:                   true
+        action_on_lost:
+          value:                      "stop"
+          required:                   true
+      trace:
+        ha_dr_hanasr:
           required:                   false
         ha_dr_chksrv:
           required:                   false

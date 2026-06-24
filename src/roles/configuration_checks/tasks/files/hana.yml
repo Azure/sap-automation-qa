@@ -15,11 +15,18 @@ enums:
     - all_os:                         &os_type [*suse, *redhat, *oraclelinux, *windows]
 
   os_version:
-    - suse_12_3:                      &suse_12_3 "SUSE 12 SP3"
-    - suse_12_4:                      &suse_12_4 "SUSE 12 SP4"
-    - suse_12_5:                      &suse_12_5 "SUSE 12 SP5"
-    - suse_15_0:                      &suse_15_0 "SUSE 15 SP0"
-    - suse_15_0:                      &suse_15_1 "SUSE 15 SP1"
+    - suse_12_3:                      &suse_12_3 "12.3"
+    - suse_12_4:                      &suse_12_4 "12.4"
+    - suse_12_5:                      &suse_12_5 "12.5"
+    - suse_15_0:                      &suse_15_0 "15"
+    - suse_15_1:                      &suse_15_1 "15.1"
+    - rhel_7_9:                       &rhel_7_9 "7.9"
+    - rhel_8_2:                       &rhel_8_2 "8.2"
+    - rhel_8_4:                       &rhel_8_4 "8.4"
+    - rhel_8_6:                       &rhel_8_6 "8.6"
+    - rhel_8_8:                       &rhel_8_8 "8.8"
+    - rhel_9_0:                       &rhel_9_0 "9.0"
+    - rhel_9_2:                       &rhel_9_2 "9.2"
     - all_versions:                   &all_versions "all"
 
   hardware_type:
@@ -38,11 +45,11 @@ enums:
 
   db:
     - hana:                           &hana "HANA"
-    - mssql:                          &mssql "MSSQL"
+    - sqlserver:                      &sqlserver "SQLSERVER"
     - oracle:                         &oracle "Oracle"
     - db2:                            &db2 "Db2"
     - ase:                            &ase "ASE"
-    - all_db:                         &db [*hana, *mssql, *oracle, *db2, *ase]
+    - all_db:                         &db [*hana, *sqlserver, *oracle, *db2, *ase]
 
   role:
     - db:                             &db_role "DB"
@@ -84,7 +91,9 @@ enums:
     - string:                         &string "string"
     - range:                          &range "range"
     - list:                           &list "list"
-    - all:                            &validator_type [*string, *range, *list]
+    - disk_consistency:               &disk_consistency "disk_consistency"
+    - check_storage_type:             &check_storage_type "check_storage_type"
+    - all:                            &validator_type [*string, *range, *list, *disk_consistency, *check_storage_type]
 
   report:
     - check:                          &check "check"
@@ -112,7 +121,7 @@ checks:
       high_availability_agent:          *cluster_type
     collector_type:                     *command
     collector_args:
-      command:                          cibadmin --query --xpath "//nvpair[@name='PREFER_SITE_TAKEOVER']" | grep -o 'value="[^\"]*"' | cut -d'"' -f2
+      command:                          cibadmin --query --xpath "//nvpair[@name='PREFER_SITE_TAKEOVER']" | grep -o 'value="[^"]*"' | cut -d'"' -f2
       user:                             *root
     validator_type:                     *string
     validator_args:
@@ -136,7 +145,7 @@ checks:
       high_availability_agent:          *cluster_type
     collector_type:                     *command
     collector_args:
-      command:                          cibadmin --query --xpath "//nvpair[@name='AUTOMATED_REGISTER']" | grep -o 'value="[^\"]*"' | tail -n 1 | cut -d'"' -f2
+      command:                          cibadmin --query --xpath "//nvpair[@name='AUTOMATED_REGISTER']" | grep -o 'value="[^"]*"' | tail -n 1 | cut -d'"' -f2
       user:                             *root
     validator_type:                     *string
     validator_args:
@@ -828,7 +837,7 @@ checks:
       high_availability_agent:          [*fencing_agent]
     collector_type:                     *command
     collector_args:
-      command:                          cibadmin --query --xpath "//nvpair[@name='msi']" | grep -o 'value=\"[^\"]*\"' | cut -d'"' -f2
+      command:                          cibadmin --query --xpath "//nvpair[@name='msi']" | grep -o 'value="[^"]*"' | cut -d'"' -f2
       user:                             *root
     validator_type:                     *string
     validator_args:
@@ -1488,3 +1497,409 @@ checks:
     report:                             *check
     references:
       microsoft:                        "https://learn.microsoft.com/en-us/azure/sap/workloads/sap-hana-high-availability-scale-out-hsr-suse"
+
+  - id:                                 "DB-HANA-0058"
+    name:                               "Same disk type for /hana/data"
+    description:                        "All disks backing /hana/data must be of the same disk type (SKU) for consistent performance"
+    category:                           *sap_check
+    severity:                           *high
+    workload:                           *sap
+    applicability:
+      os_type:                          [*suse, *redhat]
+      os_version:                       *all_versions
+      hardware_type:                    *vm
+      storage_type:                     *premium_storage
+      role:                             [*db_role]
+      database_type:                    [*hana]
+    collector_type:                     *azure
+    collector_args:
+      resource_type:                    "disk_consistency"
+      property:                         "sku"
+      mount_point:                      "/hana/data"
+    validator_type:                     *disk_consistency
+    validator_args:
+      consistency_property:             "sku"
+    report:                             *check
+    references:
+      sap:                              "2972496"
+      microsoft:                        "https://learn.microsoft.com/en-us/azure/sap/workloads/hana-vm-operations-storage"
+
+  - id:                                 "DB-HANA-0059"
+    name:                               "Same disk type for /hana/log"
+    description:                        "All disks backing /hana/log must be of the same disk type (SKU) for consistent performance"
+    category:                           *sap_check
+    severity:                           *high
+    workload:                           *sap
+    applicability:
+      os_type:                          [*suse, *redhat]
+      os_version:                       *all_versions
+      hardware_type:                    *vm
+      storage_type:                     *premium_storage
+      role:                             [*db_role]
+      database_type:                    [*hana]
+    collector_type:                     *azure
+    collector_args:
+      resource_type:                    "disk_consistency"
+      property:                         "sku"
+      mount_point:                      "/hana/log"
+    validator_type:                     *disk_consistency
+    validator_args:
+      consistency_property:             "sku"
+    report:                             *check
+    references:
+      sap:                              "2972496"
+      microsoft:                        "https://learn.microsoft.com/en-us/azure/sap/workloads/hana-vm-operations-storage"
+
+  - id:                                 "DB-HANA-0060"
+    name:                               "Same performance tier for /hana/data"
+    description:                        "All disks backing /hana/data must share the same performance tier for predictable behavior"
+    category:                           *sap_check
+    severity:                           *high
+    workload:                           *sap
+    applicability:
+      os_type:                          [*suse, *redhat]
+      os_version:                       *all_versions
+      hardware_type:                    *vm
+      storage_type:                     *premium_storage
+      role:                             [*db_role]
+      database_type:                    [*hana]
+    collector_type:                     *azure
+    collector_args:
+      resource_type:                    "disk_consistency"
+      property:                         "tier"
+      mount_point:                      "/hana/data"
+    validator_type:                     *disk_consistency
+    validator_args:
+      consistency_property:             "tier"
+    report:                             *check
+    references:
+      sap:                              "2972496"
+      microsoft:                        "https://learn.microsoft.com/en-us/azure/sap/workloads/hana-vm-operations-storage"
+
+  - id:                                 "DB-HANA-0061"
+    name:                               "Same performance tier for /hana/log"
+    description:                        "All disks backing /hana/log must share the same performance tier for predictable behavior"
+    category:                           *sap_check
+    severity:                           *high
+    workload:                           *sap
+    applicability:
+      os_type:                          [*suse, *redhat]
+      os_version:                       *all_versions
+      hardware_type:                    *vm
+      storage_type:                     *premium_storage
+      role:                             [*db_role]
+      database_type:                    [*hana]
+    collector_type:                     *azure
+    collector_args:
+      resource_type:                    "disk_consistency"
+      property:                         "tier"
+      mount_point:                      "/hana/log"
+    validator_type:                     *disk_consistency
+    validator_args:
+      consistency_property:             "tier"
+    report:                             *check
+    references:
+      sap:                              "2972496"
+      microsoft:                        "https://learn.microsoft.com/en-us/azure/sap/workloads/hana-vm-operations-storage"
+
+  - id:                                 "DB-HANA-0062"
+    name:                               "Write Accelerator enabled for /hana/log"
+    description:                        "Write Accelerator must be enabled on /hana/log Premium_LRS managed disks"
+    category:                           *sap_check
+    severity:                           *high
+    workload:                           *sap
+    applicability:
+      os_type:                          [*suse, *redhat]
+      os_version:                       *all_versions
+      hardware_type:                    *vm
+      storage_type:                     ["Premium_LRS"]
+      role:                             [*db_role]
+      database_type:                    [*hana]
+    collector_type:                     *command
+    collector_args:
+      command:                          "LOG_DEVS=$(lsblk -npo NAME $(findmnt -n -o SOURCE /hana/log 2>/dev/null) 2>/dev/null | grep -oP 'sd[a-z]+' | sort -u); WA_COUNT=0; for dev in $LOG_DEVS; do LUN_LINK=$(ls -la /dev/disk/azure/scsi1/ 2>/dev/null | grep \"$dev\" | head -1); if [ -n \"$LUN_LINK\" ]; then LUN=$(echo \"$LUN_LINK\" | grep -oP 'lun\\K[0-9]+'); WA=$(curl -s --noproxy '*' -H Metadata:true \"http://169.254.169.254/metadata/instance/compute/storageProfile/dataDisks/$LUN/writeAcceleratorEnabled?api-version=2021-02-01&format=text\" 2>/dev/null); if [ \"$WA\" = \"true\" ]; then WA_COUNT=$((WA_COUNT+1)); fi; fi; done; echo $WA_COUNT"
+      user:                             *root
+    validator_type:                     *range
+    validator_args:
+      min:                              "1"
+    report:                             *check
+    references:
+      sap:                              "2972496"
+      microsoft:                        "https://learn.microsoft.com/en-us/azure/virtual-machines/how-to-enable-write-accelerator"
+
+  - id:                                 "DB-HANA-0063"
+    name:                               "Storage type supported for /hana/data"
+    description:                        "The storage type (SKU) for /hana/data disks must be in the per-VM supported list from the SAP support matrix"
+    category:                           *sap_check
+    severity:                           *high
+    workload:                           *sap
+    applicability:
+      os_type:                          [*suse, *redhat]
+      os_version:                       *all_versions
+      hardware_type:                    *vm
+      storage_type:                     *premium_storage
+      role:                             [*db_role]
+      database_type:                    [*hana]
+    collector_type:                     *azure
+    collector_args:
+      resource_type:                    "disk_consistency"
+      property:                         "sku"
+      mount_point:                      "/hana/data"
+    validator_type:                     "check_storage_type"
+    validator_args:
+      mount_role:                       "data"
+    report:                             *check
+    references:
+      sap:                              "2972496"
+      microsoft:                        "https://learn.microsoft.com/en-us/azure/sap/workloads/hana-vm-operations-storage"
+
+  - id:                                 "DB-HANA-0064"
+    name:                               "Storage type supported for /hana/log"
+    description:                        "The storage type (SKU) for /hana/log disks must be in the per-VM supported list from the SAP support matrix"
+    category:                           *sap_check
+    severity:                           *high
+    workload:                           *sap
+    applicability:
+      os_type:                          [*suse, *redhat]
+      os_version:                       *all_versions
+      hardware_type:                    *vm
+      storage_type:                     *premium_storage
+      role:                             [*db_role]
+      database_type:                    [*hana]
+    collector_type:                     *azure
+    collector_args:
+      resource_type:                    "disk_consistency"
+      property:                         "sku"
+      mount_point:                      "/hana/log"
+    validator_type:                     "check_storage_type"
+    validator_args:
+      mount_role:                       "log"
+    report:                             *check
+    references:
+      sap:                              "2972496"
+      microsoft:                        "https://learn.microsoft.com/en-us/azure/sap/workloads/hana-vm-operations-storage"
+
+  - id:                                 "DB-HANA-0065"
+    name:                               "Static ANF tcp_max_slot_table_entries persistence"
+    description:                        "The sunrpc tcp_max_slot_table_entries value must be persistently configured to 128 in /etc/modprobe.d/ for ANF storage"
+    category:                           *os_check
+    severity:                           *high
+    workload:                           *sap
+    applicability:
+      os_type:                          [*suse, *redhat]
+      os_version:                       *all_versions
+      hardware_type:                    *vm
+      storage_type:                     *anf
+      role:                             [*db_role]
+      database_type:                    [*hana]
+    collector_type:                     *command
+    collector_args:
+      command:                          "grep -r 'tcp_max_slot_table_entries' /etc/modprobe.d/ 2>/dev/null | grep -oP '\\d+' | tail -1 || echo 'not_configured'"
+      user:                             *root
+    validator_type:                     *string
+    validator_args:
+      expected_output:                  "128"
+    report:                             *check
+    references:
+      sap:                              "3024346"
+      microsoft:                        "https://learn.microsoft.com/en-us/azure/sap/workloads/sap-hana-high-availability-netapp-files-suse"
+
+  - id:                                 "DB-HANA-0066"
+    name:                               "Minimum safe kernel for RHEL 7.9 (Mellanox)"
+    description:                        "RHEL 7.9 hosts running HANA must have a kernel build at or above the minimum safe version to avoid Mellanox TX timeout / CPU soft lockup"
+    category:                           *os_check
+    severity:                           *warning
+    workload:                           *sap
+    applicability:
+      os_type:                          [*redhat]
+      os_version:                       [*rhel_7_9]
+      hardware_type:                    *vm
+      storage_type:                     *premium_storage
+      role:                             [*db_role]
+      database_type:                    [*hana]
+    collector_type:                     *command
+    collector_args:
+      command:                          "MIN=3.10.0-1160.45.1.el7; CUR=$(uname -r | sed 's/.x86_64//'); if [ \"$(printf '%s\n%s' \"$MIN\" \"$CUR\" | sort -V | head -1)\" = \"$MIN\" ]; then echo SAFE; else echo \"$CUR\"; fi"
+      user:                             *root
+    validator_type:                     *string
+    validator_args:
+      expected_output:                  "SAFE"
+    report:                             *check
+    references:
+      sap:                              "2814271"
+      microsoft:                        "https://learn.microsoft.com/en-us/azure/sap/workloads/sap-hana-high-availability-rhel"
+
+  - id:                                 "DB-HANA-0067"
+    name:                               "Minimum safe kernel for RHEL 8.2 (Mellanox)"
+    description:                        "RHEL 8.2 hosts running HANA must have a kernel build at or above the minimum safe version to avoid Mellanox TX timeout / CPU soft lockup"
+    category:                           *os_check
+    severity:                           *warning
+    workload:                           *sap
+    applicability:
+      os_type:                          [*redhat]
+      os_version:                       [*rhel_8_2]
+      hardware_type:                    *vm
+      storage_type:                     *premium_storage
+      role:                             [*db_role]
+      database_type:                    [*hana]
+    collector_type:                     *command
+    collector_args:
+      command:                          "MIN=4.18.0-193.60.2.el8_2; CUR=$(uname -r | sed 's/.x86_64//'); if [ \"$(printf '%s\n%s' \"$MIN\" \"$CUR\" | sort -V | head -1)\" = \"$MIN\" ]; then echo SAFE; else echo \"$CUR\"; fi"
+      user:                             *root
+    validator_type:                     *string
+    validator_args:
+      expected_output:                  "SAFE"
+    report:                             *check
+    references:
+      sap:                              "2814271"
+      microsoft:                        "https://learn.microsoft.com/en-us/azure/sap/workloads/sap-hana-high-availability-rhel"
+
+  - id:                                 "DB-HANA-0068"
+    name:                               "Minimum safe kernel for RHEL 8.4 (Mellanox)"
+    description:                        "RHEL 8.4 hosts running HANA must have a kernel build at or above the minimum safe version to avoid Mellanox TX timeout / CPU soft lockup"
+    category:                           *os_check
+    severity:                           *warning
+    workload:                           *sap
+    applicability:
+      os_type:                          [*redhat]
+      os_version:                       [*rhel_8_4]
+      hardware_type:                    *vm
+      storage_type:                     *premium_storage
+      role:                             [*db_role]
+      database_type:                    [*hana]
+    collector_type:                     *command
+    collector_args:
+      command:                          "MIN=4.18.0-305.25.1.el8_4; CUR=$(uname -r | sed 's/.x86_64//'); if [ \"$(printf '%s\n%s' \"$MIN\" \"$CUR\" | sort -V | head -1)\" = \"$MIN\" ]; then echo SAFE; else echo \"$CUR\"; fi"
+      user:                             *root
+    validator_type:                     *string
+    validator_args:
+      expected_output:                  "SAFE"
+    report:                             *check
+    references:
+      sap:                              "2814271"
+      microsoft:                        "https://learn.microsoft.com/en-us/azure/sap/workloads/sap-hana-high-availability-rhel"
+
+  - id:                                 "DB-HANA-0069"
+    name:                               "Minimum safe kernel for RHEL 8.6 (Mellanox)"
+    description:                        "RHEL 8.6 hosts running HANA must have a kernel build at or above the minimum safe version to avoid Mellanox TX timeout / CPU soft lockup"
+    category:                           *os_check
+    severity:                           *warning
+    workload:                           *sap
+    applicability:
+      os_type:                          [*redhat]
+      os_version:                       [*rhel_8_6]
+      hardware_type:                    *vm
+      storage_type:                     *premium_storage
+      role:                             [*db_role]
+      database_type:                    [*hana]
+    collector_type:                     *command
+    collector_args:
+      command:                          "MIN=4.18.0-372.26.1.el8_6; CUR=$(uname -r | sed 's/.x86_64//'); if [ \"$(printf '%s\n%s' \"$MIN\" \"$CUR\" | sort -V | head -1)\" = \"$MIN\" ]; then echo SAFE; else echo \"$CUR\"; fi"
+      user:                             *root
+    validator_type:                     *string
+    validator_args:
+      expected_output:                  "SAFE"
+    report:                             *check
+    references:
+      sap:                              "2814271"
+      microsoft:                        "https://learn.microsoft.com/en-us/azure/sap/workloads/sap-hana-high-availability-rhel"
+
+  - id:                                 "DB-HANA-0070"
+    name:                               "Minimum safe kernel for RHEL 8.8 (Mellanox)"
+    description:                        "RHEL 8.8 hosts running HANA must have a kernel build at or above the minimum safe version to avoid Mellanox TX timeout / CPU soft lockup"
+    category:                           *os_check
+    severity:                           *warning
+    workload:                           *sap
+    applicability:
+      os_type:                          [*redhat]
+      os_version:                       [*rhel_8_8]
+      hardware_type:                    *vm
+      storage_type:                     *premium_storage
+      role:                             [*db_role]
+      database_type:                    [*hana]
+    collector_type:                     *command
+    collector_args:
+      command:                          "MIN=4.18.0-477.15.1.el8_8; CUR=$(uname -r | sed 's/.x86_64//'); if [ \"$(printf '%s\n%s' \"$MIN\" \"$CUR\" | sort -V | head -1)\" = \"$MIN\" ]; then echo SAFE; else echo \"$CUR\"; fi"
+      user:                             *root
+    validator_type:                     *string
+    validator_args:
+      expected_output:                  "SAFE"
+    report:                             *check
+    references:
+      sap:                              "2814271"
+      microsoft:                        "https://learn.microsoft.com/en-us/azure/sap/workloads/sap-hana-high-availability-rhel"
+
+  - id:                                 "DB-HANA-0071"
+    name:                               "Minimum safe kernel for RHEL 9.0 (Mellanox)"
+    description:                        "RHEL 9.0 hosts running HANA must have a kernel build at or above the minimum safe version to avoid Mellanox TX timeout / CPU soft lockup"
+    category:                           *os_check
+    severity:                           *warning
+    workload:                           *sap
+    applicability:
+      os_type:                          [*redhat]
+      os_version:                       [*rhel_9_0]
+      hardware_type:                    *vm
+      storage_type:                     *premium_storage
+      role:                             [*db_role]
+      database_type:                    [*hana]
+    collector_type:                     *command
+    collector_args:
+      command:                          "MIN=5.14.0-70.30.1.el9_0; CUR=$(uname -r | sed 's/.x86_64//'); if [ \"$(printf '%s\n%s' \"$MIN\" \"$CUR\" | sort -V | head -1)\" = \"$MIN\" ]; then echo SAFE; else echo \"$CUR\"; fi"
+      user:                             *root
+    validator_type:                     *string
+    validator_args:
+      expected_output:                  "SAFE"
+    report:                             *check
+    references:
+      sap:                              "2814271"
+      microsoft:                        "https://learn.microsoft.com/en-us/azure/sap/workloads/sap-hana-high-availability-rhel"
+
+  - id:                                 "DB-HANA-0072"
+    name:                               "Minimum safe kernel for RHEL 9.2 (Mellanox)"
+    description:                        "RHEL 9.2 hosts running HANA must have a kernel build at or above the minimum safe version to avoid Mellanox TX timeout / CPU soft lockup"
+    category:                           *os_check
+    severity:                           *warning
+    workload:                           *sap
+    applicability:
+      os_type:                          [*redhat]
+      os_version:                       [*rhel_9_2]
+      hardware_type:                    *vm
+      storage_type:                     *premium_storage
+      role:                             [*db_role]
+      database_type:                    [*hana]
+    collector_type:                     *command
+    collector_args:
+      command:                          "MIN=5.14.0-284.25.1.el9_2; CUR=$(uname -r | sed 's/.x86_64//'); if [ \"$(printf '%s\n%s' \"$MIN\" \"$CUR\" | sort -V | head -1)\" = \"$MIN\" ]; then echo SAFE; else echo \"$CUR\"; fi"
+      user:                             *root
+    validator_type:                     *string
+    validator_args:
+      expected_output:                  "SAFE"
+    report:                             *check
+    references:
+      sap:                              "2814271"
+      microsoft:                        "https://learn.microsoft.com/en-us/azure/sap/workloads/sap-hana-high-availability-rhel"
+
+  - id:                                 "DB-HANA-0073"
+    name:                               "TSC clocksource risk for SLES 12"
+    description:                        "On SLES 12 (SP3-SP5), the system clocksource must be tsc or hyperv_clocksource_tsc_page to avoid high I/O latency bugs"
+    category:                           *os_check
+    severity:                           *warning
+    workload:                           *sap
+    applicability:
+      os_type:                          [*suse]
+      os_version:                       [*suse_12_3, *suse_12_4, *suse_12_5]
+      hardware_type:                    *vm
+      storage_type:                     *all_storage
+      role:                             [*db_role]
+      database_type:                    [*hana]
+    collector_type:                     *command
+    collector_args:
+      command:                          "cat /sys/devices/system/clocksource/clocksource0/current_clocksource"
+      user:                             *root
+    validator_type:                     *list
+    validator_args:
+      valid_list:                       ["tsc", "hyperv_clocksource_tsc_page"]
+    report:                             *check
+    references:
+      sap:                              "2684254"
+      microsoft:                        "https://learn.microsoft.com/en-us/troubleshoot/azure/virtual-machines/linux/performance-diagnostics"

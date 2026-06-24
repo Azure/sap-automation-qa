@@ -20,16 +20,30 @@ jobs:
       - name: Collect traffic stats
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
+          github-token: ${{ secrets.TRAFFIC_TOKEN }}
           script: |
             const owner = context.repo.owner;
             const repo = context.repo.repo;
 
-            const [clones, views, repoInfo] = await Promise.all([
-              github.rest.repos.getClones({ owner, repo, per: 'day' }),
-              github.rest.repos.getViews({ owner, repo, per: 'day' }),
-              github.rest.repos.get({ owner, repo }),
-            ]);
+            let clones, views, repoInfo;
+            try {
+              [clones, views, repoInfo] = await Promise.all([
+                github.rest.repos.getClones({ owner, repo, per: 'day' }),
+                github.rest.repos.getViews({ owner, repo, per: 'day' }),
+                github.rest.repos.get({ owner, repo }),
+              ]);
+            } catch (error) {
+              if (error.status === 403) {
+                core.warning(
+                  'Traffic stats require a token with push (write) access. ' +
+                  'Set the TRAFFIC_TOKEN secret to a Classic PAT with the ' +
+                  '"repo" scope. Fine-grained PATs are not supported by the ' +
+                  'traffic API.'
+                );
+                return;
+              }
+              throw error;
+            }
 
             const today = new Date().toISOString().split('T')[0];
 

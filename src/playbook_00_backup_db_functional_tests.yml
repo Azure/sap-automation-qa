@@ -33,7 +33,7 @@
           ansible.builtin.command:
             cmd:                        >-
                                         az login --identity
-                                        {% if user_assigned_identity_client_id | default('') | length > 0
+                                        {% if user_assigned_identity_client_id | default('', true) | length > 0
                                         and user_assigned_identity_client_id != '00000000-0000-0000-0000-000000000000' %}
                                         --username {{ user_assigned_identity_client_id }}
                                         {% endif %}
@@ -43,7 +43,7 @@
           ansible.builtin.command:
             cmd:                        >-
                                         az login --identity
-                                        {% if user_assigned_identity_client_id | default('') | length > 0
+                                        {% if user_assigned_identity_client_id | default('', true) | length > 0
                                         and user_assigned_identity_client_id != '00000000-0000-0000-0000-000000000000' %}
                                         --client-id {{ user_assigned_identity_client_id }}
                                         {% endif %}
@@ -104,7 +104,7 @@
     - name:                            "Orchestration: Validate Required Variables"
       ansible.builtin.assert:
         that:
-          - backup_vault_resource_id | default('') | length > 0
+          - backup_vault_resource_id | default('', true) | length > 0
         fail_msg: >-
           backup_vault_resource_id is not set.
           Provide the full ARM resource ID of the Recovery Services vault

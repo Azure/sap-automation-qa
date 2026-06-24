@@ -16,9 +16,9 @@ enums:
     - all_os:                         &os_type [*suse, *redhat, *oraclelinux, *windows]
 
   os_version:
-    - suse_12_3:                      &suse_12_3 "SUSE 12 SP3"
-    - suse_12_4:                      &suse_12_4 "SUSE 12 SP4"
-    - suse_12_5:                      &suse_12_5 "SUSE 12 SP5"
+    - suse_12_3:                      &suse_12_3 "12.3"
+    - suse_12_4:                      &suse_12_4 "12.4"
+    - suse_12_5:                      &suse_12_5 "12.5"
     - all_versions:                   &all_versions "all"
 
   hardware_type:
@@ -37,11 +37,11 @@ enums:
 
   db:
     - hana:                           &hana "HANA"
-    - mssql:                          &mssql "MSSQL"
+    - sqlserver:                      &sqlserver "SQLSERVER"
     - oracle:                         &oracle "Oracle"
     - db2:                            &db2 "Db2"
     - ase:                            &ase "ASE"
-    - all_db:                         &db [*hana, *mssql, *oracle, *db2, *ase]
+    - all_db:                         &db [*hana, *sqlserver, *oracle, *db2, *ase]
 
   role:
     - db:                             &db_role "DB"
@@ -104,6 +104,7 @@ checks:
     collector_type:                   *command
     collector_args:
       command:                        "curl -H 'Metadata: true' 'http://169.254.169.254/metadata/instance/compute/name?api-version=2021-02-01&format=text' -s"
+      windows_command:                "Invoke-RestMethod -Uri 'http://169.254.169.254/metadata/instance/compute/name?api-version=2021-02-01&format=text' -Headers @{Metadata='true'}"
     report:                           *check
 
   - id:                               "IC-0002"
@@ -115,6 +116,7 @@ checks:
     collector_type:                   *command
     collector_args:
       command:                        "curl -H 'Metadata: true' 'http://169.254.169.254/metadata/instance/compute/resourceGroupName?api-version=2021-02-01&format=text' -s"
+      windows_command:                "Invoke-RestMethod -Uri 'http://169.254.169.254/metadata/instance/compute/resourceGroupName?api-version=2021-02-01&format=text' -Headers @{Metadata='true'}"
     report:                           *check
 
   - id:                               "IC-0003"
@@ -126,6 +128,7 @@ checks:
     collector_type:                   *command
     collector_args:
       command:                        "curl -H 'Metadata: true' 'http://169.254.169.254/metadata/instance/compute/location?api-version=2021-02-01&format=text' -s"
+      windows_command:                "Invoke-RestMethod -Uri 'http://169.254.169.254/metadata/instance/compute/location?api-version=2021-02-01&format=text' -Headers @{Metadata='true'}"
     report:                           *check
 
   - id:                               "IC-0004"
@@ -137,6 +140,7 @@ checks:
     collector_type:                   *command
     collector_args:
       command:                        "curl -H 'Metadata: true' 'http://169.254.169.254/metadata/instance/compute/zone?api-version=2021-02-01&format=text' -s"
+      windows_command:                "Invoke-RestMethod -Uri 'http://169.254.169.254/metadata/instance/compute/zone?api-version=2021-02-01&format=text' -Headers @{Metadata='true'}"
     report:                           *check
 
   - id:                               "IC-0005"
@@ -798,7 +802,7 @@ checks:
                                       if command -v az >/dev/null 2>&1; then
                                         security_type=$(az vm show --resource-group {{ CONTEXT.resource_group_name }} --name {{ CONTEXT.vm_name }} --query "securityProfile.securityType" -o tsv 2>/dev/null);
                                         if [ $? -eq 0 ]; then
-                                          if [ -z "$security_type" ] || [ "$security_type" == "null" ]; then
+                                          if [ -z "$security_type" ] || [ "$security_type" = "null" ]; then
                                             echo "Standard";
                                           else
                                             echo "$security_type";
@@ -874,7 +878,7 @@ checks:
                                       if command -v az >/dev/null 2>&1; then
                                         vmss_id=$(az vm show --resource-group {{ CONTEXT.resource_group_name }} --name {{ CONTEXT.vm_name }} --query "virtualMachineScaleSet.id" -o tsv 2>/dev/null);
                                         if [ $? -eq 0 ]; then
-                                          if [ -z "$vmss_id" ] || [ "$vmss_id" == "null" ]; then
+                                          if [ -z "$vmss_id" ] || [ "$vmss_id" = "null" ]; then
                                             echo "No VMSS defined";
                                           else
                                             echo "$vmss_id";
@@ -924,3 +928,140 @@ checks:
       command:                        "/bin/systemctl status kdump.service | grep -o 'Active:.*'"
       user:                           *root
     report:                           *check
+
+  - id:                               "IC-0049"
+    name:                             "HugePages Total"
+    description:                      "Checks the total number of HugePages configured on the system"
+    category:                         *vm_check
+    severity:                         *info
+    workload:                         *workload
+    applicability:
+      os_type:                        [*suse, *redhat, *oraclelinux]
+      os_version:                     *all_versions
+      hardware_type:                  *vm
+      role:                           *role
+      database_type:                  *db
+    collector_type:                   *command
+    collector_args:
+      command:                        "grep HugePages_Total /proc/meminfo | awk '{print $2}'"
+      user:                           *root
+    report:                           *check
+
+  - id:                               "IC-0042"
+    name:                             "Windows Server Time Zone"
+    description:                      "Checks the time zone configured on the Windows server"
+    category:                         *vm_check
+    severity:                         *info
+    workload:                         *workload
+    applicability:
+      os_type:                        *windows
+      os_version:                     *all_versions
+      hardware_type:                  *vm
+      role:                           *role
+      database_type:                  *db
+    collector_type:                   *command
+    collector_args:
+      command:                        "powershell -NoProfile -Command \"(Get-TimeZone).Id\""
+    report:                           *check
+
+  - id:                               "IC-0043"
+    name:                             "Windows OS Product"
+    description:                      "Checks the Windows OS product caption"
+    category:                         *vm_check
+    severity:                         *info
+    workload:                         *workload
+    applicability:
+      os_type:                        *windows
+      os_version:                     *all_versions
+      hardware_type:                  *vm
+      role:                           *role
+      database_type:                  *db
+    collector_type:                   *command
+    collector_args:
+      command:                        "powershell -NoProfile -Command \"(Get-CimInstance Win32_OperatingSystem).Caption\""
+    report:                           *check
+
+  - id:                               "IC-0044"
+    name:                             "Windows OS Edition"
+    description:                      "Checks the Windows edition (Standard, Datacenter, etc.)"
+    category:                         *vm_check
+    severity:                         *info
+    workload:                         *workload
+    applicability:
+      os_type:                        *windows
+      os_version:                     *all_versions
+      hardware_type:                  *vm
+      role:                           *role
+      database_type:                  *db
+    collector_type:                   *command
+    collector_args:
+      command:                        "powershell -NoProfile -Command \"(Get-CimInstance Win32_OperatingSystem).Caption -replace '.*?(Standard|Datacenter|Enterprise|Web).*','$1'\""
+    report:                           *check
+
+  - id:                               "IC-0045"
+    name:                             "Windows OS Version"
+    description:                      "Checks the Windows OS build version"
+    category:                         *vm_check
+    severity:                         *info
+    workload:                         *workload
+    applicability:
+      os_type:                        *windows
+      os_version:                     *all_versions
+      hardware_type:                  *vm
+      role:                           *role
+      database_type:                  *db
+    collector_type:                   *command
+    collector_args:
+      command:                        "powershell -NoProfile -Command \"[System.Environment]::OSVersion.Version.ToString()\""
+    report:                           *check
+
+  - id:                               "IC-0046"
+    name:                             "Windows Domain Name"
+    description:                      "Checks the Active Directory domain membership"
+    category:                         *vm_check
+    severity:                         *info
+    workload:                         *workload
+    applicability:
+      os_type:                        *windows
+      os_version:                     *all_versions
+      hardware_type:                  *vm
+      role:                           *role
+      database_type:                  *db
+    collector_type:                   *command
+    collector_args:
+      command:                        "powershell -NoProfile -Command \"(Get-CimInstance Win32_ComputerSystem).Domain\""
+    report:                           *check
+
+  - id:                               "IC-0047"
+    name:                             "Windows Hosts File"
+    description:                      "Checks the content of the Windows hosts file"
+    category:                         *vm_check
+    severity:                         *info
+    workload:                         *workload
+    applicability:
+      os_type:                        *windows
+      os_version:                     *all_versions
+      hardware_type:                  *vm
+      role:                           *role
+      database_type:                  *db
+    collector_type:                   *command
+    collector_args:
+      command:                        "powershell -NoProfile -Command \"Get-Content 'C:\\Windows\\System32\\drivers\\etc\\hosts'\""
+    report:                           *section
+
+  - id:                               "IC-0048"
+    name:                             "Windows MiniFilter Drivers"
+    description:                      "Lists filesystem minifilter driver instances (antivirus, backup)"
+    category:                         *vm_check
+    severity:                         *info
+    workload:                         *workload
+    applicability:
+      os_type:                        *windows
+      os_version:                     *all_versions
+      hardware_type:                  *vm
+      role:                           *role
+      database_type:                  *db
+    collector_type:                   *command
+    collector_args:
+      command:                        "powershell -NoProfile -Command \"fltmc instances\""
+    report:                           *section

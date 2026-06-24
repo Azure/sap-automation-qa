@@ -23,9 +23,10 @@ class MockCheck:
     Mock Check object for testing
     """
 
-    def __init__(self, collector_args: Dict[str, Any] | None = None):
+    def __init__(self, collector_args: Dict[str, Any] | None = None, check_id: str | None = None):
         self.collector_args = collector_args or {}
         self.command = None
+        self.id = check_id
 
 
 class MockParent:
@@ -153,6 +154,30 @@ class TestCommandCollector:
         result = collector.collect(MockCheck({"command": "failing_command", "shell": True}), {})
         assert "ERROR: Command execution failed" in result
         assert len(parent.errors) == 1
+
+    def test_collect_uses_precollected_output(self, monkeypatch):
+        """
+        Test that pre-collected command output is returned without executing a subprocess.
+        """
+        parent = MockParent()
+        collector = CommandCollector(parent)
+
+        def mock_execute_should_not_run(command: str, shell_command: bool = True) -> str:
+            raise AssertionError("subprocess must not run when pre-collected output exists")
+
+        monkeypatch.setattr(parent, "execute_command_subprocess", mock_execute_should_not_run)
+        check = MockCheck({"command": "Get-Cluster"}, check_id="SAP-0022")
+        context = {"precollected_command_outputs": {"SAP-0022": "  5000\r\n"}}
+        assert collector.collect(check, context) == "5000"
+
+    def test_collect_falls_back_when_check_not_precollected(self):
+        """
+        Test that a check missing from the pre-collected map still executes normally.
+        """
+        collector = CommandCollector(MockParent())
+        check = MockCheck({"command": "whoami", "shell": True}, check_id="SAP-9999")
+        context = {"precollected_command_outputs": {"SAP-0022": "5000"}}
+        assert collector.collect(check, context) == "mock_output"
 
 
 class TestAzureDataParser:

@@ -57,6 +57,24 @@ class TestHanaClusterStatusChecker:
             hana_primitive_resource_name="rsc_SAPHanaCon_TEST_HDB00",
         )
 
+    @pytest.fixture
+    def hana_checker_rhel_angi(self):
+        """
+        Fixture for a RHEL + SAPHanaSR-angi scale-up HanaClusterStatusChecker,
+        using the RHEL angi resource naming (SAPHanaController).
+
+        :return: Instance of HanaClusterStatusChecker.
+        :rtype: HanaClusterStatusChecker
+        """
+        return HanaClusterStatusChecker(
+            database_sid="HDB",
+            ansible_os_family=OperatingSystemFamily.REDHAT,
+            saphanasr_provider=HanaSRProvider.ANGI,
+            db_instance_number="00",
+            hana_clone_resource_name="cln_SAPHanaController_HDB_HDB00",
+            hana_primitive_resource_name="rsc_SAPHanaController_HDB_HDB00",
+        )
+
     def test_get_cluster_pramaeters(self, mocker, hana_checker_classic):
         """
         Test the _get_cluster_parameters method.
@@ -184,6 +202,57 @@ class TestHanaClusterStatusChecker:
 
         assert result["primary_node"] == "node1"
         assert result["secondary_node"] == "node2"
+        assert result["primary_site_name"] == "SITEA"
+        assert result["secondary_site_name"] == "SITEB"
+
+    def test_provider_config_rhel_angi(self, hana_checker_rhel_angi):
+        """
+        RHEL angi provider config must derive the promotion-score attribute
+        from the discovered primitive name and use angi sync values (150/100).
+
+        :param hana_checker_rhel_angi: Instance of HanaClusterStatusChecker.
+        :type hana_checker_rhel_angi: HanaClusterStatusChecker
+        """
+        config = hana_checker_rhel_angi._get_provider_config()
+        assert config["clone_attr"] == "hana_HDB_clone_state"
+        assert config["score_attr"] == "master-rsc_SAPHanaController_HDB_HDB00"
+        assert config["primary"]["clone"] == "PROMOTED"
+        assert config["secondary"]["clone"] == "DEMOTED"
+        assert config["primary"]["sync"] == "150"
+        assert config["secondary"]["sync"] == "100"
+
+    def test_process_node_attributes_both_nodes_rhel_angi(self, hana_checker_rhel_angi):
+        """
+        RHEL angi scale-up node-attribute processing must identify primary and
+        secondary using the SAPHanaController promotion score.
+
+        :param hana_checker_rhel_angi: Instance of HanaClusterStatusChecker.
+        :type hana_checker_rhel_angi: HanaClusterStatusChecker
+        """
+        xml_str = """
+        <dummy>
+            <node_attributes>
+                <node name="rh7dhdb00l043">
+                    <attribute name="hana_HDB_clone_state" value="PROMOTED"/>
+                    <attribute name="hana_HDB_roles" value="master1:master:worker:master"/>
+                    <attribute name="hana_HDB_site" value="SITEA"/>
+                    <attribute name="hana_HDB_vhost" value="rh7dhdb00l043"/>
+                    <attribute name="master-rsc_SAPHanaController_HDB_HDB00" value="150"/>
+                </node>
+                <node name="rh7dhdb00l143">
+                    <attribute name="hana_HDB_clone_state" value="DEMOTED"/>
+                    <attribute name="hana_HDB_roles" value="master1:master:worker:master"/>
+                    <attribute name="hana_HDB_site" value="SITEB"/>
+                    <attribute name="hana_HDB_vhost" value="rh7dhdb00l143"/>
+                    <attribute name="master-rsc_SAPHanaController_HDB_HDB00" value="100"/>
+                </node>
+            </node_attributes>
+        </dummy>
+        """
+        result = hana_checker_rhel_angi._process_node_attributes(ET.fromstring(xml_str))
+
+        assert result["primary_node"] == "rh7dhdb00l043"
+        assert result["secondary_node"] == "rh7dhdb00l143"
         assert result["primary_site_name"] == "SITEA"
         assert result["secondary_site_name"] == "SITEB"
 
@@ -827,3 +896,68 @@ class TestHanaClusterStatusCheckerScaleOutHSR:
             "clone": "DEMOTED",
             "sync": "100",
         }
+
+    def test_angi_provider_config_primary_worker_scores(self, scaleout_checker_hdb_controller):
+        """
+        RHEL angi accepts both '101' and '-10000' as valid promotion scores
+        for worker nodes on the primary site.
+        """
+        config = scaleout_checker_hdb_controller._get_provider_config()
+        assert config["worker_scores"]["primary"] == ["101", "-10000"]
+
+    ANGI_PRIMARY_WORKER_NEG_SCORE = """
+    <pacemaker-result api-version="2.38"
+        request="crm_mon --output-as=xml">
+        <node_attributes>
+            <node name="node1">
+                <attribute name="hana_hdb_clone_state" value="PROMOTED"/>
+                <attribute name="hana_hdb_site" value="SITEA"/>
+                <attribute name="hana_hdb_op_mode" value="logreplay"/>
+                <attribute name="hana_hdb_srmode" value="syncmem"/>
+                <attribute name="hana_hdb_roles"
+                    value="master1:master:worker:master"/>
+                <attribute name="master-SAPHana_HDB_HDB00" value="150"/>
+            </node>
+            <node name="node2">
+                <attribute name="hana_hdb_clone_state" value="DEMOTED"/>
+                <attribute name="hana_hdb_site" value="SITEA"/>
+                <attribute name="hana_hdb_roles"
+                    value="master1:slave:worker:slave"/>
+                <attribute name="master-SAPHana_HDB_HDB00" value="-10000"/>
+            </node>
+            <node name="node3">
+                <attribute name="hana_hdb_clone_state" value="DEMOTED"/>
+                <attribute name="hana_hdb_site" value="SITEB"/>
+                <attribute name="hana_hdb_roles"
+                    value="master1:master:worker:master"/>
+                <attribute name="master-SAPHana_HDB_HDB00" value="100"/>
+            </node>
+            <node name="node4">
+                <attribute name="hana_hdb_clone_state" value="DEMOTED"/>
+                <attribute name="hana_hdb_site" value="SITEB"/>
+                <attribute name="hana_hdb_roles"
+                    value="master1:slave:worker:slave"/>
+                <attribute name="master-SAPHana_HDB_HDB00" value="-12200"/>
+            </node>
+            <node name="observer">
+                <attribute name="hana_hdb_clone_state" value="UNDEFINED"/>
+            </node>
+        </node_attributes>
+    </pacemaker-result>
+    """
+
+    def test_angi_primary_worker_negative_score_valid(self, scaleout_checker_hdb_controller):
+        """
+        A RHEL angi primary-site worker reporting '-10000' must be accepted
+        (worker_node_scores_valid stays True).
+        """
+        result = scaleout_checker_hdb_controller._process_node_attributes(
+            ET.fromstring(self.ANGI_PRIMARY_WORKER_NEG_SCORE)
+        )
+        assert result["worker_node_scores_valid"] is True
+        primary_workers = [
+            d for d in result["worker_node_score_details"] if d["site_role"] == "primary"
+        ]
+        assert primary_workers, "expected at least one primary worker score detail"
+        assert all(d["valid"] for d in primary_workers)
+        assert any(d["actual_score"] == "-10000" for d in primary_workers)

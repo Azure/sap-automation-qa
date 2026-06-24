@@ -1,11 +1,14 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
 
+# SAP on Azure - VM Support Matrix
+# https://me.sap.com/notes/1928533
+
 os_type:
   - suse:                        &suse "SUSE"
   - redhat:                      &redhat "REDHAT"
   - oraclelinux:                 &oraclelinux "ORACLELINUX"
-  - windows:                     &windows "WINDOWS"
+  - windows:                     &windows "MICROSOFTWINDOWSSERVER"
 
 SupportedOSDBCombinations:
   HANA:
@@ -14,7 +17,7 @@ SupportedOSDBCombinations:
     ERS:                         [*windows, *redhat, *suse]
     APP:                         [*windows, *redhat, *suse]
     PAS:                         [*windows, *redhat, *suse]
-  MSSQL:
+  SQLSERVER:
     DB:                          [*windows]
     SCS:                         [*windows, *redhat, *suse]
     ERS:                         [*windows, *redhat, *suse]
@@ -42,14 +45,15 @@ SupportedOSDBCombinations:
 
 # Database configurations
 db_types:
-  non_hana_dbs:                &db_type_non_hana ["MSSQL", "Oracle", "Db2", "ASE"]
-  non_hana_dbs_ase:            &db_type_non_hana_ase ["MSSQL", "Oracle", "Db2"]
-  all_dbs:                     &db_type_all ["MSSQL", "Oracle", "Db2", "HANA", "ASE"]
+  non_hana_dbs:                &db_type_non_hana ["SQLSERVER", "Oracle", "Db2", "ASE"]
+  non_hana_dbs_ase:            &db_type_non_hana_ase ["SQLSERVER", "Oracle", "Db2"]
+  all_dbs:                     &db_type_all ["SQLSERVER", "Oracle", "Db2", "HANA", "ASE"]
 
 # Storage configurations
 storage_types:
   premium:                     &storage_premium ["Premium_LRS", "UltraSSD_LRS", "ANF", "PremiumV2_LRS"]
   ultra:                       &storage_ultra ["UltraSSD_LRS", "ANF", "PremiumV2_LRS"]
+  premium_v2_anf:              &storage_premium_v2_anf ["ANF", "PremiumV2_LRS"]
 
 # HANA scenarios
 hana_scenarios:
@@ -107,6 +111,18 @@ vm_patterns:
       SupportedDB:             *db_type_all
     PAS:
       SupportedDB:             *db_type_all
+    SCS:
+      SupportedDB:             *db_type_all
+    ERS:
+      SupportedDB:             *db_type_all
+
+  non_hana_db_hana_app_pas:    &vm_pattern_non_hana_db_hana_app_pas
+    DB:
+      SupportedDB:             *db_type_non_hana
+    APP:
+      SupportedDB:             ["SQLSERVER", "Oracle", "Db2", "HANA"]
+    PAS:
+      SupportedDB:             ["SQLSERVER", "Oracle", "Db2", "HANA"]
     SCS:
       SupportedDB:             *db_type_all
     ERS:
@@ -232,6 +248,36 @@ vm_patterns:
     ERS:
       SupportedDB:             *db_type_all
 
+  hana_db_premium_v2_anf_oltp: &vm_pattern_hana_premium_v2_anf_oltp
+    DB:
+      SupportedDB:             *db_type_all
+      HANAStorageTypeData:     *storage_premium_v2_anf
+      HANAStorageTypeLog:      *storage_premium_v2_anf
+      HANAScenario:            *hana_scenario_oltp
+    APP:
+      SupportedDB:             *db_type_all
+    PAS:
+      SupportedDB:             *db_type_all
+    SCS:
+      SupportedDB:             *db_type_all
+    ERS:
+      SupportedDB:             *db_type_all
+
+  hana_db_premium_v2_anf:      &vm_pattern_hana_premium_v2_anf
+    DB:
+      SupportedDB:             *db_type_all
+      HANAStorageTypeData:     *storage_premium_v2_anf
+      HANAStorageTypeLog:      *storage_premium_v2_anf
+      HANAScenario:            *hana_scenario_basic
+    APP:
+      SupportedDB:             *db_type_all
+    PAS:
+      SupportedDB:             *db_type_all
+    SCS:
+      SupportedDB:             *db_type_all
+    ERS:
+      SupportedDB:             *db_type_all
+
 # Supported VM types
 SupportedVMs:
   # D-series VMs
@@ -332,8 +378,8 @@ SupportedVMs:
   Standard_D64ds_v5:           *vm_pattern_non_hana_db
   Standard_D64as_v5:           *vm_pattern_non_hana_db
   Standard_D64ads_v5:          *vm_pattern_non_hana_db
-  Standard_D64s_v6:            *vm_pattern_non_hana_db
-  Standard_D64ds_v6:           *vm_pattern_non_hana_db
+  Standard_D64s_v6:            *vm_pattern_hana_premium_v2_anf_oltp
+  Standard_D64ds_v6:           *vm_pattern_hana_premium_v2_anf_oltp
   Standard_D64as_v6:           *vm_pattern_non_hana_db
   Standard_D64ads_v6:          *vm_pattern_non_hana_db
 
@@ -342,13 +388,13 @@ SupportedVMs:
   Standard_D96ds_v5:           *vm_pattern_non_hana_db
   Standard_D96as_v5:           *vm_pattern_non_hana_db
   Standard_D96ads_v5:          *vm_pattern_non_hana_db
-  Standard_D96s_v6:            *vm_pattern_non_hana_db
-  Standard_D96ds_v6:           *vm_pattern_non_hana_db
+  Standard_D96s_v6:            *vm_pattern_hana_premium_v2_anf_oltp
+  Standard_D96ds_v6:           *vm_pattern_hana_premium_v2_anf_oltp
   Standard_D96as_v6:           *vm_pattern_non_hana_db
   Standard_D96ads_v6:          *vm_pattern_non_hana_db
 
-  Standard_D128s_v6:           *vm_pattern_non_hana_db
-  Standard_D128ds_v6:          *vm_pattern_non_hana_db
+  Standard_D128s_v6:           *vm_pattern_hana_premium_v2_anf_oltp
+  Standard_D128ds_v6:          *vm_pattern_hana_premium_v2_anf_oltp
 
   # F-series VMs
   Standard_F2as_v6:            *vm_pattern_non_hana_db
@@ -447,20 +493,20 @@ SupportedVMs:
   Standard_E32ds_v5:           *vm_pattern_hana_ultra_log_oltp
   Standard_E32as_v5:           *vm_pattern_non_hana_db
   Standard_E32ads_v5:          *vm_pattern_non_hana_db
-  Standard_E32s_v6:            *vm_pattern_non_hana_db
-  Standard_E32ds_v6:           *vm_pattern_non_hana_db
+  Standard_E32s_v6:            *vm_pattern_hana_premium_v2_anf_oltp
+  Standard_E32ds_v6:           *vm_pattern_hana_premium_v2_anf_oltp
   Standard_E32as_v6:           *vm_pattern_non_hana_db
   Standard_E32ads_v6:          *vm_pattern_non_hana_db
 
   Standard_E48s_v3:            *vm_pattern_non_hana_db
   Standard_E48ds_v4:           *vm_pattern_hana_ultra_log
-  Standard_E48as_v4:           *vm_pattern_non_hana_db
+  Standard_E48as_v4:           *vm_pattern_non_hana_db_hana_app_pas
   Standard_E48s_v5:            *vm_pattern_hana_ultra_log_oltp
   Standard_E48ds_v5:           *vm_pattern_hana_ultra_log_oltp
   Standard_E48as_v5:           *vm_pattern_non_hana_db
   Standard_E48ads_v5:          *vm_pattern_non_hana_db
-  Standard_E48s_v6:            *vm_pattern_non_hana_db
-  Standard_E48ds_v6:           *vm_pattern_non_hana_db
+  Standard_E48s_v6:            *vm_pattern_hana_premium_v2_anf_oltp
+  Standard_E48ds_v6:           *vm_pattern_hana_premium_v2_anf_oltp
   Standard_E48as_v6:           *vm_pattern_non_hana_db
   Standard_E48ads_v6:          *vm_pattern_non_hana_db
 
@@ -472,8 +518,8 @@ SupportedVMs:
   Standard_E64ds_v5:           *vm_pattern_hana_ultra_log_oltp
   Standard_E64as_v5:           *vm_pattern_non_hana_db
   Standard_E64ads_v5:          *vm_pattern_non_hana_db
-  Standard_E64s_v6:            *vm_pattern_non_hana_db
-  Standard_E64ds_v6:           *vm_pattern_non_hana_db
+  Standard_E64s_v6:            *vm_pattern_hana_premium_v2_anf_oltp
+  Standard_E64ds_v6:           *vm_pattern_hana_premium_v2_anf_oltp
   Standard_E64as_v6:           *vm_pattern_non_hana_db
   Standard_E64ads_v6:          *vm_pattern_non_hana_db
 
@@ -482,13 +528,15 @@ SupportedVMs:
   Standard_E96ds_v5:           *vm_pattern_hana_ultra_log_oltp
   Standard_E96as_v5:           *vm_pattern_non_hana_db
   Standard_E96ads_v5:          *vm_pattern_non_hana_db
-  Standard_E96s_v6:            *vm_pattern_non_hana_db
-  Standard_E96ds_v6:           *vm_pattern_non_hana_db
+  Standard_E96s_v6:            *vm_pattern_hana_premium_v2_anf_oltp
+  Standard_E96ds_v6:           *vm_pattern_hana_premium_v2_anf_oltp
   Standard_E96as_v6:           *vm_pattern_non_hana_db
   Standard_E96ads_v6:          *vm_pattern_non_hana_db
 
-  Standard_E128s_v6:           *vm_pattern_non_hana_db
-  Standard_E128ds_v6:          *vm_pattern_non_hana_db
+  Standard_E128s_v6:           *vm_pattern_hana_premium_v2_anf
+  Standard_E128ds_v6:          *vm_pattern_hana_premium_v2_anf
+  Standard_E192is_v6:          *vm_pattern_hana_premium_v2_anf
+  Standard_E192ids_v6:         *vm_pattern_hana_premium_v2_anf
 
   # M-series VMs
   Standard_M8ms:               *vm_pattern_non_hana_db
@@ -532,6 +580,7 @@ SupportedVMs:
   Standard_M96ds_2_v3:         *vm_pattern_hana_premium_log_olap
   Standard_M96ds_4_v3:         *vm_pattern_hana_olap_scale_out
   Standard_M96bds_v3:          *vm_pattern_hana_premium_log
+  Standard_M96bds_2_v3:        *vm_pattern_hana_premium_log
   Standard_M96bs_v3:           *vm_pattern_non_hana_db
   Standard_M96bds_1_v3:        *vm_pattern_hana_premium_log
 
@@ -576,8 +625,8 @@ SupportedVMs:
   Standard_M624s_12_v3:        *vm_pattern_hana_olap_scale_out
   Standard_M624ds_12_v3:       *vm_pattern_hana_olap_scale_out
 
+  Standard_M832ixs:            *vm_pattern_hana_oltp_scale_out
   Standard_M832ixs_v2:         *vm_pattern_hana_oltp_scale_out
-  Standard_M832ixs_8_v2:       *vm_pattern_hana_oltp_scale_out
   Standard_M832s_12_v3:        *vm_pattern_hana_olap_scale_out
   Standard_M832s_16_v3:        *vm_pattern_hana_olap_scale_out
   Standard_M832ds_12_v3:       *vm_pattern_hana_olap_scale_out
@@ -587,6 +636,7 @@ SupportedVMs:
   Standard_M832ids_16_v3:      *vm_pattern_hana_premium_log_oltp
   Standard_M832ids_12_v3:      *vm_pattern_hana_premium_log_oltp
 
+  Standard_M896ixds_24_v3:     *vm_pattern_hana_premium_log
   Standard_M896ixds_32_v3:     *vm_pattern_hana_premium_log
 
   Standard_M1792ixds_32_v3:    *vm_pattern_hana_premium_log

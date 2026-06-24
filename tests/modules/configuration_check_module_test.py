@@ -123,6 +123,8 @@ class TestConfigurationCheckModuleInit:
         assert "list" in registry
         assert "check_support" in registry
         assert "properties" in registry
+        assert "disk_consistency" in registry
+        assert "check_storage_type" in registry
 
 
 class TestSetContext:
@@ -1076,3 +1078,214 @@ checks:
             )
             assert len(results) == 1
             assert results[0].check.id == "check_001"
+
+
+class TestValidateDiskConsistency:
+    """Test suite for validate_disk_consistency method"""
+
+    def test_all_disks_same_type(self, config_module, sample_check):
+        """Test disk consistency when all disks share the same type"""
+        sample_check.validator_args = {"consistency_property": "sku"}
+        result = config_module.validate_disk_consistency(
+            sample_check, "Premium_LRS,Premium_LRS,Premium_LRS"
+        )
+        assert result["status"] == TestStatus.SUCCESS.value
+        assert "consistent" in result["details"].lower()
+
+    def test_mixed_disk_types(self, config_module, sample_check):
+        """Test disk consistency when disks have different types"""
+        sample_check.severity = TestSeverity.CRITICAL
+        sample_check.validator_args = {"consistency_property": "sku"}
+        result = config_module.validate_disk_consistency(
+            sample_check, "Premium_LRS,StandardSSD_LRS,Premium_LRS"
+        )
+        assert result["status"] == TestStatus.ERROR.value
+        assert "inconsistent" in result["details"].lower()
+
+    def test_single_disk(self, config_module, sample_check):
+        """Test disk consistency with a single disk"""
+        sample_check.validator_args = {"consistency_property": "sku"}
+        result = config_module.validate_disk_consistency(sample_check, "Premium_LRS")
+        assert result["status"] == TestStatus.SUCCESS.value
+
+    def test_empty_data(self, config_module, sample_check):
+        """Test disk consistency with empty input"""
+        sample_check.validator_args = {"consistency_property": "sku"}
+        result = config_module.validate_disk_consistency(sample_check, "")
+        assert result["status"] == TestStatus.ERROR.value
+        assert "details" in result
+
+    def test_na_data(self, config_module, sample_check):
+        """Test disk consistency with N/A input"""
+        sample_check.validator_args = {"consistency_property": "sku"}
+        result = config_module.validate_disk_consistency(sample_check, "N/A")
+        assert result["status"] == TestStatus.ERROR.value
+
+    def test_none_data(self, config_module, sample_check):
+        """Test disk consistency with None input"""
+        sample_check.validator_args = {"consistency_property": "sku"}
+        result = config_module.validate_disk_consistency(sample_check, None)
+        assert result["status"] == TestStatus.ERROR.value
+
+
+class TestValidateVmSupportDiagnostics:
+    """Test suite for improved validate_vm_support diagnostics"""
+
+    def test_missing_input_details(self, config_module, sample_check):
+        """Test that missing input produces details"""
+        config_module.set_context({"role": "", "database_type": "", "supported_configurations": {}})
+        sample_check.validator_args = {"validation_rules": "VMs"}
+        result = config_module.validate_vm_support(sample_check, "")
+        assert result["status"] == TestStatus.ERROR.value
+        assert "details" in result
+
+    def test_unsupported_vm_details(self, config_module, sample_check):
+        """Test that unsupported VM produces details with allowed list"""
+        config_module.set_context(
+            {
+                "role": "DB",
+                "database_type": "Oracle",
+                "supported_configurations": {
+                    "SupportedVMs": {"Standard_M32ts": {"DB": {"SupportedDB": ["HANA", "Db2"]}}}
+                },
+            }
+        )
+        sample_check.validator_args = {"validation_rules": "SupportedVMs"}
+        result = config_module.validate_vm_support(sample_check, "Standard_M32ts")
+        assert result["status"] == TestStatus.ERROR.value
+        assert "details" in result
+
+
+class TestValidateNumericRangeDiagnostics:
+    """Test suite for improved validate_numeric_range diagnostics"""
+
+    def test_non_numeric_input_details(self, config_module, sample_check):
+        """Test that non-numeric input produces details with context"""
+        sample_check.validator_args = {"min": "100", "max": "500"}
+        result = config_module.validate_numeric_range(sample_check, "N/A")
+        assert result["status"] == TestStatus.ERROR.value
+        assert "details" in result
+        assert "N/A" in result["details"]
+
+    def test_error_string_input_details(self, config_module, sample_check):
+        """Test that ERROR: prefix input produces details"""
+        sample_check.validator_args = {"min": "400"}
+        result = config_module.validate_numeric_range(sample_check, "ERROR: Mount point not found")
+        assert result["status"] == TestStatus.ERROR.value
+        assert "details" in result
+
+
+class TestValidateStorageTypeSupport:
+    """Test suite for validate_storage_type_support method"""
+
+    def test_supported_storage_type(self, config_module, sample_check):
+        """Test storage type validation with supported type"""
+        config_module.set_context(
+            {
+                "role": "DB",
+                "vm_size": "Standard_M32ts",
+                "supported_configurations": {
+                    "SupportedVMs": {
+                        "Standard_M32ts": {
+                            "DB": {
+                                "HANAStorageTypeData": ["Premium_LRS", "UltraSSD_LRS"],
+                                "HANAStorageTypeLog": ["Premium_LRS"],
+                            }
+                        }
+                    }
+                },
+            }
+        )
+        sample_check.validator_args = {"mount_role": "data"}
+        result = config_module.validate_storage_type_support(sample_check, "Premium_LRS")
+        assert result["status"] == TestStatus.SUCCESS.value
+        assert "details" in result
+
+    def test_unsupported_storage_type(self, config_module, sample_check):
+        """Test storage type validation with unsupported type"""
+        config_module.set_context(
+            {
+                "role": "DB",
+                "vm_size": "Standard_M32ts",
+                "supported_configurations": {
+                    "SupportedVMs": {
+                        "Standard_M32ts": {
+                            "DB": {
+                                "HANAStorageTypeData": ["PremiumV2_LRS"],
+                                "HANAStorageTypeLog": ["PremiumV2_LRS"],
+                            }
+                        }
+                    }
+                },
+            }
+        )
+        sample_check.severity = TestSeverity.CRITICAL
+        sample_check.validator_args = {"mount_role": "data"}
+        result = config_module.validate_storage_type_support(sample_check, "Premium_LRS")
+        assert result["status"] == TestStatus.ERROR.value
+
+    def test_log_mount_role(self, config_module, sample_check):
+        """Test storage type validation for log mount role"""
+        config_module.set_context(
+            {
+                "role": "DB",
+                "vm_size": "Standard_M32ts",
+                "supported_configurations": {
+                    "SupportedVMs": {
+                        "Standard_M32ts": {
+                            "DB": {
+                                "HANAStorageTypeData": ["Premium_LRS"],
+                                "HANAStorageTypeLog": ["UltraSSD_LRS"],
+                            }
+                        }
+                    }
+                },
+            }
+        )
+        sample_check.validator_args = {"mount_role": "log"}
+        result = config_module.validate_storage_type_support(sample_check, "UltraSSD_LRS")
+        assert result["status"] == TestStatus.SUCCESS.value
+
+    def test_empty_collected_data(self, config_module, sample_check):
+        """Test storage type validation with empty data"""
+        config_module.set_context({"role": "DB", "vm_size": "Standard_M32ts"})
+        sample_check.validator_args = {"mount_role": "data"}
+        result = config_module.validate_storage_type_support(sample_check, "")
+        assert result["status"] == TestStatus.ERROR.value
+
+    def test_vm_not_in_matrix(self, config_module, sample_check):
+        """Test storage type validation with unknown VM falls back to general list"""
+        config_module.set_context(
+            {
+                "role": "DB",
+                "vm_size": "Standard_UNKNOWN",
+                "supported_configurations": {
+                    "SupportedVMs": {
+                        "Standard_M32ts": {"DB": {"HANAStorageTypeData": ["Premium_LRS"]}}
+                    },
+                    "storage_types": {
+                        "premium": ["Premium_LRS", "UltraSSD_LRS", "ANF", "PremiumV2_LRS"],
+                        "ultra": ["UltraSSD_LRS", "ANF", "PremiumV2_LRS"],
+                    },
+                },
+            }
+        )
+        sample_check.validator_args = {"mount_role": "data"}
+        result = config_module.validate_storage_type_support(sample_check, "Premium_LRS")
+        assert result["status"] == TestStatus.SUCCESS.value
+
+    def test_vm_not_in_matrix_no_fallback(self, config_module, sample_check):
+        """Test storage type validation with unknown VM and no fallback"""
+        config_module.set_context(
+            {
+                "role": "DB",
+                "vm_size": "Standard_UNKNOWN",
+                "supported_configurations": {
+                    "SupportedVMs": {},
+                },
+            }
+        )
+        sample_check.validator_args = {"mount_role": "data"}
+        result = config_module.validate_storage_type_support(sample_check, "Premium_LRS")
+        assert result["status"] == TestStatus.INFO.value
+        assert "No storage type constraints" in result["details"]

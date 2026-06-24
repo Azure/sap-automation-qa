@@ -15,11 +15,11 @@ enums:
     - all_os:                         &os_type [*suse, *redhat, *oraclelinux, *windows]
 
   os_version:
-    - suse_12_3:                      &suse_12_3 "SUSE 12 SP3"
-    - suse_12_4:                      &suse_12_4 "SUSE 12 SP4"
-    - suse_12_5:                      &suse_12_5 "SUSE 12 SP5"
-    - suse_15_0:                      &suse_15_0 "SUSE 15 SP0"
-    - suse_15_0:                      &suse_15_1 "SUSE 15 SP1"
+    - suse_12_3:                      &suse_12_3 "12.3"
+    - suse_12_4:                      &suse_12_4 "12.4"
+    - suse_12_5:                      &suse_12_5 "12.5"
+    - suse_15_0:                      &suse_15_0 "15"
+    - suse_15_1:                      &suse_15_1 "15.1"
     - all_versions:                   &all_versions "all"
 
   hardware_type:
@@ -38,11 +38,11 @@ enums:
 
   db:
     - hana:                           &hana "HANA"
-    - mssql:                          &mssql "MSSQL"
+    - sqlserver:                      &sqlserver "SQLSERVER"
     - oracle:                         &oracle "Oracle"
     - db2:                            &db2 "Db2"
     - ase:                            &ase "ASE"
-    - all_db:                         &db [*hana, *mssql, *oracle, *db2, *ase]
+    - all_db:                         &db [*hana, *sqlserver, *oracle, *db2, *ase]
 
   role:
     - db:                             &db_role "DB"

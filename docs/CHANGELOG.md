@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file.
 
+## 1.1.2
+Release Date: 06-30-2026
+
+1. Configuration checks parity closure with legacy QualityCheck
+   - Added Oracle OEL database checks (DB-ORA-0001 through DB-ORA-0007): hardware, LANG, SELinux, vm.max_map_count, kernel.sem, THP, ASM process.
+   - Added HANA filesystem/storage checks (DB-HANA-0058 through DB-HANA-0065): disk type/tier consistency, Write Accelerator, storage type verdicts, ANF static persistence.
+   - Added RHEL Mellanox kernel guards (DB-HANA-0066 through DB-HANA-0072) for RHEL 7.9, 8.2, 8.4, 8.6, 8.8, 9.0, 9.2.
+2. Configuration check robustness and reporting improvements
+   - New `disk_consistency` validator for cross-disk type/tier homogeneity checks.
+   - New `parse_disk_consistency_vars` collector for per-disk property collection.
+3. Extended support for Agent Skills for Claude and Gemini CLI
+
 ## 1.1.1
 Release Date: 05-30-2026
 

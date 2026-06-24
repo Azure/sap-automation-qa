@@ -1,0 +1,264 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+
+enums:
+  severity:
+    - info:                           &info "INFO"
+    - high:                           &high "HIGH"
+    - low:                            &low "LOW"
+    - warning:                        &warning "WARNING"
+    - critical:                       &critical "CRITICAL"
+    - all_severity:                   &severity [*info, *high, *low, *warning, *critical]
+
+  os_type:
+    - suse:                           &suse "SLES_SAP"
+    - redhat:                         &redhat "REDHAT"
+    - oraclelinux:                    &oraclelinux "ORACLELINUX"
+    - windows:                        &windows "Windows"
+    - all_os:                         &os_type [*suse, *redhat, *oraclelinux, *windows]
+
+  os_version:
+    - all_versions:                   &all_versions "all"
+
+  hardware_type:
+    - vm:                             &vm "VM"
+    - hli:                            &hli "HLI"
+    - all_hardware:                   &all_hardware [*vm, *hli]
+
+  storage_type:
+    premium_storage:                  &premium_storage ["Premium_LRS","UltraSSD_LRS","PremiumV2_LRS","AFS"]
+    anf:                              &anf ["ANF"]
+    all_storage:                      &all_storage ["Premium_LRS","UltraSSD_LRS","StandardSSD_LRS","Standard_LRS","ANF","PremiumV2_LRS","AFS"]
+
+  workload:
+    - sap:                            &sap "SAP"
+    - all_workload:                   &workload [*sap]
+
+  db:
+    - hana:                           &hana "HANA"
+    - sqlserver:                      &sqlserver "SQLSERVER"
+    - oracle:                         &oracle "Oracle"
+    - db2:                            &db2 "Db2"
+    - ase:                            &ase "ASE"
+    - all_db:                         &db [*hana, *sqlserver, *oracle, *db2, *ase]
+
+  role:
+    - db:                             &db_role "DB"
+    - ascs:                           &ascs_role "SCS"
+    - ers:                            &ers_role "ERS"
+    - app:                            &app_role "APP"
+    - webdispatcher:                  &web_dispatch "WEB"
+    - pas:                            &pas "PAS"
+    - all_role:                       &all_role [*db_role, *ascs_role, *ers_role, *app_role, *web_dispatch, *pas]
+
+  cluster_type:
+    - sbd:                            &sbd "ISCSI"
+    - fencing_agent:                  &fencing_agent "AFA"
+    - all_fencing_agent:              &cluster_type [*sbd, *fencing_agent]
+
+  collector_type:
+    - command:                        &command "command"
+    - azure:                          &azure "azure"
+    - all_collector_type:             &collector_type [*command, *azure]
+
+  category:
+    - package:                        &package_check "Package"
+    - vm:                             &vm_check "Virtual Machine"
+    - sap:                            &sap_check "SAP"
+    - os:                             &os_check "Operating System"
+    - all_check_types:                &category [*package_check, *vm_check, *sap_check, *os_check]
+
+  user:
+    - root:                           &root "root"
+    - sidadm:                         &sidadm "sidadm"
+    - orasid:                         &orasid "orasid"
+    - all_users:                      &user [*root, *sidadm, *orasid]
+
+  validator_type:
+    - string:                         &string "string"
+    - range:                          &range "range"
+    - list:                           &list "list"
+    - min_list:                       &min_list "min_list"
+    - all:                            &validator_type [*string, *range, *list, *min_list]
+
+  report:
+    - check:                          &check "check"
+    - section:                        &section "section"
+    - table:                          &table "table"
+    - report:                         &report [*check, *section, *table]
+
+# Checks for DB roles for database_type == Oracle (OEL parity)
+
+checks:
+  - id:                                 "DB-ORA-0001"
+    name:                               "Oracle Hardware Check"
+    description:                        "Check if the hardware architecture is x86_64 as required for Oracle on Azure"
+    category:                           *sap_check
+    severity:                           *high
+    workload:                           *sap
+    applicability:
+      os_type:                          [*redhat, *oraclelinux]
+      os_version:                       *all_versions
+      hardware_type:                    *vm
+      storage_type:                     *all_storage
+      role:                             [*db_role]
+      database_type:                    [*oracle]
+    collector_type:                     *command
+    collector_args:
+      command:                          "lscpu | grep -E 'Architecture:|Vendor ID:|Model name:' | grep 'x86_64' | awk '{print $2}'"
+      user:                             *root
+    validator_type:                     *list
+    validator_args:
+      valid_list:                       ["x86_64", "x64"]
+    report:                             *check
+    references:
+      sap:                              "2039619"
+      microsoft:                        "https://learn.microsoft.com/en-us/azure/virtual-machines/workloads/oracle/oracle-overview"
+
+  - id:                                 "DB-ORA-0002"
+    name:                               "Linux installation & system language"
+    description:                        "Check if the LANG environment variable is set to en_US.UTF-8 for the Oracle SID user"
+    category:                           *sap_check
+    severity:                           *high
+    workload:                           *sap
+    applicability:
+      os_type:                          [*redhat, *oraclelinux]
+      os_version:                       *all_versions
+      hardware_type:                    *vm
+      storage_type:                     *all_storage
+      role:                             [*db_role]
+      database_type:                    [*oracle]
+    collector_type:                     *command
+    collector_args:
+      command:                          "echo $LANG"
+      user:                             *orasid
+    validator_type:                     *string
+    validator_args:
+      expected_output:                  "en_US.UTF-8"
+    report:                             *check
+    references:
+      sap:                              "2039619"
+
+  - id:                                 "DB-ORA-0003"
+    name:                               "SELinux settings"
+    description:                        "SAP recommends SELinux in permissive mode or disabled for Oracle Database on Azure"
+    category:                           *sap_check
+    severity:                           *high
+    workload:                           *sap
+    applicability:
+      os_type:                          [*redhat, *oraclelinux]
+      os_version:                       *all_versions
+      hardware_type:                    *vm
+      storage_type:                     *all_storage
+      role:                             [*db_role]
+      database_type:                    [*oracle]
+    collector_type:                     *command
+    collector_args:
+      command:                          "[ -f /etc/selinux/config ] && grep '^SELINUX=' /etc/selinux/config | awk -F= '{print $2}' || echo 'disabled'"
+      user:                             *root
+    validator_type:                     *list
+    validator_args:
+      valid_list:                       ["permissive", "disabled"]
+    report:                             *check
+    references:
+      sap:                              "2936683"
+
+  - id:                                 "DB-ORA-0004"
+    name:                               "vm.max_map_count setting for Oracle"
+    description:                        "vm.max_map_count should be set to 2147483647 for Oracle Database"
+    category:                           *sap_check
+    severity:                           *high
+    workload:                           *sap
+    applicability:
+      os_type:                          [*redhat, *oraclelinux]
+      os_version:                       *all_versions
+      hardware_type:                    *vm
+      storage_type:                     *all_storage
+      role:                             [*db_role]
+      database_type:                    [*oracle]
+    collector_type:                     *command
+    collector_args:
+      command:                          "/sbin/sysctl vm.max_map_count -n"
+      user:                             *root
+    validator_type:                     *string
+    validator_args:
+      expected_output:                  "2147483647"
+    report:                             *check
+    references:
+      sap:                              "2039619"
+      microsoft:                        "https://learn.microsoft.com/en-us/azure/virtual-machines/workloads/oracle/oracle-overview"
+
+  - id:                                 "DB-ORA-0005"
+    name:                               "kernel.sem settings for Oracle"
+    description:                        "kernel.sem semaphore values must meet Oracle minimums: SEMMSL>=250, SEMMNS>=32000, SEMOPM>=100, SEMMNI>=128"
+    category:                           *sap_check
+    severity:                           *high
+    workload:                           *sap
+    applicability:
+      os_type:                          [*redhat, *oraclelinux]
+      os_version:                       *all_versions
+      hardware_type:                    *vm
+      storage_type:                     *all_storage
+      role:                             [*db_role]
+      database_type:                    [*oracle]
+    collector_type:                     *command
+    collector_args:
+      command:                          "/sbin/sysctl kernel.sem -n"
+      user:                             *root
+    validator_type:                     *min_list
+    validator_args:
+      min_values:                       [250, 32000, 100, 128]
+    report:                             *check
+    references:
+      sap:                              "2039619"
+      microsoft:                        "https://learn.microsoft.com/en-us/azure/virtual-machines/workloads/oracle/oracle-overview"
+
+  - id:                                 "DB-ORA-0006"
+    name:                               "Transparent Huge Pages disabled"
+    description:                        "Transparent Huge Pages (THP) should be set to never for Oracle Database on Azure"
+    category:                           *os_check
+    severity:                           *high
+    workload:                           *sap
+    applicability:
+      os_type:                          [*redhat, *oraclelinux]
+      os_version:                       *all_versions
+      hardware_type:                    *vm
+      storage_type:                     *all_storage
+      role:                             [*db_role]
+      database_type:                    [*oracle]
+    collector_type:                     *command
+    collector_args:
+      command:                          "cat /sys/kernel/mm/transparent_hugepage/enabled | grep -oP '\\[\\K[^\\]]+'"
+      user:                             *root
+    validator_type:                     *string
+    validator_args:
+      expected_output:                  "never"
+    report:                             *check
+    references:
+      sap:                              "2039619"
+      microsoft:                        "https://learn.microsoft.com/en-us/azure/virtual-machines/workloads/oracle/oracle-overview"
+
+  - id:                                 "DB-ORA-0007"
+    name:                               "ASM process running"
+    description:                        "Oracle ASM (Automatic Storage Management) process must be running for Oracle Database on Azure"
+    category:                           *sap_check
+    severity:                           *high
+    workload:                           *sap
+    applicability:
+      os_type:                          [*redhat, *oraclelinux]
+      os_version:                       *all_versions
+      hardware_type:                    *vm
+      storage_type:                     *all_storage
+      role:                             [*db_role]
+      database_type:                    [*oracle]
+    collector_type:                     *command
+    collector_args:
+      command:                          "pgrep -c asm_pmon || echo '0'"
+      user:                             *root
+    validator_type:                     *range
+    validator_args:
+      min:                              "1"
+    report:                             *check
+    references:
+      sap:                              "2039619"
+      microsoft:                        "https://learn.microsoft.com/en-us/azure/virtual-machines/workloads/oracle/oracle-overview"

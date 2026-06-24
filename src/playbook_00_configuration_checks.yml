@@ -21,6 +21,7 @@
           - azure-mgmt-network
           - azure-storage-blob
           - azure-storage-queue
+          - pywinrm[credssp]
 
     - name:                             "Init: Authenticate to Azure Using Managed Identity"
       block:
@@ -28,7 +29,7 @@
           ansible.builtin.command:
             cmd:                        >-
                                         az login --identity
-                                        {% if user_assigned_identity_client_id | default('') | length > 0
+                                        {% if user_assigned_identity_client_id | default('', true) | length > 0
                                         and user_assigned_identity_client_id != '00000000-0000-0000-0000-000000000000' %}
                                         --username {{ user_assigned_identity_client_id }}
                                         {% endif %}
@@ -38,7 +39,7 @@
           ansible.builtin.command:
             cmd:                        >-
                                         az login --identity
-                                        {% if user_assigned_identity_client_id | default('') | length > 0
+                                        {% if user_assigned_identity_client_id | default('', true) | length > 0
                                         and user_assigned_identity_client_id != '00000000-0000-0000-0000-000000000000' %}
                                         --client-id {{ user_assigned_identity_client_id }}
                                         {% endif %}
@@ -89,8 +90,8 @@
     - name:                             "Orchestration: Set Role From Inventory Group"
       ansible.builtin.set_fact:
         role:                           "{{ (group_names
-                                        | select('match', sap_sid + '_.*')
-                                        | map('regex_replace', sap_sid + '_(.*)', '\\1')
+                                        | select('match', (sap_sid | upper) + '_.*')
+                                        | map('regex_replace', (sap_sid | upper) + '_(.*)', '\\1')
                                         | list)[0] | default('UNKNOWN') }}"
 
     - name:                             "Report: Debug Host Role Assignment"
@@ -179,6 +180,30 @@
       when:                             >-
                                         role == 'DB' and
                                         (platform | default('HANA') | upper == 'DB2') and
+                                        (configuration_test_type == 'all' or
+                                         configuration_test_type == 'Database')
+
+    - name:                             "Orchestration: Run Oracle DB Checks"
+      ansible.builtin.include_tasks:
+        file:                           "./roles/configuration_checks/tasks/main.yml"
+      vars:
+        check_type:
+          name:                         "Database (Oracle) Checks"
+          file_name:                    "oracle"
+          checks_var:                   "db_oracle_checks"
+          results_var:                  "db_oracle_results"
+      when:                             >-
+                                        role == 'DB' and
+                                        (platform | default('HANA') | upper == 'ORACLE') and
+                                        (configuration_test_type == 'all' or
+                                         configuration_test_type == 'Database')
+
+    - name:                             "Report: Debug Oracle Checks Execution"
+      ansible.builtin.debug:
+        msg:                            "Executing Database (Oracle) checks on host {{ inventory_hostname }}"
+      when:                             >-
+                                        role == 'DB' and
+                                        (platform | default('HANA') | upper == 'ORACLE') and
                                         (configuration_test_type == 'all' or
                                          configuration_test_type == 'Database')
 
@@ -363,6 +388,18 @@
                                           | default({})}] }}"
       loop:                             "{{ groups[sap_sid | upper + '_DB']|default([]) }}"
       when:                             hostvars[item].db_db2_results is defined
+
+    - name:                             "Report: Collect DB (Oracle) Check Results"
+      ansible.builtin.set_fact:
+        all_results:                    "{{ all_results + hostvars[item].db_oracle_results
+                                            | default([]) }}"
+        execution_metadata:             "{{ execution_metadata + [
+                                          {'host': item,
+                                          'check_type': 'db_oracle',
+                                          'metadata': hostvars[item].db_oracle_results_metadata
+                                          | default({})}] }}"
+      loop:                             "{{ groups[sap_sid | upper + '_DB']|default([]) }}"
+      when:                             hostvars[item].db_oracle_results is defined
 
     - name:                             "Report: Collect DB HA Configuration Check Results"
       ansible.builtin.set_fact:

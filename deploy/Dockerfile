@@ -7,14 +7,20 @@ WORKDIR /build
 RUN tdnf update -y && tdnf install -y \
     gcc \
     libffi-devel \
+    ca-certificates \
+    && update-ca-trust extract \
     && tdnf clean all
 COPY requirements.in .
+COPY collections/requirements.yml collections/requirements.yml
 RUN python3 -m venv /opt/venv \
     && . /opt/venv/bin/activate \
     && pip install --no-cache-dir pip-tools \
     && pip-compile --strip-extras --no-header \
         -o requirements.lock requirements.in \
-    && pip install --no-cache-dir -r requirements.lock
+    && pip install --no-cache-dir -r requirements.lock \
+    && ansible-galaxy collection install \
+        -r collections/requirements.yml \
+        -p /opt/ansible/collections
 
 # Stage 2: Startup stage
 FROM mcr.microsoft.com/azurelinux/base/python:3.12@sha256:8300706a0e644a7e260b6a464a1ae3967181ee9057a4accceaaf0ecdedb1d4a2
@@ -39,6 +45,7 @@ RUN tdnf update -y && tdnf install -y \
 WORKDIR /app
 
 COPY --from=builder /opt/venv /opt/venv
+COPY --from=builder /opt/ansible /opt/ansible
 COPY src/ ./src/
 COPY VERSION ./VERSION
 
@@ -47,6 +54,7 @@ ENV VIRTUAL_ENV=/opt/venv
 ENV PYTHONPATH=/app
 ENV PYTHONUNBUFFERED=1
 ENV HOME=/app
+ENV ANSIBLE_COLLECTIONS_PATH=/opt/ansible/collections
 
 RUN chown -R appuser:appgroup /opt/venv /app
 

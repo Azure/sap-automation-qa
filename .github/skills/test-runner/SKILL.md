@@ -6,12 +6,29 @@ description: >
   HA tests on SAP systems. Triggered by "run test", "execute ha test", "start test",
   "run configuration check", "test my system", or "trigger test job".
 allowed-tools: shell
+license: MIT
 ---
 
 # Test Runner
 
 Executes STAF tests via `./scripts/sap_automation_qa.sh`. Supports two modes: direct
 Ansible execution and API-driven job management.
+
+## Locate Framework
+
+Before running any commands, locate the STAF framework directory:
+
+```bash
+if [ -f "./scripts/sap_automation_qa.sh" ]; then
+  STAF_DIR="$(pwd)"
+elif [ -f "../sap-automation-qa/scripts/sap_automation_qa.sh" ]; then
+  STAF_DIR="$(cd ../sap-automation-qa && pwd)"
+else
+  git clone https://github.com/Azure/sap-automation-qa.git ../sap-automation-qa
+  STAF_DIR="$(cd ../sap-automation-qa && pwd)"
+fi
+cd "$STAF_DIR"
+```
 
 > **⚠️ This skill is guidance only. Do NOT modify any source code, scripts, or framework files. Only help the user by running test commands and interpreting output.**
 
