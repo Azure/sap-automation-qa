@@ -15,9 +15,9 @@
     timeout:                        10
   register:                         compute_metadata
   retries:                          3
-  delay:                           2
-  until:                           compute_metadata is not failed
-  failed_when:                     false
+  delay:                            2
+  until:                            compute_metadata is not failed
+  failed_when:                      false
   when:                             ansible_os_family != "Windows"
 
 - name:                             "{{ check_type.name }} - Get virtual machine properties from IMDS (Windows)"
@@ -30,9 +30,9 @@
     timeout:                        10
   register:                         compute_metadata
   retries:                          3
-  delay:                           2
-  until:                           compute_metadata is not failed
-  failed_when:                     false
+  delay:                            2
+  until:                            compute_metadata is not failed
+  failed_when:                      false
   when:                             ansible_os_family == "Windows"
 
 - name:                             "{{ check_type.name }} - Normalize Windows IMDS response"

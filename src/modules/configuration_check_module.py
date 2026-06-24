@@ -687,9 +687,6 @@ class ConfigurationCheckModule(SapAutomationQA):
         """
         Validate disk storage type against the per-SKU supported list from vm-support.yml.
 
-        Handles multi-disk mount points where collected_data may contain multiple
-        comma-separated SKU values (e.g. from LVM-striped volumes).
-
         :param check: Check definition with validator_args containing mount_role
         :type check: Check
         :param collected_data: Disk SKU value(s), possibly comma-separated

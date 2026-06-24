@@ -335,6 +335,68 @@ X00_DB:
     node_tier: "hana"  # or "ers", "scs"
 ```
 
+**Windows hosts.yaml example:**
+
+For Windows-based SAP systems (e.g., SQL Server on Windows), use the following format.
+Windows hosts use WinRM instead of SSH and require additional connection parameters:
+
+```yaml
+WI6_DB:
+  hosts:
+    wi6db00w0f68:
+      ansible_host              : 172.234.13.5
+      ansible_user              : azureadm
+      ansible_connection        : winrm
+      virtual_host              : wi6db00w0f68
+      os_type                   : windows
+      vm_name                   : WIN-NOEU-SAP04-WI6_wi6db00w0f68
+      resource_group_name       : WIN-NOEU-SAP04-WI6
+      subscription_id           : 80d5ed43-1465-432b-8914-xxxxxxxxxxxx
+      ansible_winrm_transport   : credssp
+      ansible_winrm_server_cert_validation : ignore
+      ansible_winrm_operation_timeout_sec  : 120
+      ansible_winrm_read_timeout_sec       : 150
+
+    wi6db00w1f68:
+      ansible_host              : 172.234.13.8
+      ansible_user              : azureadm
+      ansible_connection        : winrm
+      virtual_host              : wi6db00w1f68
+      os_type                   : windows
+      vm_name                   : WIN-NOEU-SAP04-WI6_wi6db00w1f68
+      resource_group_name       : WIN-NOEU-SAP04-WI6
+      subscription_id           : 80d5ed43-1465-432b-8914-xxxxxxxxxxxx
+      ansible_winrm_transport   : credssp
+      ansible_winrm_server_cert_validation : ignore
+      ansible_winrm_operation_timeout_sec  : 120
+      ansible_winrm_read_timeout_sec       : 150
+
+  vars:
+    node_tier                   : sqlserver
+    supported_tiers             : [sqlserver]
+```
+
+**Key differences for Windows hosts:**
+
+| Property | Linux | Windows |
+|----------|-------|---------|
+| `ansible_connection` | `ssh` | `winrm` |
+| `os_type` | `linux` | `windows` |
+| `connection_type` | `key` | Not used |
+| `become_user` | Required (root-capable user) | Not used |
+| `ansible_winrm_transport` | Not used | `credssp` |
+| `ansible_winrm_server_cert_validation` | Not used | `ignore` (for self-signed certs) |
+| `ansible_winrm_operation_timeout_sec` | Not used | `120` (recommended) |
+| `ansible_winrm_read_timeout_sec` | Not used | `150` (recommended) |
+| `resource_group_name` | Not required | Required (used for Azure API queries) |
+| `subscription_id` | Not required | Required (used for Azure API queries) |
+| `node_tier` | `hana`, `scs`, `ers` | `sqlserver`, `scs`, `ers` |
+
+> [!NOTE]
+>
+> Windows hosts require a `password` file for authentication (see Credential Files below).
+> Use `--auth-type=VMPASSWORD` when running configuration checks against Windows systems.
+
 In the file:
 
 - X00 represents the SAP SID (System ID) of the SAP system, followed by the host type (e.g., DB, ASCS, PAS). You must provide the SAP SID of the system, regardless of whether you are testing Database High Availability or Central Services High Availability.
@@ -343,16 +405,19 @@ The file includes the following details:
 
 - **ansible_host**: The IP address of the host.
 - **ansible_user**: The user for connecting to the host.
-- **ansible_connection**: The connection type (usually "ssh"; use "winrm" for Windows hosts).
-- **ansible_winrm_transport**: Windows-only WinRM authentication transport. Use "credssp" for password-based Windows configuration checks.
-- **ansible_port**: Windows-only WinRM port. Use 5986 for HTTPS WinRM.
-- **ansible_winrm_server_cert_validation**: Windows-only certificate validation mode. Use "ignore" when the Windows host uses a self-signed WinRM certificate.
-- **connection_type**: The connection type, used when connecting via SSH key (not needed for password-based connections).
+- **ansible_connection**: The connection type (`ssh` for Linux, `winrm` for Windows).
+- **connection_type**: Linux-only. The authentication method when connecting via SSH key.
 - **virtual_host**: The virtual host name of the SCS/DB host.
-- **become_user**: The user with root privileges. For example, user "azureadm" must be able to change to root without password.
-- **os_type**: The operating system type (e.g., Linux or Windows).
-- **vm_name**: The computer name of the Azure VM.
-- **node_tier**: The type of node tier. Supported values: hana, ers, scs.
+- **become_user**: Linux-only. The user with root privileges (e.g., `azureadm` must be able to `sudo` without password).
+- **os_type**: The operating system type (`linux` or `windows`).
+- **vm_name**: The Azure VM resource name (as shown in Azure Portal).
+- **resource_group_name**: Windows-only. The Azure resource group containing the VM. Used for Azure API queries during configuration checks.
+- **subscription_id**: Windows-only. The Azure subscription ID containing the VM. Used for Azure API queries during configuration checks.
+- **node_tier**: The type of node tier. Supported values: `hana`, `sqlserver`, `scs`, `ers`, `app`, `pas`.
+- **ansible_winrm_transport**: Windows-only. WinRM authentication transport (`credssp` for password-based auth).
+- **ansible_winrm_server_cert_validation**: Windows-only. Set to `ignore` when the Windows host uses a self-signed WinRM HTTPS certificate.
+- **ansible_winrm_operation_timeout_sec**: Windows-only. WinRM operation timeout in seconds (recommended: `120`).
+- **ansible_winrm_read_timeout_sec**: Windows-only. WinRM read timeout in seconds (recommended: `150`, must be greater than operation timeout).
 
 2.2.2. **sap-parameters.yaml** - SAP Configuration (required)
 

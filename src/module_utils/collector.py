@@ -318,10 +318,6 @@ class AzureDataParser(Collector):
         """
         Resolve a mount point to its backing Azure disk metadata entries.
 
-        Parses disk metadata, finds the filesystem entry for the mount point,
-        and returns the parsed disks list, the filesystem entry, and the list
-        of matched Azure disk dicts.
-
         :param check: Check object with collector arguments (mount_point)
         :type check: Check
         :param context: Context object containing filesystems and azure_disks_metadata
@@ -477,11 +473,6 @@ class AzureDataParser(Collector):
     def parse_disk_consistency_vars(self, check, context) -> str:
         """
         Collect a property value from each disk backing a mount point.
-
-        Returns comma-separated values for consistency validation. Unlike
-        :meth:`parse_disks_vars` which aggregates numeric values, this method
-        preserves individual per-disk values so a consistency validator can
-        detect mixed types/tiers.
 
         :param check: Check object with collector arguments
         :type check: Check
