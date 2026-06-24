@@ -60,7 +60,7 @@ azure-mgmt-core==1.6.0
     #   azure-mgmt-loganalytics
     #   azure-mgmt-network
     #   azure-mgmt-recoveryservicesbackup
-azure-mgmt-loganalytics==13.1.1
+azure-mgmt-loganalytics==14.0.0
     # via -r requirements.in
 azure-mgmt-network==30.2.0
     # via -r requirements.in
