@@ -82,9 +82,9 @@ azure-kusto-ingest==6.0.3 \
     --hash=sha256:0a2af480da969d423457dabb036ebacf6e90621a7905a09482a7308f621dd95e \
     --hash=sha256:db412f4f5c61f87513c4e3929246784c89d22ea8d22a1703818f55e000e07549
     # via -r requirements.in
-azure-mgmt-compute==38.1.0 \
-    --hash=sha256:c119b41fd1a52a742bfbf20e6570bba81d22ed665f5bc05e9552382d431044a5 \
-    --hash=sha256:dbbe8355472bf58e9b358041d0124ca6b0fffff79d60aa6d0f094d8644ccffe5
+azure-mgmt-compute==37.2.0 \
+    --hash=sha256:23499d4d5ad2b2bf40a4c59df2684cc4c9cef0f9672a4e842bb9a1cf6b62f628 \
+    --hash=sha256:70741c26ac94c30408a3b20f4fdfe93e6481e308b3c14a6dbefdfd4794028616
     # via -r requirements.in
 azure-mgmt-core==1.6.0 \
     --hash=sha256:0460d11e85c408b71c727ee1981f74432bc641bb25dfcf1bb4e90a49e776dbc4 \
@@ -94,9 +94,9 @@ azure-mgmt-core==1.6.0 \
     #   azure-mgmt-loganalytics
     #   azure-mgmt-network
     #   azure-mgmt-recoveryservicesbackup
-azure-mgmt-loganalytics==14.0.0 \
-    --hash=sha256:200ecc8744b616c67b40a2e39d11831a0606021db8a199c79bfc246f8806ad35 \
-    --hash=sha256:f8c9938c4d51a6f472e253e631f67ecb043fabf4e55ac79b1e1f299dc5e46b3d
+azure-mgmt-loganalytics==13.1.1 \
+    --hash=sha256:4f971ee9d43fdc99e8299f44ca9f8f7a3b5f100be139fb0a9dac7efef8b698af \
+    --hash=sha256:73382d5036f478d3f6e856a0effc3637be2ebc782ab667fc45b25707edceaa55
     # via -r requirements.in
 azure-mgmt-network==30.2.0 \
     --hash=sha256:9b17c259e6344808aaa80a34bbc4b13f16bc01185dd9db137eaa0ae26664861a \
