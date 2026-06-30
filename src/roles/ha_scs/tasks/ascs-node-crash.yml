@@ -26,8 +26,9 @@
   tags:                                 [test-execution]
   block:
     - name:                             "Test Execution: {{ item.name | default('') }} - Check for ENSA version"
-      ansible.builtin.shell:            pgrep -f 'enq.sap{{ sap_sid | upper }}'
+      ansible.builtin.command:            pgrep -f enq.sap{{ sap_sid | upper }}
       register:                         ensa2_check
+      changed_when:                     false
       failed_when:                      false
 
     - name:                             "Test Execution: {{ item.name | default('') }} - Simulate ASCS Node Crash"

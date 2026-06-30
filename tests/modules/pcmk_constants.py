@@ -1,5 +1,6 @@
 # Copyright (c) Microsoft Corporation.
 # Licensed under the MIT License.
+# pylint: disable=line-too-long,too-many-lines
 
 """
 Shared dummy CIB/constants test data for the get_pcmk_properties_db and

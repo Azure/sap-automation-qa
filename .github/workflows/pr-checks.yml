@@ -48,7 +48,6 @@ jobs:
 
       - name: Install dependencies
         run: |
-          python -m pip install --upgrade pip
           pip install --require-hashes -r requirements.txt
 
       - name: Run pytest with coverage
@@ -100,13 +99,14 @@ jobs:
             exit 1
           fi
 
+      - name: Install dependencies
+        run: |
+          pip install --require-hashes -r requirements.txt
+
       - name: Run pip-audit
         run: |
-          python -m pip install --upgrade pip
-          pip install pip-audit
           pip-audit -r requirements.txt --strict
 
       - name: Run bandit
         run: |
-          pip install "bandit[toml]"
           bandit -r src/ -c pyproject.toml --severity-level medium

@@ -73,7 +73,7 @@ There are three ways to use the SAP Testing Automation Framework:
 
 ### Option 1: AI Assistant Plugins (Recommended) &nbsp; ![New](https://img.shields.io/badge/NEW-brightgreen)
 
-The fastest path — install a plugin in your AI coding assistant and let it handle environment setup, test execution, and result analysis interactively with natural lanugage.
+The fastest path — install a plugin in your AI coding assistant and let it handle environment setup, test execution, and result analysis interactively with natural language.
 
 | Platform | Install |
 |----------|---------|

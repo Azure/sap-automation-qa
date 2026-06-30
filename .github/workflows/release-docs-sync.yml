@@ -190,7 +190,7 @@ jobs:
           COPILOT_GITHUB_TOKEN: ${{ secrets.AZURE_DOCS_PAT }}
         run: |
           set -euo pipefail
-          npm install -g @github/copilot
+          npm install -g @github/copilot@1.0.64 --ignore-scripts
           copilot --version
           copilot plugin marketplace add microsoft/hve-core
           copilot plugin install hve-core-all@hve-core
@@ -312,6 +312,16 @@ jobs:
           # 4. Fix the plan
           run_stage fix-plan hve-core-all:task-planner "$PLAN_MODEL" \
             "${BASE} Revise the plan at ${PLAN_REL} IN PLACE to resolve the discrepancies recorded in its Planning Log (Discrepancy Log section). Update the existing plan and details files; do not create a new dated plan. Do not edit any docs yet."
+          PLAN_REL="$(latest_rel plans)"
+
+          # 4.5. Challenge the plan (adversarial validation)
+          run_stage challenge hve-core-all:task-challenger "$PLAN_MODEL" \
+            "${BASE} Challenge the plan at ${PLAN_REL}. Identify: (1) assumptions about Microsoft Learn doc structure that may be incorrect, (2) changes that could break existing cross-references or includes, (3) user-visible features in the release that the plan fails to cover, (4) over-documentation of internal-only changes. Write challenges to .copilot-tracking/challenges/. Do not edit the plan or any docs."
+          CHALLENGE_REL="$(latest_rel challenges)"
+
+          # 4.6. Address valid challenges in the plan
+          run_stage address-challenges hve-core-all:task-planner "$PLAN_MODEL" \
+            "${BASE} Review the challenges at ${CHALLENGE_REL} and update the plan at ${PLAN_REL} IN PLACE to address valid concerns. Dismiss invalid challenges with inline reasoning in the plan. Do not edit any docs."
           PLAN_REL="$(latest_rel plans)"
 
           # 5. Implement

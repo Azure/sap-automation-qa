@@ -20,7 +20,7 @@ jobs:
       - name: Collect traffic stats
         uses: actions/github-script@3a2844b7e9c422d3c10d287c895573f7108da1b3 # v9.0.0
         with:
-          github-token: ${{ secrets.TRAFFIC_TOKEN }}
+          github-token: ${{ secrets.TRAFFIC_TOKEN || secrets.GITHUB_TOKEN }}
           script: |
             const owner = context.repo.owner;
             const repo = context.repo.repo;
@@ -33,7 +33,7 @@ jobs:
                 github.rest.repos.get({ owner, repo }),
               ]);
             } catch (error) {
-              if (error.status === 403) {
+              if (error.status === 403 || error.status === 401) {
                 core.warning(
                   'Traffic stats require a token with push (write) access. ' +
                   'Set the TRAFFIC_TOKEN secret to a Classic PAT with the ' +

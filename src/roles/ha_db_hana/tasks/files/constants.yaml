@@ -907,7 +907,7 @@ RESOURCE_DEFAULTS:
           value:                    "true"
           required:                 false
         priority:
-          value:                    "10"
+          value:                    "100"
           required:                 false
       instance_attributes:
         PREFER_SITE_TAKEOVER:
