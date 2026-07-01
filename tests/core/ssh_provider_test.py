@@ -43,6 +43,25 @@ class TestSshCredentialProvider:
         cred.cleanup()
         assert cred.temp_files == []
 
+    def test_cleanup_logs_remove_failure(
+        self,
+        tmp_path: Path,
+        mocker: MockerFixture,
+        caplog: pytest.LogCaptureFixture,
+    ) -> None:
+        failing_file = tmp_path / "key.ppk"
+        failing_file.write_text("secret")
+        mocker.patch("src.core.models.ssh.os.remove", side_effect=OSError("denied"))
+        cred = SshCredential(
+            auth_type=AuthType.SSHKEY,
+            temp_files=[str(failing_file)],
+        )
+
+        cred.cleanup()
+
+        assert cred.temp_files == []
+        assert "Failed to clean up" in caplog.text
+
     def test_cleanup_empty(self) -> None:
         cred = SshCredential(auth_type=AuthType.SSHKEY)
         cred.cleanup()

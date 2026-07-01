@@ -17,6 +17,8 @@ azure-storage-queue
 
 # Development tools
 black
+bandit
+pip-audit
 pylint
 coverage
 
