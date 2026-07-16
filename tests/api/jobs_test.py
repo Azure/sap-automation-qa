@@ -333,3 +333,121 @@ class TestJobsApi:
         response = client.get(f"/api/v1/jobs/{job.id}/log")
         assert response.status_code == 500
         assert "Failed to read" in response.json()["detail"]
+
+
+class TestJobsApiP1WP003:
+    """P1-WP-003: offline validation, actor/approval fields, backward compat."""
+
+    def test_create_job_with_actor_fields(self, client: TestClient) -> None:
+        """Actor and metadata fields are accepted and persisted."""
+        response = client.post(
+            "/api/v1/jobs",
+            json={
+                "workspace_id": "NEW-WORKSPACE",
+                "test_group": "ConfigurationChecks",
+                "actor": "mcp-agent",
+                "approval_ref": "CHG-99",
+                "incident_ticket": "INC-77",
+            },
+        )
+        assert response.status_code == 201
+        data = response.json()
+        assert data["actor"] == "mcp-agent"
+        assert data["approval_ref"] == "CHG-99"
+        assert data["incident_ticket"] == "INC-77"
+        assert data["offline"] is False
+
+    def test_create_job_offline_eligible_group(self, client: TestClient) -> None:
+        """offline=true accepted for an eligible HA group."""
+        response = client.post(
+            "/api/v1/jobs",
+            json={
+                "workspace_id": "NEW-WORKSPACE",
+                "test_group": "DatabaseHighAvailability",
+                "offline": True,
+                "actor": "offline-bot",
+            },
+        )
+        assert response.status_code == 201
+        data = response.json()
+        assert data["offline"] is True
+        assert data["test_group"] == "DatabaseHighAvailability"
+
+    def test_create_job_offline_ineligible_group_rejected(self, client: TestClient) -> None:
+        """offline=true rejected for an ineligible group (ConfigurationChecks)."""
+        response = client.post(
+            "/api/v1/jobs",
+            json={
+                "workspace_id": "NEW-WORKSPACE",
+                "test_group": "ConfigurationChecks",
+                "offline": True,
+            },
+        )
+        assert response.status_code == 400
+        assert "not eligible for offline" in response.json()["detail"]
+
+    def test_create_job_offline_no_test_group_rejected(self, client: TestClient) -> None:
+        """offline=true rejected when no test_group specified."""
+        response = client.post(
+            "/api/v1/jobs",
+            json={
+                "workspace_id": "NEW-WORKSPACE",
+                "offline": True,
+            },
+        )
+        assert response.status_code == 400
+        assert "requires a test_group" in response.json()["detail"]
+
+    def test_create_job_offline_false_default(self, client: TestClient) -> None:
+        """offline defaults to false when not supplied (backward compat)."""
+        response = client.post(
+            "/api/v1/jobs",
+            json={
+                "workspace_id": "NEW-WORKSPACE",
+                "test_group": "ConfigurationChecks",
+            },
+        )
+        assert response.status_code == 201
+        assert response.json()["offline"] is False
+
+    def test_existing_create_job_unchanged(self, client: TestClient) -> None:
+        """Pre-existing payloads (no new fields) still work unchanged."""
+        response = client.post(
+            "/api/v1/jobs",
+            json={
+                "workspace_id": "NEW-WORKSPACE",
+                "test_group": "ConfigurationChecks",
+                "test_ids": ["t1"],
+            },
+        )
+        assert response.status_code == 201
+        data = response.json()
+        assert data["workspace_id"] == "NEW-WORKSPACE"
+        assert data["actor"] is None
+        assert data["offline"] is False
+
+    def test_create_job_offline_central_services_eligible(self, client: TestClient) -> None:
+        """offline=true accepted for CentralServicesHighAvailability."""
+        response = client.post(
+            "/api/v1/jobs",
+            json={
+                "workspace_id": "NEW-WORKSPACE",
+                "test_group": "CentralServicesHighAvailability",
+                "offline": True,
+            },
+        )
+        assert response.status_code == 201
+        assert response.json()["offline"] is True
+
+    def test_create_job_offline_azure_backup_ineligible(self, client: TestClient) -> None:
+        """offline=true rejected for AzureBackupDatabase (not eligible)."""
+        response = client.post(
+            "/api/v1/jobs",
+            json={
+                "workspace_id": "NEW-WORKSPACE",
+                "test_group": "AzureBackupDatabase",
+                "offline": True,
+            },
+        )
+        assert response.status_code == 400
+        assert "not eligible for offline" in response.json()["detail"]

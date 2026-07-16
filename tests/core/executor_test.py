@@ -495,3 +495,167 @@ class TestAnsibleExecutor:
 
         extra = json.loads(captured_cmd[captured_cmd.index("-e") + 1])
         assert "test_groups" not in extra
+
+    def test_online_dispatch_default_unchanged(
+        self,
+        mocker: MockerFixture,
+        executor: AnsibleExecutor,
+    ) -> None:
+        """
+        Verify the default (offline=False) online path is unaffected:
+        no --connection=local flag, and the group's own playbook is used.
+        """
+        captured_cmd: list[str] = []
+
+        def fake_popen(cmd, **kw):
+            captured_cmd.extend(cmd)
+            proc = mocker.MagicMock()
+            proc.returncode = 0
+            proc.pid = 42
+            proc.communicate.return_value = ("", "")
+            return proc
+
+        mocker.patch(
+            "src.core.execution.executor.subprocess.Popen",
+            side_effect=fake_popen,
+        )
+        result = executor.run_test(
+            workspace_id="WS",
+            test_id="t1",
+            test_group="ConfigurationChecks",
+            inventory_path="/fake/hosts",
+        )
+        assert result["status"] == "success"
+        assert "--connection=local" not in captured_cmd
+        assert "playbook_00_configuration_checks.yml" in captured_cmd[1]
+
+    @pytest.fixture
+    def executor_with_offline_playbook(self, tmp_path: Path) -> AnsibleExecutor:
+        """
+        Create executor with both an online HA playbook and the offline
+        HA playbook stub present.
+        """
+        playbook_dir = tmp_path / "src"
+        playbook_dir.mkdir(exist_ok=True)
+        (playbook_dir / "ansible.cfg").write_text("")
+        (playbook_dir / "playbook_00_ha_db_functional_tests.yml").write_text("---\n- hosts: all\n")
+        (playbook_dir / "playbook_01_ha_offline_tests.yml").write_text("---\n- hosts: localhost\n")
+        return AnsibleExecutor(playbook_dir=playbook_dir)
+
+    def test_offline_dispatch_selects_offline_playbook_and_local_connection(
+        self,
+        mocker: MockerFixture,
+        executor_with_offline_playbook: AnsibleExecutor,
+    ) -> None:
+        """
+        Verify offline=True for an eligible HA group selects
+        playbook_01_ha_offline_tests.yml and adds --connection=local,
+        per sap_automation_qa.sh's offline mode.
+        """
+        captured_cmd: list[str] = []
+
+        def fake_popen(cmd, **kw):
+            captured_cmd.extend(cmd)
+            proc = mocker.MagicMock()
+            proc.returncode = 0
+            proc.pid = 42
+            proc.communicate.return_value = ("", "")
+            return proc
+
+        mocker.patch(
+            "src.core.execution.executor.subprocess.Popen",
+            side_effect=fake_popen,
+        )
+        result = executor_with_offline_playbook.run_test(
+            workspace_id="WS",
+            test_id="",
+            test_group="DatabaseHighAvailability",
+            inventory_path="/fake/hosts",
+            offline=True,
+        )
+        assert result["status"] == "success"
+        assert "playbook_01_ha_offline_tests.yml" in captured_cmd[1]
+        assert "--connection=local" in captured_cmd
+
+    def test_offline_dispatch_ignores_ssh_credentials(
+        self,
+        mocker: MockerFixture,
+        executor_with_offline_playbook: AnsibleExecutor,
+    ) -> None:
+        """
+        Verify offline dispatch does not attach --private-key or
+        ansible_password, matching the offline mode's "skip SSH
+        authentication setup" behavior.
+        """
+        captured_cmd: list[str] = []
+
+        def fake_popen(cmd, **kw):
+            captured_cmd.extend(cmd)
+            proc = mocker.MagicMock()
+            proc.returncode = 0
+            proc.pid = 42
+            proc.communicate.return_value = ("", "")
+            return proc
+
+        mocker.patch(
+            "src.core.execution.executor.subprocess.Popen",
+            side_effect=fake_popen,
+        )
+        executor_with_offline_playbook.run_test(
+            workspace_id="WS",
+            test_id="",
+            test_group="CentralServicesHighAvailability",
+            inventory_path="/fake/hosts",
+            private_key_path="/fake/key",
+            ssh_password="secret",
+            offline=True,
+        )
+        assert "--private-key" not in captured_cmd
+        extra = json.loads(captured_cmd[captured_cmd.index("-e") + 1])
+        assert "ansible_password" not in extra
+
+    def test_offline_dispatch_rejects_unsupported_group(
+        self,
+        executor: AnsibleExecutor,
+    ) -> None:
+        """
+        Verify offline=True for a non-eligible group (e.g.
+        ConfigurationChecks) is explicitly rejected, not silently run
+        online or defaulted.
+        """
+        result = executor.run_test(
+            workspace_id="WS",
+            test_id="",
+            test_group="ConfigurationChecks",
+            inventory_path="/fake/hosts",
+            offline=True,
+        )
+        assert result["status"] == "failed"
+        assert "offline" in result["error"].lower()
+
+    def test_offline_dispatch_subprocess_timeout_preserved(
+        self,
+        mocker: MockerFixture,
+        executor_with_offline_playbook: AnsibleExecutor,
+    ) -> None:
+        """
+        Verify the 1-hour subprocess timeout still applies to offline
+        dispatch (no bypass of existing timeout enforcement).
+        """
+        mock_popen = mocker.patch(
+            "src.core.execution.executor.subprocess.Popen",
+        )
+        proc = mocker.MagicMock()
+        proc.pid = 42
+        proc.communicate.side_effect = subprocess.TimeoutExpired("cmd", 3600)
+        mock_popen.return_value = proc
+
+        result = executor_with_offline_playbook.run_test(
+            workspace_id="WS",
+            test_id="",
+            test_group="DatabaseHighAvailability",
+            inventory_path="/fake/hosts",
+            offline=True,
+        )
+        assert result["status"] == "failed"
+        assert "timed out" in result["error"]
