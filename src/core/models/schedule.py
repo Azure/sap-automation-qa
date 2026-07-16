@@ -7,7 +7,7 @@ from datetime import datetime, timezone
 from typing import List, Optional
 from uuid import uuid4
 
-from pydantic import BaseModel, ConfigDict, Field
+from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
 
 
 def _utcnow() -> datetime:
@@ -35,6 +35,7 @@ class Schedule(BaseModel):
     total_runs: int = 0
     created_at: datetime = Field(default_factory=_utcnow)
     updated_at: datetime = Field(default_factory=_utcnow)
+    _storage_etag: Optional[str] = PrivateAttr(default=None)
 
 
 class CreateScheduleRequest(BaseModel):

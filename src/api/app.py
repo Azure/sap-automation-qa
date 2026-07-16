@@ -18,7 +18,12 @@ from src.api.routes.health import (
     set_storage_backend,
     set_workspace_backend,
 )
-from src.api.routes.jobs import router as jobs_router, set_job_store, set_job_worker
+from src.api.routes.jobs import (
+    router as jobs_router,
+    set_job_store,
+    set_job_worker,
+    set_workspace_reader as set_job_workspace_reader,
+)
 from src.api.routes.schedules import (
     router as schedules_router,
     set_schedule_store,
@@ -83,6 +88,7 @@ async def lifespan(application: FastAPI) -> AsyncGenerator[None, None]:
             data_dir=DATA_DIR,
         )
         set_workspace_reader(workspace_backend)
+        set_job_workspace_reader(workspace_backend)
         set_workspace_backend(workspace_backend.backend_name)
 
         job_worker = JobWorker(

@@ -5,8 +5,17 @@
 
 from __future__ import annotations
 from dataclasses import dataclass, field
+from typing import Protocol
+
 from src.core.contracts.storage import JobStoreProtocol, ScheduleStoreProtocol
-from src.core.storage.staf_store import StafStore
+
+
+class Closeable(Protocol):
+    """Resource that can be closed by a storage context."""
+
+    def close(self) -> None:
+        """Release the owned resource."""
+        ...
 
 
 @dataclass
@@ -16,9 +25,10 @@ class StorageContext:
     """
 
     backend: str
-    db: StafStore | None
+    db: Closeable | None
     job_store: JobStoreProtocol
     schedule_store: ScheduleStoreProtocol
+    owned_resources: tuple[Closeable, ...]
     _closed: bool = field(default=False, init=False, repr=False)
 
     def close(self) -> None:
@@ -26,24 +36,14 @@ class StorageContext:
         if self._closed:
             return
 
-        if self.db is not None:
-            self.db.close()
-            self._closed = True
-            return
-
-        job_error: Exception | None = None
-        try:
-            self.job_store.close()
-        except Exception as exc:
-            job_error = exc
-
-        try:
-            self.schedule_store.close()
-        except Exception as schedule_error:
-            if job_error is not None:
-                raise RuntimeError("Both job and schedule stores failed to close") from job_error
-            raise schedule_error
-
-        if job_error is not None:
-            raise job_error
+        errors: list[Exception] = []
+        for resource in self.owned_resources:
+            try:
+                resource.close()
+            except Exception as exc:
+                errors.append(exc)
+        if errors:
+            if len(errors) > 1:
+                raise RuntimeError("Multiple storage resources failed to close") from errors[0]
+            raise errors[0]
         self._closed = True
