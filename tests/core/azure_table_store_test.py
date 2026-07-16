@@ -41,15 +41,22 @@ class TestValidateEntitySize:
         with pytest.raises(EntityTooLargeError, match="big"):
             _validate_entity_size(entity, "job")
 
+    def test_ascii_property_over_utf16_limit_is_rejected(self) -> None:
+        """ASCII values are two bytes per character in Azure Table strings."""
+        entity = {"PartitionKey": "staf", "RowKey": "id-1", "big": "x" * 40_000}
+
+        with pytest.raises(EntityTooLargeError, match="big"):
+            _validate_entity_size(entity, "job")
+
     def test_total_entity_over_1mib_is_rejected_without_any_single_field_over_64kib(
         self,
     ) -> None:
         """Many fields individually under 64 KiB can still sum past the 1 MiB entity limit."""
         entity = {"PartitionKey": "staf", "RowKey": "id-1"}
-        # 20 fields of ~60 KiB each sum to ~1.2 MiB, comfortably over the 1 MiB
+        # 40 fields of ~30 KiB each sum to ~1.2 MiB in UTF-16, comfortably over the 1 MiB
         # entity limit, while each individual field stays under 64 KiB.
-        for i in range(20):
-            entity[f"field_{i}"] = "y" * (60 * 1024)
+        for i in range(40):
+            entity[f"field_{i}"] = "y" * (30 * 1024)
 
         with pytest.raises(EntityTooLargeError, match="1 MiB"):
             _validate_entity_size(entity, "job")
@@ -139,6 +146,21 @@ class TestAzureTableJobStoreConstruction:
         # Non-owning: the store does NOT close the injected shared client
         mock_client.close.assert_not_called()
 
+    def test_get_table_client_failure_closes_service(self) -> None:
+        """A failure after table creation still closes the owning service."""
+        with patch("src.core.storage.azure_table_store.TableServiceClient") as mock_svc_cls:
+            mock_service = MagicMock()
+            mock_service.get_table_client.side_effect = RuntimeError("client failure")
+            mock_svc_cls.return_value = mock_service
+
+            with pytest.raises(RuntimeError, match="client failure"):
+                AzureTableJobStore(
+                    endpoint="https://acct.table.core.windows.net",
+                    credential=MagicMock(),
+                )
+
+            mock_service.close.assert_called_once()
+
 
 class TestAzureTableJobStoreCrud:
     """CRUD and query round trips for AzureTableJobStore."""
@@ -166,8 +188,8 @@ class TestAzureTableJobStoreCrud:
         """Create calls create entity with partition and row key."""
         job = Job(workspace_id="WS-A", test_group="DatabaseHighAvailability")
         result = job_store.create(job)
-        mock_table_client.create_entity.assert_called_once()
-        entity = mock_table_client.create_entity.call_args[0][0]
+        assert mock_table_client.create_entity.call_count == 2
+        entity = mock_table_client.create_entity.call_args_list[1].args[0]
         assert entity["PartitionKey"] == "staf"
         assert entity["RowKey"] == str(job.id)
         assert result is job
@@ -238,6 +260,23 @@ class TestAzureTableJobStoreCrud:
         assert restored.started_at is None
         assert restored.completed_at is None
 
+    def test_empty_result_and_error_roundtrip_without_becoming_none(
+        self, job_store: AzureTableJobStore
+    ) -> None:
+        """Valid empty values remain distinct from absent values."""
+        completed = Job(workspace_id="WS-A")
+        completed.start()
+        completed.complete({})
+        failed = Job(workspace_id="WS-B")
+        failed.start()
+        failed.fail("")
+
+        restored_completed = job_store._to_job(job_store._to_entity(completed))
+        restored_failed = job_store._to_job(job_store._to_entity(failed))
+
+        assert restored_completed.result == {}
+        assert restored_failed.error == ""
+
     def test_all_statuses_roundtrip(self, job_store: AzureTableJobStore) -> None:
         """All statuses roundtrip."""
         for status in JobStatus:
@@ -281,9 +320,7 @@ class TestAzureTableJobStoreCrud:
     ) -> None:
         """Update existing uses etag optimistic concurrency."""
         job = Job(workspace_id="WS-A")
-        mock_table_client.get_entity.return_value = _entity_with_etag(
-            job_store._to_entity(job), etag='W/"etag-123"'
-        )
+        job._storage_etag = 'W/"etag-123"'
 
         job.start()
         job_store.update(job)
@@ -298,7 +335,7 @@ class TestAzureTableJobStoreCrud:
     ) -> None:
         """Update conflict raises concurrency error."""
         job = Job(workspace_id="WS-A")
-        mock_table_client.get_entity.return_value = _entity_with_etag(job_store._to_entity(job))
+        job._storage_etag = 'W/"etag-1"'
         conflict = HttpResponseError(message="Precondition Failed")
         conflict.status_code = 412
         mock_table_client.update_entity.side_effect = conflict
@@ -311,7 +348,7 @@ class TestAzureTableJobStoreCrud:
     ) -> None:
         """Update non conflict http error propagates."""
         job = Job(workspace_id="WS-A")
-        mock_table_client.get_entity.return_value = _entity_with_etag(job_store._to_entity(job))
+        job._storage_etag = 'W/"etag-1"'
         server_error = HttpResponseError(message="Server error")
         server_error.status_code = 500
         mock_table_client.update_entity.side_effect = server_error
@@ -348,6 +385,7 @@ class TestAzureTableJobStoreCrud:
         args, kwargs = mock_table_client.query_entities.call_args
         assert "workspace_id eq @ws" in args[0]
         assert kwargs["parameters"]["ws"] == "WS-A"
+        assert args[0].count("status ne") == len(JobStatus) - 2
 
     def test_get_active_for_workspace_and_has_active_job(
         self, job_store: AzureTableJobStore, mock_table_client: MagicMock
@@ -499,7 +537,7 @@ class TestAzureTableJobStoreSizeValidation:
     ) -> None:
         """Update also validates size before calling ``update_entity``."""
         job = Job(workspace_id="WS-A")
-        mock_table_client.get_entity.return_value = _entity_with_etag(job_store._to_entity(job))
+        job._storage_etag = 'W/"etag-1"'
         job.metadata["blob"] = "m" * (65 * 1024)
 
         with pytest.raises(EntityTooLargeError):
@@ -737,9 +775,7 @@ class TestAzureTableScheduleStoreCrud:
         schedule = Schedule(name="x", cron_expression="* * * * *")
         schedule.updated_at = datetime.now(timezone.utc) - timedelta(hours=1)
         original_updated_at = schedule.updated_at
-        mock_table_client.get_entity.return_value = _entity_with_etag(
-            schedule_store._to_entity(schedule), etag='W/"sched-etag"'
-        )
+        schedule._storage_etag = 'W/"sched-etag"'
 
         updated = schedule_store.update(schedule)
 
@@ -754,9 +790,7 @@ class TestAzureTableScheduleStoreCrud:
     ) -> None:
         """Update conflict raises concurrency error."""
         schedule = Schedule(name="x", cron_expression="* * * * *")
-        mock_table_client.get_entity.return_value = _entity_with_etag(
-            schedule_store._to_entity(schedule)
-        )
+        schedule._storage_etag = 'W/"etag-1"'
         conflict = HttpResponseError(message="Precondition Failed")
         conflict.status_code = 412
         mock_table_client.update_entity.side_effect = conflict

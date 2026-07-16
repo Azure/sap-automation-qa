@@ -22,6 +22,7 @@ from src.core.observability import get_logger
 logger = get_logger(__name__)
 
 _PARTITION_KEY = "staf"
+_WORKSPACE_LOCK_PARTITION_KEY = "workspace-lock"
 _JOB_TERMINAL_STATUSES = (
     JobStatus.COMPLETED.value,
     JobStatus.FAILED.value,
@@ -37,8 +38,8 @@ def _validate_entity_size(entity: Dict[str, Any], entity_kind: str) -> None:
     """Reject a table entity that violates Azure Table Storage size limits.
 
     This is a client-side safety net, not a byte-exact reimplementation of
-    the service's internal accounting: total size is approximated as the
-    UTF-8 byte length of every property name plus its value.
+    the service's internal accounting. Azure Table string properties are
+    UTF-16, so string limits and the approximate entity total use UTF-16 bytes.
 
     :param entity: Entity that would be written.
     :param entity_kind: Human-readable entity kind, used in error messages.
@@ -48,9 +49,9 @@ def _validate_entity_size(entity: Dict[str, Any], entity_kind: str) -> None:
     row_key = entity.get("RowKey", "<unknown>")
     total = 0
     for key, value in entity.items():
-        total += len(key.encode("utf-8"))
+        total += len(key.encode("utf-16-le"))
         if isinstance(value, str):
-            size = len(value.encode("utf-8"))
+            size = len(value.encode("utf-16-le"))
             if size > _MAX_STRING_PROPERTY_BYTES:
                 raise EntityTooLargeError(
                     f"{entity_kind} {row_key}: property '{key}' is {size} bytes, "
@@ -58,7 +59,7 @@ def _validate_entity_size(entity: Dict[str, Any], entity_kind: str) -> None:
                 )
             total += size
         elif value is not None:
-            total += len(str(value).encode("utf-8"))
+            total += len(str(value).encode("utf-16-le"))
     if total > _MAX_ENTITY_BYTES:
         raise EntityTooLargeError(
             f"{entity_kind} {row_key}: entity is approximately {total} bytes, "
@@ -118,6 +119,16 @@ def _close_quietly(obj: Any) -> None:
         close()
 
 
+def _extract_etag(value: Any) -> Optional[str]:
+    """Extract a concrete ETag from an Azure response or table entity."""
+    metadata = getattr(value, "metadata", None)
+    etag = metadata.get("etag") if metadata is not None else None
+    if not isinstance(etag, str) and hasattr(value, "get"):
+        candidate = value.get("etag")
+        etag = candidate if isinstance(candidate, str) else None
+    return etag
+
+
 def _new_table_resources(
     endpoint: str, table_name: str, credential: TokenCredential
 ) -> tuple[TableServiceClient, TableClient]:
@@ -134,10 +145,11 @@ def _new_table_resources(
     service = TableServiceClient(endpoint=endpoint, credential=credential)
     try:
         service.create_table_if_not_exists(table_name)
+        client = service.get_table_client(table_name)
     except Exception:
         _close_quietly(service)
         raise
-    return service, service.get_table_client(table_name)
+    return service, client
 
 
 class AzureTableJobStore:
@@ -214,8 +226,10 @@ class AzureTableJobStore:
             "created_at": _dt_to_str(job.created_at),
             "started_at": _dt_to_str(job.started_at),
             "completed_at": _dt_to_str(job.completed_at),
-            "error": job.error or "",
-            "result": json.dumps(job.result, default=str) if job.result else "",
+            "error_present": job.error is not None,
+            "error": job.error if job.error is not None else "",
+            "result_present": job.result is not None,
+            "result": json.dumps(job.result, default=str) if job.result is not None else "",
             "log_file": job.log_file or "",
             "events": json.dumps(
                 [e.model_dump(mode="json") for e in job.events],
@@ -247,8 +261,16 @@ class AzureTableJobStore:
                 "status": _require(entity, "status", "job"),
                 "started_at": _str_to_dt(entity.get("started_at")),
                 "completed_at": _str_to_dt(entity.get("completed_at")),
-                "error": entity.get("error") or None,
-                "result": json.loads(entity["result"]) if entity.get("result") else None,
+                "error": (
+                    entity.get("error", "")
+                    if entity.get("error_present", bool(entity.get("error")))
+                    else None
+                ),
+                "result": (
+                    json.loads(entity.get("result", ""))
+                    if entity.get("result_present", bool(entity.get("result")))
+                    else None
+                ),
                 "log_file": entity.get("log_file") or None,
                 "events": json.loads(entity.get("events") or "[]"),
                 "metadata": json.loads(entity.get("metadata") or "{}"),
@@ -263,7 +285,9 @@ class AzureTableJobStore:
         created_at = _str_to_dt(entity.get("created_at"))
         if created_at is not None:
             data["created_at"] = created_at
-        return Job.model_validate(data)
+        job = Job.model_validate(data)
+        job._storage_etag = _extract_etag(entity)
+        return job
 
     def create(self, job: Job) -> Job:
         """Create a new job.
@@ -274,9 +298,35 @@ class AzureTableJobStore:
             same ID already exists. Left unwrapped, mirroring the local
             store's unwrapped ``sqlite3.IntegrityError`` on duplicate insert.
         """
-        self._client.create_entity(self._to_entity(job))
+        entity = self._to_entity(job)
+        lock_acquired = not job.is_terminal
+        if lock_acquired:
+            lock_entity = {
+                "PartitionKey": _WORKSPACE_LOCK_PARTITION_KEY,
+                "RowKey": job.workspace_id,
+                "job_id": str(job.id),
+                "created_at": _dt_to_str(job.created_at),
+            }
+            self._client.create_entity(lock_entity)
+        try:
+            response = self._client.create_entity(entity)
+        except Exception:
+            if lock_acquired:
+                self._release_workspace_lock(job)
+            raise
+        job._storage_etag = _extract_etag(response)
         logger.info(f"Created job {job.id} for workspace {job.workspace_id}")
         return job
+
+    def _release_workspace_lock(self, job: Job) -> None:
+        """Release the lock owned by a job after rollback or terminal update."""
+        try:
+            lock = self._client.get_entity(_WORKSPACE_LOCK_PARTITION_KEY, job.workspace_id)
+        except ResourceNotFoundError:
+            return
+        if lock.get("job_id") != str(job.id):
+            return
+        self._client.delete_entity(_WORKSPACE_LOCK_PARTITION_KEY, job.workspace_id)
 
     def get(self, job_id: UUID | str) -> Optional[Job]:
         """Get a job by ID.
@@ -298,14 +348,17 @@ class AzureTableJobStore:
         :raises ConcurrencyConflictError: If the job was modified by another
             writer between the existence check and this update.
         """
+        entity = self._to_entity(job)
+        etag = job._storage_etag
+        if etag is None:
+            try:
+                self._client.get_entity(_PARTITION_KEY, str(job.id))
+            except ResourceNotFoundError:
+                return
+            raise ConcurrencyConflictError(f"Job {job.id} has no expected storage version")
         try:
-            current = self._client.get_entity(_PARTITION_KEY, str(job.id))
-        except ResourceNotFoundError:
-            return
-        etag = current.metadata.get("etag")
-        try:
-            self._client.update_entity(
-                self._to_entity(job),
+            response = self._client.update_entity(
+                entity,
                 mode=UpdateMode.REPLACE,
                 etag=etag,
                 match_condition=MatchConditions.IfNotModified,
@@ -314,6 +367,10 @@ class AzureTableJobStore:
             if exc.status_code == 412:
                 raise ConcurrencyConflictError(f"Job {job.id} was modified concurrently") from exc
             raise
+        updated_etag = _extract_etag(response)
+        job._storage_etag = updated_etag
+        if job.is_terminal:
+            self._release_workspace_lock(job)
         logger.debug(f"Updated job {job.id} (status={job.status})")
 
     def get_active(self, workspace_id: Optional[str] = None) -> List[Job]:
@@ -324,6 +381,10 @@ class AzureTableJobStore:
         """
         query_filter = "PartitionKey eq @pk"
         parameters: Dict[str, Any] = {"pk": _PARTITION_KEY}
+        for index, terminal_status in enumerate(_JOB_TERMINAL_STATUSES):
+            parameter = f"terminal{index}"
+            query_filter += f" and status ne @{parameter}"
+            parameters[parameter] = terminal_status
         if workspace_id:
             query_filter += " and workspace_id eq @ws"
             parameters["ws"] = workspace_id
@@ -529,7 +590,9 @@ class AzureTableScheduleStore:
             value = _str_to_dt(entity.get(dt_field))
             if value is not None:
                 data[dt_field] = value
-        return Schedule.model_validate(data)
+        schedule = Schedule.model_validate(data)
+        schedule._storage_etag = _extract_etag(entity)
+        return schedule
 
     def create(self, schedule: Schedule) -> Schedule:
         """Create a new schedule.
@@ -539,9 +602,10 @@ class AzureTableScheduleStore:
         :raises ValueError: If a schedule with the same ID already exists.
         """
         try:
-            self._client.create_entity(self._to_entity(schedule))
+            response = self._client.create_entity(self._to_entity(schedule))
         except ResourceExistsError as exc:
             raise ValueError(f"Schedule with ID {schedule.id} already exists") from exc
+        schedule._storage_etag = _extract_etag(response)
         logger.info(f"Created schedule '{schedule.name}' (ID: {schedule.id})")
         return schedule
 
@@ -581,15 +645,20 @@ class AzureTableScheduleStore:
         :raises ConcurrencyConflictError: If the schedule was modified by
             another writer between the existence check and this update.
         """
-        try:
-            current = self._client.get_entity(_PARTITION_KEY, schedule.id)
-        except ResourceNotFoundError as exc:
-            raise ValueError(f"Schedule {schedule.id} not found") from exc
+        entity = self._to_entity(schedule)
+        etag = schedule._storage_etag
+        if etag is None:
+            try:
+                self._client.get_entity(_PARTITION_KEY, schedule.id)
+            except ResourceNotFoundError as exc:
+                raise ValueError(f"Schedule {schedule.id} not found") from exc
+            raise ConcurrencyConflictError(
+                f"Schedule {schedule.id} has no expected storage version"
+            )
         schedule.updated_at = datetime.now(timezone.utc)
-        etag = current.metadata.get("etag")
         try:
-            self._client.update_entity(
-                self._to_entity(schedule),
+            response = self._client.update_entity(
+                entity,
                 mode=UpdateMode.REPLACE,
                 etag=etag,
                 match_condition=MatchConditions.IfNotModified,
@@ -600,6 +669,8 @@ class AzureTableScheduleStore:
                     f"Schedule {schedule.id} was modified concurrently"
                 ) from exc
             raise
+        updated_etag = _extract_etag(response)
+        schedule._storage_etag = updated_etag
         logger.info(f"Updated schedule '{schedule.name}' (ID: {schedule.id})")
         return schedule
 

@@ -7,7 +7,7 @@ from datetime import datetime
 from enum import Enum
 from typing import Any, Optional, List
 from uuid import UUID, uuid4
-from pydantic import BaseModel, Field, ConfigDict
+from pydantic import BaseModel, ConfigDict, Field, PrivateAttr
 
 
 class JobStatus(str, Enum):
@@ -63,6 +63,7 @@ class Job(BaseModel):
     approval_ref: Optional[str] = None
     incident_ticket: Optional[str] = None
     offline: bool = False
+    _storage_etag: Optional[str] = PrivateAttr(default=None)
 
     def start(self) -> JobEvent:
         """Mark job as started.
