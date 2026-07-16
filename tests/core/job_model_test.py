@@ -132,3 +132,59 @@ class TestJobModel:
         job.start()
         job.fail("")
         assert job.error == ""
+
+
+class TestJobModelP1WP003:
+    """P1-WP-003: actor, approval_ref, incident_ticket, offline fields."""
+
+    def test_new_fields_default_values(self) -> None:
+        """New fields have correct defaults (None/False)."""
+        job = Job(workspace_id="WS")
+        assert job.actor is None
+        assert job.approval_ref is None
+        assert job.incident_ticket is None
+        assert job.offline is False
+
+    def test_new_fields_set_explicitly(self) -> None:
+        """New fields are settable at construction."""
+        job = Job(
+            workspace_id="WS",
+            actor="user@example.com",
+            approval_ref="CHG-123",
+            incident_ticket="INC-456",
+            offline=True,
+        )
+        assert job.actor == "user@example.com"
+        assert job.approval_ref == "CHG-123"
+        assert job.incident_ticket == "INC-456"
+        assert job.offline is True
+
+    def test_offline_false_by_default(self) -> None:
+        """offline defaults to False, not None."""
+        job = Job(workspace_id="WS")
+        assert job.offline is False
+        assert isinstance(job.offline, bool)
+
+    def test_model_round_trip_json(self) -> None:
+        """New fields survive JSON serialization/deserialization."""
+        job = Job(
+            workspace_id="WS",
+            actor="bot",
+            approval_ref="REF-1",
+            incident_ticket="TKT-9",
+            offline=True,
+        )
+        data = job.model_dump(mode="json")
+        restored = Job.model_validate(data)
+        assert restored.actor == "bot"
+        assert restored.approval_ref == "REF-1"
+        assert restored.incident_ticket == "TKT-9"
+        assert restored.offline is True
+
+    def test_existing_fields_unchanged(self) -> None:
+        """Existing model semantics are not broken by new fields."""
+        job = Job(workspace_id="WS", test_group="ConfigurationChecks")
+        assert job.status == JobStatus.PENDING
+        assert job.test_ids == []
+        job.start()
+        assert job.status == JobStatus.RUNNING

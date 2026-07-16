@@ -14,6 +14,7 @@ from pathlib import Path
 from dataclasses import asdict
 from typing import Any, Optional, Protocol
 from src.module_utils.filter_tests import TestFilter
+from src.core.execution.test_catalog import OFFLINE_PLAYBOOK, TEST_GROUP_PLAYBOOKS
 from src.core.observability import get_logger
 from src.core.models.telemetry import TelemetryConfig
 from src.core.observability.telemetry_handlers import (
@@ -51,21 +52,13 @@ def _describe_exit_code(returncode: int) -> str:
     except ValueError:
         sig_name = f"signal {sig_num}"
     well_known: dict[int, str] = {
-        signal.SIGKILL: "(likely OOM-killed or forced termination)",
+        signal.SIGILL: "(likely OOM-killed or forced termination)",
         signal.SIGTERM: "(terminated — container stop or shutdown)",
         signal.SIGSEGV: "(segmentation fault)",
         signal.SIGABRT: "(aborted)",
     }
     detail = well_known.get(sig_num, "")
     return f"Process killed by {sig_name} {detail}".strip()
-
-
-TEST_GROUP_PLAYBOOKS: dict[str, str] = {
-    "ConfigurationChecks": "playbook_00_configuration_checks.yml",
-    "DatabaseHighAvailability": "playbook_00_ha_db_functional_tests.yml",
-    "CentralServicesHighAvailability": "playbook_00_ha_scs_functional_tests.yml",
-    "AzureBackupDatabase": "playbook_00_backup_db_functional_tests.yml",
-}
 
 
 def _tail_file(
@@ -105,6 +98,7 @@ class ExecutorProtocol(Protocol):
         job_id: Optional[str] = None,
         private_key_path: Optional[str] = None,
         ssh_password: Optional[str] = None,
+        offline: bool = False,
     ) -> dict[str, Any]:
         """
         Run a test.
@@ -118,6 +112,9 @@ class ExecutorProtocol(Protocol):
         :param job_id: Job correlation ID for process tracking
         :param private_key_path: Path to SSH private key file
         :param ssh_password: SSH password for VMPASSWORD auth
+        :param offline: Dispatch the offline-eligible HA `test_group` via
+            `playbook_01_ha_offline_tests.yml` with a local connection,
+            instead of the group's normal online playbook
         :returns: Execution result
         """
         raise NotImplementedError
@@ -182,6 +179,7 @@ class AnsibleExecutor:
         job_id: Optional[str] = None,
         private_key_path: Optional[str] = None,
         ssh_password: Optional[str] = None,
+        offline: bool = False,
     ) -> dict[str, Any]:
         """Run a test using ansible-playbook.
 
@@ -194,14 +192,31 @@ class AnsibleExecutor:
         :param job_id: Job correlation ID for process tracking
         :param private_key_path: Path to SSH private key file
         :param ssh_password: SSH password for VMPASSWORD auth
+        :param offline: Dispatch via `playbook_01_ha_offline_tests.yml` with
+            a local connection instead of the group's online playbook.
+            Only offline-eligible HA groups support this (`P1-RD-001`).
         :returns: Execution result dict
         """
+        from src.core.execution.capability_classification import get_capability
+
         playbook_name = TEST_GROUP_PLAYBOOKS.get(test_group)
         if not playbook_name:
             return {
                 "status": "failed",
                 "error": f"Unknown test group: {test_group}",
             }
+
+        if offline:
+            try:
+                get_capability(test_group).for_dispatch(offline=True)
+            except ValueError as exc:
+                return {
+                    "status": "failed",
+                    "error": str(exc),
+                    "test_id": test_id,
+                    "test_group": test_group,
+                }
+            playbook_name = OFFLINE_PLAYBOOK
 
         playbook_path = self.playbook_dir / playbook_name
         if not playbook_path.exists():
@@ -217,7 +232,12 @@ class AnsibleExecutor:
             inventory_path,
         ]
 
-        if private_key_path:
+        if offline:
+            # Offline dispatch analyzes previously collected CIB files
+            # locally; no SSH connection or credentials are used, matching
+            # `sap_automation_qa.sh`'s offline mode.
+            cmd.append("--connection=local")
+        elif private_key_path:
             cmd.extend(["--private-key", private_key_path])
         all_vars = extra_vars or {}
         all_vars["workspace_id"] = workspace_id
@@ -234,7 +254,7 @@ class AnsibleExecutor:
             all_vars["SAP_FUNCTIONAL_TEST_TYPE"] = test_group
             all_vars["TEST_TYPE"] = "SAPFunctionalTests"
 
-        if ssh_password:
+        if ssh_password and not offline:
             all_vars["ansible_password"] = ssh_password
         if test_id:
             all_vars["test_id"] = test_id
@@ -277,7 +297,7 @@ class AnsibleExecutor:
 
         logger.info(
             f"Running test: workspace={workspace_id}, "
-            f"test_id={test_id or 'all'}, group={test_group}"
+            f"test_id={test_id or 'all'}, group={test_group}, offline={offline}"
         )
 
         try:
