@@ -30,11 +30,25 @@ class StorageContext:
         """Close exactly the resources owned by this storage context."""
         if self._closed:
             return
-        self._closed = True
 
         if self.db is not None:
             self.db.close()
+            self._closed = True
             return
 
-        self.job_store.close()
-        self.schedule_store.close()
+        job_error: Exception | None = None
+        try:
+            self.job_store.close()
+        except Exception as exc:
+            job_error = exc
+
+        try:
+            self.schedule_store.close()
+        except Exception as schedule_error:
+            if job_error is not None:
+                raise RuntimeError("Both job and schedule stores failed to close") from job_error
+            raise schedule_error
+
+        if job_error is not None:
+            raise job_error
+        self._closed = True

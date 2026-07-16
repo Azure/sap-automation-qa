@@ -6,7 +6,7 @@ Normalized knowledge record schema for the STAF generated knowledge base.
 """
 
 from enum import Enum
-from typing import List, Literal
+from typing import Literal
 from pydantic import BaseModel, ConfigDict, Field
 
 SCHEMA_VERSION = "1.0"
@@ -36,9 +36,9 @@ class AppliesTo(BaseModel):
     """
 
     model_config = ConfigDict(frozen=True, extra="forbid")
-    component: List[str] = Field(default_factory=list)
-    os_family: List[str] = Field(default_factory=list)
-    topology: List[str] = Field(default_factory=list)
+    component: tuple[str, ...] = Field(default_factory=tuple)
+    os_family: tuple[str, ...] = Field(default_factory=tuple)
+    topology: tuple[str, ...] = Field(default_factory=tuple)
 
 
 class KnowledgeRecord(BaseModel):
@@ -53,7 +53,7 @@ class KnowledgeRecord(BaseModel):
     name: str = Field(..., min_length=1)
     description: str = Field(..., min_length=1)
     applies_to: AppliesTo = Field(default_factory=AppliesTo)
-    provides: List[str] = Field(default_factory=list)
+    provides: tuple[str, ...] = Field(default_factory=tuple)
     risk: KnowledgeRisk
     execution_ref: str = Field(..., min_length=1)
     source_ref: str = Field(..., min_length=1)
@@ -70,7 +70,7 @@ class SearchResult(BaseModel):
     description: str
     kind: str
     risk: str
-    provides: List[str]
+    provides: tuple[str, ...]
     source_ref: str
     rank: float = Field(description="FTS5 rank score; lower is a better match")
 
@@ -80,5 +80,5 @@ class SearchResponse(BaseModel):
 
     model_config = ConfigDict(frozen=True, extra="forbid")
 
-    results: List[SearchResult]
+    results: tuple[SearchResult, ...]
     total_matched: int = Field(description="Total matches before applying the limit")

@@ -47,12 +47,20 @@ def _describe_exit_code(returncode: int) -> str:
     if returncode >= 0:
         return f"Process exited with code {returncode}"
     sig_num = -returncode
-    try:
-        sig_name = signal.Signals(sig_num).name
-    except ValueError:
-        sig_name = f"signal {sig_num}"
+    portable_names = {
+        6: "SIGABRT",
+        9: "SIGKILL",
+        11: "SIGSEGV",
+        15: "SIGTERM",
+    }
+    sig_name = portable_names.get(sig_num)
+    if sig_name is None:
+        try:
+            sig_name = signal.Signals(sig_num).name
+        except ValueError:
+            sig_name = f"signal {sig_num}"
     well_known: dict[int, str] = {
-        signal.SIGILL: "(likely OOM-killed or forced termination)",
+        9: "(likely OOM-killed or forced termination)",
         signal.SIGTERM: "(terminated — container stop or shutdown)",
         signal.SIGSEGV: "(segmentation fault)",
         signal.SIGABRT: "(aborted)",
