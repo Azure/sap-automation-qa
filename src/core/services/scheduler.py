@@ -9,7 +9,7 @@ from typing import Optional
 from apscheduler.triggers.cron import CronTrigger
 from src.core.models.job import Job
 from src.core.models.schedule import Schedule
-from src.core.storage.schedule_store import ScheduleStore
+from src.core.contracts.storage import ScheduleRuntimeProtocol
 from src.core.execution.worker import JobWorker
 from src.core.observability import get_logger, create_service_event
 
@@ -25,7 +25,7 @@ class SchedulerService:
 
     def __init__(
         self,
-        schedule_store: ScheduleStore,
+        schedule_store: ScheduleRuntimeProtocol,
         job_worker: JobWorker,
         check_interval_seconds: int = 60,
     ) -> None:

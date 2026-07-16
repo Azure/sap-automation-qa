@@ -4,6 +4,7 @@ ansible-lint
 ansible-runner
 
 # Azure packages
+azure-data-tables
 azure-identity
 azure-keyvault-secrets
 azure-kusto-data
@@ -50,3 +51,6 @@ uvicorn
 pydantic
 apscheduler
 python-multipart
+
+# MCP
+mcp[cli]==1.28.1

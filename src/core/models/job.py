@@ -59,6 +59,10 @@ class Job(BaseModel):
     log_file: Optional[str] = None
     events: list[JobEvent] = Field(default_factory=list)
     metadata: dict[str, Any] = Field(default_factory=dict)
+    actor: Optional[str] = None
+    approval_ref: Optional[str] = None
+    incident_ticket: Optional[str] = None
+    offline: bool = False
 
     def start(self) -> JobEvent:
         """Mark job as started.
@@ -162,6 +166,10 @@ class CreateJobRequest(BaseModel):
     workspace_id: str
     test_group: Optional[str] = None
     test_ids: List[str] = []
+    actor: Optional[str] = None
+    approval_ref: Optional[str] = None
+    incident_ticket: Optional[str] = None
+    offline: bool = False
 
 
 class CancelJobRequest(BaseModel):

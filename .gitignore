@@ -429,3 +429,9 @@ deploy/.env
 .github/workflows/sync*
 
 .copilot-tracking/*
+
+# plan files 
+docs/projects/*
+docs/adr/*
+
+_mcp_inspect/*
