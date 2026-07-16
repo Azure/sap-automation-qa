@@ -4,14 +4,9 @@
 """Storage context model."""
 
 from __future__ import annotations
-
 from dataclasses import dataclass, field
-from typing import TYPE_CHECKING
-
 from src.core.contracts.storage import JobStoreProtocol, ScheduleStoreProtocol
-
-if TYPE_CHECKING:
-    from src.core.storage.staf_store import StafStore
+from src.core.storage.staf_store import StafStore
 
 
 @dataclass
