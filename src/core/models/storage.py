@@ -4,9 +4,14 @@
 """Storage context model."""
 
 from __future__ import annotations
+
 from dataclasses import dataclass, field
-from typing import Any
+from typing import TYPE_CHECKING
+
 from src.core.contracts.storage import JobStoreProtocol, ScheduleStoreProtocol
+
+if TYPE_CHECKING:
+    from src.core.storage.staf_store import StafStore
 
 
 @dataclass
@@ -16,7 +21,7 @@ class StorageContext:
     """
 
     backend: str
-    db: Any | None
+    db: StafStore | None
     job_store: JobStoreProtocol
     schedule_store: ScheduleStoreProtocol
     _closed: bool = field(default=False, init=False, repr=False)

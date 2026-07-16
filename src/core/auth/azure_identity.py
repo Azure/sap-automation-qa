@@ -6,6 +6,7 @@ Azure identity provider: credential acquisition only (P1-WP-002D).
 """
 
 from __future__ import annotations
+
 from azure.core.credentials import TokenCredential
 from azure.identity import DefaultAzureCredential
 
