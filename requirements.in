@@ -43,7 +43,7 @@ pywinrm[credssp]
 cryptography>=48.0.1
 
 # CLI tools
-click
+click>=8.3.3
 rich
 # API 
 fastapi
