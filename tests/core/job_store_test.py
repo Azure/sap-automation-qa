@@ -214,3 +214,166 @@ class TestJobStore:
         retrieved = job_store.get(job.id)
         assert retrieved is not None
         assert retrieved.log_file is None
+
+
+class TestJobStoreP1WP003:
+    """P1-WP-003: actor/approval_ref/incident_ticket/offline persistence and migration."""
+
+    def test_new_fields_round_trip(self, job_store: JobStore) -> None:
+        """New fields are persisted and readable."""
+        job = Job(
+            workspace_id="WS-NEW",
+            actor="ci-agent",
+            approval_ref="CHG-001",
+            incident_ticket="INC-002",
+            offline=True,
+            test_group="DatabaseHighAvailability",
+        )
+        job_store.create(job)
+        retrieved = job_store.get(job.id)
+        assert retrieved is not None
+        assert retrieved.actor == "ci-agent"
+        assert retrieved.approval_ref == "CHG-001"
+        assert retrieved.incident_ticket == "INC-002"
+        assert retrieved.offline is True
+
+    def test_new_fields_default_none_false(self, job_store: JobStore) -> None:
+        """Jobs without new fields get defaults."""
+        job = Job(workspace_id="WS-OLD")
+        job_store.create(job)
+        retrieved = job_store.get(job.id)
+        assert retrieved is not None
+        assert retrieved.actor is None
+        assert retrieved.approval_ref is None
+        assert retrieved.incident_ticket is None
+        assert retrieved.offline is False
+
+    def test_pre_migration_row_readable(self, temp_dir: Path) -> None:
+        """Rows written before migration (without new columns) are readable after migration.
+
+        Simulates the old schema by creating a DB with the original schema only,
+        inserting a row, then opening it with the new JobStore which runs migration.
+        """
+        import sqlite3
+        from src.core.storage.job_store import _JOBS_SCHEMA, _dt_to_iso
+        from datetime import datetime, timezone
+
+        db_path = temp_dir / "legacy.db"
+        conn = sqlite3.connect(str(db_path))
+        conn.executescript(_JOBS_SCHEMA)
+        # Insert a row using only the old columns (no actor/approval_ref/incident_ticket/offline)
+        job_id = "aaaaaaaa-bbbb-cccc-dddd-eeeeeeeeeeee"
+        conn.execute(
+            """INSERT INTO jobs
+               (id, workspace_id, schedule_id, test_group,
+                test_ids, status, created_at, started_at,
+                completed_at, error, result, log_file,
+                events, metadata)
+               VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)""",
+            (
+                job_id,
+                "WS-LEGACY",
+                None,
+                "ConfigurationChecks",
+                "[]",
+                "pending",
+                _dt_to_iso(datetime.now(timezone.utc)),
+                None,
+                None,
+                None,
+                None,
+                None,
+                "[]",
+                "{}",
+            ),
+        )
+        conn.commit()
+        conn.close()
+
+        # Re-open with the new JobStore → migration adds columns
+        store = JobStore(db_path=db_path)
+        retrieved = store.get(job_id)
+        assert retrieved is not None
+        assert retrieved.workspace_id == "WS-LEGACY"
+        assert retrieved.actor is None
+        assert retrieved.approval_ref is None
+        assert retrieved.incident_ticket is None
+        assert retrieved.offline is False
+        store.close()
+
+    def test_migration_idempotent(self, temp_dir: Path) -> None:
+        """Opening the store multiple times does not fail on already-added columns."""
+        db_path = temp_dir / "idem.db"
+        store1 = JobStore(db_path=db_path)
+        store1.close()
+        # Open again — migration runs again without error
+        store2 = JobStore(db_path=db_path)
+        job = Job(workspace_id="WS-IDEM", offline=True)
+        store2.create(job)
+        assert store2.get(job.id) is not None
+        store2.close()
+
+    def test_update_preserves_new_fields(self, job_store: JobStore) -> None:
+        """Update round-trip preserves the new fields."""
+        job = Job(
+            workspace_id="WS-UPD",
+            actor="human",
+            offline=True,
+            test_group="CentralServicesHighAvailability",
+        )
+        job_store.create(job)
+        job.start()
+        job_store.update(job)
+        retrieved = job_store.get(job.id)
+        assert retrieved is not None
+        assert retrieved.actor == "human"
+        assert retrieved.offline is True
+        assert retrieved.status == "running"
+
+    def test_migration_durable_without_job_write(self, temp_dir: Path) -> None:
+        """Migration columns persist even when no Job create/update follows.
+
+        Regression: under DEFERRED isolation, uncommitted ALTER TABLE would be
+        rolled back on close if no subsequent write triggered a commit.
+        """
+        import sqlite3
+
+        db_path = temp_dir / "durable.db"
+
+        # Create a legacy DB with only the old schema
+        conn = sqlite3.connect(str(db_path))
+        conn.executescript("""
+            CREATE TABLE IF NOT EXISTS jobs (
+                id           TEXT PRIMARY KEY,
+                workspace_id TEXT NOT NULL,
+                schedule_id  TEXT,
+                test_group   TEXT,
+                test_ids     TEXT NOT NULL DEFAULT '[]',
+                status       TEXT NOT NULL DEFAULT 'pending',
+                created_at   TEXT NOT NULL,
+                started_at   TEXT,
+                completed_at TEXT,
+                error        TEXT,
+                result       TEXT,
+                log_file     TEXT,
+                events       TEXT NOT NULL DEFAULT '[]',
+                metadata     TEXT NOT NULL DEFAULT '{}'
+            );
+            """)
+        conn.commit()
+        conn.close()
+
+        # Open JobStore (triggers migration), then close WITHOUT any Job write
+        store = JobStore(db_path=db_path)
+        store.close()
+
+        # Reopen with a raw connection and verify all 4 columns exist
+        conn2 = sqlite3.connect(str(db_path))
+        cur = conn2.execute("PRAGMA table_info(jobs)")
+        columns = {row[1] for row in cur.fetchall()}
+        conn2.close()
+
+        assert "actor" in columns
+        assert "approval_ref" in columns
+        assert "incident_ticket" in columns
+        assert "offline" in columns

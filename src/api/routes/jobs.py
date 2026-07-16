@@ -11,22 +11,23 @@ from fastapi import APIRouter, HTTPException, Query
 from fastapi.responses import PlainTextResponse
 from src.api.routes.workspaces import _load_workspaces_from_directory
 from src.core.models.job import Job, JobStatus, CreateJobRequest, CancelJobRequest, JobListResponse
-from src.core.storage.job_store import JobStore
+from src.core.contracts.storage import JobQueryProtocol
 from src.core.execution.worker import JobWorker
-from src.core.execution.executor import TEST_GROUP_PLAYBOOKS
+from src.core.execution.test_catalog import TEST_GROUP_PLAYBOOKS
+from src.core.execution.capability_classification import get_capability
 from src.core.observability import get_logger
 
 logger = get_logger(__name__)
 router = APIRouter(prefix="/jobs", tags=["jobs"])
-_job_store: Optional[JobStore] = None
+_job_store: Optional[JobQueryProtocol] = None
 _job_worker: Optional[JobWorker] = None
 
 
-def set_job_store(store: JobStore) -> None:
+def set_job_store(store: JobQueryProtocol) -> None:
     """Set the job store instance.
 
-    :param store: JobStore instance for persistence.
-    :type store: JobStore
+    :param store: Any implementation satisfying ``JobQueryProtocol``.
+    :type store: JobQueryProtocol
     """
     global _job_store
     _job_store = store
@@ -42,11 +43,11 @@ def set_job_worker(worker: JobWorker) -> None:
     _job_worker = worker
 
 
-def get_job_store() -> JobStore:
+def get_job_store() -> JobQueryProtocol:
     """Get the job store instance.
 
-    :returns: The configured JobStore instance.
-    :rtype: JobStore
+    :returns: The configured job store.
+    :rtype: JobQueryProtocol
     :raises HTTPException: If store not initialized (503 error).
     """
     if _job_store is None:
@@ -139,7 +140,8 @@ async def create_job(request: CreateJobRequest) -> Job:
     :type request: CreateJobRequest
     :returns: The created and submitted job.
     :rtype: Job
-    :raises HTTPException: 404 if workspace not found, 400 on invalid test_group.
+    :raises HTTPException: 404 if workspace not found, 400 on invalid test_group
+        or ineligible offline request.
     """
     if request.workspace_id not in {ws.id for ws in _load_workspaces_from_directory()}:
         raise HTTPException(
@@ -156,12 +158,33 @@ async def create_job(request: CreateJobRequest) -> Job:
             ),
         )
 
+    if request.offline:
+        if not request.test_group:
+            raise HTTPException(
+                status_code=400,
+                detail="offline=true requires a test_group",
+            )
+        cap = get_capability(request.test_group)
+        if not cap.offline_eligible:
+            raise HTTPException(
+                status_code=400,
+                detail=(
+                    f"test_group '{request.test_group}' is not eligible for "
+                    f"offline execution. Eligible groups: "
+                    f"{sorted(g for g, c in TEST_GROUP_PLAYBOOKS.items() if get_capability(g).offline_eligible)}"
+                ),
+            )
+
     try:
         submitted = await get_job_worker().submit_job(
             Job(
                 workspace_id=request.workspace_id,
                 test_group=request.test_group,
                 test_ids=request.test_ids,
+                actor=request.actor,
+                approval_ref=request.approval_ref,
+                incident_ticket=request.incident_ticket,
+                offline=request.offline,
             )
         )
         logger.info(f"Created job {submitted.id} for workspace {request.workspace_id}")

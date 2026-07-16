@@ -9,9 +9,9 @@ from datetime import datetime, timedelta, timezone
 from pathlib import Path
 from typing import List, Optional
 from uuid import UUID
-
 from src.core.models.job import Job, JobStatus
 from src.core.observability import get_logger
+from src.core.storage.staf_store import StafStore
 
 logger = get_logger(__name__)
 
@@ -67,29 +67,55 @@ class JobStore:
     def __init__(
         self,
         db_path: Path | str = "data/scheduler.db",
+        *,
+        db: Optional[StafStore] = None,
     ) -> None:
         """Initialize the job store.
 
-        :param db_path: Path to SQLite database file.
+        :param db_path: Path to SQLite database file. Ignored when ``db`` is given.
+        :param db: Optional shared ``StafStore`` connection owner. When omitted, the
+            store creates and owns its own ``StafStore`` at ``db_path``.
         """
-        self.db_path = Path(db_path)
-        self.db_path.parent.mkdir(parents=True, exist_ok=True)
-
-        self._conn = sqlite3.connect(
-            str(self.db_path),
-            isolation_level="DEFERRED",
-            check_same_thread=False,
-        )
-        self._conn.execute("PRAGMA journal_mode=WAL")
-        self._conn.execute("PRAGMA foreign_keys=ON")
-        self._conn.execute("PRAGMA busy_timeout=5000")
-        self._conn.executescript(_JOBS_SCHEMA)
+        if db is None:
+            db = StafStore(db_path)
+            self._owns_db = True
+        else:
+            self._owns_db = False
+        self._db = db
+        self._conn = db.conn
+        self._lock = db.lock
+        self.db_path = db.db_path
+        db.executescript(_JOBS_SCHEMA)
+        self._migrate_add_columns()
 
         logger.info(f"Initialized job storage at {self.db_path}")
 
     def close(self) -> None:
-        """Close the database connection."""
-        self._conn.close()
+        """Close the database connection if this store owns it."""
+        if self._owns_db:
+            self._db.close()
+
+    _NEW_COLUMNS: list[tuple[str, str]] = [
+        ("actor", "TEXT"),
+        ("approval_ref", "TEXT"),
+        ("incident_ticket", "TEXT"),
+        ("offline", "INTEGER NOT NULL DEFAULT 0"),
+    ]
+
+    def _migrate_add_columns(self) -> None:
+        """Idempotently add P1-WP-003 columns via ALTER TABLE ADD COLUMN.
+
+        Uses ``PRAGMA table_info`` to detect which columns already exist so
+        the migration is safe to run on both fresh and pre-existing databases.
+        The migration is committed atomically under the shared lock.
+        """
+        with self._lock, self._conn:
+            cur = self._conn.execute("PRAGMA table_info(jobs)")
+            existing = {row[1] for row in cur.fetchall()}
+            for col_name, col_type in self._NEW_COLUMNS:
+                if col_name not in existing:
+                    self._conn.execute(f"ALTER TABLE jobs ADD COLUMN {col_name} {col_type}")
+                    logger.info(f"Migrated jobs table: added column {col_name}")
 
     @staticmethod
     def _job_to_row(job: Job) -> dict:
@@ -112,6 +138,10 @@ class JobStore:
                 default=str,
             ),
             "metadata": json.dumps(job.metadata, default=str),
+            "actor": job.actor,
+            "approval_ref": job.approval_ref,
+            "incident_ticket": job.incident_ticket,
+            "offline": 1 if job.offline else 0,
         }
 
     @staticmethod
@@ -125,6 +155,10 @@ class JobStore:
         for dt_field in ("created_at", "started_at", "completed_at"):
             if data.get(dt_field):
                 data[dt_field] = datetime.fromisoformat(data[dt_field])
+        data.setdefault("actor", None)
+        data.setdefault("approval_ref", None)
+        data.setdefault("incident_ticket", None)
+        data["offline"] = bool(data.get("offline", 0))
         return Job.model_validate(data)
 
     def create(self, job: Job) -> Job:
@@ -134,18 +168,20 @@ class JobStore:
         :returns: Created job.
         """
         row = self._job_to_row(job)
-        with self._conn:
+        with self._lock, self._conn:
             self._conn.execute(
                 """INSERT INTO jobs
                    (id, workspace_id, schedule_id, test_group,
                     test_ids, status, created_at, started_at,
                     completed_at, error, result, log_file,
-                    events, metadata)
+                    events, metadata,
+                    actor, approval_ref, incident_ticket, offline)
                    VALUES
                    (:id, :workspace_id, :schedule_id, :test_group,
                     :test_ids, :status, :created_at, :started_at,
                     :completed_at, :error, :result, :log_file,
-                    :events, :metadata)
+                    :events, :metadata,
+                    :actor, :approval_ref, :incident_ticket, :offline)
                 """,
                 row,
             )
@@ -158,8 +194,9 @@ class JobStore:
         :param job_id: Job ID.
         :returns: Job if found, None otherwise.
         """
-        self._conn.row_factory = sqlite3.Row
-        row = self._conn.execute("SELECT * FROM jobs WHERE id = ?", (str(job_id),)).fetchone()
+        with self._lock:
+            self._conn.row_factory = sqlite3.Row
+            row = self._conn.execute("SELECT * FROM jobs WHERE id = ?", (str(job_id),)).fetchone()
         return self._row_to_job(row) if row else None
 
     def update(self, job: Job) -> None:
@@ -168,7 +205,7 @@ class JobStore:
         :param job: Job with updated fields.
         """
         row = self._job_to_row(job)
-        with self._conn:
+        with self._lock, self._conn:
             cur = self._conn.execute(
                 """UPDATE jobs SET
                        workspace_id  = :workspace_id,
@@ -183,7 +220,11 @@ class JobStore:
                        result        = :result,
                        log_file      = :log_file,
                        events        = :events,
-                       metadata      = :metadata
+                       metadata      = :metadata,
+                       actor         = :actor,
+                       approval_ref  = :approval_ref,
+                       incident_ticket = :incident_ticket,
+                       offline       = :offline
                    WHERE id = :id
                 """,
                 row,
@@ -197,23 +238,25 @@ class JobStore:
         :param workspace_id: Optional filter by workspace.
         :returns: List of active jobs.
         """
-        self._conn.row_factory = sqlite3.Row
         terminal = (
             JobStatus.COMPLETED.value,
             JobStatus.FAILED.value,
             JobStatus.CANCELLED.value,
         )
-        if workspace_id:
-            cur = self._conn.execute(
-                "SELECT * FROM jobs " "WHERE status NOT IN (?, ?, ?) " "AND workspace_id = ?",
-                (*terminal, workspace_id),
-            )
-        else:
-            cur = self._conn.execute(
-                "SELECT * FROM jobs " "WHERE status NOT IN (?, ?, ?)",
-                terminal,
-            )
-        return [self._row_to_job(r) for r in cur.fetchall()]
+        with self._lock:
+            self._conn.row_factory = sqlite3.Row
+            if workspace_id:
+                cur = self._conn.execute(
+                    "SELECT * FROM jobs " "WHERE status NOT IN (?, ?, ?) " "AND workspace_id = ?",
+                    (*terminal, workspace_id),
+                )
+            else:
+                cur = self._conn.execute(
+                    "SELECT * FROM jobs " "WHERE status NOT IN (?, ?, ?)",
+                    terminal,
+                )
+            rows = cur.fetchall()
+        return [self._row_to_job(r) for r in rows]
 
     def get_active_for_workspace(self, workspace_id: str) -> Optional[Job]:
         """Get the active job for a workspace.
@@ -221,20 +264,21 @@ class JobStore:
         :param workspace_id: Workspace ID.
         :returns: Active job if one exists.
         """
-        self._conn.row_factory = sqlite3.Row
         terminal = (
             JobStatus.COMPLETED.value,
             JobStatus.FAILED.value,
             JobStatus.CANCELLED.value,
         )
-        cur = self._conn.execute(
-            "SELECT * FROM jobs "
-            "WHERE workspace_id = ? "
-            "AND status NOT IN (?, ?, ?) "
-            "LIMIT 1",
-            (workspace_id, *terminal),
-        )
-        row = cur.fetchone()
+        with self._lock:
+            self._conn.row_factory = sqlite3.Row
+            cur = self._conn.execute(
+                "SELECT * FROM jobs "
+                "WHERE workspace_id = ? "
+                "AND status NOT IN (?, ?, ?) "
+                "LIMIT 1",
+                (workspace_id, *terminal),
+            )
+            row = cur.fetchone()
         return self._row_to_job(row) if row else None
 
     def has_active_job(self, workspace_id: str) -> bool:
@@ -262,7 +306,6 @@ class JobStore:
         :param limit: Maximum number of jobs to return.
         :returns: List of historical jobs.
         """
-        self._conn.row_factory = sqlite3.Row
         terminal = (
             JobStatus.COMPLETED.value,
             JobStatus.FAILED.value,
@@ -289,11 +332,14 @@ class JobStore:
         where = " AND ".join(clauses)
         params.append(limit)
 
-        cur = self._conn.execute(
-            f"SELECT * FROM jobs WHERE {where} " "ORDER BY created_at DESC LIMIT ?",
-            params,
-        )
-        return [self._row_to_job(r) for r in cur.fetchall()]
+        with self._lock:
+            self._conn.row_factory = sqlite3.Row
+            cur = self._conn.execute(
+                f"SELECT * FROM jobs WHERE {where} " "ORDER BY created_at DESC LIMIT ?",
+                params,
+            )
+            rows = cur.fetchall()
+        return [self._row_to_job(r) for r in rows]
 
     def get_jobs_for_schedule(
         self,
