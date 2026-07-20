@@ -13,10 +13,10 @@
     headers:
       Metadata:                     true
     timeout:                        10
-  register:                         compute_metadata
+  register:                         linux_compute_metadata
   retries:                          3
   delay:                            2
-  until:                            compute_metadata is not failed
+  until:                            linux_compute_metadata is not failed
   failed_when:                      false
   when:                             ansible_os_family != "Windows"
 
@@ -28,12 +28,19 @@
       Metadata:                     true
     return_content:                 true
     timeout:                        10
-  register:                         compute_metadata
+  register:                         windows_compute_metadata
   retries:                          3
   delay:                            2
-  until:                            compute_metadata is not failed
+  until:                            windows_compute_metadata is not failed
   failed_when:                      false
   when:                             ansible_os_family == "Windows"
+
+- name:                             "{{ check_type.name }} - Select IMDS response for host OS"
+  ansible.builtin.set_fact:
+    compute_metadata: >-
+                                    {{ windows_compute_metadata
+                                       if ansible_os_family == 'Windows'
+                                       else linux_compute_metadata }}
 
 - name:                             "{{ check_type.name }} - Normalize Windows IMDS response"
   ansible.builtin.set_fact:
@@ -169,6 +176,13 @@
     module_checks_yaml:             "{{ {'checks': module_checks} | to_yaml }}"
   when:                             command_checks is defined or azure_checks is defined or module_checks is defined
 
+- name:                             "{{ check_type.name }} - Initialize collector results"
+  no_log:                           true
+  ansible.builtin.set_fact:
+    command_check_results:          {}
+    azure_check_results:            {}
+    module_check_results:           {}
+
 - name:                             "{{ check_type.name }} - Run Windows command-based collectors"
   no_log:                           true
   ansible.windows.win_shell:        "{{ item.collector_args.windows_command | default(item.collector_args.command) }}"
@@ -231,7 +245,7 @@
         parallel_execution:         true
         max_workers:                1
         enable_retry:               true
-      register:                     command_check_results
+      register:                     linux_command_check_results
       when:                         ansible_os_family != "Windows"
 
     - name:                         "{{ check_type.name }} - Evaluate Windows command-based configuration checks"
@@ -249,12 +263,21 @@
         parallel_execution:         true
         max_workers:                1
         enable_retry:               true
-      register:                     command_check_results
+      register:                     windows_command_check_results
       when:                         ansible_os_family == "Windows"
+
+    - name:                         "{{ check_type.name }} - Select command check results for host OS"
+      ansible.builtin.set_fact:
+        command_check_results: >-
+                                        {{ windows_command_check_results
+                                           if ansible_os_family == 'Windows'
+                                           else linux_command_check_results }}
   rescue:
     - name:                         Log command check failure
       ansible.builtin.debug:
-        msg:                        "Command-based configuration checks failed {{ command_check_results.msg }}"
+        msg: >-
+                                        Command-based configuration checks failed
+                                        {{ ansible_failed_result.msg | default('Unknown error') }}
 
 - name:                             "{{ check_type.name }} - Debug the logs from command-based configuration check"
   when:
@@ -319,7 +342,7 @@
         parallel_execution:         true
         max_workers:                1
         enable_retry:               true
-      register:                     module_check_results
+      register:                     linux_module_check_results
       when:                         ansible_os_family != "Windows"
 
     - name:                         Evaluate Windows module-based configuration checks
@@ -337,12 +360,21 @@
         parallel_execution:         true
         max_workers:                1
         enable_retry:               true
-      register:                     module_check_results
+      register:                     windows_module_check_results
       when:                         ansible_os_family == "Windows"
+
+    - name:                         "{{ check_type.name }} - Select module check results for host OS"
+      ansible.builtin.set_fact:
+        module_check_results: >-
+                                        {{ windows_module_check_results
+                                           if ansible_os_family == 'Windows'
+                                           else linux_module_check_results }}
   rescue:
     - name:                         Log module check failure
       ansible.builtin.debug:
-        msg:                        "Module-based configuration checks failed but continuing {{ module_check_results.msg }}"
+        msg: >-
+                                        Module-based configuration checks failed but continuing
+                                        {{ ansible_failed_result.msg | default('Unknown error') }}
 
 - name:                             "{{ check_type.name }} - Debug the logs from module-based configuration check"
   when:
