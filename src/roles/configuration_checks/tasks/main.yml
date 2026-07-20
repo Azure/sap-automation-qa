@@ -273,6 +273,10 @@
                                            if ansible_os_family == 'Windows'
                                            else linux_command_check_results }}
   rescue:
+    - name:                         Preserve command check failure result
+      ansible.builtin.set_fact:
+        command_check_results:      "{{ ansible_failed_result }}"
+
     - name:                         Log command check failure
       ansible.builtin.debug:
         msg: >-
@@ -370,6 +374,10 @@
                                            if ansible_os_family == 'Windows'
                                            else linux_module_check_results }}
   rescue:
+    - name:                         Preserve module check failure result
+      ansible.builtin.set_fact:
+        module_check_results:       "{{ ansible_failed_result }}"
+
     - name:                         Log module check failure
       ansible.builtin.debug:
         msg: >-

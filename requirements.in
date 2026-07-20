@@ -1,5 +1,5 @@
 # Ansible packages
-ansible-core
+ansible-core==2.16.19
 ansible-lint
 ansible-runner
 
@@ -40,7 +40,7 @@ pywinrm[credssp]
 cryptography>=48.0.1
 
 # CLI tools
-click
+click>=8.3.3
 rich
 # API 
 fastapi
