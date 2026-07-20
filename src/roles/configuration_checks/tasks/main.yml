@@ -267,6 +267,7 @@
       when:                         ansible_os_family == "Windows"
 
     - name:                         "{{ check_type.name }} - Select command check results for host OS"
+      no_log:                       true
       ansible.builtin.set_fact:
         command_check_results: >-
                                         {{ windows_command_check_results
@@ -274,6 +275,7 @@
                                            else linux_command_check_results }}
   rescue:
     - name:                         Preserve command check failure result
+      no_log:                       true
       ansible.builtin.set_fact:
         command_check_results:      "{{ ansible_failed_result }}"
 
@@ -368,6 +370,7 @@
       when:                         ansible_os_family == "Windows"
 
     - name:                         "{{ check_type.name }} - Select module check results for host OS"
+      no_log:                       true
       ansible.builtin.set_fact:
         module_check_results: >-
                                         {{ windows_module_check_results
@@ -375,6 +378,7 @@
                                            else linux_module_check_results }}
   rescue:
     - name:                         Preserve module check failure result
+      no_log:                       true
       ansible.builtin.set_fact:
         module_check_results:       "{{ ansible_failed_result }}"
 
