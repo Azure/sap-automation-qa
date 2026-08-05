@@ -26,7 +26,7 @@ jobs:
       uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
 
     - name: Run Trivy vulnerability scanner (file system)
-      uses: aquasecurity/trivy-action@476e4fdcdc675b65ce75e8c3440b48d7a494f0e5 # 0.34.2
+      uses: aquasecurity/trivy-action@2736533278103862a861f4a35ebac3e97854d956 # 0.34.2
       with:
         scan-type: 'fs'
         ignore-unfixed: true
