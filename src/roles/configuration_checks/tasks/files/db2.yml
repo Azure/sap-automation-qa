@@ -55,8 +55,9 @@ enums:
 
   cluster_type:
     - sbd:                            &sbd "ISCSI"
+    - asd:                            &asd "ASD"
     - fencing_agent:                  &fencing_agent "AFA"
-    - all_fencing_agent:              &cluster_type [*sbd, *fencing_agent]
+    - all_fencing_agent:              &cluster_type [*sbd, *asd, *fencing_agent]
 
   collector_type:
     - command:                        &command "command"
@@ -527,7 +528,7 @@ checks:
       storage_type:                     *premium_storage
       role:                             [*db_role]
       database_type:                    [*db2]
-      high_availability_agent:          *sbd
+      high_availability_agent:          [*sbd, *asd]
     collector_type:                     *command
     collector_args:
       command:                          ". ~/sqllib/db2profile && db2pd -alldbs -hadr | grep -i 'PEER_WINDOW(seconds)' | awk '{print $NF}'"
