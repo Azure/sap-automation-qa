@@ -249,13 +249,7 @@ jobs:
           GEMINI_CLI_TRUST_WORKSPACE: "true"
         run: |
           set -euo pipefail
-          set +e
           timeout 120s gemini extensions install "$PWD" --consent --skip-settings
-          install_rc=$?
-          set -e
-          if [ "$install_rc" -ne 0 ] && [ "$install_rc" -ne 124 ]; then
-            echo "::error::Gemini extension install failed (exit $install_rc)"; exit 1
-          fi
           timeout 60s gemini extensions list --output-format json \
             > "$RUNNER_TEMP/gemini-list.json"
           cat "$RUNNER_TEMP/gemini-list.json"
@@ -271,6 +265,11 @@ jobs:
           ls -1 "$EXTDIR/skills" | sort > "$RUNNER_TEMP/gemini.txt"
           diff "$RUNNER_TEMP/expected_mirror.txt" "$RUNNER_TEMP/gemini.txt" \
             || { echo "::error::Gemini loaded a different skill set than the skills/ mirror"; exit 1; }
+          while IFS= read -r name; do
+            skill_file="$EXTDIR/skills/$name/SKILL.md"
+            [ -f "$skill_file" ] && [ ! -L "$skill_file" ] \
+              || { echo "::error::Gemini payload missing real $name/SKILL.md"; exit 1; }
+          done < "$RUNNER_TEMP/expected_mirror.txt"
 
       - name: Copilot - install from local checkout and assert skills
         run: |
