@@ -183,6 +183,10 @@ jobs:
               d="$base/$name"; f="$d/SKILL.md"
               if [ -L "$d" ]; then echo "::error::$d is a symlink"; fail=1; fi
               if [ ! -d "$d" ]; then echo "::error::$d is not a directory"; fail=1; continue; fi
+              while IFS= read -r link; do
+                echo "::error::$link is a symlink inside the skill payload"
+                fail=1
+              done < <(find "$d" -type l -print)
               if [ -L "$f" ]; then echo "::error::$f is a symlink stub"; fail=1; fi
               if [ ! -f "$f" ]; then echo "::error::$f missing"; fail=1; continue; fi
               sz=$(stat -c%s "$f")

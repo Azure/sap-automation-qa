@@ -25,7 +25,11 @@ via `CLAUDE.md` and `GEMINI.md` redirects.
 If that section is not in context, use this fallback:
 
 ```bash
-if [ ! -f "./scripts/sap_automation_qa.sh" ]; then
+if [ -f "./scripts/sap_automation_qa.sh" ]; then
+  :
+elif [ -f "../sap-automation-qa/scripts/sap_automation_qa.sh" ]; then
+  cd ../sap-automation-qa
+else
   git clone https://github.com/Azure/sap-automation-qa.git ../sap-automation-qa
   cd ../sap-automation-qa
 fi
