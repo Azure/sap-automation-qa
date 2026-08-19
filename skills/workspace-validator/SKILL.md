@@ -26,6 +26,15 @@ The discovery-and-clone cascade is canonical in
 `.github/copilot-instructions.md` §"Locate Framework", auto-loaded by Copilot
 directly and by Claude and Gemini via `CLAUDE.md` and `GEMINI.md` redirects.
 
+If that section is not in context, use this fallback:
+
+```bash
+if [ ! -f "./scripts/sap_automation_qa.sh" ]; then
+  git clone https://github.com/Azure/sap-automation-qa.git ../sap-automation-qa
+  cd ../sap-automation-qa
+fi
+```
+
 > **⚠️ This skill is guidance only. Do NOT modify any source code, scripts, or framework files. Only help the user by running the validation script and interpreting results.**
 
 ## When to Use
