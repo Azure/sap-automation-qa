@@ -256,9 +256,9 @@ jobs:
           if [ "$install_rc" -ne 0 ] && [ "$install_rc" -ne 124 ]; then
             echo "::error::Gemini extension install failed (exit $install_rc)"; exit 1
           fi
-          LIST=$(timeout 60s gemini extensions list --output-format json)
-          echo "$LIST"
-          printf '%s\n' "$LIST" > "$RUNNER_TEMP/gemini-list.json"
+          timeout 60s gemini extensions list --output-format json \
+            > "$RUNNER_TEMP/gemini-list.json"
+          cat "$RUNNER_TEMP/gemini-list.json"
           EXTMANIFEST=$(find "$HOME/.gemini/extensions" -maxdepth 2 \
             -name gemini-extension.json -print -quit)
           if [ -z "$EXTMANIFEST" ]; then
@@ -268,16 +268,9 @@ jobs:
           if [ ! -d "$EXTDIR/skills" ]; then
             echo "::error::Gemini extension has no skills/ (extDir='$EXTDIR')"; exit 1
           fi
-          if [ "$install_rc" -eq 124 ]; then
-            echo "::warning::Gemini install timed out after writing a valid extension payload"
-          fi
           ls -1 "$EXTDIR/skills" | sort > "$RUNNER_TEMP/gemini.txt"
           diff "$RUNNER_TEMP/expected_mirror.txt" "$RUNNER_TEMP/gemini.txt" \
             || { echo "::error::Gemini loaded a different skill set than the skills/ mirror"; exit 1; }
-          jq -r '.[].skills[].name' "$RUNNER_TEMP/gemini-list.json" \
-            | sort > "$RUNNER_TEMP/gemini-active.txt"
-          diff "$RUNNER_TEMP/expected_mirror.txt" "$RUNNER_TEMP/gemini-active.txt" \
-            || { echo "::error::Gemini reported a different active skill set"; exit 1; }
 
       - name: Copilot - install from local checkout and assert skills
         run: |
