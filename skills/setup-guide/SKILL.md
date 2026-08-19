@@ -28,13 +28,18 @@ others hand off here.
 
 ### If you already have a checkout
 
-Verify its provenance and revision yourself through a trusted out-of-band
-channel — inspect commit hashes against known-good upstream tags, re-clone
-to a scratch path and diff, or whatever your trust bar requires. Trust
-cannot be inferred from remote URL, `git status`, or filesystem structure:
-a pre-existing tree can carry attacker-controlled config (for example,
-`core.fsmonitor` pointing at a hook binary) that executes the moment any
-`git` command touches it. Once you are satisfied, `cd` into the trusted
+Verify both its source (upstream URL or your fork URL) and its revision
+yourself through a trusted out-of-band channel — inspect commit hashes
+against known-good upstream tags or against your fork's reviewed
+revision, re-clone to a scratch path and diff, or whatever your trust bar
+requires. A trusted checkout may point at either the official upstream
+(`https://github.com/Azure/sap-automation-qa.git`) or an operator-verified
+fork; the framework marker `./scripts/sap_automation_qa.sh` must be
+present in the working tree. Provenance cannot be inferred from remote
+URL, `git status`, or filesystem structure alone: a pre-existing tree can
+carry attacker-controlled config (for example, `core.fsmonitor` pointing
+at a hook binary) that executes the moment any `git` command touches it.
+Once you are satisfied on both source and revision, `cd` into the trusted
 checkout.
 
 ### If you do not have a checkout

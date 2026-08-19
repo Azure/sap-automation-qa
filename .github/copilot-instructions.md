@@ -389,10 +389,13 @@ cd deploy && docker compose up -d
 
 ## Locate Framework
 
-Every STAF skill operates from within a **trusted STAF checkout** — a clone
-of `https://github.com/Azure/sap-automation-qa.git` at a revision the
-operator has verified through a trusted out-of-band channel, `cd`-ed into by
-the operator, with `./scripts/sap_automation_qa.sh` present.
+Every STAF skill operates from within a **trusted STAF checkout** — a
+working tree the operator has verified out-of-band as either the official
+upstream (`https://github.com/Azure/sap-automation-qa.git`) or a fork of
+it, at a specific revision, with the framework marker
+`./scripts/sap_automation_qa.sh` present. The operator must have verified
+both the source (upstream URL or fork URL) and the revision through a
+trusted out-of-band channel, and must have `cd`-ed into that directory.
 
 Skills never auto-adopt, auto-clone, or auto-execute against any tree.
 Trust cannot be inferred from remote URL, `git status`, or filesystem

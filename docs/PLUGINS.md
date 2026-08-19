@@ -135,7 +135,7 @@ All skills are plain directories with real `SKILL.md` files — no symlinks — 
 
 ## Framework checkout and setup handoff
 
-Every STAF skill operates from within a **trusted STAF checkout** — a clone of `https://github.com/Azure/sap-automation-qa.git` at a revision you have verified out-of-band. Skills never auto-clone, auto-adopt, or auto-execute against an unverified tree.
+Every STAF skill operates from within a **trusted STAF checkout** — a working tree you have verified out-of-band as either the official upstream (`https://github.com/Azure/sap-automation-qa.git`) or a fork of it, at a specific revision, with the framework marker `./scripts/sap_automation_qa.sh` present. You must have verified both the source (upstream URL or fork URL) and the revision through a trusted out-of-band channel. Skills never auto-clone, auto-adopt, or auto-execute against an unverified tree.
 
 The `setup-guide` skill is the single owner of the setup workflow. It walks you through verifying an existing checkout or manually running the `git clone` and `cd` steps to produce a new one. The other four skills (`test-runner`, `test-result-analyzer`, `workspace-creator`, `workspace-validator`) hand off to `setup-guide` when the trusted-checkout state is not confirmed; they do not carry their own setup logic.
 

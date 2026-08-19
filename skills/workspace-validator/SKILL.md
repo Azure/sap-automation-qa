@@ -20,13 +20,16 @@ completeness, valid values, SSH authentication readiness, and inventory structur
 
 ## Locate Framework
 
-This skill requires a **trusted STAF checkout** — a clone of
-`https://github.com/Azure/sap-automation-qa.git` at a revision the operator
-has verified out-of-band, `cd`-ed into by the operator, with
-`./scripts/sap_automation_qa.sh` present. If that state is not confirmed,
-stop and use the `setup-guide` skill first; it owns the setup workflow.
-Do not resume this skill until `setup-guide` (or the operator directly)
-confirms the trusted-checkout state.
+This skill requires a **trusted STAF checkout** — a working tree the
+operator has verified out-of-band as either the official upstream
+(`https://github.com/Azure/sap-automation-qa.git`) or a fork of it, at a
+specific revision, with the framework marker `./scripts/sap_automation_qa.sh`
+present. The operator must have verified both the source (upstream URL or
+fork URL) and the revision through a trusted out-of-band channel before
+running this skill, and must have `cd`-ed into that directory. If that
+state is not confirmed, stop and use the `setup-guide` skill first; it owns
+the setup workflow. Do not resume this skill until `setup-guide` (or the
+operator directly) confirms the checkout is trusted.
 
 > **⚠️ This skill is guidance only. Do NOT modify any source code, scripts, or framework files. Only help the user by running the validation script and interpreting results.**
 
