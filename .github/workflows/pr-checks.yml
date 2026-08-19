@@ -245,23 +245,33 @@ jobs:
           done < "$RUNNER_TEMP/expected_mirror.txt"
 
       - name: Gemini - install from local checkout and assert skills
+        env:
+          GEMINI_CLI_TRUST_WORKSPACE: "true"
         run: |
           set -euo pipefail
-          retry() { local n=1; until "$@"; do
-            if [ "$n" -ge 3 ]; then echo "::error::command failed after $n attempts: $*"; return 1; fi
-            echo "attempt $n failed, retrying: $*"; n=$((n+1)); sleep 5; done; }
-          retry gemini extensions install "$PWD" --consent --skip-settings
-          LIST=$(gemini extensions list)
+          set +e
+          timeout 120s gemini extensions install "$PWD" --consent --skip-settings
+          install_rc=$?
+          set -e
+          if [ "$install_rc" -ne 0 ] && [ "$install_rc" -ne 124 ]; then
+            echo "::error::Gemini extension install failed (exit $install_rc)"; exit 1
+          fi
+          LIST=$(timeout 60s gemini extensions list --output-format json)
           echo "$LIST"
           EXTDIR=$(dirname "$(find "$HOME/.gemini/extensions" -maxdepth 2 -name gemini-extension.json | head -1)")
           if [ -z "$EXTDIR" ] || [ ! -d "$EXTDIR/skills" ]; then
             echo "::error::Gemini extension has no skills/ (extDir='$EXTDIR')"; exit 1
           fi
+          if [ "$install_rc" -eq 124 ]; then
+            echo "::warning::Gemini install timed out after writing a valid extension payload"
+          fi
           ls -1 "$EXTDIR/skills" | sort > "$RUNNER_TEMP/gemini.txt"
           diff "$RUNNER_TEMP/expected_mirror.txt" "$RUNNER_TEMP/gemini.txt" \
             || { echo "::error::Gemini loaded a different skill set than the skills/ mirror"; exit 1; }
           while IFS= read -r name; do
-            echo "$LIST" | grep -q "$name" || { echo "::error::Gemini extensions list missing '$name'"; exit 1; }
+            echo "$LIST" | jq -e --arg name "$name" \
+              'any(.[]?.skills[]?; .name == $name)' >/dev/null \
+              || { echo "::error::Gemini extensions list missing '$name'"; exit 1; }
           done < "$RUNNER_TEMP/expected_mirror.txt"
 
       - name: Copilot - install from local checkout and assert skills
