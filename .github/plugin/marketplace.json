@@ -1,5 +1,6 @@
 {
     "name": "sap-automation-qa",
+    "description": "SAP Testing Automation Framework skills for AI assistants — HA functional testing, configuration validation, and backup testing for SAP on Azure",
     "owner": {
         "name": "Microsoft"
     },
@@ -8,7 +9,11 @@
             "name": "staf",
             "source": ".",
             "description": "SAP Testing Automation Framework — HA functional testing, configuration validation, and backup testing for SAP on Azure",
-            "version": "1.1.3"
+            "version": "1.1.3",
+            "author": {
+                "name": "Microsoft",
+                "url": "https://github.com/Azure/sap-automation-qa"
+            }
         }
     ]
 }

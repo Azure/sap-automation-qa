@@ -387,9 +387,36 @@ cd deploy && docker compose up -d
 
 ---
 
+## Locate Framework
+
+Every skill under `skills/*` (loaded by Copilot CLI, Claude Code, and Gemini
+CLI) requires the operator to run commands from the STAF framework directory —
+the directory that contains `./scripts/sap_automation_qa.sh`. The discovery
+cascade below is the single canonical source; each skill body cites this
+section rather than restating the bash.
+
+```bash
+# Check current directory first
+if [ -f "./scripts/sap_automation_qa.sh" ]; then
+  STAF_DIR="$(pwd)"
+# Check sibling directory
+elif [ -f "../sap-automation-qa/scripts/sap_automation_qa.sh" ]; then
+  STAF_DIR="$(cd ../sap-automation-qa && pwd)"
+# Not found — clone it
+else
+  git clone https://github.com/Azure/sap-automation-qa.git ../sap-automation-qa
+  STAF_DIR="$(cd ../sap-automation-qa && pwd)"
+fi
+cd "$STAF_DIR"
+```
+
+All framework commands assume you are in `$STAF_DIR`.
+
+---
+
 ## Copilot CLI Skills
 
-This repo includes skills in `.github/skills/` that provide guided workflows.
+This repo includes skills in `skills/` that provide guided workflows.
 Skills activate automatically based on prompt context, or can be invoked directly
 with the `/` prefix (e.g., `/test-runner`).
 

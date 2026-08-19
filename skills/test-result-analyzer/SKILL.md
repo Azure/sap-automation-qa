@@ -16,19 +16,11 @@ root causes by classifying failures against known patterns.
 
 ## Locate Framework
 
-Before reading logs, locate the STAF framework directory:
-
-```bash
-if [ -f "./scripts/sap_automation_qa.sh" ]; then
-  STAF_DIR="$(pwd)"
-elif [ -f "../sap-automation-qa/scripts/sap_automation_qa.sh" ]; then
-  STAF_DIR="$(cd ../sap-automation-qa && pwd)"
-else
-  git clone https://github.com/Azure/sap-automation-qa.git ../sap-automation-qa
-  STAF_DIR="$(cd ../sap-automation-qa && pwd)"
-fi
-cd "$STAF_DIR"
-```
+Before reading logs, ensure you are in the STAF framework directory (the
+directory containing the `sap_automation_qa.sh` CLI under `scripts/`). The
+discovery-and-clone cascade is canonical in `.github/copilot-instructions.md`
+§"Locate Framework", auto-loaded by Copilot directly and by Claude and Gemini
+via `CLAUDE.md` and `GEMINI.md` redirects.
 
 > **⚠️ This skill is guidance only. Do NOT modify any source code, scripts, or framework files. Only help the user by reading logs, running diagnostic commands, and reporting findings.**
 

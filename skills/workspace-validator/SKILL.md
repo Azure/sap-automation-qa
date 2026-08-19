@@ -1,8 +1,14 @@
 ---
 name: workspace-validator
 description: >
-  Validate SAP workspace configurations before running tests.
-  Use when asked to validate a workspace, check config, or troubleshoot workspace setup issues.
+  Validate an existing SAP workspace configuration before running tests —
+  checks sap-parameters.yaml, hosts.yaml, and SSH auth readiness. Use when
+  asked to validate or troubleshoot a workspace that already exists; not for
+  creating a new one from scratch (see workspace-creator) and not for
+  framework installation issues (see setup-guide).
+  Triggered by "validate workspace", "check workspace", "workspace issues",
+  "fix workspace", "sap-parameters check", "hosts.yaml check",
+  "SSH auth problems", or "troubleshoot workspace".
 allowed-tools: shell
 license: MIT
 ---
@@ -14,19 +20,11 @@ completeness, valid values, SSH authentication readiness, and inventory structur
 
 ## Locate Framework
 
-Before running validation, locate the STAF framework directory:
-
-```bash
-if [ -f "./scripts/sap_automation_qa.sh" ]; then
-  STAF_DIR="$(pwd)"
-elif [ -f "../sap-automation-qa/scripts/sap_automation_qa.sh" ]; then
-  STAF_DIR="$(cd ../sap-automation-qa && pwd)"
-else
-  git clone https://github.com/Azure/sap-automation-qa.git ../sap-automation-qa
-  STAF_DIR="$(cd ../sap-automation-qa && pwd)"
-fi
-cd "$STAF_DIR"
-```
+Before running validation, ensure you are in the STAF framework directory
+(the directory containing the `sap_automation_qa.sh` CLI under `scripts/`).
+The discovery-and-clone cascade is canonical in
+`.github/copilot-instructions.md` §"Locate Framework", auto-loaded by Copilot
+directly and by Claude and Gemini via `CLAUDE.md` and `GEMINI.md` redirects.
 
 > **⚠️ This skill is guidance only. Do NOT modify any source code, scripts, or framework files. Only help the user by running the validation script and interpreting results.**
 
@@ -43,7 +41,7 @@ cd "$STAF_DIR"
 ## Running Validation
 
 ```bash
-python3 .github/skills/workspace-validator/scripts/validate_workspace.py [WORKSPACE_PATH]
+python3 skills/workspace-validator/scripts/validate_workspace.py [WORKSPACE_PATH]
 ```
 
 If no path is provided, discovers and validates all workspaces under `WORKSPACES/SYSTEM/`.
@@ -51,11 +49,11 @@ If no path is provided, discovers and validates all workspaces under `WORKSPACES
 **Examples:**
 ```bash
 # Validate specific workspace
-python3 .github/skills/workspace-validator/scripts/validate_workspace.py \
+python3 skills/workspace-validator/scripts/validate_workspace.py \
   WORKSPACES/SYSTEM/DEV-WEEU-SAP01-X00
 
 # Validate all workspaces
-python3 .github/skills/workspace-validator/scripts/validate_workspace.py
+python3 skills/workspace-validator/scripts/validate_workspace.py
 ```
 
 **Exit codes:**
@@ -141,10 +139,10 @@ When run with network access to the SAP hosts, the validator tests SSH connectiv
 
 ```bash
 # With SSH connectivity test (default when hosts are reachable)
-python3 .github/skills/workspace-validator/scripts/validate_workspace.py WORKSPACES/SYSTEM/DEV-WEEU-SAP01-X00
+python3 skills/workspace-validator/scripts/validate_workspace.py WORKSPACES/SYSTEM/DEV-WEEU-SAP01-X00
 
 # Skip SSH connectivity test (CI, offline, or no network access)
-STAF_SKIP_SSH=1 python3 .github/skills/workspace-validator/scripts/validate_workspace.py WORKSPACES/SYSTEM/DEV-WEEU-SAP01-X00
+STAF_SKIP_SSH=1 python3 skills/workspace-validator/scripts/validate_workspace.py WORKSPACES/SYSTEM/DEV-WEEU-SAP01-X00
 ```
 
 **What it checks:**

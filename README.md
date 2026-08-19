@@ -77,9 +77,9 @@ The fastest path — install a plugin in your AI coding assistant and let it han
 
 | Platform | Install |
 |----------|---------|
-| GitHub Copilot CLI | `copilot plugin install Azure/sap-automation-qa` |
+| GitHub Copilot CLI | `copilot plugin marketplace add Azure/sap-automation-qa` → `copilot plugin install staf@sap-automation-qa` |
 | Claude Code | `/plugin marketplace add Azure/sap-automation-qa` → `/plugin install staf@sap-automation-qa` |
-| Gemini CLI | `gemini skills install https://github.com/Azure/sap-automation-qa` |
+| Gemini CLI | `gemini extensions install https://github.com/Azure/sap-automation-qa` |
 
 The plugin provides guided skills for workspace creation, configuration validation, HA test execution, and result analysis. See [docs/PLUGINS.md](./docs/PLUGINS.md) for full details.
 

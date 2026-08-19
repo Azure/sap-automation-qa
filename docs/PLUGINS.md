@@ -8,9 +8,20 @@ Install the STAF skills plugin using the command for your AI assistant:
 
 | Platform | Command |
 |----------|---------|
-| **GitHub Copilot CLI** | `copilot plugin install Azure/sap-automation-qa` |
+| **GitHub Copilot CLI** | `copilot plugin marketplace add Azure/sap-automation-qa` then `copilot plugin install staf@sap-automation-qa` |
 | **Claude Code** | `/plugin marketplace add Azure/sap-automation-qa` then `/plugin install staf@sap-automation-qa` |
-| **Gemini CLI** | `gemini skills install https://github.com/Azure/sap-automation-qa` |
+| **Gemini CLI** | `gemini extensions install https://github.com/Azure/sap-automation-qa` |
+
+> **Note on names.** The identifiers differ per runtime, and this is intentional:
+> - The **plugin** installed into Copilot and Claude Code is named `staf`.
+> - The **marketplace** catalog (Copilot and Claude Code) is named `sap-automation-qa`.
+> - The **Gemini extension** is named `sap-automation-qa`. Gemini derives the
+>   extension directory name from the repository name on a Git install and
+>   requires `gemini-extension.json`'s `name` to match it, so it cannot be `staf`.
+>
+> Copilot's older direct form (`copilot plugin install Azure/sap-automation-qa`)
+> still works but is deprecated in favour of the two-step `plugin@marketplace`
+> form shown above.
 
 ## Usage
 
@@ -56,36 +67,84 @@ The skills automatically locate the STAF framework in the following order:
 | `test-result-analyzer` | Analyzes test logs, classifies failures against known patterns, and surfaces root causes |
 | `workspace-creator` | Generates workspace configuration files (`sap-parameters.yaml`, `hosts.yaml`) from templates |
 | `workspace-validator` | Validates workspace files, field completeness, SSH authentication, and inventory structure |
+| `code-review` _(bot-only)_ | Reviews a PR or diff for correctness, reliability, security, Azure/SAP domain rules, performance, test coverage, and maintainability. Read directly from `.github/skills/` by the server-side GitHub Copilot code-review bot; not loaded by any CLI (Copilot, Claude Code or Gemini) |
 
 ## Repository Structure
 
-Skills are maintained in `.github/skills/` as the single source of truth. Platform-specific directories use symlinks to avoid duplication.
+Every skill lives in **exactly one location** — there is no mirror and no
+generator. Skills are plain directories with real `SKILL.md` files (symlinks do
+**not** materialise on Windows clones or inside a tool's install cache, where
+they appear as tiny text stubs that load nothing), so each skill is a real
+directory that loads correctly on every platform.
+
+The skills are split into two trees by audience:
+
+- **`skills/` (repository root)** — the **cross-agent** skills that all three
+  CLIs load: `setup-guide`, `test-runner`, `test-result-analyzer`,
+  `workspace-creator`, `workspace-validator`.
+- **`.github/skills/`** — **Copilot-only** skills. `code-review` lives here
+  because the **server-side GitHub Copilot code-review bot** discovers review
+  skills from `.github/skills/` and reads them directly from the repository. This
+  skill is not a cross-agent plugin skill and is **not** loaded by any CLI
+  (Copilot, Claude Code or Gemini) — only by the bot. `_validation/validate_skills.py`
+  (the skill-conformance validator) also lives here; it is tooling, not a skill.
+
+Each runtime discovers skills through its own manifest:
+
+- **Copilot CLI** reads `.github/plugin/plugin.json`, whose `skills` field points
+  at `skills/`, plus `.github/plugin/marketplace.json` (plugin `source: "."`). It
+  loads exactly the cross-agent set — the same five skills as Claude and Gemini.
+  It does **not** load `code-review` (that skill is consumed only by the
+  server-side bot, described above).
+- **Claude Code** reads `.claude-plugin/marketplace.json` (plugin `source: "./"`)
+  and auto-scans `<plugin-root>/skills/` — the root tree only (no `code-review`).
+- **Gemini CLI** reads `gemini-extension.json` at the repo root and auto-loads
+  the root `skills/` tree only (no `code-review`).
 
 ```
+skills/                              ← CROSS-AGENT skills (Copilot + Claude + Gemini)
+├── setup-guide/
+├── test-runner/
+├── test-result-analyzer/
+├── workspace-creator/
+└── workspace-validator/
+
 .github/
+├── skills/                          ← COPILOT-ONLY skills + validator tooling
+│   ├── code-review/                 ← read by the server-side Copilot code-review bot
+│   └── _validation/validate_skills.py   ← skill-conformance validator (not a skill)
 ├── plugin/
-│   ├── marketplace.json             ← Plugin marketplace catalog
-│   └── plugin.json                  ← Plugin manifest
-├── skills/                          ← Canonical skill definitions
-│   ├── setup-guide/
-│   ├── test-runner/
-│   ├── test-result-analyzer/
-│   ├── workspace-creator/
-│   └── workspace-validator/
+│   ├── marketplace.json             ← Copilot marketplace catalog (source ".")
+│   └── plugin.json                  ← Copilot manifest ("skills": ["skills/"])
 └── copilot-instructions.md          ← Project instructions
 
-.claude-plugin/marketplace.json      ← Claude Code marketplace catalog
-.claude-plugin/plugin.json           ← Claude Code plugin manifest
-.claude/skills/*                     → symlinks to .github/skills/*
-.gemini/skills/*                     → symlinks to .github/skills/*
+gemini-extension.json                ← Gemini CLI extension manifest (repo root)
+.claude-plugin/marketplace.json      ← Claude Code marketplace catalog (source "./")
+.claude-plugin/plugin.json           ← Claude Code plugin manifest (default skills/ scan)
 CLAUDE.md                            → symlink to .github/copilot-instructions.md
 GEMINI.md                            → symlink to .github/copilot-instructions.md
 ```
 
+There are **no symlinks in any skill payload** — both `skills/` and
+`.github/skills/` contain real directories and real `SKILL.md` files, so they
+load correctly on every platform and inside every tool's install cache.
+
 ## Contributing
 
-To add or modify a skill:
+To add or modify a **cross-agent** skill (loaded by all three CLIs):
 
-1. Edit the skill definition in `.github/skills/<name>/SKILL.md`.
-2. Symlinks propagate changes to all platform directories automatically.
-3. Run skill validation: `python3 .github/skills/_validation/validate_skills.py`.
+1. Edit the definition in `skills/<name>/SKILL.md`.
+2. Validate skill conformance: `python3 .github/skills/_validation/validate_skills.py skills`.
+
+To add or modify a **Copilot-only** skill (e.g. a code-review skill for the
+server-side bot):
+
+1. Edit the definition in `.github/skills/<name>/SKILL.md`.
+2. Validate skill conformance: `python3 .github/skills/_validation/validate_skills.py .github/skills`.
+
+CI enforces this automatically (`.github/workflows/pr-checks.yml`): the
+`plugin-install` job derives the expected skill set **from the `skills/`
+directory itself** and asserts that all three runtimes load exactly that set. It
+separately asserts every skill under `.github/skills/` ships as a real (non-symlink)
+`SKILL.md` so the server-side bot can read it. A newly added skill is therefore
+covered with no workflow edit.

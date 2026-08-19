@@ -1,7 +1,10 @@
 ---
 name: setup-guide
 description: >
-  Guide for setting up the SAP Testing Automation Framework environment.
+  Guide for setting up the SAP Testing Automation Framework itself on a
+  management server — Python venv, Docker, vars.yaml, Copilot integration.
+  Use for framework installation, not for creating a workspace for a specific
+  SAP system (see workspace-creator).
   Use when asked about installation, setup, Docker deployment, or Copilot integration.
   Triggered by "setup environment", "install staf", "how to get started", "container start",
   "setup.sh", "configure vars.yaml", "setup help", or "docker deployment".
@@ -16,24 +19,14 @@ For full details, see `docs/SETUP.MD`.
 
 ## Locate Framework
 
-Before running any commands, locate the STAF framework directory:
-
-```bash
-# Check current directory first
-if [ -f "./scripts/sap_automation_qa.sh" ]; then
-  STAF_DIR="$(pwd)"
-# Check sibling directory
-elif [ -f "../sap-automation-qa/scripts/sap_automation_qa.sh" ]; then
-  STAF_DIR="$(cd ../sap-automation-qa && pwd)"
-# Not found — clone it
-else
-  git clone https://github.com/Azure/sap-automation-qa.git ../sap-automation-qa
-  STAF_DIR="$(cd ../sap-automation-qa && pwd)"
-fi
-cd "$STAF_DIR"
-```
-
-All commands below assume you are in the STAF framework directory.
+Before running any commands, ensure you are in the STAF framework directory
+(the directory containing the `sap_automation_qa.sh` CLI under `scripts/`).
+The discovery-and-clone cascade — check current dir → check sibling
+`../sap-automation-qa` → clone from
+`https://github.com/Azure/sap-automation-qa.git` if not found — is
+canonical in `.github/copilot-instructions.md` §"Locate Framework", which is
+auto-loaded by Copilot directly and by Claude and Gemini via `CLAUDE.md` and
+`GEMINI.md` redirects. All commands below assume you are in that directory.
 
 ## Local vs Container: When to Use Which
 
@@ -300,24 +293,17 @@ WORKSPACES/
 
 ## Log Locations
 
-### API Mode (FastAPI/uvicorn)
+Workspace-scoped result files (job execution log, test result log, HTML
+report) are the canonical concern of the `test-result-analyzer` skill; see its
+`## Result File Locations` section for the full mode-by-mode breakdown of
+Direct Execution and API Mode paths.
+
+### API Server (setup-guide-scoped)
 
 | Log | Location | Format |
 |-----|----------|--------|
 | API server logs | stdout/stderr (console) | Structured JSON (production) or color-coded (dev) |
 | Persistent API logs | `logs/api.log` | Rotating file (10 MB, 5 backups) |
-| Job execution logs | `WORKSPACES/SYSTEM/{name}/logs/execution_{timestamp}.log` | Plain text (Ansible output) |
-| Test result logs | `WORKSPACES/SYSTEM/{name}/logs/{invocation_id}.log` | JSON lines (one entry per test case) |
-| HTML reports | `WORKSPACES/SYSTEM/{name}/quality_assurance/{group}_{invocation}.html` | HTML |
-
-### Direct Execution Mode
-
-| Log | Location | Format |
-|-----|----------|--------|
-| Ansible output | stdout (console) | Plain text |
-| Test result logs | `WORKSPACES/SYSTEM/{name}/logs/{invocation_id}.log` | JSON lines |
-| Execution log | `WORKSPACES/SYSTEM/{name}/logs/execution_{timestamp}.log` | Plain text |
-| HTML reports | `WORKSPACES/SYSTEM/{name}/quality_assurance/{group}_{invocation}.html` | HTML |
 
 ### Docker Deployment
 
@@ -377,13 +363,9 @@ Before reporting setup complete, verify:
 
 ## Copilot CLI Skills
 
-| Skill | What It Does |
-|-------|-------------|
-| `/setup-guide` | Guides through environment setup (local, Docker) |
-| `/workspace-validator` | Validates workspace `sap-parameters.yaml` and `hosts.yaml` |
-| `/workspace-creator` | Creates new workspace configurations from templates |
-| `/test-runner` | Executes tests via `sap_automation_qa.sh` (direct and API modes) |
-| `/test-result-analyzer` | Analyzes test results, matches known failure patterns |
+The full `/`-prefixed CLI skill list (Copilot, Claude Code, Gemini CLI) lives
+in `.github/copilot-instructions.md` §"Copilot CLI Skills" — the canonical
+manifest for all three CLIs.
 
 
 ## Related Skills
