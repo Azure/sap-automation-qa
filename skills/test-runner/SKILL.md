@@ -16,24 +16,13 @@ Ansible execution and API-driven job management.
 
 ## Locate Framework
 
-Before running any commands, ensure you are in the STAF framework directory
-(the directory containing the `sap_automation_qa.sh` CLI under `scripts/`).
-The discovery-and-clone cascade is canonical in
-`.github/copilot-instructions.md` §"Locate Framework", auto-loaded by Copilot
-directly and by Claude and Gemini via `CLAUDE.md` and `GEMINI.md` redirects.
-
-If that section is not in context, use this fallback:
-
-```bash
-if [ -f "./scripts/sap_automation_qa.sh" ]; then
-  :
-elif [ -f "../sap-automation-qa/scripts/sap_automation_qa.sh" ]; then
-  cd ../sap-automation-qa
-else
-  git clone https://github.com/Azure/sap-automation-qa.git ../sap-automation-qa
-  cd ../sap-automation-qa
-fi
-```
+This skill requires a **trusted STAF checkout** — a clone of
+`https://github.com/Azure/sap-automation-qa.git` at a revision the operator
+has verified out-of-band, `cd`-ed into by the operator, with
+`./scripts/sap_automation_qa.sh` present. If that state is not confirmed,
+stop and use the `setup-guide` skill first; it owns the setup workflow.
+Do not resume this skill until `setup-guide` (or the operator directly)
+confirms the trusted-checkout state.
 
 > **⚠️ This skill is guidance only. Do NOT modify any source code, scripts, or framework files. Only help the user by running test commands and interpreting output.**
 
@@ -259,7 +248,7 @@ Locations` section.
 | `Workspace not found` | Invalid SYSTEM_CONFIG_NAME in vars.yaml | Check workspace exists |
 | `SSH connection failed` | Auth or network issue | Validate SSH key, check connectivity |
 | `vars.yaml not found` | Missing config | Create vars.yaml at project root or use CLI flags |
-| `API not reachable` | Server not running | Start with `./scripts/setup.sh container start` |
+| `API not reachable` | Server not running | **Stop this skill and invoke `setup-guide`** to start or restore the API/container. `setup-guide` owns the setup workflow; do not run `setup.sh`, `docker compose`, or any container-start command from this skill. Resume this skill only after `setup-guide` (or the operator directly) confirms the API is reachable. |
 | `Job already running` | Workspace locked | Wait for completion or cancel existing job |
 | `Test case not found` | Invalid test-case name | Check test-catalog.md for valid names |
 

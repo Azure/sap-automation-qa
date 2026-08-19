@@ -19,15 +19,43 @@ For full details, see `docs/SETUP.MD`.
 
 ## Locate Framework
 
-Before running any commands, ensure you are in the STAF framework directory
-(the directory containing the `sap_automation_qa.sh` CLI under `scripts/`).
-The discovery-and-clone cascade — check current dir → check sibling
-`../sap-automation-qa` → clone from
-`https://github.com/Azure/sap-automation-qa.git` if not found — is
-canonical in `.github/copilot-instructions.md` §"Locate Framework", which is
-auto-loaded by Copilot directly and by Claude and Gemini via `CLAUDE.md` and
-`GEMINI.md` redirects. All commands below assume you are in that directory.
+STAF skills operate on the framework directory that contains
+`./scripts/sap_automation_qa.sh`. Before any other section of this skill —
+or any section of `test-runner`, `test-result-analyzer`, `workspace-creator`,
+or `workspace-validator` — runs, the operator must be inside a **trusted
+STAF checkout**. This skill is the single owner of the setup workflow; the
+others hand off here.
 
+### If you already have a checkout
+
+Verify its provenance and revision yourself through a trusted out-of-band
+channel — inspect commit hashes against known-good upstream tags, re-clone
+to a scratch path and diff, or whatever your trust bar requires. Trust
+cannot be inferred from remote URL, `git status`, or filesystem structure:
+a pre-existing tree can carry attacker-controlled config (for example,
+`core.fsmonitor` pointing at a hook binary) that executes the moment any
+`git` command touches it. Once you are satisfied, `cd` into the trusted
+checkout.
+
+### If you do not have a checkout
+
+Run these two commands yourself; this skill will not run them for you.
+
+```bash
+git clone --depth 1 https://github.com/Azure/sap-automation-qa.git
+cd sap-automation-qa
+```
+
+For contributors who prefer the fork-based flow, see
+[`docs/SETUP.MD`](../../docs/SETUP.MD) §"Fork and Clone".
+
+### Hard rule
+
+Do not continue with any other section of this skill or any section of
+another STAF skill until you have confirmed you are inside a trusted STAF
+checkout — the directory must contain `./scripts/sap_automation_qa.sh`
+**and** you must have verified the checkout's provenance and revision
+yourself. The rest of this skill assumes that state.
 ## Local vs Container: When to Use Which
 
 | Use Case | Recommended Setup | Why |
@@ -87,15 +115,29 @@ See `docs/TELEMETRY_SETUP.md` for Azure Log Analytics and Azure Data Explorer in
 
 ### Option A: Install via AI Assistant Plugin (Recommended)
 
-Install the STAF skills plugin for your AI assistant:
+Install the STAF skills plugin for your AI assistant. Pick your assistant and run the commands below. See [docs/PLUGINS.md](../../docs/PLUGINS.md) for verification, updates, uninstall, and the skill layout.
 
-| Platform | Command |
-|----------|---------|
-| **GitHub Copilot CLI** | `copilot plugin install Azure/sap-automation-qa` |
-| **Claude Code** | `/plugin marketplace add Azure/sap-automation-qa` then `/plugin install staf@sap-automation-qa` |
-| **Gemini CLI** | `gemini skills install https://github.com/Azure/sap-automation-qa` |
+**GitHub Copilot CLI**
 
-Once installed, bring your `WORKSPACES/` directory and interact through natural language. The skills handle locating or cloning the framework automatically.
+```bash
+copilot plugin marketplace add Azure/sap-automation-qa
+copilot plugin install staf@sap-automation-qa
+```
+
+**Claude Code** (run inside a Claude Code session)
+
+```text
+/plugin marketplace add Azure/sap-automation-qa
+/plugin install staf@sap-automation-qa
+```
+
+**Gemini CLI**
+
+```bash
+gemini extensions install https://github.com/Azure/sap-automation-qa
+```
+
+Once installed, bring your `WORKSPACES/` directory and interact through natural language. The skills assume you are already inside a trusted STAF checkout — see [Locate Framework](#locate-framework) above for the manual verification and setup steps.
 
 ### Option B: Manual Setup
 
@@ -116,10 +158,13 @@ apt-get install git            yum install git              zypper install git
 ```bash
 # First: fork https://github.com/Azure/sap-automation-qa in your browser
 # Then clone YOUR fork (not the Azure repo directly):
-sudo su -
 git clone https://github.com/GITHUB-USERNAME/sap-automation-qa.git
 cd sap-automation-qa
 ```
+
+> `git clone` runs as an ordinary user; do **not** clone as root. The
+> `sudo su -` shown above under "Install Git" is only for the OS package
+> install step (`apt-get`/`yum`/`zypper install git`).
 
 ### 4. Local Setup
 

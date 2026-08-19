@@ -67,23 +67,39 @@ Testing is crucial for keeping SAP systems running smoothly, especially for crit
 
 To learn how the framework works, refer to the [architecture and components](./docs/ARCHITECTURE.md) documentation.
 
-## 🚦 Get Started
+## 🤖 Install STAF Skills for your AI Assistant &nbsp; ![New](https://img.shields.io/badge/NEW-brightgreen)
 
-There are three ways to use the SAP Testing Automation Framework:
+The fastest way to use STAF is to install its skills into your AI coding assistant. The assistant then guides you through workspace setup, configuration validation, HA test execution, and result analysis using natural language.
 
-### Option 1: AI Assistant Plugins (Recommended) &nbsp; ![New](https://img.shields.io/badge/NEW-brightgreen)
+Pick your assistant and run the commands below. See [docs/PLUGINS.md](./docs/PLUGINS.md) for verification, updates, the skill layout, and troubleshooting.
 
-The fastest path — install a plugin in your AI coding assistant and let it handle environment setup, test execution, and result analysis interactively with natural language.
+### GitHub Copilot CLI
 
-| Platform | Install |
-|----------|---------|
-| GitHub Copilot CLI | `copilot plugin marketplace add Azure/sap-automation-qa` → `copilot plugin install staf@sap-automation-qa` |
-| Claude Code | `/plugin marketplace add Azure/sap-automation-qa` → `/plugin install staf@sap-automation-qa` |
-| Gemini CLI | `gemini extensions install https://github.com/Azure/sap-automation-qa` |
+```bash
+copilot plugin marketplace add Azure/sap-automation-qa
+copilot plugin install staf@sap-automation-qa
+```
 
-The plugin provides guided skills for workspace creation, configuration validation, HA test execution, and result analysis. See [docs/PLUGINS.md](./docs/PLUGINS.md) for full details.
+### Claude Code
 
-### Option 2: Standalone Setup of SAP Testing Automation Framework
+Run inside a Claude Code session:
+
+```text
+/plugin marketplace add Azure/sap-automation-qa
+/plugin install staf@sap-automation-qa
+```
+
+### Gemini CLI
+
+```bash
+gemini extensions install https://github.com/Azure/sap-automation-qa
+```
+
+## 🚦 Other Ways to Get Started
+
+If you prefer not to use an AI assistant, STAF also supports two direct paths:
+
+### Option 1: Standalone Setup of SAP Testing Automation Framework
 
  Standalone Setup of SAP Testing Automation Framework
 
@@ -95,10 +111,9 @@ For full setup details including workspace configuration, credential management,
 - [Azure Backup Testing](./docs/AZURE_BACKUP.md)
 - [Configuration Checks](./docs/CONFIGURATION_CHECKS.md)
 
-### Option 3: Integration with SAP Deployment Automation Framework (SDAF)
+### Option 2: Integration with SAP Deployment Automation Framework (SDAF)
 
 If you already have an [SAP Deployment Automation Framework](https://learn.microsoft.com/azure/sap/automation/deployment-framework) environment set up, integrating the SAP Testing Automation Framework is a natural extension that allows you to leverage existing deployment pipelines and configurations. For more details on the setup, see [Setup Guide](./docs/SETUP.MD).
-
 
 ## 🆘 Support
 

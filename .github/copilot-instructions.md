@@ -389,29 +389,23 @@ cd deploy && docker compose up -d
 
 ## Locate Framework
 
-Every skill under `skills/*` (loaded by Copilot CLI, Claude Code, and Gemini
-CLI) requires the operator to run commands from the STAF framework directory —
-the directory that contains `./scripts/sap_automation_qa.sh`. The discovery
-cascade below is the single canonical source; each skill body cites this
-section rather than restating the bash.
+Every STAF skill operates from within a **trusted STAF checkout** — a clone
+of `https://github.com/Azure/sap-automation-qa.git` at a revision the
+operator has verified through a trusted out-of-band channel, `cd`-ed into by
+the operator, with `./scripts/sap_automation_qa.sh` present.
 
-```bash
-# Check current directory first
-if [ -f "./scripts/sap_automation_qa.sh" ]; then
-  STAF_DIR="$(pwd)"
-# Check sibling directory
-elif [ -f "../sap-automation-qa/scripts/sap_automation_qa.sh" ]; then
-  STAF_DIR="$(cd ../sap-automation-qa && pwd)"
-# Not found — clone it
-else
-  git clone https://github.com/Azure/sap-automation-qa.git ../sap-automation-qa
-  STAF_DIR="$(cd ../sap-automation-qa && pwd)"
-fi
-cd "$STAF_DIR"
-```
+Skills never auto-adopt, auto-clone, or auto-execute against any tree.
+Trust cannot be inferred from remote URL, `git status`, or filesystem
+structure; a pre-existing tree can carry attacker-controlled config (for
+example, `core.fsmonitor` pointing at a hook binary) that would execute the
+moment any `git` command touched it. Only the operator can confirm the tree
+is trusted.
 
-All framework commands assume you are in `$STAF_DIR`.
-
+The `setup-guide` skill is the single owner of the setup workflow — how the
+operator verifies an existing checkout or manually creates a new one. Every
+other skill (`test-runner`, `test-result-analyzer`, `workspace-creator`,
+`workspace-validator`) hands off to `setup-guide` when the trusted-checkout
+state is not confirmed and does not carry its own setup logic.
 ---
 
 ## Copilot CLI Skills

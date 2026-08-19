@@ -2,6 +2,10 @@
 
 All notable changes to this project will be documented in this file.
 
+## 1.1.4
+Release Date: 08-31-2026
+1. STAF skill package installable across GitHub Copilot CLI, Claude Code, and Gemini CLI without Windows-incompatible skill symlinks. Cross-agent skills now have one real home under skills/; the Copilot server-side review skill remains under .github/skills/.
+
 ## 1.1.3
 Release Date: 07-21-2026
 1. Configuration Checks Bug Fix - Fixed the parameter overrides issue in configuration checks main module, ensuring each os family has its own set of parameter overrides and preventing cross-family parameter contamination.
