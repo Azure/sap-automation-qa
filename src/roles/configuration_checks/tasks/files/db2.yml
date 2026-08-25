@@ -129,8 +129,16 @@ checks:
       database_type:                    [*db2]
     collector_type:                     *command
     collector_args:
-      command:                          "echo $LANG"
-      user:                             *db2sid
+      command: >-
+                                        db2_user="db2$(printf '%s' '{{ CONTEXT.database_sid }}' | tr '[:upper:]' '[:lower:]')";
+                                        if ! id "$db2_user" >/dev/null 2>&1; then
+                                          echo "DB2_USER_NOT_FOUND: $db2_user";
+                                        elif ! language=$(su - "$db2_user" -c 'echo "${LANG:-LANG_NOT_SET}"' 2>/dev/null); then
+                                          echo "DB2_USER_LOGIN_FAILED: $db2_user";
+                                        else
+                                          echo "$language";
+                                        fi
+      user:                             *root
     validator_type:                     *string
     validator_args:
       expected_output:                  "en_US.UTF-8"
