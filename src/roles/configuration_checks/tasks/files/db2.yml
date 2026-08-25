@@ -129,17 +129,8 @@ checks:
       database_type:                    [*db2]
     collector_type:                     *command
     collector_args:
-      command: >-
-                                        db2_user=$(ps -eo user=,comm= | awk '$2 == "db2sysc" {print $1; exit}');
-                                        if [ -z "$db2_user" ]; then
-                                          echo "DB2_INSTANCE_OWNER_NOT_FOUND";
-                                        elif ! locale_output=$(su - "$db2_user" -c locale 2>/dev/null); then
-                                          echo "DB2_USER_LOGIN_FAILED";
-                                        else
-                                          language=$(printf '%s\n' "$locale_output" | awk -F= '$1 == "LANG" {gsub(/"/, "", $2); print $2}');
-                                          [ -n "$language" ] && echo "$language" || echo "LANG_NOT_SET";
-                                        fi
-      user:                             *root
+      command:                          "language=$(locale 2>/dev/null | awk -F= '$1 == \"LANG\" {gsub(/\"/, \"\", $2); print $2}'); [ -n \"$language\" ] && echo \"$language\" || echo \"LANG_NOT_SET\""
+      user:                             *db2sid
     validator_type:                     *string
     validator_args:
       expected_output:                  "en_US.UTF-8"
