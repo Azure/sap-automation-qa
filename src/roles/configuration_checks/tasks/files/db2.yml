@@ -116,7 +116,7 @@ checks:
 
   - id:                                 "DB-Db2-0002"
     name:                               "Linux installation & system language"
-    description:                        "Check if the Linux installation and system language are supported for Db2"
+    description:                        "Check whether LANG is set to the supported locale for the Db2 instance user"
     category:                           *sap_check
     severity:                           *high
     workload:                           *sap
