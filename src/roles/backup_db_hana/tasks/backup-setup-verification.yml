@@ -30,6 +30,9 @@
     - name:                             "Pre Validation: {{ item.name | default('') }} - Resolve primary node VM name"
       ansible.builtin.set_fact:
         backup_verify_vm_name:          "{{ hostvars[cluster_status_pre.primary_node].azure_instance_metadata.json.compute.name }}"
+        backup_verify_vm_names:         "{{ [hostvars[cluster_status_pre.primary_node].azure_instance_metadata.json.compute.name]
+                                          + ([hostvars[cluster_status_pre.secondary_node].azure_instance_metadata.json.compute.name]
+                                             if (cluster_status_pre.secondary_node | default('')) != '' else []) }}"
       run_once:                         true
 
 - name:                                 "Pre Validation: {{ item.name | default('') }} - Resolve Source VM Name for Standalone Systems"
@@ -38,6 +41,7 @@
                                         - not (database_high_availability | default(false) | bool)
   ansible.builtin.set_fact:
     backup_verify_vm_name:              "{{ azure_instance_metadata.json.compute.name }}"
+    backup_verify_vm_names:             "{{ [azure_instance_metadata.json.compute.name] }}"
   run_once:                             true
 
 # /*---------------------------------------------------------------------------
@@ -60,7 +64,7 @@
         subscription_id:                "{{ azure_instance_metadata.json.compute.subscriptionId }}"
         msi_client_id:                  "{{ user_assigned_identity_client_id | default('') }}"
         database_sid:                   "{{ db_sid | upper }}"
-        source_vm_name:                 "{{ backup_verify_vm_name }}"
+        source_vm_names:                "{{ backup_verify_vm_names }}"
         parameter_definitions:          "{{ backup_parameters | default([]) }}"
       register:                         backup_verification_result
       run_once:                         true

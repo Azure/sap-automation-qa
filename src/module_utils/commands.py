@@ -93,6 +93,11 @@ RECOMMENDATION_MESSAGES = {
 }
 
 AZURE_ERROR_HINTS: Dict[str, str] = {
+    "BMSUserErrorDataSourceInDeferredDeleteState": (
+        "The backup item is soft deleted. Undelete it in the Recovery Services vault, "
+        "wait for the undelete job to complete, and retry the restore. Resume backup only "
+        "if future backups are also required."
+    ),
     "LinkedAuthorizationFailed": (
         "The managed identity lacks 'Microsoft.Compute/virtualMachines/write' "
         "on the target VM. Assign 'Virtual Machine Contributor' on the VM or "

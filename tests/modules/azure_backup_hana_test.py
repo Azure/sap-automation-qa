@@ -28,6 +28,7 @@ from azure.mgmt.recoveryservicesbackup.models import (
     AzureWorkloadJob,
     AzureWorkloadSAPHanaRestoreRequest,
     AzureVmWorkloadSAPHanaDatabaseProtectedItem,
+    DistributedNodesInfo,
     ProtectedItemResource,
     RecoveryType,
 )
@@ -45,6 +46,8 @@ def _make_protected_item(
     "Microsoft.RecoveryServices/vaults/vault/backupPolicies/daily-policy",
     container_name: str = "VMAppContainer;Compute;rg;hanavm01",
     item_name: str = "saphanadatabase;h05;systemdb",
+    is_scheduled_for_deferred_delete: bool = False,
+    nodes_list: list[DistributedNodesInfo] | None = None,
 ) -> SimpleNamespace:
     """Build a fake ``ProtectedItemResource`` for testing."""
     return SimpleNamespace(
@@ -56,6 +59,8 @@ def _make_protected_item(
             parent_name=parent_name,
             protected_item_health_status=protected_item_health_status,
             protection_status=protection_status,
+            is_scheduled_for_deferred_delete=is_scheduled_for_deferred_delete,
+            nodes_list=nodes_list or [],
             last_backup_time=last_backup_time or datetime(2026, 3, 1, 12, 0),
             policy_name=policy_name,
             policy_id=policy_id,
@@ -369,9 +374,46 @@ class TestStaticHelpers:
             client=mocker.MagicMock(),
             vault_name="v",
             vault_resource_group="rg",
-            source_vm_name=source_vm,
+            source_vm_names=[source_vm],
         )
         assert disc._matches_source_vm(container, server_name) == expected
+
+    def test_matches_source_vm_multiple_candidates(self):
+        """With multiple source VMs, an item matching ANY candidate is included.
+
+        Covers the HSR case where backups are pinned to whichever node was primary
+        at registration time: passing both nodes lets discovery succeed regardless
+        of the current HSR role.
+        """
+        disc = BackupDiscovery(
+            client=None,
+            vault_name="v",
+            vault_resource_group="rg",
+            source_vm_names=["sles16hdb04", "sles16hdb03"],
+        )
+        assert disc._matches_source_vm("HanaHSRContainer;h01-hana-hsr-sys", "sles16hdb03") is True
+        assert disc._matches_source_vm("HanaHSRContainer;h01-hana-hsr-sys", "othernode99") is False
+
+    def test_matches_hsr_source_vm_from_distributed_node_model(self):
+        """HSR ownership uses typed distributed-node metadata from Azure Backup."""
+        disc = BackupDiscovery(
+            client=None,
+            vault_name="v",
+            vault_resource_group="rg",
+            source_vm_names=["rh6dhdb-z1-00l0c19"],
+        )
+        nodes = [
+            DistributedNodesInfo(
+                node_name="rh6dhdb00l0c1",
+                status="Succeeded",
+                source_resource_id=(
+                    "/subscriptions/sub/resourceGroups/rg/providers/Microsoft.Compute/"
+                    "virtualMachines/rh6dhdb-z1-00l0c19"
+                ),
+            )
+        ]
+
+        assert disc._matches_source_vm("HanaHSRContainer;RH6", "RH6", nodes) is True
 
     @pytest.mark.parametrize(
         "health, protection, has_rp, is_hsr, last_job_status, expected",
@@ -954,6 +996,65 @@ class TestStaticHelpers:
         db = result["protected_items"][0]
         assert db["last_job_operation"] == "N/A"
         assert db["last_full_backup_status"] == "N/A"
+
+    def test_discover_exposes_deferred_delete_state(
+        self,
+        backup,
+        mock_client,
+    ):
+        """Discovery exposes the SDK deferred-delete flag for reporting."""
+        mock_client.backup_protected_items.list.return_value = [
+            _make_protected_item(is_scheduled_for_deferred_delete=True)
+        ]
+        mock_client.recovery_points.list.return_value = [_make_recovery_point()]
+
+        result = backup.discover_protected_items()
+
+        assert result["protected_items"][0]["is_scheduled_for_deferred_delete"] is True
+
+    def test_restore_discovery_selects_hsr_over_deferred_standalone(
+        self,
+        mock_client,
+    ):
+        """Restore discovery returns the HSR item and skips its stale standalone duplicate."""
+        mock_client.backup_protected_items.list.return_value = [
+            _make_protected_item(
+                container_name="VMAppContainer;Compute;rg;hanavm01",
+                is_scheduled_for_deferred_delete=True,
+            ),
+            _make_protected_item(
+                container_name="HanaHSRContainer;RH6",
+                server_name="RH6",
+                item_name="saphanadatabase;h05;systemdb-hsr",
+                nodes_list=[
+                    DistributedNodesInfo(
+                        node_name="rh6-db-0",
+                        source_resource_id=(
+                            "/subscriptions/sub/resourceGroups/rg/"
+                            "providers/Microsoft.Compute/virtualMachines/hanavm01"
+                        ),
+                    )
+                ],
+            ),
+        ]
+        mock_client.recovery_points.list.side_effect = [
+            [_make_recovery_point()],
+            [_make_recovery_point()],
+        ]
+        discovery = BackupDiscovery(
+            client=mock_client,
+            vault_name="vault",
+            vault_resource_group="rg",
+            source_vm_names=["hanavm01"],
+            restore_source_type="hsr",
+        )
+
+        result = discovery.discover()
+
+        assert result["status"] == TestStatus.SUCCESS.value
+        assert len(result["protected_items"]) == 1
+        assert result["protected_items"][0]["server_type"] == "HSR"
+        assert mock_client.recovery_points.list.call_count == 1
 
     def test_all_items_have_restore_points(self, backup, mock_client):
         """SUCCESS when every item has at least one RP."""

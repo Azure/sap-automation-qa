@@ -1,0 +1,156 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+
+################################################################################
+#  Verify all tenant databases are active after recovery/restore               #
+#                                                                              #
+#  Optional variables:                                                         #
+#    - verify_tenant_db_sid (default: db_sid) - override SID for target host    #
+################################################################################
+
+- name:                                 "Tenant Health: Query all database statuses"
+  become:                               true
+  become_user:                          "{{ (verify_tenant_db_sid | default(db_sid)) | lower }}adm"
+  ansible.builtin.shell: |
+                                        set -o pipefail
+                                        source /usr/sap/{{ (verify_tenant_db_sid | default(db_sid)) | upper }}/home/.sapenv.sh && \
+                                        hdbsql -U {{ hana_userstore_key | default('SYSTEM') }} -j -a \
+                                          "SELECT DATABASE_NAME, ACTIVE_STATUS FROM SYS.M_DATABASES"
+  args:
+    executable:                         /bin/bash
+  register:                             tenant_health_db_list
+  delegate_to:                          "{{ verify_tenant_delegate_to }}"
+  run_once:                             true
+  changed_when:                         false
+
+- name:                                 "Tenant Health: Parse database statuses"
+  ansible.builtin.set_fact:
+    tenant_health_all_databases:        "{{ tenant_health_db_list.stdout_lines | default([])
+                                            | select('search', ',')
+                                            | map('regex_replace', '\"', '')
+                                            | map('split', ',')
+                                            | list }}"
+  run_once:                             true
+
+- name:                                 "Tenant Health: Identify inactive tenant databases"
+  ansible.builtin.set_fact:
+    tenant_health_inactive_tenants:     "{{ tenant_health_all_databases
+                                            | rejectattr('0', 'match', '(?i)^SYSTEMDB$')
+                                            | selectattr('1', 'match', '(?i)^\\s*NO\\s*$')
+                                            | map(attribute='0')
+                                            | map('trim')
+                                            | map('upper')
+                                            | list }}"
+    tenant_health_scope:                "{{ verify_tenant_expected_databases | default([]) }}"
+  run_once:                             true
+
+- name:                                 "Tenant Health: Filter to expected tenants (if specified)"
+  ansible.builtin.set_fact:
+    tenant_health_inactive_tenants:     "{{ tenant_health_inactive_tenants
+                                            | select('in', tenant_health_scope | map('upper') | list)
+                                            | list }}"
+  run_once:                             true
+  when:                                 tenant_health_scope | length > 0
+
+- name:                                 "Tenant Health: Build SQL scope filter"
+  ansible.builtin.set_fact:
+    tenant_health_where_scope:          >-
+      {{ (" AND DATABASE_NAME IN ('" ~ (tenant_health_scope | map('upper') | join("','")) ~ "')")
+         if (tenant_health_scope | length > 0) else "" }}
+  run_once:                             true
+
+- name:                                 "Tenant Health: Log inactive tenants detected"
+  ansible.builtin.debug:
+    msg: >-
+      Inactive tenant databases detected: {{ tenant_health_inactive_tenants | join(', ') | default('none') }}.
+      Scope filter: {{ tenant_health_scope | join(', ') | default('all tenants') }}.
+  run_once:                             true
+
+- name:                                 "Tenant Health: Start inactive tenant database"
+  become:                               true
+  become_user:                          "{{ (verify_tenant_db_sid | default(db_sid)) | lower }}adm"
+  ansible.builtin.shell: |
+                                        set -o pipefail
+                                        source /usr/sap/{{ (verify_tenant_db_sid | default(db_sid)) | upper }}/home/.sapenv.sh && \
+                                        hdbsql -U {{ hana_userstore_key | default('SYSTEM') }} -j \
+                                          "ALTER SYSTEM START DATABASE {{ tenant_name }}"
+  args:
+    executable:                         /bin/bash
+  register:                             tenant_health_start_results
+  delegate_to:                          "{{ verify_tenant_delegate_to }}"
+  run_once:                             true
+  changed_when:                         true
+  failed_when:                          false
+  loop:                                 "{{ tenant_health_inactive_tenants }}"
+  loop_control:
+    loop_var:                           tenant_name
+    label:                              "{{ tenant_name }}"
+  when:                                 tenant_health_inactive_tenants | length > 0
+
+- name:                                 "Tenant Health: Wait for tenant databases to become active"
+  become:                               true
+  become_user:                          "{{ (verify_tenant_db_sid | default(db_sid)) | lower }}adm"
+  ansible.builtin.shell: |
+                                        set -o pipefail
+                                        source /usr/sap/{{ (verify_tenant_db_sid | default(db_sid)) | upper }}/home/.sapenv.sh && \
+                                        hdbsql -U {{ hana_userstore_key | default('SYSTEM') }} -j -a \
+                                          "SELECT COUNT(*) FROM SYS.M_DATABASES \
+                                           WHERE DATABASE_NAME != 'SYSTEMDB' \
+                                           AND ACTIVE_STATUS = 'NO'{{ tenant_health_where_scope }}"
+  args:
+    executable:                         /bin/bash
+  register:                             tenant_health_wait_result
+  delegate_to:                          "{{ verify_tenant_delegate_to }}"
+  run_once:                             true
+  changed_when:                         false
+  retries:                              "{{ backup_tenant_start_retries | default(10) }}"
+  delay:                                "{{ backup_tenant_start_delay | default(30) }}"
+  until:                                tenant_health_wait_result.stdout | default('1') | regex_search('[0-9]+') | default('1') | int == 0
+  when:                                 tenant_health_inactive_tenants | length > 0
+
+- name:                                 "Tenant Health: Final status query"
+  become:                               true
+  become_user:                          "{{ (verify_tenant_db_sid | default(db_sid)) | lower }}adm"
+  ansible.builtin.shell: |
+                                        set -o pipefail
+                                        source /usr/sap/{{ (verify_tenant_db_sid | default(db_sid)) | upper }}/home/.sapenv.sh && \
+                                        hdbsql -U {{ hana_userstore_key | default('SYSTEM') }} -j -a \
+                                          "SELECT DATABASE_NAME, ACTIVE_STATUS FROM SYS.M_DATABASES"
+  args:
+    executable:                         /bin/bash
+  register:                             tenant_health_final_status
+  delegate_to:                          "{{ verify_tenant_delegate_to }}"
+  run_once:                             true
+  changed_when:                         false
+
+- name:                                 "Tenant Health: Parse final statuses"
+  ansible.builtin.set_fact:
+    tenant_health_final_databases:      "{{ tenant_health_final_status.stdout_lines | default([])
+                                            | select('search', ',')
+                                            | map('regex_replace', '\"', '')
+                                            | map('split', ',')
+                                            | list }}"
+  run_once:                             true
+
+- name:                                 "Tenant Health: Determine databases in scope for final check"
+  ansible.builtin.set_fact:
+    tenant_health_check_databases:      "{{ (tenant_health_final_databases
+                                            | selectattr('0', 'in', tenant_health_scope | map('upper') | list)
+                                            | list)
+                                            if (tenant_health_scope | length > 0)
+                                            else (tenant_health_final_databases
+                                                  | rejectattr('0', 'match', '(?i)^SYSTEMDB$')
+                                                  | list) }}"
+  run_once:                             true
+
+- name:                                 "Tenant Health: Compute final result"
+  ansible.builtin.set_fact:
+    tenant_db_health_result:
+      all_active:                       "{{ (tenant_health_check_databases
+                                              | selectattr('1', 'match', '(?i)^\\s*NO\\s*$')
+                                              | list | length) == 0 }}"
+      databases:                        "{{ tenant_health_final_databases }}"
+      inactive_before_start:            "{{ tenant_health_inactive_tenants }}"
+      start_results:                    "{{ tenant_health_start_results.results | default([]) }}"
+      final_query:                      "{{ tenant_health_final_status.stdout }}"
+  run_once:                             true

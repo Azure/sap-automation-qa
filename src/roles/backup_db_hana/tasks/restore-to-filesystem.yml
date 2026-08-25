@@ -43,6 +43,8 @@
             backup_restore_vm_name:        "{{ hostvars[backup_primary_node].azure_instance_metadata.json.compute.name }}"
             backup_restore_vm_rg:          "{{ hostvars[backup_primary_node].azure_instance_metadata.json.compute.resourceGroupName }}"
             backup_restore_subscription:   "{{ hostvars[backup_primary_node].azure_instance_metadata.json.compute.subscriptionId }}"
+            backup_discovery_vm_names:     "{{ [hostvars[backup_primary_node].azure_instance_metadata.json.compute.name,
+                                              hostvars[backup_secondary_node].azure_instance_metadata.json.compute.name] }}"
           run_once:                 true
 
     - name:                         "Pre Validation: {{ item.name | default('') }} - Set standalone node facts"
@@ -52,6 +54,7 @@
         backup_restore_vm_name:     "{{ azure_instance_metadata.json.compute.name }}"
         backup_restore_vm_rg:       "{{ azure_instance_metadata.json.compute.resourceGroupName }}"
         backup_restore_subscription: "{{ azure_instance_metadata.json.compute.subscriptionId }}"
+        backup_discovery_vm_names:  "{{ [azure_instance_metadata.json.compute.name] }}"
       run_once:                     true
       when:                         not (database_high_availability | default(false) | bool)
 
@@ -72,7 +75,8 @@
         vault_resource_id:           "{{ backup_vault_resource_id }}"
         subscription_id:             "{{ azure_instance_metadata.json.compute.subscriptionId }}"
         msi_client_id:               "{{ user_assigned_identity_client_id | default('') }}"
-        source_vm_name:              "{{ backup_restore_vm_name }}"
+        source_vm_names:             "{{ backup_discovery_vm_names }}"
+        restore_source_type:         "{{ 'hsr' if (database_high_availability | default(false) | bool) else 'standalone' }}"
       register:                      pre_backup_discovery
       run_once:                      true
       failed_when:                   pre_backup_discovery.protected_items | default([]) | length == 0
@@ -150,23 +154,6 @@
     - name:                         "Test Execution: {{ item.name | default('') }} - Put cluster in maintenance mode"
       when:                         database_high_availability | default(false) | bool
       ansible.builtin.include_tasks: "roles/backup_db_hana/tasks/includes/cluster-maintenance-on.yml"
-
-    - name:                         "Test Execution: {{ item.name | default('') }} - HSR - Teardown replication before restore"
-      ansible.builtin.include_tasks: "roles/backup_db_hana/tasks/includes/hsr-teardown.yml"
-
-    - name:                         "Test Execution: {{ item.name | default('') }} - Stop HANA DB before restore"
-      become:                       true
-      become_user:                  "{{ db_sid | lower }}adm"
-      ansible.builtin.shell: |
-                                    set -o pipefail
-                                    source /usr/sap/{{ db_sid | upper }}/home/.sapenv.sh && \
-                                    HDB stop
-      args:
-        executable:                 /bin/bash
-      register:                     hana_stop_result
-      delegate_to:                  "{{ backup_primary_node }}"
-      run_once:                     true
-      changed_when:                 hana_stop_result.rc == 0
 
     - name:                         "Test Execution: {{ item.name | default('') }} - Clean target filesystem path"
       ansible.builtin.file:
@@ -340,26 +327,55 @@
         success_msg:                "Found {{ restored_files.files | length }} backup file(s)"
       run_once:                     true
 
-    - name:                         "Test Execution: {{ item.name | default('') }} - Discover SYSTEMDB backup file prefix"
+    - name:                         "Test Execution: {{ item.name | default('') }} - Set ownership of restored files (chown)"
+      become:                       true
+      ansible.builtin.file:
+        path:                       "{{ backup_target_filesystem_path }}"
+        owner:                      "{{ db_sid | lower }}adm"
+        group:                      sapsys
+        recurse:                    true
+      delegate_to:                  "{{ backup_primary_node }}"
+      run_once:                     true
+
+    - name:                         "Test Execution: {{ item.name | default('') }} - Extract SYSTEMDB backup ID from metadata"
       ansible.builtin.shell: |
                                     set -o pipefail
-                                    ls -1 {{ backup_target_filesystem_path }}/{{ (backup_systemdb_items[0].name | default('systemdb')) | lower }}/Data/*_databackup_0_1 2>/dev/null \
-                                      | head -1 | xargs basename | sed 's/_databackup_0_1$//'
+                                    cat "$(ls -1 {{ backup_target_filesystem_path }}/{{ (backup_systemdb_items[0].name | default('systemdb')) | lower }}/Data/*_metadata.json | head -1)" \
+                                      | python3 -c "import sys, json; d = json.load(sys.stdin); print(json.loads(d['WorkloadMetadata'])['BackupSet']['BackupId'])"
       args:
         executable:                 /bin/bash
-      register:                     systemdb_backup_prefix
+      register:                     systemdb_backup_id
       delegate_to:                  "{{ backup_primary_node }}"
       run_once:                     true
       changed_when:                 false
+      when:                         backup_systemdb_items | length > 0
 
-    - name:                         "Test Execution: {{ item.name | default('') }} - Discover tenant backup file prefixes"
+    - name:                         "Test Execution: {{ item.name | default('') }} - Generate SYSTEMDB recovery catalog"
+      become:                       true
+      become_user:                  "{{ db_sid | lower }}adm"
       ansible.builtin.shell: |
                                     set -o pipefail
-                                    ls -1 {{ backup_target_filesystem_path }}/{{ db_item.name | lower }}/Data/*_databackup_0_1 2>/dev/null \
-                                      | head -1 | xargs basename | sed 's/_databackup_0_1$//'
+                                    source /usr/sap/{{ db_sid | upper }}/home/.sapenv.sh
+                                    db_dir="{{ backup_target_filesystem_path }}/{{ (backup_systemdb_items[0].name | default('systemdb')) | lower }}"
+                                    mkdir -p "${db_dir}/Log" "${db_dir}/catalog"
+                                    rm -f "${db_dir}"/Data/*_metadata.json "${db_dir}"/Log/*_metadata.json
+                                    hdbbackupdiag --generate --dataDir "${db_dir}/Data" --logDirs "${db_dir}/Log" -d "${db_dir}/catalog" --databaseName SYSTEMDB
       args:
         executable:                 /bin/bash
-      register:                     tenant_backup_prefixes
+      register:                     systemdb_catalog_gen
+      delegate_to:                  "{{ backup_primary_node }}"
+      run_once:                     true
+      changed_when:                 systemdb_catalog_gen.rc == 0
+      when:                         backup_systemdb_items | length > 0
+
+    - name:                         "Test Execution: {{ item.name | default('') }} - Extract tenant backup IDs from metadata"
+      ansible.builtin.shell: |
+                                    set -o pipefail
+                                    cat "$(ls -1 {{ backup_target_filesystem_path }}/{{ db_item.name | lower }}/Data/*_metadata.json | head -1)" \
+                                      | python3 -c "import sys, json; d = json.load(sys.stdin); print(json.loads(d['WorkloadMetadata'])['BackupSet']['BackupId'])"
+      args:
+        executable:                 /bin/bash
+      register:                     tenant_backup_ids
       delegate_to:                  "{{ backup_primary_node }}"
       run_once:                     true
       changed_when:                 false
@@ -368,21 +384,41 @@
         loop_var:                   db_item
         label:                      "{{ db_item.name }}"
 
-    - name:                         "Test Execution: {{ item.name | default('') }} - Log discovered backup prefixes"
-      ansible.builtin.debug:
-        msg: >-
-          SYSTEMDB prefix: '{{ systemdb_backup_prefix.stdout }}'.
-          Tenant prefixes: {{ tenant_backup_prefixes.results | default([]) | map(attribute='stdout') | list }}
+    - name:                         "Test Execution: {{ item.name | default('') }} - Generate tenant recovery catalogs"
+      become:                       true
+      become_user:                  "{{ db_sid | lower }}adm"
+      ansible.builtin.shell: |
+                                    set -o pipefail
+                                    source /usr/sap/{{ db_sid | upper }}/home/.sapenv.sh
+                                    db_dir="{{ backup_target_filesystem_path }}/{{ db_item.name | lower }}"
+                                    mkdir -p "${db_dir}/Log" "${db_dir}/catalog"
+                                    rm -f "${db_dir}"/Data/*_metadata.json "${db_dir}"/Log/*_metadata.json
+                                    hdbbackupdiag --generate --dataDir "${db_dir}/Data" --logDirs "${db_dir}/Log" -d "${db_dir}/catalog" --databaseName {{ db_item.name | upper }}
+      args:
+        executable:                 /bin/bash
+      register:                     tenant_catalog_gen
+      delegate_to:                  "{{ backup_primary_node }}"
       run_once:                     true
+      changed_when:                 tenant_catalog_gen.rc == 0
+      loop:                         "{{ backup_tenant_items | default([]) }}"
+      loop_control:
+        loop_var:                   db_item
+        label:                      "{{ db_item.name }}"
 
-    - name:                         "Test Execution: {{ item.name | default('') }} - Recover SYSTEMDB from backup files"
+    - name:                         "Test Execution: {{ item.name | default('') }} - HSR - Teardown replication before recovery"
+      ansible.builtin.include_tasks: "roles/backup_db_hana/tasks/includes/hsr-teardown.yml"
+
+    - name:                         "Test Execution: {{ item.name | default('') }} - Recover SYSTEMDB from backup files (recoverSys.py)"
       become:                       true
       become_user:                  "{{ db_sid | lower }}adm"
       ansible.builtin.shell: |
                                     set -o pipefail
                                     source /usr/sap/{{ db_sid | upper }}/home/.sapenv.sh && \
                                     HDBSettings.sh recoverSys.py \
-                                      --command="RECOVER DATA USING FILE ('{{ backup_target_filesystem_path }}/{{ (backup_systemdb_items[0].name | default('systemdb')) | lower }}/Data/{{ systemdb_backup_prefix.stdout }}') CLEAR LOG" \
+                                      --command="RECOVER DATA USING BACKUP_ID {{ systemdb_backup_id.stdout }} \
+                                       USING CATALOG PATH ('{{ backup_target_filesystem_path }}/{{ (backup_systemdb_items[0].name | default('systemdb')) | lower }}/catalog') \
+                                       USING DATA PATH ('{{ backup_target_filesystem_path }}/{{ (backup_systemdb_items[0].name | default('systemdb')) | lower }}/Data/') \
+                                       CLEAR LOG" \
                                       --timeout={{ backup_recover_timeout | default(3600) }}
       args:
         executable:                 /bin/bash
@@ -390,25 +426,53 @@
       delegate_to:                  "{{ backup_primary_node }}"
       run_once:                     true
 
-    - name:                         "Test Execution: {{ item.name | default('') }} - Start HANA DB after recovery"
+    - name:                         "Test Execution: {{ item.name | default('') }} - Wait for SQL connectivity after SYSTEMDB recovery"
+      ansible.builtin.include_tasks: "roles/backup_db_hana/tasks/includes/wait-for-sql.yml"
+      vars:
+        wait_sql_delegate_to:       "{{ backup_primary_node }}"
+
+    - name:                         "Test Execution: {{ item.name | default('') }} - Wait for tenant auto-recovery to timeout (120s default)"
+      ansible.builtin.pause:
+        seconds:                    "{{ backup_log_recovery_timeout | default(150) }}"
+      run_once:                     true
+
+    - name:                         "Test Execution: {{ item.name | default('') }} - Stop tenant database before recovery"
       become:                       true
       become_user:                  "{{ db_sid | lower }}adm"
       ansible.builtin.shell: |
                                     set -o pipefail
                                     source /usr/sap/{{ db_sid | upper }}/home/.sapenv.sh && \
-                                    HDB start
+                                    hdbsql -U {{ hana_userstore_key | default('SYSTEM') }} -j \
+                                      "ALTER SYSTEM STOP DATABASE {{ db_item.name | upper }} IMMEDIATE"
       args:
         executable:                 /bin/bash
-      register:                     hana_start_result
+      register:                     tenant_stop_result
       delegate_to:                  "{{ backup_primary_node }}"
       run_once:                     true
-      changed_when:                 hana_start_result.rc == 0
+      failed_when:                  false
+      loop:                         "{{ backup_tenant_items | default([]) }}"
+      loop_control:
+        loop_var:                   db_item
+        label:                      "{{ db_item.name }}"
 
-    - name:                         "Test Execution: {{ item.name | default('') }} - Wait for SQL connectivity after recovery"
-      ansible.builtin.include_tasks: "roles/backup_db_hana/tasks/includes/wait-for-sql.yml"
-      vars:
-        wait_sql_delegate_to:       "{{ backup_primary_node }}"
-      when:                         backup_tenant_items | length > 0
+    - name:                         "Test Execution: {{ item.name | default('') }} - Wait for tenant databases to reach stopped state"
+      become:                       true
+      become_user:                  "{{ db_sid | lower }}adm"
+      ansible.builtin.shell: |
+                                    set -o pipefail
+                                    source /usr/sap/{{ db_sid | upper }}/home/.sapenv.sh && \
+                                    hdbsql -U {{ hana_userstore_key | default('SYSTEM') }} -j -a \
+                                      "SELECT COUNT(*) FROM SYS.M_DATABASES \
+                                       WHERE DATABASE_NAME != 'SYSTEMDB' AND ACTIVE_STATUS = 'YES'"
+      args:
+        executable:                 /bin/bash
+      register:                     tenant_stop_verify
+      delegate_to:                  "{{ backup_primary_node }}"
+      run_once:                     true
+      changed_when:                 false
+      retries:                      "{{ backup_tenant_stop_retries | default(30) }}"
+      delay:                        "{{ backup_tenant_stop_delay | default(10) }}"
+      until:                        tenant_stop_verify.stdout | default('1') | regex_search('[0-9]+') | default('1') | int == 0
 
     - name:                         "Test Execution: {{ item.name | default('') }} - Recover tenant DB from backup files"
       become:                       true
@@ -417,40 +481,54 @@
                                     set -o pipefail
                                     source /usr/sap/{{ db_sid | upper }}/home/.sapenv.sh && \
                                     hdbsql -U {{ hana_userstore_key | default('SYSTEM') }} -j \
-                                      "RECOVER DATA FOR {{ db_item.name | upper }} USING FILE ('{{ backup_target_filesystem_path }}/{{ db_item.name | lower }}/Data/{{ tenant_backup_prefixes.results[idx].stdout }}') CLEAR LOG"
+                                      "RECOVER DATA FOR {{ db_item.name | upper }} USING BACKUP_ID {{ tenant_backup_ids.results[idx].stdout }} USING CATALOG PATH ('{{ backup_target_filesystem_path }}/{{ db_item.name | lower }}/catalog') USING DATA PATH ('{{ backup_target_filesystem_path }}/{{ db_item.name | lower }}/Data/') CLEAR LOG"
       args:
         executable:                 /bin/bash
       register:                     tenant_recover_result
       delegate_to:                  "{{ backup_primary_node }}"
       run_once:                     true
+      changed_when:                 tenant_recover_result.rc == 0
       loop:                         "{{ backup_tenant_items | default([]) }}"
       loop_control:
         loop_var:                   db_item
         index_var:                  idx
         label:                      "{{ db_item.name }}"
 
-    - name:                         "Test Execution: {{ item.name | default('') }} - Start tenant DB after recovery"
-      become:                       true
-      become_user:                  "{{ db_sid | lower }}adm"
-      ansible.builtin.shell: |
-                                    set -o pipefail
-                                    source /usr/sap/{{ db_sid | upper }}/home/.sapenv.sh && \
-                                    hdbsql -U {{ hana_userstore_key | default('SYSTEM') }} -j \
-                                      "ALTER SYSTEM START DATABASE {{ db_item.name }}"
-      args:
-        executable:                 /bin/bash
-      register:                     tenant_start_result
-      delegate_to:                  "{{ backup_primary_node }}"
-      run_once:                     true
-      changed_when:                 true
-      loop:                         "{{ backup_tenant_items | default([]) }}"
-      loop_control:
-        loop_var:                   db_item
-        label:                      "{{ db_item.name }}"
+    - name:                         "Test Execution: {{ item.name | default('') }} - Verify all tenant databases are active"
+      ansible.builtin.include_tasks: "roles/backup_db_hana/tasks/includes/verify-tenant-db-active.yml"
+      vars:
+        verify_tenant_delegate_to:  "{{ backup_primary_node }}"
+        verify_tenant_expected_databases: "{{ backup_tenant_items | map(attribute='name') | list }}"
 
     - name:                         "Test Execution: {{ item.name | default('') }} - HSR - Re-establish replication"
       when:                         database_high_availability | default(false) | bool
       ansible.builtin.include_tasks: "roles/backup_db_hana/tasks/includes/hsr-reestablish.yml"
+
+    - name:                         "Post Validation: {{ item.name | default('') }} - Allow secondary replication to settle"
+      when:                         database_high_availability | default(false) | bool
+      ansible.builtin.pause:
+        seconds:                    "{{ hsr_settle_seconds | default(60) | int }}"
+      run_once:                     true
+
+    - name:                         "Post Validation: {{ item.name | default('') }} - Verify HSR cluster healthy (primary and secondary resolved)"
+      when:                         database_high_availability | default(false) | bool
+      become:                       true
+      get_cluster_status_db:
+        db_instance_number:         "{{ db_instance_number }}"
+        operation_step:             "post_failover"
+        database_sid:               "{{ db_sid | lower }}"
+        saphanasr_provider:         "{{ saphanasr_provider | default('SAPHanaSR') }}"
+        hana_clone_resource_name:   "{{ hana_clone_resource_name | default('') }}"
+        hana_primitive_resource_name: "{{ hana_primitive_resource_name | default('') }}"
+        hana_topology:              "{{ hana_topology | default('scale_up') }}"
+      register:                     cluster_status_post_fs_restore
+      until:                        cluster_status_post_fs_restore.primary_node | default('') != '' and
+                                    cluster_status_post_fs_restore.secondary_node | default('') != ''
+      retries:                      "{{ default_retries | default(75) }}"
+      delay:                        "{{ default_delay | default(10) }}"
+      run_once:                     true
+      failed_when:                  cluster_status_post_fs_restore.primary_node | default('') == '' or
+                                    cluster_status_post_fs_restore.secondary_node | default('') == ''
 
     - name:                         "Test Execution: {{ item.name | default('') }} - Compute restore results summary"
       ansible.builtin.set_fact:
@@ -480,6 +558,7 @@
                                         and tenant_all_ok | bool
                                         and restored_files.files | length > 0
                                         and hsr_register_result.rc | default(1) == 0
+                                        and tenant_db_health_result.all_active | default(false) | bool
                                       ) else 'FAILED' }}"
       run_once:                     true
 
@@ -490,6 +569,7 @@
                                         systemdb_all_ok | bool
                                         and tenant_all_ok | bool
                                         and restored_files.files | length > 0
+                                        and tenant_db_health_result.all_active | default(false) | bool
                                       ) else 'FAILED' }}"
       run_once:                     true
 
@@ -504,6 +584,7 @@
           Restore-to-filesystem for {{ backup_source_items | length }} DB(s):
           SYSTEMDB: {{ systemdb_all_ok }}, Tenants: {{ tenant_all_ok }},
           Backup files found: {{ restored_files.files | length }},
+          All tenants active: {{ tenant_db_health_result.all_active | default(false) }}
         test_case_details_from_test_case:
           topology:                 "Standalone"
           databases_restored:       "{{ backup_source_items | map(attribute='name') | list }}"
@@ -513,7 +594,7 @@
           tenant_job_statuses:      "{{ tenant_fs_job_statuses.results | default([]) }}"
           restored_files_count:     "{{ restored_files.files | length }}"
           hana_file_recover:        "{{ hana_file_recover_result }}"
-          hana_start:               "{{ hana_start_result }}"
+          tenant_db_health:         "{{ tenant_db_health_result | default({}) }}"
       run_once:                     true
       when:                         not (database_high_availability | default(false) | bool)
 
@@ -523,7 +604,8 @@
           Restore-to-filesystem (HSR) for {{ backup_source_items | length }} DB(s):
           SYSTEMDB: {{ systemdb_all_ok }}, Tenants: {{ tenant_all_ok }},
           Backup files found: {{ restored_files.files | length }},
-          HSR re-established: {{ (hsr_register_result.rc | default(1)) == 0 }}
+          HSR re-established: {{ (hsr_register_result.rc | default(1)) == 0 }},
+          All tenants active: {{ tenant_db_health_result.all_active | default(false) }}
         test_case_details_from_test_case:
           topology:                 "HSR"
           databases_restored:       "{{ backup_source_items | map(attribute='name') | list }}"
@@ -533,14 +615,14 @@
           tenant_job_statuses:      "{{ tenant_fs_job_statuses.results | default([]) }}"
           restored_files_count:     "{{ restored_files.files | length }}"
           hana_file_recover:        "{{ hana_file_recover_result }}"
-          hana_stop:                "{{ hana_stop_result }}"
-          hana_start:               "{{ hana_start_result }}"
           cluster_status_pre:       "{{ cluster_status_pre | default({}) }}"
           hsr_disable:              "{{ hsr_disable_result | default({}) }}"
           hsr_unregister:           "{{ hsr_unregister_result | default({}) }}"
           hsr_enable:               "{{ hsr_enable_result | default({}) }}"
           hsr_register:             "{{ hsr_register_result | default({}) }}"
           hsr_state:                "{{ hsr_state_result | default({}) }}"
+          tenant_db_health:         "{{ tenant_db_health_result | default({}) }}"
+          cluster_status_post_fs_restore: "{{ cluster_status_post_fs_restore | default({}) }}"
       run_once:                     true
       when:                         database_high_availability | default(false) | bool
 

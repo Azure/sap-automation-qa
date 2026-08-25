@@ -23,7 +23,8 @@
         vault_resource_id:              "{{ backup_vault_resource_id }}"
         subscription_id:                "{{ azure_instance_metadata.json.compute.subscriptionId }}"
         msi_client_id:                  "{{ user_assigned_identity_client_id | default('') }}"
-        source_vm_name:                 "{{ azure_instance_metadata.json.compute.name }}"
+        source_vm_names:                "{{ [azure_instance_metadata.json.compute.name] }}"
+        restore_source_type:            "{{ 'hsr' if (database_high_availability | default(false) | bool) else 'standalone' }}"
       register:                         pre_backup_discovery
       run_once:                         true
       failed_when:                      pre_backup_discovery.protected_items | default([]) | length == 0
@@ -42,6 +43,7 @@
       ansible.builtin.set_fact:
         backup_alr_vm_rg:               "{{ backup_target_vm_rg if (backup_target_vm_rg | default('') | length > 0) else azure_instance_metadata.json.compute.resourceGroupName }}"
         backup_alr_subscription:        "{{ azure_instance_metadata.json.compute.subscriptionId }}"
+        backup_alr_target_sid:          "{{ backup_target_db_sid if (backup_target_db_sid | default('') | length > 0) else db_sid }}"
       run_once:                         true
 
     - name:                             "Pre Validation: {{ item.name | default('') }} - Build source and target container identifiers"
@@ -147,10 +149,10 @@
 
     - name:                             "Test Execution: {{ item.name | default('') }} - ALR - Ensure HANA is running on target"
       become:                           true
-      become_user:                      "{{ db_sid | lower }}adm"
+      become_user:                      "{{ backup_alr_target_sid | lower }}adm"
       ansible.builtin.shell: |
                                         set -o pipefail
-                                        source /usr/sap/{{ db_sid | upper }}/home/.sapenv.sh && \
+                                        source /usr/sap/{{ backup_alr_target_sid | upper }}/home/.sapenv.sh && \
                                         HDB start
       args:
         executable:                     /bin/bash
@@ -170,7 +172,7 @@
         item_name:                      "{{ db_item.item_name }}"
         restore_point_time:             "{{ backup_restore_point_time | default('') }}"
         target_container_name:          "{{ backup_alr_target_container | trim }}"
-        target_database_name:           "{{ (db_sid | upper) ~ '/' ~ db_item.name }}"
+        target_database_name:           "{{ (backup_alr_target_sid | upper) ~ '/' ~ db_item.name }}"
         source_resource_id:             >-
           {{ '/subscriptions/' ~ backup_alr_subscription
              ~ '/resourceGroups/' ~ backup_alr_vm_rg
@@ -217,10 +219,10 @@
 
     - name:                             "Test Execution: {{ item.name | default('') }} - Start HANA on target VM"
       become:                           true
-      become_user:                      "{{ db_sid | lower }}adm"
+      become_user:                      "{{ backup_alr_target_sid | lower }}adm"
       ansible.builtin.shell: |
                                         set -o pipefail
-                                        source /usr/sap/{{ db_sid | upper }}/home/.sapenv.sh && \
+                                        source /usr/sap/{{ backup_alr_target_sid | upper }}/home/.sapenv.sh && \
                                         HDB start
       args:
         executable:                     /bin/bash
@@ -233,13 +235,21 @@
       ansible.builtin.include_tasks:    "roles/backup_db_hana/tasks/includes/wait-for-sql.yml"
       vars:
         wait_sql_delegate_to:           "{{ backup_target_vm_name }}"
+        wait_sql_db_sid:                "{{ backup_alr_target_sid }}"
+
+    - name:                             "Test Execution: {{ item.name | default('') }} - Verify all tenant databases are active on target VM"
+      ansible.builtin.include_tasks:    "roles/backup_db_hana/tasks/includes/verify-tenant-db-active.yml"
+      vars:
+        verify_tenant_delegate_to:      "{{ backup_target_vm_name }}"
+        verify_tenant_db_sid:           "{{ backup_alr_target_sid }}"
+        verify_tenant_expected_databases: "{{ backup_tenant_items | map(attribute='name') | list }}"
 
     - name:                             "Test Execution: {{ item.name | default('') }} - Verify DB on target VM"
       become:                           true
-      become_user:                      "{{ db_sid | lower }}adm"
+      become_user:                      "{{ backup_alr_target_sid | lower }}adm"
       ansible.builtin.shell: |
                                         set -o pipefail
-                                        source /usr/sap/{{ db_sid | upper }}/home/.sapenv.sh && \
+                                        source /usr/sap/{{ backup_alr_target_sid | upper }}/home/.sapenv.sh && \
                                         hdbsql -U {{ hana_userstore_key | default('SYSTEM') }} -j \
                                           "SELECT DATABASE_NAME, ACTIVE_STATUS FROM SYS.M_DATABASES"
       args:
@@ -279,6 +289,7 @@
       ansible.builtin.set_fact:
         test_execution_status:          "{{ 'PASSED' if (
                                             alr_tenant_ok | bool
+                                            and tenant_db_health_result.all_active | default(false) | bool
                                           ) else 'FAILED' }}"
       run_once:                         true
 
@@ -292,7 +303,8 @@
         test_case_message_from_test_case: >-
           Cross-VM Restore (ALR) for {{ backup_tenant_items | length }} tenant DB(s) to {{ backup_target_vm_name }}:
           Tenants: {{ alr_tenant_ok }},
-          DB consistent: {{ (alr_db_check.rc | default(1)) == 0 }}
+          DB consistent: {{ (alr_db_check.rc | default(1)) == 0 }},
+          All tenants active: {{ tenant_db_health_result.all_active | default(false) }}
         test_case_details_from_test_case:
           target_vm:                    "{{ backup_target_vm_name }}"
           databases_restored:           "{{ backup_tenant_items | map(attribute='name') | list }}"
@@ -300,6 +312,7 @@
           tenant_job_statuses:          "{{ alr_tenant_job_statuses.results | default([]) }}"
           hana_target_start:            "{{ alr_hana_start }}"
           target_db_check:              "{{ alr_db_check }}"
+          tenant_db_health:             "{{ tenant_db_health_result | default({}) }}"
       run_once:                         true
 
     - name:                             "Post Validation: {{ item.name | default('') }} - Validate Results"
