@@ -469,6 +469,18 @@ class ConfigurationCheckModule(SapAutomationQA):
         :rtype: Dict[str, Any]
         """
         expected = str(check.validator_args.get("expected", "OK")).strip()
+        if str(collected_data).strip().startswith("ERROR:"):
+            message = (
+                "Azure VM extension for SAP metrics endpoint is unavailable on "
+                "localhost:11812. Verify that the extension is installed, running, "
+                "and configured."
+            )
+            return {
+                "status": TestStatus.ERROR.value,
+                "actual_value": message,
+                "details": message,
+            }
+
         try:
             root = ET.fromstring(str(collected_data).strip())
         except (ET.ParseError, TypeError, ValueError) as error:
@@ -482,10 +494,15 @@ class ConfigurationCheckModule(SapAutomationQA):
 
         metric_name = "providerhealthdescription"
         health_value = None
+        data_provider_version = None
+        metric_count = 0
         for element in root.iter():
             tag = normalize_metric_name(element.tag.rsplit("}", 1)[-1])
             attributes = {key.lower(): str(value).strip() for key, value in element.attrib.items()}
             text = (element.text or "").strip()
+
+            if tag == "metric":
+                metric_count += 1
 
             if tag == metric_name:
                 health_value = text or attributes.get("value")
@@ -498,9 +515,11 @@ class ConfigurationCheckModule(SapAutomationQA):
                 }
                 if any(normalize_metric_name(value) == metric_name for value in children.values()):
                     health_value = children.get("value") or children.get("description")
-
-            if health_value:
-                break
+                if any(
+                    normalize_metric_name(value) == "dataproviderversion"
+                    for value in children.values()
+                ):
+                    data_provider_version = children.get("value")
 
         if health_value is None:
             return {
@@ -509,9 +528,25 @@ class ConfigurationCheckModule(SapAutomationQA):
             }
 
         is_healthy = health_value.casefold() == expected.casefold()
+        if is_healthy:
+            summary = (
+                "Azure VM extension for SAP is installed and ready. "
+                f"Provider Health Description: {health_value}."
+            )
+            if data_provider_version:
+                summary += f" Data Provider Version: {data_provider_version}."
+            if metric_count:
+                summary += f" Metrics available: {metric_count}."
+        else:
+            summary = (
+                "Azure VM extension for SAP is installed but not ready. "
+                f"Provider Health Description: {health_value}."
+            )
+
         return {
             "status": self._create_validation_result(check.severity, is_healthy),
-            "details": f"Provider Health Description: {health_value}",
+            "actual_value": summary,
+            "details": summary,
         }
 
     def validate_numeric_range(self, check: Check, collected_data: str) -> Dict[str, Any]:
@@ -938,6 +973,14 @@ class ConfigurationCheckModule(SapAutomationQA):
         try:
             collected_data = collector.collect(check, self.context)
             execution_time = time.time() - start_time
+            if check.validator_type == "azure_vm_extension_health":
+                validation_result = self.validate_result(check, collected_data)
+                return create_result(
+                    status=validation_result["status"],
+                    actual_value=validation_result.get("actual_value", collected_data),
+                    execution_time=int(execution_time),
+                    details=validation_result.get("details"),
+                )
             if check.severity == TestSeverity.INFO:
                 details = None
                 if check.collector_type == "module":

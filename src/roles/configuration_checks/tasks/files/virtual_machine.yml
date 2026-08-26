@@ -1088,5 +1088,5 @@ checks:
       -                               "readiness"
       -                               "health"
     references:
-      documentation:                  "https://learn.microsoft.com/azure/sap/workloads/vm-extension-for-sap-new#readiness-check"
+      microsoft:                      "https://learn.microsoft.com/en-us/azure/sap/workloads/vm-extension-for-sap-new?tabs=azure-powershell%2Cazure-powershell-1%2Cwin-vm"
     report:                           *check

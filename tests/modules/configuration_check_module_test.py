@@ -278,7 +278,30 @@ class TestValidators:
         sample_check.validator_args = {"expected": "OK"}
         result = config_module.validate_azure_vm_extension_health(sample_check, metrics_xml)
         assert result["status"] == TestStatus.SUCCESS.value
-        assert result["details"] == "Provider Health Description: OK"
+        assert result["actual_value"].startswith(
+            "Azure VM extension for SAP is installed and ready."
+        )
+        assert "Provider Health Description: OK." in result["details"]
+
+    def test_validate_azure_vm_extension_health_summarizes_metrics(
+        self, config_module, sample_check
+    ):
+        """Test healthy extension XML reports version and metric count instead of raw XML"""
+        sample_check.validator_args = {"expected": "OK"}
+        metrics_xml = (
+            "<metrics>"
+            "<metric><name>Provider Health Description</name><value>OK</value></metric>"
+            "<metric><name>Data Provider Version</name><value>1.110.0.0 (rel)</value></metric>"
+            "<metric><name>Memory Consumption</name><value>80.0</value></metric>"
+            "</metrics>"
+        )
+        result = config_module.validate_azure_vm_extension_health(sample_check, metrics_xml)
+        assert result["status"] == TestStatus.SUCCESS.value
+        assert result["actual_value"] == (
+            "Azure VM extension for SAP is installed and ready. "
+            "Provider Health Description: OK. "
+            "Data Provider Version: 1.110.0.0 (rel). Metrics available: 3."
+        )
 
     def test_validate_azure_vm_extension_health_unhealthy(self, config_module, sample_check):
         """Test a non-OK provider health metric warns for a noncritical check"""
@@ -290,7 +313,23 @@ class TestValidators:
         )
         result = config_module.validate_azure_vm_extension_health(sample_check, metrics_xml)
         assert result["status"] == TestStatus.WARNING.value
-        assert result["details"] == "Provider Health Description: Extension unavailable"
+        assert result["actual_value"] == (
+            "Azure VM extension for SAP is installed but not ready. "
+            "Provider Health Description: Extension unavailable."
+        )
+
+    def test_validate_azure_vm_extension_health_endpoint_unavailable(
+        self, config_module, sample_check
+    ):
+        """Test command failures produce an actionable extension health error"""
+        result = config_module.validate_azure_vm_extension_health(
+            sample_check,
+            "ERROR: Command failed with exit code 7: curl: (7) Connection refused",
+        )
+        assert result["status"] == TestStatus.ERROR.value
+        assert result["actual_value"].startswith(
+            "Azure VM extension for SAP metrics endpoint is unavailable"
+        )
 
     @pytest.mark.parametrize("metrics_xml", ["not xml", "<Metrics><Value>OK</Value></Metrics>"])
     def test_validate_azure_vm_extension_health_rejects_invalid_response(
@@ -467,6 +506,27 @@ class TestExecuteCheck:
         with patch("src.module_utils.collector.CommandCollector.collect", side_effect=mock_collect):
             result = config_module.execute_check(sample_check)
             assert result.status == TestStatus.INFO.value
+
+    def test_execute_check_validates_info_extension_health(
+        self, config_module, sample_check
+    ):
+        """Test IC-0050 reports endpoint failures as errors despite INFO severity"""
+        config_module.set_context({"hostname": "testhost"})
+        sample_check.severity = TestSeverity.INFO
+        sample_check.validator_type = "azure_vm_extension_health"
+        sample_check.validator_args = {"expected": "OK"}
+
+        with patch(
+            "src.module_utils.collector.CommandCollector.collect",
+            return_value="ERROR: Command failed with exit code 7: Connection refused",
+        ):
+            result = config_module.execute_check(sample_check)
+
+        assert result.status == TestStatus.ERROR.value
+        assert result.actual_value.startswith(
+            "Azure VM extension for SAP metrics endpoint is unavailable"
+        )
+        assert "installed, running, and configured" in result.details
 
     def test_execute_check_collector_not_found(self, config_module, sample_check):
         """Test check execution with unknown collector"""
