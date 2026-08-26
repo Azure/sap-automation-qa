@@ -259,6 +259,47 @@ class TestValidators:
         result = config_module.validate_string(sample_check, "  test   value  ")
         assert result["status"] == TestStatus.SUCCESS.value
 
+    @pytest.mark.parametrize(
+        "metrics_xml",
+        [
+            "<Metrics><Metric Name='Provider Health Description' Value='OK'/></Metrics>",
+            (
+                "<Metrics><Metric><Name>Provider Health Description</Name>"
+                "<Value>OK</Value></Metric></Metrics>"
+            ),
+            "<Metrics><Provider_Health_Description>OK</Provider_Health_Description></Metrics>",
+            "<Metrics><ProviderHealthDescription>OK</ProviderHealthDescription></Metrics>",
+        ],
+    )
+    def test_validate_azure_vm_extension_health_success(
+        self, config_module, sample_check, metrics_xml
+    ):
+        """Test supported representations of a healthy provider metric"""
+        sample_check.validator_args = {"expected": "OK"}
+        result = config_module.validate_azure_vm_extension_health(sample_check, metrics_xml)
+        assert result["status"] == TestStatus.SUCCESS.value
+        assert result["details"] == "Provider Health Description: OK"
+
+    def test_validate_azure_vm_extension_health_unhealthy(self, config_module, sample_check):
+        """Test a non-OK provider health metric warns for a noncritical check"""
+        sample_check.severity = TestSeverity.WARNING
+        sample_check.validator_args = {"expected": "OK"}
+        metrics_xml = (
+            "<Metrics><Metric><Name>Provider Health Description</Name>"
+            "<Value>Extension unavailable</Value></Metric></Metrics>"
+        )
+        result = config_module.validate_azure_vm_extension_health(sample_check, metrics_xml)
+        assert result["status"] == TestStatus.WARNING.value
+        assert result["details"] == "Provider Health Description: Extension unavailable"
+
+    @pytest.mark.parametrize("metrics_xml", ["not xml", "<Metrics><Value>OK</Value></Metrics>"])
+    def test_validate_azure_vm_extension_health_rejects_invalid_response(
+        self, config_module, sample_check, metrics_xml
+    ):
+        """Test invalid XML and missing provider health metrics fail validation"""
+        result = config_module.validate_azure_vm_extension_health(sample_check, metrics_xml)
+        assert result["status"] == TestStatus.ERROR.value
+
     def test_validate_numeric_range_within_bounds(self, config_module, sample_check):
         """Test numeric range validation within bounds"""
         sample_check.validator_args = {"min": 10, "max": 100}

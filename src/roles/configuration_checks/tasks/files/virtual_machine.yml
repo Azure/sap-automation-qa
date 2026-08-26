@@ -1066,3 +1066,27 @@ checks:
     collector_args:
       command:                        "powershell -NoProfile -Command \"fltmc instances\""
     report:                           *section
+
+  - id:                               "IC-0050"
+    name:                             "Azure VM Extension for SAP Provider Health"
+    description:                      "Checks that the Azure VM extension for SAP delivers metrics and reports a healthy provider"
+    category:                         *vm_check
+    severity:                         *info
+    workload:                         *workload
+    applicability:
+      os_type:                        *os_type
+      hardware_type:                  *vm
+    collector_type:                   *command
+    collector_args:
+      command:                        "curl --fail --silent --show-error --max-time 10 http://127.0.0.1:11812/azure4sap/metrics"
+      windows_command:                "(Invoke-WebRequest -Uri 'http://127.0.0.1:11812/azure4sap/metrics' -UseBasicParsing -TimeoutSec 10).Content"
+    validator_type:                   "azure_vm_extension_health"
+    validator_args:
+      expected:                       "OK"
+    tags:
+      -                               "azure-vm-extension"
+      -                               "readiness"
+      -                               "health"
+    references:
+      documentation:                  "https://learn.microsoft.com/azure/sap/workloads/vm-extension-for-sap-new#readiness-check"
+    report:                           *check
