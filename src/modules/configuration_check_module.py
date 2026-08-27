@@ -973,14 +973,6 @@ class ConfigurationCheckModule(SapAutomationQA):
         try:
             collected_data = collector.collect(check, self.context)
             execution_time = time.time() - start_time
-            if check.validator_type == "azure_vm_extension_health":
-                validation_result = self.validate_result(check, collected_data)
-                return create_result(
-                    status=validation_result["status"],
-                    actual_value=validation_result.get("actual_value", collected_data),
-                    execution_time=int(execution_time),
-                    details=validation_result.get("details"),
-                )
             if check.severity == TestSeverity.INFO:
                 details = None
                 if check.collector_type == "module":
@@ -994,7 +986,7 @@ class ConfigurationCheckModule(SapAutomationQA):
             validation_result = self.validate_result(check, collected_data)
             return create_result(
                 status=validation_result["status"],
-                actual_value=collected_data,
+                actual_value=validation_result.get("actual_value", collected_data),
                 execution_time=int(execution_time),
                 details=validation_result.get("details"),
             )

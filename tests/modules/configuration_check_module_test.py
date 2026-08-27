@@ -507,12 +507,10 @@ class TestExecuteCheck:
             result = config_module.execute_check(sample_check)
             assert result.status == TestStatus.INFO.value
 
-    def test_execute_check_validates_info_extension_health(
-        self, config_module, sample_check
-    ):
-        """Test IC-0050 reports endpoint failures as errors despite INFO severity"""
+    def test_execute_check_uses_validator_actual_value(self, config_module, sample_check):
+        """Test validators can replace raw collector output in the check result"""
         config_module.set_context({"hostname": "testhost"})
-        sample_check.severity = TestSeverity.INFO
+        sample_check.severity = TestSeverity.CRITICAL
         sample_check.validator_type = "azure_vm_extension_health"
         sample_check.validator_args = {"expected": "OK"}
 

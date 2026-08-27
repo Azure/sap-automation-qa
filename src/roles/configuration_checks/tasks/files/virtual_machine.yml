@@ -1071,7 +1071,7 @@ checks:
     name:                             "Azure VM Extension for SAP Provider Health"
     description:                      "Checks that the Azure VM extension for SAP delivers metrics and reports a healthy provider"
     category:                         *vm_check
-    severity:                         *info
+    severity:                         *critical
     workload:                         *workload
     applicability:
       os_type:                        *os_type
