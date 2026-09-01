@@ -16,6 +16,44 @@
 - name:                                 "Pre Validation: {{ item.name | default('') }} - Cross-VM Restore (ALR)"
   when:                                 node_tier == "hana"
   block:
+    - name:                             "Pre Validation: {{ item.name | default('') }} - Determine active primary (HSR)"
+      when:                             database_high_availability | default(false) | bool
+      block:
+        - name:                         "Pre Validation: {{ item.name | default('') }} - Run standard DB pre-validations"
+          ansible.builtin.include_tasks: "roles/misc/tasks/pre-validations-db.yml"
+          tags:                         [pre-validation]
+
+        - name:                         "Pre Validation: {{ item.name | default('') }} - Set primary/secondary from cluster status"
+          ansible.builtin.set_fact:
+            backup_primary_node:        "{{ cluster_status_pre.primary_node }}"
+            backup_secondary_node:      "{{ cluster_status_pre.secondary_node }}"
+          run_once:                     true
+
+        - name:                         "Pre Validation: {{ item.name | default('') }} - Verify primary/secondary nodes are resolved"
+          ansible.builtin.assert:
+            that:
+              - backup_primary_node | default('') != ''
+              - backup_secondary_node | default('') != ''
+            fail_msg: >-
+              Primary/secondary node hostnames could not be resolved from cluster status.
+              cluster_status_pre.primary_node / secondary_node were empty.
+          run_once:                     true
+
+    - name:                             "Pre Validation: {{ item.name | default('') }} - Set standalone node facts"
+      ansible.builtin.set_fact:
+        backup_primary_node:            "{{ ansible_hostname }}"
+        backup_secondary_node:          ""
+      run_once:                         true
+      when:                             not (database_high_availability | default(false) | bool)
+
+    - name:                             "Pre Validation: {{ item.name | default('') }} - Resolve source VM name(s) from primary"
+      ansible.builtin.set_fact:
+        backup_source_vm_names:         "{{ [hostvars[backup_primary_node].azure_instance_metadata.json.compute.name,
+                                            hostvars[backup_secondary_node].azure_instance_metadata.json.compute.name]
+                                            if (database_high_availability | default(false) | bool)
+                                            else [azure_instance_metadata.json.compute.name] }}"
+      run_once:                         true
+
     - name:                             "Pre Validation: {{ item.name | default('') }} - Verify backup vault connectivity"
       delegate_to:                      localhost
       azure_backup_hana:
@@ -23,7 +61,7 @@
         vault_resource_id:              "{{ backup_vault_resource_id }}"
         subscription_id:                "{{ azure_instance_metadata.json.compute.subscriptionId }}"
         msi_client_id:                  "{{ user_assigned_identity_client_id | default('') }}"
-        source_vm_names:                "{{ [azure_instance_metadata.json.compute.name] }}"
+        source_vm_names:                "{{ backup_source_vm_names }}"
         restore_source_type:            "{{ 'hsr' if (database_high_availability | default(false) | bool) else 'standalone' }}"
       register:                         pre_backup_discovery
       run_once:                         true
@@ -43,12 +81,26 @@
       ansible.builtin.set_fact:
         backup_alr_vm_rg:               "{{ backup_target_vm_rg if (backup_target_vm_rg | default('') | length > 0) else azure_instance_metadata.json.compute.resourceGroupName }}"
         backup_alr_subscription:        "{{ azure_instance_metadata.json.compute.subscriptionId }}"
+      run_once:                         true
+
+    - name:                             "Pre Validation: {{ item.name | default('') }} - Resolve target SID"
+      ansible.builtin.set_fact:
         backup_alr_target_sid:          "{{ backup_target_db_sid if (backup_target_db_sid | default('') | length > 0) else db_sid }}"
+
+    - name:                             "Pre Validation: {{ item.name | default('') }} - Validate target SID"
+      ansible.builtin.assert:
+        that:
+          - backup_alr_target_sid is match('^[A-Za-z][A-Za-z0-9]{2}$')
+        fail_msg: >-
+          Resolved target SID '{{ backup_alr_target_sid }}' is not a valid 3-character SAP SID
+          (a letter followed by two alphanumeric characters). For cross-VM restore to a
+          different-SID target, set backup_target_db_sid explicitly.
+        success_msg:                    "ALR target SID: {{ backup_alr_target_sid | upper }}"
       run_once:                         true
 
     - name:                             "Pre Validation: {{ item.name | default('') }} - Build source and target container identifiers"
       ansible.builtin.set_fact:
-        backup_source_vm_name:          "{{ azure_instance_metadata.json.compute.name }}"
+        backup_source_vm_name:          "{{ hostvars[backup_primary_node].azure_instance_metadata.json.compute.name }}"
         backup_source_items:            "{{ pre_backup_discovery.protected_items }}"
       run_once:                         true
 
@@ -120,6 +172,8 @@
 
     - name:                             "Pre Validation: {{ item.name | default('') }} - Check HANA encryption status on source"
       ansible.builtin.include_tasks:    "roles/backup_db_hana/tasks/encryption-check.yml"
+      vars:
+        encryption_check_delegate_to:   "{{ backup_primary_node }}"
       run_once:                         true
 
 # /*---------------------------------------------------------------------------

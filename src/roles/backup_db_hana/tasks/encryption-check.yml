@@ -17,6 +17,7 @@
   args:
     executable:                         /bin/bash
   register:                             encryption_check_result
+  delegate_to:                          "{{ encryption_check_delegate_to | default(omit) }}"
   run_once:                             true
   changed_when:                         false
 

@@ -186,7 +186,7 @@
     path:                               "{{ _root_key_tmp_path }}"
     state:                              directory
     mode:                               "0700"
-    owner:                              "{{ (backup_alr_target_sid | default(db_sid)) | lower }}adm"
+    owner:                              "{{ backup_alr_target_sid | lower }}adm"
     group:                              "sapsys"
   delegate_to:                          "{{ backup_target_vm_name }}"
   run_once:                             true
@@ -199,7 +199,7 @@
     src:                                "/tmp/sap_root_keys_controller/{{ rkb_file.path | basename }}"
     dest:                               "{{ _root_key_tmp_path }}/{{ rkb_file.path | basename }}"
     mode:                               "0600"
-    owner:                              "{{ (backup_alr_target_sid | default(db_sid)) | lower }}adm"
+    owner:                              "{{ backup_alr_target_sid | lower }}adm"
     group:                              "sapsys"
   loop:                                 "{{ encryption_exported_files.files | default([]) }}"
   loop_control:
@@ -213,10 +213,10 @@
 
 - name:                                 "Test Execution: {{ item.name | default('') }} - Stop tenant DB on target before key recovery"
   become:                               true
-  become_user:                          "{{ (backup_alr_target_sid | default(db_sid)) | lower }}adm"
+  become_user:                          "{{ backup_alr_target_sid | lower }}adm"
   ansible.builtin.shell: |
                                         set -o pipefail
-                                        source /usr/sap/{{ (backup_alr_target_sid | default(db_sid)) | upper }}/home/.sapenv.sh && \
+                                        source /usr/sap/{{ backup_alr_target_sid | upper }}/home/.sapenv.sh && \
                                         hdbsql -U {{ hana_userstore_key | default('SYSTEM') }} -j \
                                           "ALTER SYSTEM STOP DATABASE {{ db_item.name }}"
   args:
@@ -236,10 +236,10 @@
 
 - name:                                 "Test Execution: {{ item.name | default('') }} - Recover root keys on target - tenant '{{ db_item.name }}'"
   become:                               true
-  become_user:                          "{{ (backup_alr_target_sid | default(db_sid)) | lower }}adm"
+  become_user:                          "{{ backup_alr_target_sid | lower }}adm"
   ansible.builtin.shell: |
                                         set -o pipefail
-                                        source /usr/sap/{{ (backup_alr_target_sid | default(db_sid)) | upper }}/home/.sapenv.sh && \
+                                        source /usr/sap/{{ backup_alr_target_sid | upper }}/home/.sapenv.sh && \
                                         hdbsql -U {{ hana_userstore_key | default('SYSTEM') }} -j \
                                           "RECOVER ENCRYPTION ROOT KEYS FOR {{ db_item.name }} USING FILE ('{{ _root_key_tmp_path }}/rkb_export_{{ db_item.name }}') PASSWORD {{ _root_key_backup_password }}"
   args:
@@ -260,10 +260,10 @@
 
 - name:                                 "Test Execution: {{ item.name | default('') }} - Start tenant DB on target after key recovery"
   become:                               true
-  become_user:                          "{{ (backup_alr_target_sid | default(db_sid)) | lower }}adm"
+  become_user:                          "{{ backup_alr_target_sid | lower }}adm"
   ansible.builtin.shell: |
                                         set -o pipefail
-                                        source /usr/sap/{{ (backup_alr_target_sid | default(db_sid)) | upper }}/home/.sapenv.sh && \
+                                        source /usr/sap/{{ backup_alr_target_sid | upper }}/home/.sapenv.sh && \
                                         hdbsql -U {{ hana_userstore_key | default('SYSTEM') }} -j \
                                         "ALTER SYSTEM START DATABASE {{ db_item.name }}"
   args:
