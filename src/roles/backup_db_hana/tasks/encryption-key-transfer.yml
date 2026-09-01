@@ -22,6 +22,7 @@
     path:                               "{{ _root_key_tmp_path }}"
     state:                              directory
     mode:                               "0700"
+  delegate_to:                          "{{ backup_primary_node }}"
   run_once:                             true
   when:                                 backup_encryption_enabled | default(false) | bool
 
@@ -36,6 +37,7 @@
   args:
     executable:                         /bin/bash
   register:                             encryption_tenant_status
+  delegate_to:                          "{{ backup_primary_node }}"
   run_once:                             true
   changed_when:                         false
   loop:                                 "{{ backup_tenant_items }}"
@@ -56,6 +58,7 @@
                                         "ALTER SYSTEM START DATABASE {{ db_item.name }}"
   args:
     executable:                         /bin/bash
+  delegate_to:                          "{{ backup_primary_node }}"
   run_once:                             true
   register:                             encryption_start_tenants_source
   changed_when:                         true
@@ -80,6 +83,7 @@
   args:
     executable:                         /bin/bash
   register:                             encryption_set_pwd_tenants
+  delegate_to:                          "{{ backup_primary_node }}"
   run_once:                             true
   changed_when:                         false
   no_log:                               true
@@ -105,6 +109,7 @@
   args:
     executable:                         /bin/bash
   register:                             encryption_export_tenants
+  delegate_to:                          "{{ backup_primary_node }}"
   run_once:                             true
   changed_when:                         false
   loop:                                 "{{ backup_tenant_items }}"
@@ -137,6 +142,7 @@
     paths:                              "{{ _root_key_tmp_path }}"
     patterns:                           "*_rootkeys"
   register:                             encryption_exported_files
+  delegate_to:                          "{{ backup_primary_node }}"
   run_once:                             true
   when:                                 backup_encryption_enabled | default(false) | bool
 
@@ -158,6 +164,7 @@
   loop_control:
     loop_var:                           rkb_file
     label:                              "{{ rkb_file.path | basename }}"
+  delegate_to:                          "{{ backup_primary_node }}"
   run_once:                             true
   when:
                                         - backup_encryption_enabled | default(false) | bool
