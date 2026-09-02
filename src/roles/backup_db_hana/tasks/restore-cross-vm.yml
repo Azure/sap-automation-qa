@@ -192,11 +192,6 @@
         test_execution_hostname:        "{{ ansible_hostname }}"
       run_once:                         true
 
-    - name:                             "Test Execution: {{ item.name | default('') }} - Encryption root key transfer (SAP Note 3619961)"
-      ansible.builtin.include_tasks:    "roles/backup_db_hana/tasks/encryption-key-transfer.yml"
-      run_once:                         true
-      when:                             backup_encryption_enabled | default(false) | bool
-
     - name:                             "Test Execution: {{ item.name | default('') }} - ALR - Ensure HANA is running on target"
       become:                           true
       become_user:                      "{{ backup_alr_target_sid | lower }}adm"
@@ -210,6 +205,15 @@
       delegate_to:                      "{{ backup_target_vm_name }}"
       run_once:                         true
       changed_when:                     alr_hana_start_for_tenant.rc == 0
+
+    - name:                             "Test Execution: {{ item.name | default('') }} - ALR - Ensure target tenant database(s) exist"
+      ansible.builtin.include_tasks:    "roles/backup_db_hana/tasks/ensure-target-tenant.yml"
+      run_once:                         true
+
+    - name:                             "Test Execution: {{ item.name | default('') }} - Encryption root key transfer (SAP Note 3619961)"
+      ansible.builtin.include_tasks:    "roles/backup_db_hana/tasks/encryption-key-transfer.yml"
+      run_once:                         true
+      when:                             backup_encryption_enabled | default(false) | bool
 
     - name:                             "Test Execution: {{ item.name | default('') }} - ALR - Restore tenant '{{ db_item.name | default('') }}' to {{ backup_target_vm_name }}"
       delegate_to:                      localhost
