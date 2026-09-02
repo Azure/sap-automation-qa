@@ -170,10 +170,13 @@
                                           ) else 'FAILED' }}"
       run_once:                         true
 
-    - name:                             "Pre Validation: {{ item.name | default('') }} - Check HANA encryption status on source"
-      ansible.builtin.include_tasks:    "roles/backup_db_hana/tasks/encryption-check.yml"
-      vars:
-        encryption_check_delegate_to:   "{{ backup_primary_node }}"
+    # TEMPORARY: encryption handling disabled to test the raw Azure ALR restore path.
+    # This bypasses the SAP Note 3619961 root-key transfer (encryption-key-transfer.yml)
+    # and encryption-cleanup.yml. To re-enable, restore the encryption-check.yml include below.
+    - name:                             "Pre Validation: {{ item.name | default('') }} - Disable encryption handling (temporary bypass)"
+      ansible.builtin.set_fact:
+        backup_encryption_enabled:      false
+        _root_key_tmp_path:             "/tmp/sap_root_keys_transfer"
       run_once:                         true
 
 # /*---------------------------------------------------------------------------
