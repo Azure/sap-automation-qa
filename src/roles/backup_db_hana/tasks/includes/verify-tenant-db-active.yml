@@ -145,11 +145,37 @@
 
 - name:                                 "Tenant Health: Compute final result"
   ansible.builtin.set_fact:
+    tenant_health_present_names:        "{{ tenant_health_check_databases
+                                            | map(attribute='0') | map('trim') | map('upper') | list }}"
+    tenant_health_active_names:         "{{ tenant_health_check_databases
+                                            | selectattr('1', 'match', '(?i)^\\s*YES\\s*$')
+                                            | map(attribute='0') | map('trim') | map('upper') | list }}"
+    tenant_health_expected_names:       "{{ tenant_health_scope | map('upper') | list }}"
+  run_once:                             true
+
+- name:                                 "Tenant Health: Determine missing / inactive tenants"
+  ansible.builtin.set_fact:
+    tenant_health_missing_tenants:      "{{ tenant_health_expected_names | difference(tenant_health_present_names) }}"
+    tenant_health_still_inactive:       "{{ (tenant_health_expected_names | difference(tenant_health_active_names))
+                                            if (tenant_health_scope | length > 0)
+                                            else (tenant_health_present_names | difference(tenant_health_active_names)) }}"
+  run_once:                             true
+
+- name:                                 "Tenant Health: Compute final result"
+  ansible.builtin.set_fact:
     tenant_db_health_result:
-      all_active:                       "{{ (tenant_health_check_databases
-                                              | selectattr('1', 'match', '(?i)^\\s*NO\\s*$')
-                                              | list | length) == 0 }}"
+      all_active: >-
+        {{ (tenant_health_scope | length > 0)
+           | ternary(
+               (tenant_health_missing_tenants | length == 0)
+                 and (tenant_health_expected_names | difference(tenant_health_active_names) | length == 0),
+               ((tenant_health_check_databases
+                   | selectattr('1', 'match', '(?i)^\\s*NO\\s*$')
+                   | list | length) == 0)) }}
       databases:                        "{{ tenant_health_final_databases }}"
+      expected_tenants:                 "{{ tenant_health_expected_names }}"
+      missing_tenants:                  "{{ tenant_health_missing_tenants }}"
+      inactive_tenants:                 "{{ tenant_health_still_inactive }}"
       inactive_before_start:            "{{ tenant_health_inactive_tenants }}"
       start_results:                    "{{ tenant_health_start_results.results | default([]) }}"
       final_query:                      "{{ tenant_health_final_status.stdout }}"

@@ -132,6 +132,33 @@
         label:                          "{{ tenant_name }}"
       when:                             recover_cmd_tenant_names | length > 0
 
+    - name:                             "Test Execution: {{ item.name | default('') }} - Identify tenants without a usable backup ID"
+      ansible.builtin.set_fact:
+        recover_cmd_missing_backup_id:  "{{ tenant_catalog_results.results | default([])
+                                            | rejectattr('stdout', 'defined')
+                                            | map(attribute='tenant_name')
+                                            | list
+                                            + (tenant_catalog_results.results | default([])
+                                               | selectattr('stdout', 'defined')
+                                               | rejectattr('stdout', 'search', '[0-9]')
+                                               | map(attribute='tenant_name')
+                                               | list) }}"
+      run_once:                         true
+      when:                             recover_cmd_tenant_names | length > 0
+
+    - name:                             "Test Execution: {{ item.name | default('') }} - Fail closed when any tenant lacks a usable backup ID"
+      ansible.builtin.assert:
+        that:
+          - recover_cmd_missing_backup_id | default([]) | length == 0
+        fail_msg: >-
+          No successful complete-data backup found for tenant(s):
+          {{ recover_cmd_missing_backup_id | default([]) | join(', ') }}.
+          Refusing to proceed - recovery would silently skip these tenants and
+          the test could report PASSED on unrecovered data.
+        success_msg:                    "All discovered tenants have a usable backup ID."
+      run_once:                         true
+      when:                             recover_cmd_tenant_names | length > 0
+
     - name:                             "Test Execution: {{ item.name | default('') }} - Put cluster in maintenance mode"
       when:                             database_high_availability | default(false) | bool
       ansible.builtin.include_tasks:    "roles/backup_db_hana/tasks/includes/cluster-maintenance-on.yml"

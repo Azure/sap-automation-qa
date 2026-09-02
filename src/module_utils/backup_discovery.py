@@ -100,7 +100,11 @@ class BackupDiscovery:
                 source_vm = (node.source_resource_id or "").lower().rstrip("/").rsplit("/", 1)[-1]
                 if any(
                     (source_vm and vm == source_vm)
-                    or (node_name and (vm in node_name or node_name in vm))
+                    or (
+                        node_name
+                        and min(len(vm), len(node_name)) >= 5
+                        and (vm in node_name or node_name in vm)
+                    )
                     for vm in self._source_vms
                 ):
                     return True
@@ -374,6 +378,7 @@ class BackupDiscovery:
         job_index = self.fetch_recent_jobs()
         parameters: List[Dict[str, Any]] = []
         skipped = 0
+        excluded: List[Dict[str, Any]] = []
 
         for item in self.list_protected_items():
             props = self.get_props(item)
@@ -421,6 +426,19 @@ class BackupDiscovery:
             )
 
             if self._required_hsr is not None and db_status == TestStatus.ERROR.value:
+                excluded.append(
+                    {
+                        "name": props.friendly_name or "",
+                        "container_name": container,
+                        "item_name": item_name,
+                        "server_type": ("HSR" if is_hsr else "Standalone Instance"),
+                        "reason": (
+                            "matched the source VM and topology but has no usable "
+                            "restore point / backup (evaluated FAILED); excluded from "
+                            "restore candidates"
+                        ),
+                    }
+                )
                 skipped += 1
                 continue
 
@@ -508,6 +526,9 @@ class BackupDiscovery:
         else:
             status = TestStatus.ERROR.value
 
+        if excluded:
+            status = TestStatus.ERROR.value
+
         total = len(protected)
         passed = status_counts.get(TestStatus.SUCCESS.value, 0)
         warned = status_counts.get(TestStatus.WARNING.value, 0)
@@ -516,12 +537,19 @@ class BackupDiscovery:
         return {
             "protected_items": protected,
             "restore_points": restore_pts,
+            "excluded_items": excluded,
             "details": {"parameters": parameters},
             "status": status,
             "message": (
                 f"{total} database(s) discovered: "
                 f"{passed} PASSED, {warned} WARNING, "
                 f"{failed} FAILED."
+                + (
+                    f" {len(excluded)} requested item(s) excluded (no usable "
+                    f"restore point): {', '.join(e['name'] for e in excluded)}."
+                    if excluded
+                    else ""
+                )
             ),
         }
 
