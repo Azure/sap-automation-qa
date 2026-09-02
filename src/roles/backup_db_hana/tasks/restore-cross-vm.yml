@@ -195,10 +195,6 @@
         test_execution_hostname:        "{{ ansible_hostname }}"
       run_once:                         true
 
-    - name:                             "Test Execution: {{ item.name | default('') }} - Put cluster in maintenance mode"
-      when:                             database_high_availability | default(false) | bool
-      ansible.builtin.include_tasks:    "roles/backup_db_hana/tasks/includes/cluster-maintenance-on.yml"
-
     - name:                             "Test Execution: {{ item.name | default('') }} - Encryption root key transfer (SAP Note 3619961)"
       ansible.builtin.include_tasks:    "roles/backup_db_hana/tasks/encryption-key-transfer.yml"
       run_once:                         true
@@ -316,20 +312,6 @@
       run_once:                         true
       changed_when:                     false
 
-    - name:                             "Test Execution: {{ item.name | default('') }} - Take cluster out of maintenance mode"
-      when:                             database_high_availability | default(false) | bool
-      ansible.builtin.shell: >-
-                                        set -o pipefail && {{ commands
-                                          | selectattr('name','equalto','cluster_maintenance_off')
-                                          | map(attribute=(ansible_os_family | upper))
-                                          | first
-                                        }}
-      args:
-        executable:                     /bin/bash
-      register:                         cluster_maintenance_off_result
-      run_once:                         true
-      changed_when:                     cluster_maintenance_off_result.rc == 0
-
     - name:                             "Test Execution: {{ item.name | default('') }} - Compute ALR results summary"
       ansible.builtin.set_fact:
         alr_tenant_ok:                  "{{ (alr_tenant_job_statuses.results | default([])
@@ -379,7 +361,7 @@
 
   rescue:
     - name:                             "Rescue: {{ item.name | default('') }} - Handle Failure"
-      ansible.builtin.include_tasks:    "roles/backup_db_hana/tasks/rescue-backup.yml"
+      ansible.builtin.include_tasks:    "roles/backup_db_hana/tasks/rescue-cross-vm.yml"
       tags:                             [cleanup]
       run_once:                         true
 
