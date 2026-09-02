@@ -279,10 +279,28 @@ jobs:
             echo "attempt $n failed, retrying: $*"; n=$((n+1)); sleep 5; done; }
           retry copilot plugin marketplace add .
           retry copilot plugin install staf@sap-automation-qa
-          copilot plugin list
+          copilot plugin list | tee "$RUNNER_TEMP/copilot-plugins.txt"
           # plugin.json declares "skills": ["skills/"], so the Copilot CLI loads
           # exactly the cross-agent set from skills/ (same as Claude and Gemini).
+          # Newer Copilot CLI versions load local marketplace plugins *live* from
+          # the checkout directory and copy nothing into ~/.copilot/installed-
+          # plugins. Support both the legacy copied layout and the live layout.
+          if ! grep -q 'staf@sap-automation-qa' "$RUNNER_TEMP/copilot-plugins.txt"; then
+            echo "::error::Copilot did not list staf@sap-automation-qa after install"; exit 1
+          fi
           CP="$HOME/.copilot/installed-plugins/sap-automation-qa/staf"
+          if [ ! -d "$CP/skills" ]; then
+            # Live-load: resolve the directory the plugin was loaded "from",
+            # falling back to the checkout root used by `marketplace add .`.
+            LIVE=$(grep -oE 'from[[:space:]]+\S+' "$RUNNER_TEMP/copilot-plugins.txt" \
+                   | awk '{print $2}' | tail -n1 || true)
+            if [ -n "$LIVE" ] && [ -d "$LIVE/skills" ]; then
+              CP="$LIVE"
+            else
+              CP="$GITHUB_WORKSPACE"
+            fi
+            echo "Copilot loaded plugin live from: $CP"
+          fi
           if [ ! -d "$CP/skills" ]; then
             echo "::error::Copilot payload has no skills/ at $CP"; exit 1
           fi

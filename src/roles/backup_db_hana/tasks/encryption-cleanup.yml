@@ -9,6 +9,7 @@
   ansible.builtin.file:
     path:                               "{{ _root_key_tmp_path | default('/tmp/sap_root_keys_transfer') }}"
     state:                              absent
+  delegate_to:                          "{{ backup_primary_node | default(omit) }}"
   run_once:                             true
   failed_when:                          false
   when:                                 backup_encryption_enabled | default(false) | bool
