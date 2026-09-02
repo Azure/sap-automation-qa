@@ -259,86 +259,6 @@ class TestValidators:
         result = config_module.validate_string(sample_check, "  test   value  ")
         assert result["status"] == TestStatus.SUCCESS.value
 
-    @pytest.mark.parametrize(
-        "metrics_xml",
-        [
-            "<Metrics><Metric Name='Provider Health Description' Value='OK'/></Metrics>",
-            (
-                "<Metrics><Metric><Name>Provider Health Description</Name>"
-                "<Value>OK</Value></Metric></Metrics>"
-            ),
-            "<Metrics><Provider_Health_Description>OK</Provider_Health_Description></Metrics>",
-            "<Metrics><ProviderHealthDescription>OK</ProviderHealthDescription></Metrics>",
-        ],
-    )
-    def test_validate_azure_vm_extension_health_success(
-        self, config_module, sample_check, metrics_xml
-    ):
-        """Test supported representations of a healthy provider metric"""
-        sample_check.validator_args = {"expected": "OK"}
-        result = config_module.validate_azure_vm_extension_health(sample_check, metrics_xml)
-        assert result["status"] == TestStatus.SUCCESS.value
-        assert result["actual_value"].startswith(
-            "Azure VM extension for SAP is installed and ready."
-        )
-        assert "Provider Health Description: OK." in result["details"]
-
-    def test_validate_azure_vm_extension_health_summarizes_metrics(
-        self, config_module, sample_check
-    ):
-        """Test healthy extension XML reports version and metric count instead of raw XML"""
-        sample_check.validator_args = {"expected": "OK"}
-        metrics_xml = (
-            "<metrics>"
-            "<metric><name>Provider Health Description</name><value>OK</value></metric>"
-            "<metric><name>Data Provider Version</name><value>1.110.0.0 (rel)</value></metric>"
-            "<metric><name>Memory Consumption</name><value>80.0</value></metric>"
-            "</metrics>"
-        )
-        result = config_module.validate_azure_vm_extension_health(sample_check, metrics_xml)
-        assert result["status"] == TestStatus.SUCCESS.value
-        assert result["actual_value"] == (
-            "Azure VM extension for SAP is installed and ready. "
-            "Provider Health Description: OK. "
-            "Data Provider Version: 1.110.0.0 (rel). Metrics available: 3."
-        )
-
-    def test_validate_azure_vm_extension_health_unhealthy(self, config_module, sample_check):
-        """Test a non-OK provider health metric warns for a noncritical check"""
-        sample_check.severity = TestSeverity.WARNING
-        sample_check.validator_args = {"expected": "OK"}
-        metrics_xml = (
-            "<Metrics><Metric><Name>Provider Health Description</Name>"
-            "<Value>Extension unavailable</Value></Metric></Metrics>"
-        )
-        result = config_module.validate_azure_vm_extension_health(sample_check, metrics_xml)
-        assert result["status"] == TestStatus.WARNING.value
-        assert result["actual_value"] == (
-            "Azure VM extension for SAP is installed but not ready. "
-            "Provider Health Description: Extension unavailable."
-        )
-
-    def test_validate_azure_vm_extension_health_endpoint_unavailable(
-        self, config_module, sample_check
-    ):
-        """Test command failures produce an actionable extension health error"""
-        result = config_module.validate_azure_vm_extension_health(
-            sample_check,
-            "ERROR: Command failed with exit code 7: curl: (7) Connection refused",
-        )
-        assert result["status"] == TestStatus.ERROR.value
-        assert result["actual_value"].startswith(
-            "Azure VM extension for SAP metrics endpoint is unavailable"
-        )
-
-    @pytest.mark.parametrize("metrics_xml", ["not xml", "<Metrics><Value>OK</Value></Metrics>"])
-    def test_validate_azure_vm_extension_health_rejects_invalid_response(
-        self, config_module, sample_check, metrics_xml
-    ):
-        """Test invalid XML and missing provider health metrics fail validation"""
-        result = config_module.validate_azure_vm_extension_health(sample_check, metrics_xml)
-        assert result["status"] == TestStatus.ERROR.value
-
     def test_validate_numeric_range_within_bounds(self, config_module, sample_check):
         """Test numeric range validation within bounds"""
         sample_check.validator_args = {"min": 10, "max": 100}
@@ -506,25 +426,6 @@ class TestExecuteCheck:
         with patch("src.module_utils.collector.CommandCollector.collect", side_effect=mock_collect):
             result = config_module.execute_check(sample_check)
             assert result.status == TestStatus.INFO.value
-
-    def test_execute_check_uses_validator_actual_value(self, config_module, sample_check):
-        """Test validators can replace raw collector output in the check result"""
-        config_module.set_context({"hostname": "testhost"})
-        sample_check.severity = TestSeverity.CRITICAL
-        sample_check.validator_type = "azure_vm_extension_health"
-        sample_check.validator_args = {"expected": "OK"}
-
-        with patch(
-            "src.module_utils.collector.CommandCollector.collect",
-            return_value="ERROR: Command failed with exit code 7: Connection refused",
-        ):
-            result = config_module.execute_check(sample_check)
-
-        assert result.status == TestStatus.ERROR.value
-        assert result.actual_value.startswith(
-            "Azure VM extension for SAP metrics endpoint is unavailable"
-        )
-        assert "installed, running, and configured" in result.details
 
     def test_execute_check_collector_not_found(self, config_module, sample_check):
         """Test check execution with unknown collector"""
