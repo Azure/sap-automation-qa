@@ -10,7 +10,6 @@ import time
 import json
 import re
 import sys
-import xml.etree.ElementTree as ET
 from typing import Optional, Dict, Any, List, Type
 from datetime import datetime
 from concurrent.futures import ThreadPoolExecutor
@@ -96,7 +95,6 @@ class ConfigurationCheckModule(SapAutomationQA):
             "min_list": self.validate_min_list,
             "check_support": self.validate_vm_support,
             "properties": self.validate_properties,
-            "azure_vm_extension_health": self.validate_azure_vm_extension_health,
             "disk_consistency": self.validate_disk_consistency,
             "check_storage_type": self.validate_storage_type_support,
         }
@@ -453,100 +451,6 @@ class ConfigurationCheckModule(SapAutomationQA):
 
         return {
             "status": self._create_validation_result(check.severity, collected == expected),
-        }
-
-    def validate_azure_vm_extension_health(
-        self, check: Check, collected_data: str
-    ) -> Dict[str, Any]:
-        """
-        Validate the provider health metric returned by the Azure VM extension for SAP.
-
-        :param check: The check definition
-        :type check: Check
-        :param collected_data: Metrics XML returned by the extension endpoint
-        :type collected_data: str
-        :return: Validation result dictionary
-        :rtype: Dict[str, Any]
-        """
-        expected = str(check.validator_args.get("expected", "OK")).strip()
-        if str(collected_data).strip().startswith("ERROR:"):
-            message = (
-                "Azure VM extension for SAP metrics endpoint is unavailable on "
-                "localhost:11812. Verify that the extension is installed, running, "
-                "and configured."
-            )
-            return {
-                "status": TestStatus.ERROR.value,
-                "actual_value": message,
-                "details": message,
-            }
-
-        try:
-            root = ET.fromstring(str(collected_data).strip())
-        except (ET.ParseError, TypeError, ValueError) as error:
-            return {
-                "status": TestStatus.ERROR.value,
-                "details": f"Azure VM extension did not return valid metrics XML: {error}",
-            }
-
-        def normalize_metric_name(value: str) -> str:
-            return re.sub(r"[^a-z0-9]", "", value.casefold())
-
-        metric_name = "providerhealthdescription"
-        health_value = None
-        data_provider_version = None
-        metric_count = 0
-        for element in root.iter():
-            tag = normalize_metric_name(element.tag.rsplit("}", 1)[-1])
-            attributes = {key.lower(): str(value).strip() for key, value in element.attrib.items()}
-            text = (element.text or "").strip()
-
-            if tag == "metric":
-                metric_count += 1
-
-            if tag == metric_name:
-                health_value = text or attributes.get("value")
-            elif any(normalize_metric_name(value) == metric_name for value in attributes.values()):
-                health_value = attributes.get("value") or text
-            else:
-                children = {
-                    normalize_metric_name(child.tag.rsplit("}", 1)[-1]): (child.text or "").strip()
-                    for child in element
-                }
-                if any(normalize_metric_name(value) == metric_name for value in children.values()):
-                    health_value = children.get("value") or children.get("description")
-                if any(
-                    normalize_metric_name(value) == "dataproviderversion"
-                    for value in children.values()
-                ):
-                    data_provider_version = children.get("value")
-
-        if health_value is None:
-            return {
-                "status": TestStatus.ERROR.value,
-                "details": "Provider Health Description metric is missing from the XML response",
-            }
-
-        is_healthy = health_value.casefold() == expected.casefold()
-        if is_healthy:
-            summary = (
-                "Azure VM extension for SAP is installed and ready. "
-                f"Provider Health Description: {health_value}."
-            )
-            if data_provider_version:
-                summary += f" Data Provider Version: {data_provider_version}."
-            if metric_count:
-                summary += f" Metrics available: {metric_count}."
-        else:
-            summary = (
-                "Azure VM extension for SAP is installed but not ready. "
-                f"Provider Health Description: {health_value}."
-            )
-
-        return {
-            "status": self._create_validation_result(check.severity, is_healthy),
-            "actual_value": summary,
-            "details": summary,
         }
 
     def validate_numeric_range(self, check: Check, collected_data: str) -> Dict[str, Any]:
@@ -986,7 +890,7 @@ class ConfigurationCheckModule(SapAutomationQA):
             validation_result = self.validate_result(check, collected_data)
             return create_result(
                 status=validation_result["status"],
-                actual_value=validation_result.get("actual_value", collected_data),
+                actual_value=collected_data,
                 execution_time=int(execution_time),
                 details=validation_result.get("details"),
             )

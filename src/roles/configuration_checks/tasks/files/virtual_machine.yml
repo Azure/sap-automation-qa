@@ -1078,11 +1078,25 @@ checks:
       hardware_type:                  *vm
     collector_type:                   *command
     collector_args:
-      command:                        "curl --fail --silent --show-error --max-time 10 http://127.0.0.1:11812/azure4sap/metrics"
-      windows_command:                "(Invoke-WebRequest -Uri 'http://127.0.0.1:11812/azure4sap/metrics' -UseBasicParsing -TimeoutSec 10).Content"
-    validator_type:                   "azure_vm_extension_health"
+      command:                        >-
+                                      if ! metrics=$(curl --fail --silent --max-time 10
+                                      http://127.0.0.1:11812/azure4sap/metrics); then
+                                      printf '%s' 'Azure VM extension for SAP metrics endpoint is unavailable. Verify that the extension is installed, running, and configured.';
+                                      else printf '%s' "$metrics" | tr -d '\n\r'
+                                      | grep -oEi '<name>[[:space:]]*Provider Health Description[[:space:]]*</name>[[:space:]]*<value>[[:space:]]*[^<]+[[:space:]]*</value>'
+                                      | sed -nE 's|.*<value>[[:space:]]*([^<]+)[[:space:]]*</value>|\1|Ip'; fi
+      windows_command:                >-
+                                      try { $metrics = [xml](Invoke-WebRequest
+                                      -Uri 'http://127.0.0.1:11812/azure4sap/metrics'
+                                      -UseBasicParsing -TimeoutSec 10).Content;
+                                      ($metrics.metrics.metric
+                                      | Where-Object { $_.name -eq 'Provider Health Description' }
+                                      | Select-Object -First 1).Value }
+                                      catch { 'Azure VM extension for SAP metrics endpoint is unavailable. Verify that the extension is installed, running, and configured.' }
+    validator_type:                   *string
     validator_args:
       expected:                       "OK"
+      case_insensitive:               true
     tags:
       -                               "azure-vm-extension"
       -                               "readiness"
