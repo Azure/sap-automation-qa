@@ -242,6 +242,48 @@ class FileSystemCollector(Collector):
 
         return vg_to_disk_names
 
+    def classify_hana_storage_types(self, filesystems, azure_disk_data) -> dict:
+        """Classify each HANA mount from its correlated storage backend."""
+        mount_context_keys = {
+            "/hana/data": "hana_data_storage_type",
+            "/hana/log": "hana_log_storage_type",
+            "/hana/shared": "hana_shared_storage_type",
+        }
+        disk_skus = {
+            disk.get("name"): disk.get("sku")
+            for disk in azure_disk_data
+            if disk.get("name") and disk.get("sku")
+        }
+        storage_types = {context_key: [] for context_key in mount_context_keys.values()}
+
+        for filesystem in filesystems:
+            context_key = mount_context_keys.get(filesystem.get("target"))
+            if not context_key:
+                continue
+
+            nfs_type = filesystem.get("nfs_type")
+            if nfs_type:
+                storage_types[context_key] = [nfs_type]
+                continue
+
+            storage_types[context_key] = sorted(
+                {
+                    disk_skus[disk_name]
+                    for disk_name in filesystem.get("azure_disk_names", [])
+                    if disk_name in disk_skus
+                }
+            )
+
+        hana_storage_types = {
+            storage_type
+            for mount_storage_types in storage_types.values()
+            for storage_type in mount_storage_types
+        }
+        storage_types["storage_type"] = (
+            ["ANF"] if "ANF" in hana_storage_types else sorted(hana_storage_types)
+        )
+        return storage_types
+
     def collect_lvm_volumes(self, lvm_fullreport):
         """
         Collect LVM volume information.
@@ -979,6 +1021,11 @@ class FileSystemCollector(Collector):
                 anf_storage_data=anf_storage_data,
             )
 
+            hana_storage_types = self.classify_hana_storage_types(
+                filesystems=filesystems,
+                azure_disk_data=azure_disk_data,
+            )
+
             return {
                 "filesystems": filesystems,
                 "lvm_volumes": lvm_volumes,
@@ -988,6 +1035,7 @@ class FileSystemCollector(Collector):
                 "lvm_groups_info": lvm_groups_info,
                 "lvm_volumes_info": lvm_volumes_info,
                 "anf_volumes_info": anf_volumes_info,
+                **hana_storage_types,
             }
 
         except Exception as ex:

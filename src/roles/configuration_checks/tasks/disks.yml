@@ -45,12 +45,26 @@
         executable:                     /bin/bash
         cmd: |
                                         set -o pipefail
-                                        for lun_link in /dev/disk/azure/scsi1/lun*; do
-                                          if [ -L "$lun_link" ]; then
-                                            lun=$(basename "$lun_link" | sed 's/lun//')
-                                            device=$(readlink -f "$lun_link" | xargs basename)
-                                            echo "${device}:${lun}"
-                                          fi
+                                        shopt -s nullglob
+                                        declare -A seen_luns
+                                        lun_links=(
+                                          /dev/disk/azure/data/by-lun/*
+                                          /dev/disk/azure/scsi1/lun*
+                                        )
+                                        for lun_link in "${lun_links[@]}"; do
+                                          [ -L "$lun_link" ] || continue
+
+                                          lun=$(basename "$lun_link")
+                                          lun=${lun#lun}
+                                          [[ "$lun" =~ ^[0-9]+$ ]] || continue
+                                          [ -z "${seen_luns[$lun]:-}" ] || continue
+
+                                          device=$(readlink -f "$lun_link")
+                                          [ -e "$device" ] || continue
+                                          device=$(basename "$device")
+
+                                          echo "${device}:${lun}"
+                                          seen_luns[$lun]=1
                                         done
       register:                         device_lun_mapping_raw
       changed_when:                     false
