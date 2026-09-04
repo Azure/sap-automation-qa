@@ -1,0 +1,65 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+
+################################################################################
+#  Rescue tasks for Cross-VM (ALR) restore test cases.                         #
+################################################################################
+
+- name:                                 "Post Validation: {{ item.name | default('') }} - Set Test Case Status"
+  delegate_to:                          localhost
+  ansible.builtin.set_fact:
+    test_case_name:                     "{{ item.name | default('') }}: {{ test_execution_hostname | default(ansible_hostname) }}"
+    test_case_hostname:                 "{{ test_execution_hostname | default(ansible_hostname) }}"
+    test_case_description:              "{{ item.description }}"
+    test_case_status:                   "FAILED"
+    test_case_message:                  "{{ ansible_failed_result | default('Unknown error occurred during cross-VM restore test') }}"
+    test_case_details:                  "{{ ansible_failed_result | default('No error details available') }}"
+    test_case_var_log_messages:         []
+
+- name:                                 "Rescue: {{ item.name | default('') }} - Best-effort start HANA on target"
+  become:                               true
+  become_user:                          "{{ backup_alr_target_sid | lower }}adm"
+  ansible.builtin.shell: |
+                                        set -o pipefail
+                                        source /usr/sap/{{ backup_alr_target_sid | upper }}/home/.sapenv.sh && \
+                                        HDB start
+  args:
+    executable:                         /bin/bash
+  delegate_to:                          "{{ backup_target_vm_name }}"
+  run_once:                             true
+  changed_when:                         false
+  failed_when:                          false
+  when:
+                                        - backup_target_vm_name | default('') | length > 0
+                                        - backup_alr_target_sid | default('') | length > 0
+
+- name:                                 "Rescue: {{ item.name | default('') }} - Best-effort start target tenant '{{ db_item.name }}'"
+  become:                               true
+  become_user:                          "{{ backup_alr_target_sid | lower }}adm"
+  ansible.builtin.shell: |
+                                        set -o pipefail
+                                        source /usr/sap/{{ backup_alr_target_sid | upper }}/home/.sapenv.sh && \
+                                        hdbsql -U {{ hana_userstore_key | default('SYSTEM') }} -j \
+                                          "ALTER SYSTEM START DATABASE {{ db_item.name }}"
+  args:
+    executable:                         /bin/bash
+  delegate_to:                          "{{ backup_target_vm_name }}"
+  run_once:                             true
+  changed_when:                         false
+  failed_when:                          false
+  loop:                                 "{{ backup_tenant_items | default([]) }}"
+  loop_control:
+    loop_var:                           db_item
+    label:                              "{{ db_item.name }}"
+  when:
+                                        - backup_target_vm_name | default('') | length > 0
+                                        - backup_alr_target_sid | default('') | length > 0
+                                        - backup_tenant_items | default([]) | length > 0
+
+- name:                                 "Telemetry: {{ item.name | default('') }} - Send Telemetry Data"
+  ansible.builtin.include_tasks:        "roles/misc/tasks/post-telemetry-data.yml"
+  tags:                                 [telemetry]
+  run_once:                             true
+
+- name:                                 "Rescue: {{ item.name | default('') }} - Clear the failed state of hosts for next test case"
+  ansible.builtin.meta:                 clear_host_errors

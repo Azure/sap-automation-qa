@@ -55,8 +55,9 @@ enums:
 
   cluster_type:
     - sbd:                            &sbd "ISCSI"
+    - asd:                            &asd "ASD"
     - fencing_agent:                  &fencing_agent "AFA"
-    - all_fencing_agent:              &cluster_type [*sbd, *fencing_agent]
+    - all_fencing_agent:              &cluster_type [*sbd, *asd, *fencing_agent]
 
   collector_type:
     - command:                        &command "command"
@@ -115,7 +116,7 @@ checks:
 
   - id:                                 "DB-Db2-0002"
     name:                               "Linux installation & system language"
-    description:                        "Check if the Linux installation and system language are supported for Db2"
+    description:                        "Check whether LANG is set to the supported locale for the Db2 instance user"
     category:                           *sap_check
     severity:                           *high
     workload:                           *sap
@@ -128,7 +129,7 @@ checks:
       database_type:                    [*db2]
     collector_type:                     *command
     collector_args:
-      command:                          "echo $LANG"
+      command:                          "language=$(locale 2>/dev/null | awk -F= '$1 == \"LANG\" {gsub(/\"/, \"\", $2); print $2}'); [ -n \"$language\" ] && echo \"$language\" || echo \"LANG_NOT_SET\""
       user:                             *db2sid
     validator_type:                     *string
     validator_args:
@@ -527,7 +528,7 @@ checks:
       storage_type:                     *premium_storage
       role:                             [*db_role]
       database_type:                    [*db2]
-      high_availability_agent:          *sbd
+      high_availability_agent:          [*sbd, *asd]
     collector_type:                     *command
     collector_args:
       command:                          ". ~/sqllib/db2profile && db2pd -alldbs -hadr | grep -i 'PEER_WINDOW(seconds)' | awk '{print $NF}'"

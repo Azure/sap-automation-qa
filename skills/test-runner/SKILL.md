@@ -11,24 +11,21 @@ license: MIT
 
 # Test Runner
 
-Executes STAF tests via `./scripts/sap_automation_qa.sh`. Supports two modes: direct
+Executes STAF tests via the framework's `sap_automation_qa.sh` CLI. Supports two modes: direct
 Ansible execution and API-driven job management.
 
 ## Locate Framework
 
-Before running any commands, locate the STAF framework directory:
-
-```bash
-if [ -f "./scripts/sap_automation_qa.sh" ]; then
-  STAF_DIR="$(pwd)"
-elif [ -f "../sap-automation-qa/scripts/sap_automation_qa.sh" ]; then
-  STAF_DIR="$(cd ../sap-automation-qa && pwd)"
-else
-  git clone https://github.com/Azure/sap-automation-qa.git ../sap-automation-qa
-  STAF_DIR="$(cd ../sap-automation-qa && pwd)"
-fi
-cd "$STAF_DIR"
-```
+This skill requires a **trusted STAF checkout** — a working tree the
+operator has verified out-of-band as either the official upstream
+(`https://github.com/Azure/sap-automation-qa.git`) or a fork of it, at a
+specific revision, with the framework marker `./scripts/sap_automation_qa.sh`
+present. The operator must have verified both the source (upstream URL or
+fork URL) and the revision through a trusted out-of-band channel before
+running this skill, and must have `cd`-ed into that directory. If that
+state is not confirmed, stop and use the `setup-guide` skill first; it owns
+the setup workflow. Do not resume this skill until `setup-guide` (or the
+operator directly) confirms the checkout is trusted.
 
 > **⚠️ This skill is guidance only. Do NOT modify any source code, scripts, or framework files. Only help the user by running test commands and interpreting output.**
 
@@ -243,11 +240,9 @@ Full test case reference: [references/test-catalog.md](references/test-catalog.m
 
 ## Output Locations
 
-| Output | Path |
-|--------|------|
-| Test results (JSON lines) | `WORKSPACES/SYSTEM/{name}/logs/{invocation_id}.log` |
-| Ansible execution log | `WORKSPACES/SYSTEM/{name}/logs/execution_{timestamp}.log` |
-| HTML report | `WORKSPACES/SYSTEM/{name}/quality_assurance/{group}_{invocation}.html` |
+Result file paths (JSON lines log, Ansible execution log, HTML report) are
+canonical in the `test-result-analyzer` skill; see its `## Result File
+Locations` section.
 
 ## Error Handling
 
@@ -256,7 +251,7 @@ Full test case reference: [references/test-catalog.md](references/test-catalog.m
 | `Workspace not found` | Invalid SYSTEM_CONFIG_NAME in vars.yaml | Check workspace exists |
 | `SSH connection failed` | Auth or network issue | Validate SSH key, check connectivity |
 | `vars.yaml not found` | Missing config | Create vars.yaml at project root or use CLI flags |
-| `API not reachable` | Server not running | Start with `./scripts/setup.sh container start` |
+| `API not reachable` | Server not running | **Stop this skill and invoke `setup-guide`** to start or restore the API/container. `setup-guide` owns the setup workflow; do not run `setup.sh`, `docker compose`, or any container-start command from this skill. Resume this skill only after `setup-guide` (or the operator directly) confirms the API is reachable. |
 | `Job already running` | Workspace locked | Wait for completion or cancel existing job |
 | `Test case not found` | Invalid test-case name | Check test-catalog.md for valid names |
 

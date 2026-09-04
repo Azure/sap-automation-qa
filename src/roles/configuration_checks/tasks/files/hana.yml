@@ -67,8 +67,9 @@ enums:
 
   cluster_type:
     - sbd:                            &sbd "ISCSI"
+    - asd:                            &asd "ASD"
     - fencing_agent:                  &fencing_agent "AFA"
-    - all_fencing_agent:              &cluster_type [*sbd, *fencing_agent]
+    - all_fencing_agent:              &cluster_type [*sbd, *asd, *fencing_agent]
 
   collector_type:
     - command:                        &command "command"
@@ -905,7 +906,7 @@ checks:
       os_type:                          [*suse, *redhat]
       os_version:                       *all_versions
       hardware_type:                    *vm
-      storage_type:                     *all_storage
+      hana_data_storage_type:           *all_storage
       role:                             [*db_role]
       database_type:                    [*hana]
     collector_type:                     *command
@@ -929,7 +930,7 @@ checks:
       os_type:                          [*suse, *redhat]
       os_version:                       *all_versions
       hardware_type:                    *vm
-      storage_type:                     *premium_storage
+      hana_data_storage_type:           *premium_storage
       role:                             [*db_role]
       database_type:                    [*hana]
     collector_type:                     *azure
@@ -955,7 +956,7 @@ checks:
       os_type:                          [*suse, *redhat]
       os_version:                       *all_versions
       hardware_type:                    *vm
-      storage_type:                     *all_storage
+      hana_log_storage_type:            *all_storage
       role:                             [*db_role]
       database_type:                    [*hana]
     collector_type:                     *command
@@ -979,7 +980,7 @@ checks:
       os_type:                          [*suse, *redhat]
       os_version:                       *all_versions
       hardware_type:                    *vm
-      storage_type:                     *premium_storage
+      hana_log_storage_type:            *premium_storage
       role:                             [*db_role]
       database_type:                    [*hana]
     collector_type:                     *azure
@@ -1005,7 +1006,7 @@ checks:
       os_type:                          [*suse, *redhat]
       os_version:                       *all_versions
       hardware_type:                    *vm
-      storage_type:                     *all_storage
+      hana_shared_storage_type:         *all_storage
       role:                             [*db_role]
       database_type:                    [*hana]
     collector_type:                     *command
@@ -1053,7 +1054,7 @@ checks:
       os_type:                          [*suse, *redhat]
       os_version:                       *all_versions
       hardware_type:                    *vm
-      storage_type:                     *premium_storage
+      hana_data_storage_type:           *premium_storage
       role:                             [*db_role]
       database_type:                    [*hana]
     collector_type:                     *command
@@ -1077,7 +1078,7 @@ checks:
       os_type:                          [*suse, *redhat]
       os_version:                       *all_versions
       hardware_type:                    *vm
-      storage_type:                     *premium_storage
+      hana_log_storage_type:            *premium_storage
       role:                             [*db_role]
       database_type:                    [*hana]
     collector_type:                     *command
@@ -1101,7 +1102,7 @@ checks:
       os_type:                          [*suse, *redhat]
       os_version:                       *all_versions
       hardware_type:                    *vm
-      storage_type:                     *premium_storage
+      hana_data_storage_type:           *premium_storage
       role:                             [*db_role]
       database_type:                    [*hana]
     collector_type:                     *azure
@@ -1127,7 +1128,7 @@ checks:
       os_type:                          [*suse, *redhat]
       os_version:                       *all_versions
       hardware_type:                    *vm
-      storage_type:                     *premium_storage
+      hana_data_storage_type:           *premium_storage
       role:                             [*db_role]
       database_type:                    [*hana]
     collector_type:                     *azure
@@ -1153,7 +1154,7 @@ checks:
       os_type:                          [*suse, *redhat]
       os_version:                       *all_versions
       hardware_type:                    *vm
-      storage_type:                     *premium_storage
+      hana_log_storage_type:            *premium_storage
       role:                             [*db_role]
       database_type:                    [*hana]
     collector_type:                     *azure
@@ -1179,7 +1180,7 @@ checks:
       os_type:                          [*suse, *redhat]
       os_version:                       *all_versions
       hardware_type:                    *vm
-      storage_type:                     *premium_storage
+      hana_log_storage_type:            *premium_storage
       role:                             [*db_role]
       database_type:                    [*hana]
     collector_type:                     *azure
@@ -1310,7 +1311,7 @@ checks:
       os_type:                          [*suse, *redhat]
       os_version:                       *all_versions
       hardware_type:                    *vm
-      storage_type:                     *anf
+      hana_data_storage_type:           *anf
       role:                             [*db_role]
       database_type:                    [*hana]
     collector_type:                     *azure
@@ -1336,7 +1337,7 @@ checks:
       os_type:                          [*suse, *redhat]
       os_version:                       *all_versions
       hardware_type:                    *vm
-      storage_type:                     *anf
+      hana_log_storage_type:            *anf
       role:                             [*db_role]
       database_type:                    [*hana]
     collector_type:                     *azure
@@ -1484,7 +1485,7 @@ checks:
       os_type:                          [*suse, *redhat]
       os_version:                       *all_versions
       hardware_type:                    *all_hardware
-      storage_type:                     *anf
+      hana_shared_storage_type:         *anf
       role:                             [*db_role]
       database_type:                    [*hana]
     collector_type:                     *command
@@ -1508,7 +1509,7 @@ checks:
       os_type:                          [*suse, *redhat]
       os_version:                       *all_versions
       hardware_type:                    *vm
-      storage_type:                     *premium_storage
+      hana_data_storage_type:           *premium_storage
       role:                             [*db_role]
       database_type:                    [*hana]
     collector_type:                     *azure
@@ -1534,7 +1535,7 @@ checks:
       os_type:                          [*suse, *redhat]
       os_version:                       *all_versions
       hardware_type:                    *vm
-      storage_type:                     *premium_storage
+      hana_log_storage_type:            *premium_storage
       role:                             [*db_role]
       database_type:                    [*hana]
     collector_type:                     *azure
@@ -1560,7 +1561,7 @@ checks:
       os_type:                          [*suse, *redhat]
       os_version:                       *all_versions
       hardware_type:                    *vm
-      storage_type:                     *premium_storage
+      hana_data_storage_type:           *premium_storage
       role:                             [*db_role]
       database_type:                    [*hana]
     collector_type:                     *azure
@@ -1586,7 +1587,7 @@ checks:
       os_type:                          [*suse, *redhat]
       os_version:                       *all_versions
       hardware_type:                    *vm
-      storage_type:                     *premium_storage
+      hana_log_storage_type:            *premium_storage
       role:                             [*db_role]
       database_type:                    [*hana]
     collector_type:                     *azure
@@ -1612,7 +1613,7 @@ checks:
       os_type:                          [*suse, *redhat]
       os_version:                       *all_versions
       hardware_type:                    *vm
-      storage_type:                     ["Premium_LRS"]
+      hana_log_storage_type:            ["Premium_LRS"]
       role:                             [*db_role]
       database_type:                    [*hana]
     collector_type:                     *command
@@ -1637,7 +1638,7 @@ checks:
       os_type:                          [*suse, *redhat]
       os_version:                       *all_versions
       hardware_type:                    *vm
-      storage_type:                     *premium_storage
+      hana_data_storage_type:           *premium_storage
       role:                             [*db_role]
       database_type:                    [*hana]
     collector_type:                     *azure
@@ -1663,7 +1664,7 @@ checks:
       os_type:                          [*suse, *redhat]
       os_version:                       *all_versions
       hardware_type:                    *vm
-      storage_type:                     *premium_storage
+      hana_log_storage_type:            *premium_storage
       role:                             [*db_role]
       database_type:                    [*hana]
     collector_type:                     *azure

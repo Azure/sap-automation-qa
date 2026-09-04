@@ -1,8 +1,14 @@
 ---
 name: workspace-creator
 description: >
-  Create new SAP workspace configurations for STAF testing.
-  Use when asked to set up a new workspace, onboard a system, or create workspace configs.
+  Create new SAP workspace configurations for STAF testing — generates
+  sap-parameters.yaml and hosts.yaml under WORKSPACES/SYSTEM/ from templates.
+  Use when asked to create a workspace or onboard a new SAP system in an
+  existing STAF installation; not for installing STAF itself (see setup-guide)
+  and not for checking a workspace that already exists (see workspace-validator).
+  Triggered by "create workspace", "new workspace", "onboard system",
+  "onboard SAP system", "add new system", "generate hosts.yaml",
+  "generate sap-parameters", or "setup SAP system for testing".
 allowed-tools: shell
 license: MIT
 ---
@@ -14,19 +20,16 @@ and `hosts.yaml` from templates based on user-provided system details.
 
 ## Locate Framework
 
-Before creating workspaces, locate the STAF framework directory:
-
-```bash
-if [ -f "./scripts/sap_automation_qa.sh" ]; then
-  STAF_DIR="$(pwd)"
-elif [ -f "../sap-automation-qa/scripts/sap_automation_qa.sh" ]; then
-  STAF_DIR="$(cd ../sap-automation-qa && pwd)"
-else
-  git clone https://github.com/Azure/sap-automation-qa.git ../sap-automation-qa
-  STAF_DIR="$(cd ../sap-automation-qa && pwd)"
-fi
-cd "$STAF_DIR"
-```
+This skill requires a **trusted STAF checkout** — a working tree the
+operator has verified out-of-band as either the official upstream
+(`https://github.com/Azure/sap-automation-qa.git`) or a fork of it, at a
+specific revision, with the framework marker `./scripts/sap_automation_qa.sh`
+present. The operator must have verified both the source (upstream URL or
+fork URL) and the revision through a trusted out-of-band channel before
+running this skill, and must have `cd`-ed into that directory. If that
+state is not confirmed, stop and use the `setup-guide` skill first; it owns
+the setup workflow. Do not resume this skill until `setup-guide` (or the
+operator directly) confirms the checkout is trusted.
 
 > **⚠️ This skill is guidance only. Do NOT modify any source code, scripts, or framework files. Only help the user by creating workspace configuration files (sap-parameters.yaml, hosts.yaml) under WORKSPACES/SYSTEM/.**
 
@@ -119,7 +122,7 @@ backup_restore_point_time:     ""            # ISO 8601 UTC, empty for latest
 
 See [templates/hosts.yaml.template](templates/hosts.yaml.template)
 
-**Structure (6 groups):**
+**Structure (5 groups):**
 
 ```yaml
 {SID}_DB:                              # 2 hosts for HA
@@ -188,7 +191,7 @@ Files created:
   ✅ quality_assurance/ directory created
 
 Next steps:
-  1. Validate: python3 .github/skills/workspace-validator/scripts/validate_workspace.py WORKSPACES/SYSTEM/DEV-WEEU-SAP01-X00
+  1. Validate: python3 skills/workspace-validator/scripts/validate_workspace.py WORKSPACES/SYSTEM/DEV-WEEU-SAP01-X00
   2. Run tests: ./scripts/sap_automation_qa.sh --test-groups=HA_DB_HANA --test-cases=[ha-config]
 ```
 

@@ -59,6 +59,15 @@ options:
             - SAP HANA database SID (e.g. H05).
         type: str
         required: false
+    restore_source_type:
+        description:
+            - Optional topology filter for restore-source discovery.
+            - When omitted, discovery returns all matching items for reporting.
+        type: str
+        choices:
+            - hsr
+            - standalone
+        required: false
     container_name:
         description:
             - Backup container name
@@ -216,7 +225,8 @@ class AzureBackupHana(SapAutomationQA):
         subscription_id: str,
         msi_client_id: str = "",
         database_sid: str = "",
-        source_vm_name: str = "",
+        source_vm_names: Optional[List[str]] = None,
+        restore_source_type: str = "",
         poll_interval: int = _DEFAULT_POLL_INTERVAL,
         poll_timeout: int = _DEFAULT_POLL_TIMEOUT,
         parameter_definitions: Optional[List[Dict[str, str]]] = None,
@@ -230,7 +240,8 @@ class AzureBackupHana(SapAutomationQA):
         self.vault_resource_group = vault_rg
         self.subscription_id = subscription_id
         self.database_sid = database_sid
-        self.source_vm_name = source_vm_name
+        self.source_vm_names: List[str] = source_vm_names if source_vm_names else []
+        self.restore_source_type = restore_source_type
         self.poll_interval = poll_interval
         self.poll_timeout = poll_timeout
         self.parameter_definitions: List[Dict[str, str]] = (
@@ -293,7 +304,8 @@ class AzureBackupHana(SapAutomationQA):
                 client=self.client,
                 vault_name=self.vault_name,
                 vault_resource_group=(self.vault_resource_group),
-                source_vm_name=self.source_vm_name,
+                source_vm_names=self.source_vm_names,
+                restore_source_type=self.restore_source_type,
                 parameter_definitions=(self.parameter_definitions),
                 log_fn=self.log,
             )
@@ -544,7 +556,13 @@ def run_module() -> None:
             target_vm_resource_group=dict(type="str", required=False, default=""),
             restore_mode=dict(type="str", required=False, default=""),
             source_resource_id=dict(type="str", required=False, default=""),
-            source_vm_name=dict(type="str", required=False, default=""),
+            source_vm_names=dict(type="list", elements="str", required=False, default=[]),
+            restore_source_type=dict(
+                type="str",
+                choices=["", "hsr", "standalone"],
+                required=False,
+                default="",
+            ),
             restore_job_id=dict(type="str", required=False, default=""),
             poll_interval_seconds=dict(type="int", required=False, default=30),
             poll_timeout_seconds=dict(type="int", required=False, default=7200),
@@ -565,7 +583,8 @@ def run_module() -> None:
         subscription_id=params["subscription_id"],
         msi_client_id=params.get("msi_client_id", ""),
         database_sid=params.get("database_sid", ""),
-        source_vm_name=params.get("source_vm_name", ""),
+        source_vm_names=params.get("source_vm_names", []),
+        restore_source_type=params.get("restore_source_type", ""),
         poll_interval=params.get(
             "poll_interval_seconds",
             AzureBackupHana._DEFAULT_POLL_INTERVAL,

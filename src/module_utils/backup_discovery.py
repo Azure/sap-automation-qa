@@ -16,7 +16,9 @@ from azure.mgmt.recoveryservicesbackup.models import (
     AzureWorkloadSAPHanaRecoveryPoint,
     AzureWorkloadJob,
     BackupManagementType,
+    ContainerType,
     DataSourceType,
+    DistributedNodesInfo,
     ProtectedItemHealthStatus,
     ProtectionStatus,
 )
@@ -35,7 +37,9 @@ class BackupDiscovery:
     :param client: Authenticated Recovery Services Backup client.
     :param vault_name: Name of the Recovery Services vault.
     :param vault_resource_group: Resource group of the vault.
-    :param source_vm_name: Azure VM name to scope results to.
+    :param source_vm_names: Azure VM names to scope results to (matches any; for HSR pass
+        both nodes so discovery succeeds regardless of the current primary).
+    :param restore_source_type: Optional restore topology filter, ``hsr`` or ``standalone``.
     :param parameter_definitions: YAML-loaded parameter defs for HTML report generation.
     :param log_fn: Optional callback ``(level, message)``.
     """
@@ -50,14 +54,22 @@ class BackupDiscovery:
         client: RecoveryServicesBackupClient,
         vault_name: str,
         vault_resource_group: str,
-        source_vm_name: str = "",
+        source_vm_names: Optional[List[str]] = None,
+        restore_source_type: str = "",
         parameter_definitions: Optional[List[Dict[str, str]]] = None,
         log_fn: Optional[Callable[[int, str], None]] = None,
     ) -> None:
         self._client = client
         self._vault_name = vault_name
         self._vault_rg = vault_resource_group
-        self._source_vm = (source_vm_name or "").lower().strip()
+        self._source_vms: List[str] = [
+            vm.lower().strip() for vm in (source_vm_names or []) if vm and vm.strip()
+        ]
+        if restore_source_type not in ("", "hsr", "standalone"):
+            raise ValueError("restore_source_type must be 'hsr', 'standalone', or empty")
+        self._required_hsr: Optional[bool] = (
+            None if not restore_source_type else restore_source_type == "hsr"
+        )
         self._param_defs: List[Dict[str, str]] = (
             parameter_definitions if parameter_definitions else []
         )
@@ -67,39 +79,52 @@ class BackupDiscovery:
         self,
         container_name: str,
         server_name: str = "",
+        nodes_list: Optional[List[DistributedNodesInfo]] = None,
     ) -> bool:
         """Check whether a container belongs to the source VM.
 
         :param container_name: Backup container name.
         :param server_name: HANA server hostname from item properties (used for HSR matching).
-        :returns: ``True`` when no filter is set, the container  matches the source VM,
+        :param nodes_list: Distributed HSR nodes returned by Azure Backup.
+        :returns: ``True`` when no filter is set, the container matches the source VM,
             or -- for HSR -- the server name shares a significant identifier with the VM name.
         """
-        if not self._source_vm:
+        if not self._source_vms:
             return True
         lower_container = (container_name or "").lower()
-        if self._source_vm in lower_container:
-            return True
-        if self.is_hsr_container(container_name):
-            lower_server = (server_name or "").lower().strip()
-            if not lower_server:
-                return False
+        is_hsr = self.is_hsr_container(container_name)
+        lower_server = (server_name or "").lower().strip()
+        if is_hsr:
+            for node in nodes_list or []:
+                node_name = (node.node_name or "").lower()
+                source_vm = (node.source_resource_id or "").lower().rstrip("/").rsplit("/", 1)[-1]
+                if any(
+                    (source_vm and vm == source_vm)
+                    or (
+                        node_name
+                        and min(len(vm), len(node_name)) >= 5
+                        and (vm in node_name or node_name in vm)
+                    )
+                    for vm in self._source_vms
+                ):
+                    return True
 
-            if min(len(self._source_vm), len(lower_server)) >= 5 and (
-                self._source_vm in lower_server or lower_server in self._source_vm
+        server_parts = re.split(r"[-_]", lower_server)
+        for source_vm in self._source_vms:
+            if source_vm in lower_container:
+                return True
+            if not is_hsr or not lower_server:
+                continue
+            if min(len(source_vm), len(lower_server)) >= 5 and (
+                source_vm in lower_server or lower_server in source_vm
             ):
                 return True
-
-            parts = re.split(r"[-_]", self._source_vm)
-            for part in parts:
-                if len(part) >= 5 and part in lower_server:
-                    return True
-
-            server_parts = re.split(r"[-_]", lower_server)
-            for part in server_parts:
-                if len(part) >= 5 and part in self._source_vm:
-                    return True
-            return False
+            if any(
+                len(part) >= 5 and part in lower_server for part in re.split(r"[-_]", source_vm)
+            ):
+                return True
+            if any(len(part) >= 5 and part in source_vm for part in server_parts):
+                return True
         return False
 
     @staticmethod
@@ -122,7 +147,7 @@ class BackupDiscovery:
         :param container_name: Backup container name.
         :returns: ``True`` when the container is HSR-based.
         """
-        return "hanahsrcontainer" in (container_name or "").lower()
+        return ContainerType.HANA_HSR_CONTAINER.value.lower() in (container_name or "").lower()
 
     @staticmethod
     def evaluate_db_status(
@@ -338,7 +363,7 @@ class BackupDiscovery:
         :returns: Dict with ``protected_items``
         :raises Exception: Propagated from SDK calls.
         """
-        vm_label = f" for VM '{self._source_vm}'" if self._source_vm else ""
+        vm_label = f" for VM(s) '{', '.join(self._source_vms)}'" if self._source_vms else ""
         self._log(
             logging.INFO,
             f"Discovering protected HANA items in vault " f"'{self._vault_name}'{vm_label}",
@@ -353,6 +378,7 @@ class BackupDiscovery:
         job_index = self.fetch_recent_jobs()
         parameters: List[Dict[str, Any]] = []
         skipped = 0
+        excluded: List[Dict[str, Any]] = []
 
         for item in self.list_protected_items():
             props = self.get_props(item)
@@ -362,11 +388,18 @@ class BackupDiscovery:
             if not self._matches_source_vm(
                 container,
                 server_name=props.server_name or "",
+                nodes_list=props.nodes_list,
             ):
                 skipped += 1
                 continue
 
             is_hsr = self.is_hsr_container(container_name=container)
+
+            if self._required_hsr is not None and (
+                bool(props.is_scheduled_for_deferred_delete) or is_hsr != self._required_hsr
+            ):
+                skipped += 1
+                continue
 
             rp_list = self.list_recovery_points(
                 container_name=container,
@@ -391,6 +424,24 @@ class BackupDiscovery:
                 is_hsr=is_hsr,
                 last_job=last_job,
             )
+
+            if self._required_hsr is not None and db_status == TestStatus.ERROR.value:
+                excluded.append(
+                    {
+                        "name": props.friendly_name or "",
+                        "container_name": container,
+                        "item_name": item_name,
+                        "server_type": ("HSR" if is_hsr else "Standalone Instance"),
+                        "reason": (
+                            "matched the source VM and topology but has no usable "
+                            "restore point / backup (evaluated FAILED); excluded from "
+                            "restore candidates"
+                        ),
+                    }
+                )
+                skipped += 1
+                continue
+
             status_counts[db_status] = status_counts.get(db_status, 0) + 1
 
             server_name = props.server_name or ""
@@ -405,6 +456,9 @@ class BackupDiscovery:
                     "backup_status": db_status,
                     "health_status": (props.protected_item_health_status or "Unknown"),
                     "protection_status": (props.protection_status or "Unknown"),
+                    "is_scheduled_for_deferred_delete": bool(
+                        props.is_scheduled_for_deferred_delete
+                    ),
                     "last_backup_time": (
                         last_full.start_time.isoformat()
                         if last_full and last_full.start_time
@@ -460,7 +514,7 @@ class BackupDiscovery:
         if skipped:
             self._log(
                 logging.INFO,
-                f"Skipped {skipped} item(s) not matching " f"source VM '{self._source_vm}'.",
+                f"Skipped {skipped} item(s) that did not match discovery criteria.",
             )
 
         if status_counts.get(TestStatus.ERROR.value, 0):
@@ -472,6 +526,12 @@ class BackupDiscovery:
         else:
             status = TestStatus.ERROR.value
 
+        if excluded:
+            if not protected:
+                status = TestStatus.ERROR.value
+            elif status == TestStatus.SUCCESS.value:
+                status = TestStatus.WARNING.value
+
         total = len(protected)
         passed = status_counts.get(TestStatus.SUCCESS.value, 0)
         warned = status_counts.get(TestStatus.WARNING.value, 0)
@@ -480,12 +540,19 @@ class BackupDiscovery:
         return {
             "protected_items": protected,
             "restore_points": restore_pts,
+            "excluded_items": excluded,
             "details": {"parameters": parameters},
             "status": status,
             "message": (
                 f"{total} database(s) discovered: "
                 f"{passed} PASSED, {warned} WARNING, "
                 f"{failed} FAILED."
+                + (
+                    f" {len(excluded)} requested item(s) excluded (no usable "
+                    f"restore point): {', '.join(e['name'] for e in excluded)}."
+                    if excluded
+                    else ""
+                )
             ),
         }
 
@@ -509,6 +576,7 @@ class BackupDiscovery:
             if not self._matches_source_vm(
                 container,
                 server_name=props.server_name or "",
+                nodes_list=props.nodes_list,
             ):
                 continue
             item_count += 1

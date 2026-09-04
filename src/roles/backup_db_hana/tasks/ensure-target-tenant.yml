@@ -1,0 +1,79 @@
+# Copyright (c) Microsoft Corporation.
+# Licensed under the MIT License.
+
+# /*---------------------------------------------------------------------------
+# |  Ensure the ALR target tenant database(s) exist on the target instance    |
+# +--------------------------------------------------------------------------*/
+#
+#  Azure Backup ALR uses OverwriteOptions.OVERWRITE and recovers into a named
+#  target tenant (target_database_name = <TARGET_SID>/<tenant>). HANA cannot:
+#    * RECOVER ENCRYPTION ROOT KEYS FOR <tenant>, nor
+#    * be overwritten by the restore stream,
+#  for a tenant that does not yet exist. On a cross-SID target the source
+#  tenant name (e.g. HDB) is not present, so create it empty here. The
+#  subsequent Azure restore overwrites its data and credentials, and (when the
+#  backup is encrypted) the root-key recovery runs against this existing tenant.
+#
+#  Runs for both encrypted and unencrypted restores - a missing target tenant
+#  is a common cause of "HANA stream closed abruptly / 0 MB / Broken pipe".
+
+- name:                                 "Test Execution: {{ item.name | default('') }} - Generate temporary tenant SYSTEM password"
+  ansible.builtin.set_fact:
+    _target_tenant_temp_password:       "{{ lookup('password', '/dev/null length=24 chars=ascii_letters,digits') }}Aa1"
+  run_once:                             true
+  no_log:                               true
+
+- name:                                 "Test Execution: {{ item.name | default('') }} - Check whether target tenant '{{ db_item.name }}' exists"
+  become:                               true
+  become_user:                          "{{ backup_alr_target_sid | lower }}adm"
+  ansible.builtin.shell: |
+                                        set -o pipefail
+                                        source /usr/sap/{{ backup_alr_target_sid | upper }}/home/.sapenv.sh && \
+                                        hdbsql -U {{ hana_userstore_key | default('SYSTEM') }} -j -a -x \
+                                          "SELECT COUNT(*) FROM SYS.M_DATABASES WHERE UPPER(DATABASE_NAME) = '{{ db_item.name | upper }}'"
+  args:
+    executable:                         /bin/bash
+  register:                             target_tenant_exists
+  delegate_to:                          "{{ backup_target_vm_name }}"
+  run_once:                             true
+  changed_when:                         false
+  loop:                                 "{{ backup_tenant_items }}"
+  loop_control:
+    loop_var:                           db_item
+    label:                              "{{ db_item.name }}"
+  when:                                 backup_tenant_items | length > 0
+
+- name:                                 "Test Execution: {{ item.name | default('') }} - Create target tenant '{{ db_item.name }}' when missing"
+  become:                               true
+  become_user:                          "{{ backup_alr_target_sid | lower }}adm"
+  ansible.builtin.shell: |
+                                        set -o pipefail
+                                        source /usr/sap/{{ backup_alr_target_sid | upper }}/home/.sapenv.sh && \
+                                        hdbsql -U {{ hana_userstore_key | default('SYSTEM') }} -j \
+                                          "CREATE DATABASE {{ db_item.name }} SYSTEM USER PASSWORD {{ _target_tenant_temp_password }}"
+  args:
+    executable:                         /bin/bash
+  register:                             target_tenant_create
+  delegate_to:                          "{{ backup_target_vm_name }}"
+  run_once:                             true
+  no_log:                               true
+  changed_when:                         target_tenant_create.rc == 0
+  loop:                                 "{{ backup_tenant_items }}"
+  loop_control:
+    loop_var:                           db_item
+    index_var:                          idx
+    label:                              "{{ db_item.name }}"
+  when:
+                                        - backup_tenant_items | length > 0
+                                        - (target_tenant_exists.results[idx].stdout | default('0') | trim | int) == 0
+
+- name:                                 "Test Execution: {{ item.name | default('') }} - Log target tenant preparation"
+  ansible.builtin.debug:
+    msg: >-
+      Target tenant preparation on {{ backup_target_vm_name }}
+      ({{ backup_alr_target_sid | upper }}):
+      {% for r in target_tenant_exists.results | default([]) -%}
+      {{ r.db_item.name }}={{ 'existed' if (r.stdout | default('0') | trim | int) > 0 else 'created' }}{{ ', ' if not loop.last else '' }}
+      {%- endfor %}
+  run_once:                             true
+  when:                                 target_tenant_exists.results is defined

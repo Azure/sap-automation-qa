@@ -35,6 +35,48 @@
   changed_when:                         hsr_enable_result.rc == 0
   failed_when:                          hsr_enable_result.rc not in [0, 102]
 
+- name:                                 "HSR Re-establish: Stop HANA on secondary before full re-register"
+  become:                               true
+  become_user:                          "{{ db_sid | lower }}adm"
+  ansible.builtin.shell: |
+                                        set -o pipefail
+                                        source /usr/sap/{{ db_sid | upper }}/home/.sapenv.sh && \
+                                        HDB stop
+  args:
+    executable:                         /bin/bash
+  register:                             hsr_secondary_stop_pre_register
+  delegate_to:                          "{{ backup_secondary_node | default(inventory_hostname, true) }}"
+  run_once:                             true
+  changed_when:                         hsr_secondary_stop_pre_register.rc == 0
+  failed_when:                          false
+  when:
+                                        - hsr_enable_result.rc | default(1) in [0, 102]
+                                        - backup_secondary_node | default('') != ''
+
+- name:                                 "HSR Re-establish: Register secondary for replication (full replica)"
+  become:                               true
+  become_user:                          "{{ db_sid | lower }}adm"
+  ansible.builtin.shell: |
+                                        set -o pipefail
+                                        source /usr/sap/{{ db_sid | upper }}/home/.sapenv.sh && \
+                                        hdbnsutil -sr_register \
+                                          --name={{ backup_secondary_site_name | default(cluster_status_pre.secondary_site_name | default(backup_hsr_secondary_site | default('site2'), true), true) }} \
+                                          --remoteHost={{ backup_primary_node }} \
+                                          --remoteInstance={{ db_instance_number }} \
+                                          --replicationMode={{ cluster_status_pre.replication_mode | default(backup_hsr_replication_mode | default('syncmem')) }} \
+                                          --operationMode={{ cluster_status_pre.operation_mode | default(backup_hsr_operation_mode | default('logreplay')) }} \
+                                          --force_full_replica
+  args:
+    executable:                         /bin/bash
+  register:                             hsr_register_result
+  delegate_to:                          "{{ backup_secondary_node | default(inventory_hostname, true) }}"
+  run_once:                             true
+  changed_when:                         hsr_register_result.rc == 0
+  failed_when:                          hsr_register_result.rc != 0
+  when:
+                                        - hsr_enable_result.rc | default(1) in [0, 102]
+                                        - backup_secondary_node | default('') != ''
+
 - name:                                 "HSR Re-establish: Start HANA on secondary"
   become:                               true
   become_user:                          "{{ db_sid | lower }}adm"
@@ -49,30 +91,7 @@
   run_once:                             true
   changed_when:                         hsr_secondary_start.rc == 0
   when:
-                                        - hsr_enable_result.rc | default(1) in [0, 102]
-                                        - backup_secondary_node | default('') != ''
-
-- name:                                 "HSR Re-establish: Register secondary for replication"
-  become:                               true
-  become_user:                          "{{ db_sid | lower }}adm"
-  ansible.builtin.shell: |
-                                        set -o pipefail
-                                        source /usr/sap/{{ db_sid | upper }}/home/.sapenv.sh && \
-                                        hdbnsutil -sr_register --online \
-                                          --name={{ backup_secondary_site_name | default(cluster_status_pre.secondary_site_name | default(backup_hsr_secondary_site | default('site2'), true), true) }} \
-                                          --remoteHost={{ backup_primary_node }} \
-                                          --remoteInstance={{ db_instance_number }} \
-                                          --replicationMode={{ cluster_status_pre.replication_mode | default(backup_hsr_replication_mode | default('syncmem')) }} \
-                                          --operationMode={{ cluster_status_pre.operation_mode | default(backup_hsr_operation_mode | default('logreplay')) }}
-  args:
-    executable:                         /bin/bash
-  register:                             hsr_register_result
-  delegate_to:                          "{{ backup_secondary_node | default(inventory_hostname, true) }}"
-  run_once:                             true
-  changed_when:                         hsr_register_result.rc == 0
-  failed_when:                          hsr_register_result.rc != 0
-  when:
-                                        - hsr_enable_result.rc | default(1) in [0, 102]
+                                        - hsr_register_result.rc | default(1) == 0
                                         - backup_secondary_node | default('') != ''
 
 - name:                                 "HSR Re-establish: Validate replication state"

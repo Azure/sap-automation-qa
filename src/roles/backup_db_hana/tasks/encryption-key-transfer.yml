@@ -22,6 +22,7 @@
     path:                               "{{ _root_key_tmp_path }}"
     state:                              directory
     mode:                               "0700"
+  delegate_to:                          "{{ backup_primary_node }}"
   run_once:                             true
   when:                                 backup_encryption_enabled | default(false) | bool
 
@@ -32,10 +33,11 @@
                                         set -o pipefail
                                         source /usr/sap/{{ db_sid | upper }}/home/.sapenv.sh && \
                                         hdbsql -U {{ hana_userstore_key | default('SYSTEM') }} -j -a -x \
-                                          "SELECT DATABASE_NAME, ACTIVE_STATUS FROM SYS.M_DATABASES WHERE DATABASE_NAME = '{{ db_item.name }}'"
+                                          "SELECT ACTIVE_STATUS FROM SYS.M_DATABASES WHERE DATABASE_NAME = '{{ db_item.name }}'"
   args:
     executable:                         /bin/bash
   register:                             encryption_tenant_status
+  delegate_to:                          "{{ backup_primary_node }}"
   run_once:                             true
   changed_when:                         false
   loop:                                 "{{ backup_tenant_items }}"
@@ -53,9 +55,10 @@
                                         set -o pipefail
                                         source /usr/sap/{{ db_sid | upper }}/home/.sapenv.sh && \
                                         hdbsql -U {{ hana_userstore_key | default('SYSTEM') }} -j \
-                                          "ALTER SYSTEM START DATABASE {{ db_item.name }}"
+                                        "ALTER SYSTEM START DATABASE {{ db_item.name }}"
   args:
     executable:                         /bin/bash
+  delegate_to:                          "{{ backup_primary_node }}"
   run_once:                             true
   register:                             encryption_start_tenants_source
   changed_when:                         true
@@ -80,8 +83,10 @@
   args:
     executable:                         /bin/bash
   register:                             encryption_set_pwd_tenants
+  delegate_to:                          "{{ backup_primary_node }}"
   run_once:                             true
   changed_when:                         false
+  no_log:                               true
   loop:                                 "{{ backup_tenant_items }}"
   loop_control:
     loop_var:                           db_item
@@ -104,6 +109,7 @@
   args:
     executable:                         /bin/bash
   register:                             encryption_export_tenants
+  delegate_to:                          "{{ backup_primary_node }}"
   run_once:                             true
   changed_when:                         false
   loop:                                 "{{ backup_tenant_items }}"
@@ -136,6 +142,7 @@
     paths:                              "{{ _root_key_tmp_path }}"
     patterns:                           "*_rootkeys"
   register:                             encryption_exported_files
+  delegate_to:                          "{{ backup_primary_node }}"
   run_once:                             true
   when:                                 backup_encryption_enabled | default(false) | bool
 
@@ -157,10 +164,26 @@
   loop_control:
     loop_var:                           rkb_file
     label:                              "{{ rkb_file.path | basename }}"
+  delegate_to:                          "{{ backup_primary_node }}"
   run_once:                             true
   when:
                                         - backup_encryption_enabled | default(false) | bool
                                         - encryption_exported_files.files | default([]) | length > 0
+
+- name:                                 "Test Execution: {{ item.name | default('') }} - Assert all tenant root keys were exported"
+  ansible.builtin.assert:
+    that:
+      - encryption_exported_files.files | default([]) | length == backup_tenant_items | length
+    fail_msg: >-
+      Expected {{ backup_tenant_items | length }} encryption root key file(s) but found
+      {{ encryption_exported_files.files | default([]) | length }} in {{ _root_key_tmp_path }}.
+      Root key backup likely failed; aborting before cross-VM restore to avoid restoring
+      unreadable encrypted data on the target.
+    success_msg:                        "All {{ backup_tenant_items | length }} tenant root key file(s) exported."
+  run_once:                             true
+  when:
+                                        - backup_encryption_enabled | default(false) | bool
+                                        - backup_tenant_items | length > 0
 
 # /*-----------------------------------------------------------------------
 # |     Step 4: Import root keys on target HANA                            |
@@ -170,7 +193,7 @@
     path:                               "{{ _root_key_tmp_path }}"
     state:                              directory
     mode:                               "0700"
-    owner:                              "{{ db_sid | lower }}adm"
+    owner:                              "{{ backup_alr_target_sid | lower }}adm"
     group:                              "sapsys"
   delegate_to:                          "{{ backup_target_vm_name }}"
   run_once:                             true
@@ -183,7 +206,7 @@
     src:                                "/tmp/sap_root_keys_controller/{{ rkb_file.path | basename }}"
     dest:                               "{{ _root_key_tmp_path }}/{{ rkb_file.path | basename }}"
     mode:                               "0600"
-    owner:                              "{{ db_sid | lower }}adm"
+    owner:                              "{{ backup_alr_target_sid | lower }}adm"
     group:                              "sapsys"
   loop:                                 "{{ encryption_exported_files.files | default([]) }}"
   loop_control:
@@ -197,10 +220,10 @@
 
 - name:                                 "Test Execution: {{ item.name | default('') }} - Stop tenant DB on target before key recovery"
   become:                               true
-  become_user:                          "{{ db_sid | lower }}adm"
+  become_user:                          "{{ backup_alr_target_sid | lower }}adm"
   ansible.builtin.shell: |
                                         set -o pipefail
-                                        source /usr/sap/{{ db_sid | upper }}/home/.sapenv.sh && \
+                                        source /usr/sap/{{ backup_alr_target_sid | upper }}/home/.sapenv.sh && \
                                         hdbsql -U {{ hana_userstore_key | default('SYSTEM') }} -j \
                                           "ALTER SYSTEM STOP DATABASE {{ db_item.name }}"
   args:
@@ -220,10 +243,10 @@
 
 - name:                                 "Test Execution: {{ item.name | default('') }} - Recover root keys on target - tenant '{{ db_item.name }}'"
   become:                               true
-  become_user:                          "{{ db_sid | lower }}adm"
+  become_user:                          "{{ backup_alr_target_sid | lower }}adm"
   ansible.builtin.shell: |
                                         set -o pipefail
-                                        source /usr/sap/{{ db_sid | upper }}/home/.sapenv.sh && \
+                                        source /usr/sap/{{ backup_alr_target_sid | upper }}/home/.sapenv.sh && \
                                         hdbsql -U {{ hana_userstore_key | default('SYSTEM') }} -j \
                                           "RECOVER ENCRYPTION ROOT KEYS FOR {{ db_item.name }} USING FILE ('{{ _root_key_tmp_path }}/rkb_export_{{ db_item.name }}') PASSWORD {{ _root_key_backup_password }}"
   args:
@@ -232,6 +255,7 @@
   delegate_to:                          "{{ backup_target_vm_name }}"
   run_once:                             true
   changed_when:                         false
+  no_log:                               true
   loop:                                 "{{ backup_tenant_items }}"
   loop_control:
     loop_var:                           db_item
@@ -243,12 +267,12 @@
 
 - name:                                 "Test Execution: {{ item.name | default('') }} - Start tenant DB on target after key recovery"
   become:                               true
-  become_user:                          "{{ db_sid | lower }}adm"
+  become_user:                          "{{ backup_alr_target_sid | lower }}adm"
   ansible.builtin.shell: |
                                         set -o pipefail
-                                        source /usr/sap/{{ db_sid | upper }}/home/.sapenv.sh && \
+                                        source /usr/sap/{{ backup_alr_target_sid | upper }}/home/.sapenv.sh && \
                                         hdbsql -U {{ hana_userstore_key | default('SYSTEM') }} -j \
-                                          "ALTER SYSTEM START DATABASE {{ db_item.name | upper }}"
+                                        "ALTER SYSTEM START DATABASE {{ db_item.name }}"
   args:
     executable:                         /bin/bash
   register:                             encryption_start_tenants_target

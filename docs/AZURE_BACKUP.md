@@ -50,6 +50,12 @@ The management server's managed identity (system- or user-assigned) requires the
 - At least one HANA database must be **registered and protected** with a backup policy.
 - A recent backup (full or incremental) must have completed successfully so restore points are available.
 
+Before a restore, the framework selects items for the current topology: HSR items for HA
+systems and standalone items for non-HA systems. Items that Azure marks for deferred deletion
+(soft delete) are excluded because Azure Backup blocks restore operations on them. If no other
+eligible item exists, undelete the backup item in the Recovery Services vault and retry after the
+undelete job completes.
+
 For setup guidance, see [Back up SAP HANA databases in Azure VMs](https://learn.microsoft.com/azure/backup/sap-hana-database-instances-backup).
 
 ## Configuration
@@ -79,11 +85,15 @@ backup_restore_tenants:           []          # e.g. ["HDB", "H01"]
 # Target path for file-based restore; must be writable
 backup_target_filesystem_path:    "/sapinstall/hana_backup/"
 
-# Target VM hostname for cross-VM restore (required for test case 5, disabled by default)
-# Must be a hostname resolvable from the source VM (e.g., via DNS or /etc/hosts)
+# Target VM for cross-VM restore (required for test case 5, disabled by default)
+# Must match the inventory hostname of the target VM defined in hosts.yaml so the
+# framework can connect to it via delegate_to (inheriting ansible_host / ansible_user /
+# connection_type / become_user). See "Cross-VM Target Host" below.
 backup_target_vm_name:            ""
 # Target VM resource group (optional; defaults to source VM's resource group if empty)
 backup_target_vm_rg:              ""
+# Target HANA SID for cross-VM restore (optional; empty = same SID as the source system)
+backup_target_db_sid:             ""
 
 # Point-in-time restore (optional, ISO 8601 UTC)
 backup_restore_point_time:        ""
@@ -100,8 +110,9 @@ hana_userstore_key:               "SYSTEM"
 | `backup_restore_systemdb` | `true` | Whether to include SYSTEMDB in restore operations |
 | `backup_restore_tenants` | `[]` | List of tenant DB names to restore; empty means all tenants |
 | `backup_target_filesystem_path` | `"/sapinstall/hana_backup/"` | Filesystem path for restore-as-files (test case 3) |
-| `backup_target_vm_name` | `""` | Target VM hostname for cross-VM restore (test case 5) |
+| `backup_target_vm_name` | `""` | Target VM for cross-VM restore (test case 5). Must match an inventory hostname defined in `hosts.yaml` (see "Cross-VM Target Host" below) |
 | `backup_target_vm_rg` | `""` | Target VM resource group; defaults to source VM's RG if empty |
+| `backup_target_db_sid` | `""` | Target HANA SID for cross-VM restore (test case 5); empty means same SID as the source system |
 | `backup_restore_point_time` | `""` | Point-in-time for restore in ISO 8601 UTC; empty uses latest recovery point |
 | `hana_userstore_key` | `"SYSTEM"` | HANA hdbuserstore key for database connectivity |
 
@@ -114,6 +125,59 @@ user_assigned_identity_client_id: "xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx"
 ```
 
 If omitted or set to `null`, the framework uses system-assigned managed identity.
+
+### 4. Cross-VM Target Host (test case 5 only)
+
+The cross-VM restore test (`restore-cross-vm`) connects to the target VM via Ansible
+`delegate_to`. For this to authenticate correctly, the target VM **must be defined as a
+host in your `hosts.yaml` inventory**, and `backup_target_vm_name` must match that
+inventory hostname exactly.
+
+If the target is not in the inventory, Ansible has no `ansible_user` for it and falls
+back to connecting as the controller user (often `root`), which most SAP images reject
+(`Please login as the user "..." rather than the user "root"`) — causing an
+`UNREACHABLE` failure.
+
+Add the target VM under the database group in `hosts.yaml`, mirroring the source node's
+connection settings:
+
+```yaml
+X00_DB:
+  hosts:
+    hanadbnode1:               # source node
+      ansible_host        : 10.10.10.1
+      ansible_user        : azureadm1
+      ansible_connection  : ssh
+      connection_type     : key
+      become_user         : root
+      os_type             : linux
+    hanadbnode2:               # cross-VM restore TARGET
+      ansible_host        : 10.10.10.2
+      ansible_user        : azureadm2
+      ansible_connection  : ssh
+      connection_type     : key
+      become_user         : root
+      os_type             : linux
+```
+
+Then set the parameter to the matching inventory hostname:
+
+```yaml
+backup_target_vm_name:            "hanadbnode2"
+```
+
+The SSH private key is supplied globally by the framework (`--private-key`), so only the
+per-host `ansible_user` needs to be present in the inventory.
+
+If the target system runs a **different HANA SID** than the source, set
+`backup_target_db_sid` to the target SID. All target-side operations (HDB start, hdbsql,
+tenant health checks, root-key recovery) then use that SID for the `<sid>adm` user and
+`/usr/sap/<SID>` paths, and the restored tenants are placed under the target SID. Leave it
+empty to use the same SID as the source.
+
+```yaml
+backup_target_db_sid:             "HDB"   # target SID; empty = same as source
+```
 
 ## Test Execution
 

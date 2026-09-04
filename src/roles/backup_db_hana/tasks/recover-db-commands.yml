@@ -84,6 +84,83 @@
         test_execution_hostname:        "{{ ansible_hostname }}"
       run_once:                         true
 
+    - name:                             "Test Execution: {{ item.name | default('') }} - Discover tenant databases from M_DATABASES"
+      become:                           true
+      become_user:                      "{{ db_sid | lower }}adm"
+      ansible.builtin.shell: |
+                                        set -o pipefail
+                                        source /usr/sap/{{ db_sid | upper }}/home/.sapenv.sh && \
+                                        hdbsql -U {{ hana_userstore_key | default('SYSTEM') }} -j -a \
+                                          "SELECT DATABASE_NAME FROM SYS.M_DATABASES \
+                                           WHERE DATABASE_NAME != 'SYSTEMDB'"
+      args:
+        executable:                     /bin/bash
+      register:                         tenant_discovery_result
+      delegate_to:                      "{{ backup_primary_node }}"
+      run_once:                         true
+      changed_when:                     false
+
+    - name:                             "Test Execution: {{ item.name | default('') }} - Parse discovered tenant names"
+      ansible.builtin.set_fact:
+        recover_cmd_tenant_names:       "{{ tenant_discovery_result.stdout_lines | default([])
+                                            | map('regex_replace', '\"', '')
+                                            | map('trim')
+                                            | select('match', '^[A-Za-z0-9_]+$')
+                                            | reject('equalto', 'DATABASE_NAME')
+                                            | list }}"
+      run_once:                         true
+
+    - name:                             "Test Execution: {{ item.name | default('') }} - Capture backup ID for each tenant database (while online, before recovery)"
+      become:                           true
+      become_user:                      "{{ db_sid | lower }}adm"
+      ansible.builtin.shell: |
+                                        set -o pipefail
+                                        source /usr/sap/{{ db_sid | upper }}/home/.sapenv.sh && \
+                                        hdbsql -U {{ hana_userstore_key | default('SYSTEM') }} -j -a \
+                                          "SELECT TOP 1 BACKUP_ID FROM SYS_DATABASES.M_BACKUP_CATALOG \
+                                           WHERE DATABASE_NAME = '{{ tenant_name }}' \
+                                           AND ENTRY_TYPE_NAME = 'complete data backup' \
+                                           AND STATE_NAME = 'successful' \
+                                           ORDER BY UTC_START_TIME DESC"
+      args:
+        executable:                     /bin/bash
+      register:                         tenant_catalog_results
+      delegate_to:                      "{{ backup_primary_node }}"
+      run_once:                         true
+      changed_when:                     false
+      loop:                             "{{ recover_cmd_tenant_names }}"
+      loop_control:
+        loop_var:                       tenant_name
+        label:                          "{{ tenant_name }}"
+      when:                             recover_cmd_tenant_names | length > 0
+
+    - name:                             "Test Execution: {{ item.name | default('') }} - Identify tenants without a usable backup ID"
+      ansible.builtin.set_fact:
+        recover_cmd_missing_backup_id:  "{{ tenant_catalog_results.results | default([])
+                                            | rejectattr('stdout', 'defined')
+                                            | map(attribute='tenant_name')
+                                            | list
+                                            + (tenant_catalog_results.results | default([])
+                                               | selectattr('stdout', 'defined')
+                                               | rejectattr('stdout', 'search', '[0-9]')
+                                               | map(attribute='tenant_name')
+                                               | list) }}"
+      run_once:                         true
+      when:                             recover_cmd_tenant_names | length > 0
+
+    - name:                             "Test Execution: {{ item.name | default('') }} - Fail closed when any tenant lacks a usable backup ID"
+      ansible.builtin.assert:
+        that:
+          - recover_cmd_missing_backup_id | default([]) | length == 0
+        fail_msg: >-
+          No successful complete-data backup found for tenant(s):
+          {{ recover_cmd_missing_backup_id | default([]) | join(', ') }}.
+          Refusing to proceed - recovery would silently skip these tenants and
+          the test could report PASSED on unrecovered data.
+        success_msg:                    "All discovered tenants have a usable backup ID."
+      run_once:                         true
+      when:                             recover_cmd_tenant_names | length > 0
+
     - name:                             "Test Execution: {{ item.name | default('') }} - Put cluster in maintenance mode"
       when:                             database_high_availability | default(false) | bool
       ansible.builtin.include_tasks:    "roles/backup_db_hana/tasks/includes/cluster-maintenance-on.yml"
@@ -91,7 +168,7 @@
     - name:                             "Test Execution: {{ item.name | default('') }} - HSR - Teardown replication before recovery"
       ansible.builtin.include_tasks:    "roles/backup_db_hana/tasks/includes/hsr-teardown.yml"
 
-    - name:                             "Test Execution: {{ item.name | default('') }} - Query backup catalog for latest full data backup"
+    - name:                             "Test Execution: {{ item.name | default('') }} - Query backup catalog for latest SYSTEMDB full data backup"
       become:                           true
       become_user:                      "{{ db_sid | lower }}adm"
       ansible.builtin.shell: |
@@ -114,11 +191,11 @@
         backup_id_from_catalog:         "{{ backup_catalog_result.stdout
                                             | default('')
                                             | regex_search('[0-9]+')
-                                            | default('') }}"
+                                            | default('', true) }}"
       run_once:                         true
       when:
                                         - backup_catalog_result.rc | default(1) == 0
-                                        - backup_catalog_result.stdout | default('') | regex_search('[0-9]+') | default('') != ''
+                                        - backup_catalog_result.stdout | default('') | regex_search('[0-9]+') | default('', true) != ''
 
     - name:                             "Test Execution: {{ item.name | default('') }} - Stop HANA DB for recovery"
       become:                           true
@@ -185,6 +262,85 @@
       vars:
         wait_sql_delegate_to:           "{{ backup_primary_node }}"
 
+    - name:                             "Test Execution: {{ item.name | default('') }} - Stop tenant database before recovery"
+      become:                           true
+      become_user:                      "{{ db_sid | lower }}adm"
+      ansible.builtin.shell: |
+                                        set -o pipefail
+                                        source /usr/sap/{{ db_sid | upper }}/home/.sapenv.sh && \
+                                        hdbsql -U {{ hana_userstore_key | default('SYSTEM') }} -j \
+                                          "ALTER SYSTEM STOP DATABASE {{ tenant_name }}"
+      args:
+        executable:                     /bin/bash
+      register:                         tenant_stop_results
+      delegate_to:                      "{{ backup_primary_node }}"
+      run_once:                         true
+      changed_when:                     true
+      failed_when:                      false
+      loop:                             "{{ recover_cmd_tenant_names }}"
+      loop_control:
+        loop_var:                       tenant_name
+        label:                          "{{ tenant_name }}"
+      when:                             recover_cmd_tenant_names | length > 0
+
+    - name:                             "Test Execution: {{ item.name | default('') }} - Recover tenant database from backup catalog"
+      become:                           true
+      become_user:                      "{{ db_sid | lower }}adm"
+      ansible.builtin.shell: |
+                                        set -o pipefail
+                                        source /usr/sap/{{ db_sid | upper }}/home/.sapenv.sh && \
+                                        hdbsql -U {{ hana_userstore_key | default('SYSTEM') }} -j \
+                                          "RECOVER DATA FOR {{ tenant_name }} \
+                                           USING BACKUP_ID {{ tenant_catalog_results.results[idx].stdout
+                                             | default('')
+                                             | regex_search('[0-9]+')
+                                             | default('', true) }} CLEAR LOG"
+      args:
+        executable:                     /bin/bash
+      register:                         tenant_recover_results
+      delegate_to:                      "{{ backup_primary_node }}"
+      run_once:                         true
+      changed_when:                     tenant_recover_results.rc == 0
+      until:                            tenant_recover_results.rc == 0
+      retries:                          "{{ backup_tenant_recover_retries | default(5) }}"
+      delay:                            "{{ backup_tenant_recover_delay | default(60) }}"
+      loop:                             "{{ recover_cmd_tenant_names }}"
+      loop_control:
+        loop_var:                       tenant_name
+        index_var:                      idx
+        label:                          "{{ tenant_name }}"
+      when:
+                                        - recover_cmd_tenant_names | length > 0
+                                        - tenant_catalog_results.results[idx].rc | default(1) == 0
+                                        - tenant_catalog_results.results[idx].stdout | default('') | regex_search('[0-9]+') | default('', true) != ''
+
+    - name:                             "Test Execution: {{ item.name | default('') }} - Start tenant database after recovery"
+      become:                           true
+      become_user:                      "{{ db_sid | lower }}adm"
+      ansible.builtin.shell: |
+                                        set -o pipefail
+                                        source /usr/sap/{{ db_sid | upper }}/home/.sapenv.sh && \
+                                        hdbsql -U {{ hana_userstore_key | default('SYSTEM') }} -j \
+                                          "ALTER SYSTEM START DATABASE {{ tenant_name }}"
+      args:
+        executable:                     /bin/bash
+      register:                         tenant_start_results
+      delegate_to:                      "{{ backup_primary_node }}"
+      run_once:                         true
+      changed_when:                     true
+      failed_when:                      false
+      loop:                             "{{ recover_cmd_tenant_names }}"
+      loop_control:
+        loop_var:                       tenant_name
+        label:                          "{{ tenant_name }}"
+      when:                             recover_cmd_tenant_names | length > 0
+
+    - name:                             "Test Execution: {{ item.name | default('') }} - Verify all tenant databases are active"
+      ansible.builtin.include_tasks:    "roles/backup_db_hana/tasks/includes/verify-tenant-db-active.yml"
+      vars:
+        verify_tenant_delegate_to:      "{{ backup_primary_node }}"
+        verify_tenant_expected_databases: "{{ recover_cmd_tenant_names }}"
+
     - name:                             "Test Execution: {{ item.name | default('') }} - Verify DB consistency post-recovery"
       become:                           true
       become_user:                      "{{ db_sid | lower }}adm"
@@ -203,6 +359,32 @@
     - name:                             "Test Execution: {{ item.name | default('') }} - HSR - Re-establish replication"
       when:                             database_high_availability | default(false) | bool
       ansible.builtin.include_tasks:    "roles/backup_db_hana/tasks/includes/hsr-reestablish.yml"
+
+    - name:                             "Post Validation: {{ item.name | default('') }} - Allow secondary replication to settle"
+      when:                             database_high_availability | default(false) | bool
+      ansible.builtin.pause:
+        seconds:                        "{{ hsr_settle_seconds | default(60) | int }}"
+      run_once:                         true
+
+    - name:                             "Post Validation: {{ item.name | default('') }} - Verify HSR cluster healthy (primary and secondary resolved)"
+      when:                             database_high_availability | default(false) | bool
+      become:                           true
+      get_cluster_status_db:
+        db_instance_number:             "{{ db_instance_number }}"
+        operation_step:                 "post_failover"
+        database_sid:                   "{{ db_sid | lower }}"
+        saphanasr_provider:             "{{ saphanasr_provider | default('SAPHanaSR') }}"
+        hana_clone_resource_name:       "{{ hana_clone_resource_name | default('') }}"
+        hana_primitive_resource_name:   "{{ hana_primitive_resource_name | default('') }}"
+        hana_topology:                  "{{ hana_topology | default('scale_up') }}"
+      register:                         cluster_status_post_commands_restore
+      until:                            cluster_status_post_commands_restore.primary_node | default('') != '' and
+                                        cluster_status_post_commands_restore.secondary_node | default('') != ''
+      retries:                          "{{ default_retries | default(75) }}"
+      delay:                            "{{ default_delay | default(10) }}"
+      run_once:                         true
+      failed_when:                      cluster_status_post_commands_restore.primary_node | default('') == '' or
+                                        cluster_status_post_commands_restore.secondary_node | default('') == ''
 
     - name:                             "Test Execution: {{ item.name | default('') }} - Take cluster out of maintenance (standalone)"
       when:
@@ -229,6 +411,7 @@
                                               | default(1))) == 0
                                             and (db_consistency_check.rc | default(1)) == 0
                                             and hsr_register_result.rc | default(1) == 0
+                                            and tenant_db_health_result.all_active | default(false) | bool
                                           ) else 'FAILED' }}"
       run_once:                         true
 
@@ -240,6 +423,7 @@
                                               | default(hana_recover_recent_result.rc
                                               | default(1))) == 0
                                             and (db_consistency_check.rc | default(1)) == 0
+                                            and tenant_db_health_result.all_active | default(false) | bool
                                           ) else 'FAILED' }}"
       run_once:                         true
 
@@ -253,7 +437,9 @@
         test_case_message_from_test_case: >-
           HANA DB recovery ({{ 'Catalog-based' if (backup_catalog_result.rc | default(1) == 0) else 'Most-recent-backup' }}):
           Recovery succeeded: {{ (hana_recover_systemdb_result.rc | default(hana_recover_recent_result.rc | default(1))) == 0 }},
-          DB consistent: {{ (db_consistency_check.rc | default(1)) == 0 }}
+          DB consistent: {{ (db_consistency_check.rc | default(1)) == 0 }},
+          Tenants recovered: {{ recover_cmd_tenant_names | length }},
+          All tenants active: {{ tenant_db_health_result.all_active | default(false) }}
         test_case_details_from_test_case:
           topology:                     "Standalone"
           recovery_method:              "{{ 'catalog' if (backup_catalog_result.rc | default(1) == 0) else 'most_recent' }}"
@@ -263,6 +449,11 @@
           hana_recover_recent:          "{{ hana_recover_recent_result | default({}) }}"
           hana_start:                   "{{ hana_start_result }}"
           db_consistency:               "{{ db_consistency_check }}"
+          tenant_names:                 "{{ recover_cmd_tenant_names }}"
+          tenant_catalog_results:       "{{ tenant_catalog_results.results | default([]) }}"
+          tenant_recover_results:       "{{ tenant_recover_results.results | default([]) }}"
+          tenant_start_results:         "{{ tenant_start_results.results | default([]) }}"
+          tenant_db_health:             "{{ tenant_db_health_result | default({}) }}"
       run_once:                         true
       when:                             not (database_high_availability | default(false) | bool)
 
@@ -272,7 +463,9 @@
           HANA DB recovery (HSR, {{ 'Catalog-based' if (backup_catalog_result.rc | default(1) == 0) else 'Most-recent-backup' }}):
           Recovery succeeded: {{ (hana_recover_systemdb_result.rc | default(hana_recover_recent_result.rc | default(1))) == 0 }},
           DB consistent: {{ (db_consistency_check.rc | default(1)) == 0 }},
-          HSR re-established: {{ (hsr_register_result.rc | default(1)) == 0 }}
+          HSR re-established: {{ (hsr_register_result.rc | default(1)) == 0 }},
+          Tenants recovered: {{ recover_cmd_tenant_names | length }},
+          All tenants active: {{ tenant_db_health_result.all_active | default(false) }}
         test_case_details_from_test_case:
           topology:                     "HSR"
           recovery_method:              "{{ 'catalog' if (backup_catalog_result.rc | default(1) == 0) else 'most_recent' }}"
@@ -288,6 +481,12 @@
           hsr_enable:                   "{{ hsr_enable_result | default({}) }}"
           hsr_register:                 "{{ hsr_register_result | default({}) }}"
           hsr_state:                    "{{ hsr_state_result | default({}) }}"
+          tenant_names:                 "{{ recover_cmd_tenant_names }}"
+          tenant_catalog_results:       "{{ tenant_catalog_results.results | default([]) }}"
+          tenant_recover_results:       "{{ tenant_recover_results.results | default([]) }}"
+          tenant_start_results:         "{{ tenant_start_results.results | default([]) }}"
+          tenant_db_health:             "{{ tenant_db_health_result | default({}) }}"
+          cluster_status_post_commands_restore: "{{ cluster_status_post_commands_restore | default({}) }}"
       run_once:                         true
       when:                             database_high_availability | default(false) | bool
 

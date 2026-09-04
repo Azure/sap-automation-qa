@@ -71,7 +71,9 @@ jobs:
           ansible-lint src/ -c .ansible-lint
 
       - name: Validate Copilot CLI skills
-        run: python .github/skills/_validation/validate_skills.py .github/skills
+        run: |
+          python .github/skills/_validation/validate_skills.py skills
+          python .github/skills/_validation/validate_skills.py .github/skills
 
 
   security:
@@ -110,3 +112,216 @@ jobs:
       - name: Run bandit
         run: |
           bandit -r src/ -c pyproject.toml --severity-level medium
+
+  plugin-install:
+    name: AI plugin install (Copilot / Claude / Gemini)
+    needs: check-labels
+    runs-on: ubuntu-latest
+    steps:
+      - name: Harden Runner
+        uses: step-security/harden-runner@cb605e52c26070c328afc4562f0b4ada7618a84e # v2.10.4
+        with:
+          egress-policy: audit
+
+      - name: Checkout the code
+        uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
+
+      - name: Setup Node.js
+        uses: actions/setup-node@49933ea5288caeca8642d1e84afbd3f7d6820020 # v4.4.0
+        with:
+          node-version: '20'
+
+      - name: Setup Python
+        uses: actions/setup-python@a309ff8b426b58ec0e2a45f0f869d46889d02405 # v6.2.0
+        with:
+          python-version: '3.10'
+
+      - name: Install skill validator dependencies
+        run: |
+          set -euo pipefail
+          cat > "${RUNNER_TEMP}/skill-validator-requirements.txt" <<'EOF'
+          pyyaml==6.0.3 \
+              --hash=sha256:9c7708761fccb9397fe64bbc0395abcae8c4bf7b0eac081e12b809bf47700d0b \
+              --hash=sha256:d76623373421df22fb4cf8817020cbb7ef15c725b9d5e45f17e189bfc384190f
+          EOF
+          python -m pip install --disable-pip-version-check --require-hashes -r "${RUNNER_TEMP}/skill-validator-requirements.txt"
+
+      - name: Derive expected skill sets from the skill directories
+        run: |
+          set -euo pipefail
+          if [ ! -d skills ]; then
+            echo "::error::root skills/ (cross-agent skills) not found"; exit 1
+          fi
+          python - <<'PY'
+          import os, pathlib, sys
+
+          def skill_dirs(base):
+              p = pathlib.Path(base)
+              if not p.is_dir():
+                  return []
+              return sorted(
+                  d.name for d in p.iterdir()
+                  if d.is_dir()
+                  and not d.name.startswith(("_", "."))
+                  and (d / "SKILL.md").is_file()
+              )
+
+          rt = os.environ["RUNNER_TEMP"]
+          # Root skills/ is the single home of the cross-agent skills that ALL
+          # three CLIs load. .github/skills/ holds Copilot-only skills (e.g.
+          # code-review) that are read directly by the server-side Copilot
+          # code-review bot from the repository - they are NOT loaded by any CLI
+          # plugin, so no CLI is expected to surface them.
+          cross = skill_dirs("skills")
+          gh = skill_dirs(".github/skills")
+          if not cross:
+              sys.exit("::error::no skills found under skills/")
+
+          pathlib.Path(rt, "expected_mirror.txt").write_text("\n".join(cross) + "\n")
+          pathlib.Path(rt, "expected_ghskills.txt").write_text("\n".join(gh) + "\n")
+          print("Copilot + Claude + Gemini (root skills/):", ", ".join(cross))
+          print(".github/skills/ (server-side bot only):", ", ".join(gh) or "(none)")
+          PY
+
+      - name: Assert skills are real files (no symlinks)
+        run: |
+          set -euo pipefail
+          check_tree() {
+            base="$1"; list="$2"; fail=0
+            while IFS= read -r name; do
+              [ -n "$name" ] || continue
+              d="$base/$name"; f="$d/SKILL.md"
+              if [ -L "$d" ]; then echo "::error::$d is a symlink"; fail=1; fi
+              if [ ! -d "$d" ]; then echo "::error::$d is not a directory"; fail=1; continue; fi
+              while IFS= read -r link; do
+                echo "::error::$link is a symlink inside the skill payload"
+                fail=1
+              done < <(find "$d" -type l -print)
+              if [ -L "$f" ]; then echo "::error::$f is a symlink stub"; fail=1; fi
+              if [ ! -f "$f" ]; then echo "::error::$f missing"; fail=1; continue; fi
+              sz=$(stat -c%s "$f")
+              if [ "$sz" -le 200 ]; then echo "::error::$f is suspiciously small ($sz bytes)"; fail=1; fi
+            done < "$list"
+            return $fail
+          }
+          rc=0
+          check_tree .github/skills "$RUNNER_TEMP/expected_ghskills.txt" || rc=1
+          check_tree skills "$RUNNER_TEMP/expected_mirror.txt" || rc=1
+          [ "$rc" -eq 0 ] || { echo "::error::skill payload validation failed"; exit 1; }
+
+      - name: Skill-conformance validation (validate_skills.py)
+        run: |
+          python .github/skills/_validation/validate_skills.py skills
+          python .github/skills/_validation/validate_skills.py .github/skills
+
+      - name: Install AI CLIs
+        run: |
+          set -euo pipefail
+          retry() { local n=1; until "$@"; do
+            if [ "$n" -ge 3 ]; then echo "::error::command failed after $n attempts: $*"; return 1; fi
+            echo "attempt $n failed, retrying: $*"; n=$((n+1)); sleep 5; done; }
+          retry npm install -g @github/copilot
+          retry npm install -g @anthropic-ai/claude-code
+          retry npm install -g @google/gemini-cli
+          copilot --version
+          claude --version
+          gemini --version
+
+      - name: Claude - validate plugin manifest (strict)
+        run: claude plugin validate . --strict
+
+      - name: Claude - install from local checkout and assert skills
+        run: |
+          set -euo pipefail
+          retry() { local n=1; until "$@"; do
+            if [ "$n" -ge 3 ]; then echo "::error::command failed after $n attempts: $*"; return 1; fi
+            echo "attempt $n failed, retrying: $*"; n=$((n+1)); sleep 5; done; }
+          retry claude plugin marketplace add ./
+          retry claude plugin install staf@sap-automation-qa
+          claude plugin list
+          IP=$(claude plugin list --json | jq -r '.[] | select(.id=="staf@sap-automation-qa") | .installPath')
+          if [ -z "$IP" ] || [ ! -d "$IP/skills" ]; then
+            echo "::error::Claude payload has no skills/ (installPath='$IP')"; exit 1
+          fi
+          ls -1 "$IP/skills" | sort > "$RUNNER_TEMP/claude.txt"
+          echo "Claude loaded skills:"; cat "$RUNNER_TEMP/claude.txt"
+          diff "$RUNNER_TEMP/expected_mirror.txt" "$RUNNER_TEMP/claude.txt" \
+            || { echo "::error::Claude loaded a different skill set than the skills/ mirror"; exit 1; }
+          while IFS= read -r name; do
+            [ -f "$IP/skills/$name/SKILL.md" ] || { echo "::error::Claude payload missing $name/SKILL.md"; exit 1; }
+          done < "$RUNNER_TEMP/expected_mirror.txt"
+
+      - name: Gemini - install from local checkout and assert skills
+        env:
+          GEMINI_CLI_TRUST_WORKSPACE: "true"
+        run: |
+          set -euo pipefail
+          timeout 120s gemini extensions install "$PWD" --consent --skip-settings
+          timeout 60s gemini extensions list --output-format json \
+            > "$RUNNER_TEMP/gemini-list.json"
+          cat "$RUNNER_TEMP/gemini-list.json"
+          EXTMANIFEST=$(find "$HOME/.gemini/extensions" -maxdepth 2 \
+            -name gemini-extension.json -print -quit)
+          if [ -z "$EXTMANIFEST" ]; then
+            echo "::error::Gemini extension manifest was not installed"; exit 1
+          fi
+          EXTDIR=$(dirname "$EXTMANIFEST")
+          if [ ! -d "$EXTDIR/skills" ]; then
+            echo "::error::Gemini extension has no skills/ (extDir='$EXTDIR')"; exit 1
+          fi
+          ls -1 "$EXTDIR/skills" | sort > "$RUNNER_TEMP/gemini.txt"
+          diff "$RUNNER_TEMP/expected_mirror.txt" "$RUNNER_TEMP/gemini.txt" \
+            || { echo "::error::Gemini loaded a different skill set than the skills/ mirror"; exit 1; }
+          while IFS= read -r name; do
+            skill_file="$EXTDIR/skills/$name/SKILL.md"
+            [ -f "$skill_file" ] && [ ! -L "$skill_file" ] \
+              || { echo "::error::Gemini payload missing real $name/SKILL.md"; exit 1; }
+          done < "$RUNNER_TEMP/expected_mirror.txt"
+
+      - name: Copilot - install from local checkout and assert skills
+        run: |
+          set -euo pipefail
+          retry() { local n=1; until "$@"; do
+            if [ "$n" -ge 3 ]; then echo "::error::command failed after $n attempts: $*"; return 1; fi
+            echo "attempt $n failed, retrying: $*"; n=$((n+1)); sleep 5; done; }
+          retry copilot plugin marketplace add .
+          retry copilot plugin install staf@sap-automation-qa
+          copilot plugin list | tee "$RUNNER_TEMP/copilot-plugins.txt"
+          # plugin.json declares "skills": ["skills/"], so the Copilot CLI loads
+          # exactly the cross-agent set from skills/ (same as Claude and Gemini).
+          # Newer Copilot CLI versions load local marketplace plugins *live* from
+          # the checkout directory and copy nothing into ~/.copilot/installed-
+          # plugins. Support both the legacy copied layout and the live layout.
+          if ! grep -q 'staf@sap-automation-qa' "$RUNNER_TEMP/copilot-plugins.txt"; then
+            echo "::error::Copilot did not list staf@sap-automation-qa after install"; exit 1
+          fi
+          CP="$HOME/.copilot/installed-plugins/sap-automation-qa/staf"
+          if [ ! -d "$CP/skills" ]; then
+            # Live-load: resolve the directory the plugin was loaded "from",
+            # falling back to the checkout root used by `marketplace add .`.
+            LIVE=$(grep -oE 'from[[:space:]]+\S+' "$RUNNER_TEMP/copilot-plugins.txt" \
+                   | awk '{print $2}' | tail -n1 || true)
+            if [ -n "$LIVE" ] && [ -d "$LIVE/skills" ]; then
+              CP="$LIVE"
+            else
+              CP="$GITHUB_WORKSPACE"
+            fi
+            echo "Copilot loaded plugin live from: $CP"
+          fi
+          if [ ! -d "$CP/skills" ]; then
+            echo "::error::Copilot payload has no skills/ at $CP"; exit 1
+          fi
+          ls -1 "$CP/skills" | grep -vE '^_' | sort > "$RUNNER_TEMP/copilot.txt"
+          echo "Copilot loaded skills:"; cat "$RUNNER_TEMP/copilot.txt"
+          diff "$RUNNER_TEMP/expected_mirror.txt" "$RUNNER_TEMP/copilot.txt" \
+            || { echo "::error::Copilot loaded a different skill set than skills/"; exit 1; }
+          while IFS= read -r name; do
+            [ -f "$CP/skills/$name/SKILL.md" ] || { echo "::error::Copilot payload missing $name/SKILL.md"; exit 1; }
+          done < "$RUNNER_TEMP/expected_mirror.txt"
+          # The Copilot-only skills under .github/skills/ must still ship as real
+          # files so the server-side code-review bot can read them from the repo.
+          while IFS= read -r name; do
+            [ -n "$name" ] || continue
+            f="$CP/.github/skills/$name/SKILL.md"
+            [ -f "$f" ] && [ ! -L "$f" ] || { echo "::error::.github/skills/$name/SKILL.md missing or a symlink"; exit 1; }
+          done < "$RUNNER_TEMP/expected_ghskills.txt"

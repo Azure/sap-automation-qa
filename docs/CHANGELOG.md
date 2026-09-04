@@ -2,6 +2,15 @@
 
 All notable changes to this project will be documented in this file.
 
+## 1.1.4
+Release Date: 09-04-2026
+1. STAF skill package installable across GitHub Copilot CLI, Claude Code, and Gemini CLI without Windows-incompatible skill symlinks. Cross-agent skills now have one real home under skills/; the Copilot server-side review skill remains under .github/skills/.
+2. Enhance configuration checks for ASD fencing and correct gates: Add ASD to the enum in every check file and admit it wherever SBD or "any fencing type" is meant, leaving fencing-agent-only checks (AFA) untouched
+3. Fix checking the language environment variable for DB2 users in the db2.yml configuration check.
+4. Several improvements to Azure Backup HANA restore logic, focusing on more accurate discovery and selection of backup items for restore operations, especially in high availability (HSR) and cross-VM scenarios.
+5. New Configuration validation check for the Azure Virtual Machine Extension for SAP provider health. 
+6. Improvements to how HANA storage types are detected and reported in the filesystem collector, and updates the configuration checks to use more granular storage type keys. Additionally, it enhances disk device discovery logic for Azure environments.
+
 ## 1.1.3
 Release Date: 07-21-2026
 1. Configuration Checks Bug Fix - Fixed the parameter overrides issue in configuration checks main module, ensuring each os family has its own set of parameter overrides and preventing cross-family parameter contamination.

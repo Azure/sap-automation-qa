@@ -53,6 +53,8 @@
             backup_restore_vm_name:        "{{ hostvars[backup_primary_node].azure_instance_metadata.json.compute.name }}"
             backup_restore_vm_rg:          "{{ hostvars[backup_primary_node].azure_instance_metadata.json.compute.resourceGroupName }}"
             backup_restore_subscription:   "{{ hostvars[backup_primary_node].azure_instance_metadata.json.compute.subscriptionId }}"
+            backup_discovery_vm_names:     "{{ [hostvars[backup_primary_node].azure_instance_metadata.json.compute.name,
+                                              hostvars[backup_secondary_node].azure_instance_metadata.json.compute.name] }}"
           run_once:                 true
 
         - name:                     "Pre Validation: {{ item.name | default('') }} - Build HSR primary restore container"
@@ -68,6 +70,7 @@
         backup_restore_vm_name:     "{{ azure_instance_metadata.json.compute.name }}"
         backup_restore_vm_rg:       "{{ azure_instance_metadata.json.compute.resourceGroupName }}"
         backup_restore_subscription: "{{ azure_instance_metadata.json.compute.subscriptionId }}"
+        backup_discovery_vm_names:  "{{ [azure_instance_metadata.json.compute.name] }}"
       run_once:                     true
       when:                         not (database_high_availability | default(false) | bool)
 
@@ -85,7 +88,8 @@
         vault_resource_id:           "{{ backup_vault_resource_id }}"
         subscription_id:             "{{ azure_instance_metadata.json.compute.subscriptionId }}"
         msi_client_id:               "{{ user_assigned_identity_client_id | default('') }}"
-        source_vm_name:              "{{ backup_restore_vm_name }}"
+        source_vm_names:             "{{ backup_discovery_vm_names }}"
+        restore_source_type:         "{{ 'hsr' if (database_high_availability | default(false) | bool) else 'standalone' }}"
       register:                      pre_backup_discovery
       run_once:                      true
       failed_when:                   pre_backup_discovery.protected_items | default([]) | length == 0
@@ -135,10 +139,11 @@
           restore_tenants={{ backup_restore_tenants | default([]) }}
       run_once:                     true
 
-    - name:                         "Pre Validation: {{ item.name | default('') }} - Override status if no backup items found"
+    - name:                         "Pre Validation: {{ item.name | default('') }} - Set restore candidate status"
       ansible.builtin.set_fact:
         pre_validations_status:     "{{ 'FAILED' if (
-                                        backup_source_items | length == 0
+                                        backup_systemdb_items | length == 0
+                                        and backup_tenant_items | length == 0
                                       ) else pre_validations_status | default('PASSED') }}"
       run_once:                     true
 
@@ -337,9 +342,46 @@
       run_once:                     true
       changed_when:                 hana_start_result.rc == 0
 
+    - name:                         "Test Execution: {{ item.name | default('') }} - Wait for SQL connectivity after restore"
+      ansible.builtin.include_tasks: "roles/backup_db_hana/tasks/includes/wait-for-sql.yml"
+      vars:
+        wait_sql_delegate_to:       "{{ backup_primary_node }}"
+
+    - name:                         "Test Execution: {{ item.name | default('') }} - Verify all tenant databases are active"
+      ansible.builtin.include_tasks: "roles/backup_db_hana/tasks/includes/verify-tenant-db-active.yml"
+      vars:
+        verify_tenant_delegate_to:  "{{ backup_primary_node }}"
+        verify_tenant_expected_databases: "{{ backup_tenant_items | map(attribute='name') | list }}"
+
     - name:                         "Test Execution: {{ item.name | default('') }} - HSR - Re-establish replication"
       when:                         database_high_availability | default(false) | bool
       ansible.builtin.include_tasks: "roles/backup_db_hana/tasks/includes/hsr-reestablish.yml"
+
+    - name:                         "Post Validation: {{ item.name | default('') }} - Allow secondary replication to settle"
+      when:                         database_high_availability | default(false) | bool
+      ansible.builtin.pause:
+        seconds:                    "{{ hsr_settle_seconds | default(60) | int }}"
+      run_once:                     true
+
+    - name:                         "Post Validation: {{ item.name | default('') }} - Verify HSR cluster healthy (primary and secondary resolved)"
+      when:                         database_high_availability | default(false) | bool
+      become:                       true
+      get_cluster_status_db:
+        db_instance_number:         "{{ db_instance_number }}"
+        operation_step:             "post_failover"
+        database_sid:               "{{ db_sid | lower }}"
+        saphanasr_provider:         "{{ saphanasr_provider | default('SAPHanaSR') }}"
+        hana_clone_resource_name:   "{{ hana_clone_resource_name | default('') }}"
+        hana_primitive_resource_name: "{{ hana_primitive_resource_name | default('') }}"
+        hana_topology:              "{{ hana_topology | default('scale_up') }}"
+      register:                     cluster_status_post_olr
+      until:                        cluster_status_post_olr.primary_node | default('') != '' and
+                                    cluster_status_post_olr.secondary_node | default('') != ''
+      retries:                      "{{ default_retries | default(75) }}"
+      delay:                        "{{ default_delay | default(10) }}"
+      run_once:                     true
+      failed_when:                  cluster_status_post_olr.primary_node | default('') == '' or
+                                    cluster_status_post_olr.secondary_node | default('') == ''
 
     - name:                         "Test Execution: {{ item.name | default('') }} - Compute restore results summary"
       ansible.builtin.set_fact:
@@ -368,6 +410,7 @@
                                         systemdb_all_ok | bool
                                         and tenant_all_ok | bool
                                         and hsr_register_result.rc | default(1) == 0
+                                        and tenant_db_health_result.all_active | default(false) | bool
                                       ) else 'FAILED' }}"
       run_once:                     true
 
@@ -377,6 +420,7 @@
         test_execution_status:      "{{ 'PASSED' if (
                                         systemdb_all_ok | bool
                                         and tenant_all_ok | bool
+                                        and tenant_db_health_result.all_active | default(false) | bool
                                       ) else 'FAILED' }}"
       run_once:                     true
 
@@ -390,6 +434,7 @@
         test_case_message_from_test_case: >-
           Restore to DB (OLR) for {{ backup_source_items | length }} DB(s):
           SYSTEMDB: {{ systemdb_all_ok }}, Tenants: {{ tenant_all_ok }},
+          All tenants active: {{ tenant_db_health_result.all_active | default(false) }}
         test_case_details_from_test_case:
           topology:                 "Standalone"
           databases_restored:       "{{ backup_source_items | map(attribute='name') | list }}"
@@ -399,6 +444,7 @@
           tenant_job_statuses:      "{{ tenant_job_statuses.results | default([]) }}"
           hana_stop:                "{{ hana_stop_result }}"
           hana_start:               "{{ hana_start_result }}"
+          tenant_db_health:         "{{ tenant_db_health_result | default({}) }}"
       run_once:                     true
       when:                         not (database_high_availability | default(false) | bool)
 
@@ -407,7 +453,8 @@
         test_case_message_from_test_case: >-
           Restore to DB (HSR - AlternateWorkloadRestore) for {{ backup_source_items | length }} DB(s):
           SYSTEMDB: {{ systemdb_all_ok }}, Tenants: {{ tenant_all_ok }},
-          HSR re-established: {{ (hsr_register_result.rc | default(1)) == 0 }}
+          HSR re-established: {{ (hsr_register_result.rc | default(1)) == 0 }},
+          All tenants active: {{ tenant_db_health_result.all_active | default(false) }}
         test_case_details_from_test_case:
           topology:                 "HSR"
           databases_restored:       "{{ backup_source_items | map(attribute='name') | list }}"
@@ -423,6 +470,8 @@
           hsr_enable:               "{{ hsr_enable_result | default({}) }}"
           hsr_register:             "{{ hsr_register_result | default({}) }}"
           hsr_state:                "{{ hsr_state_result | default({}) }}"
+          tenant_db_health:         "{{ tenant_db_health_result | default({}) }}"
+          cluster_status_post_olr:  "{{ cluster_status_post_olr | default({}) }}"
       run_once:                     true
       when:                         database_high_availability | default(false) | bool
 

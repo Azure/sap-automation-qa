@@ -387,9 +387,33 @@ cd deploy && docker compose up -d
 
 ---
 
+## Locate Framework
+
+Every STAF skill operates from within a **trusted STAF checkout** — a
+working tree the operator has verified out-of-band as either the official
+upstream (`https://github.com/Azure/sap-automation-qa.git`) or a fork of
+it, at a specific revision, with the framework marker
+`./scripts/sap_automation_qa.sh` present. The operator must have verified
+both the source (upstream URL or fork URL) and the revision through a
+trusted out-of-band channel, and must have `cd`-ed into that directory.
+
+Skills never auto-adopt, auto-clone, or auto-execute against any tree.
+Trust cannot be inferred from remote URL, `git status`, or filesystem
+structure; a pre-existing tree can carry attacker-controlled config (for
+example, `core.fsmonitor` pointing at a hook binary) that would execute the
+moment any `git` command touched it. Only the operator can confirm the tree
+is trusted.
+
+The `setup-guide` skill is the single owner of the setup workflow — how the
+operator verifies an existing checkout or manually creates a new one. Every
+other skill (`test-runner`, `test-result-analyzer`, `workspace-creator`,
+`workspace-validator`) hands off to `setup-guide` when the trusted-checkout
+state is not confirmed and does not carry its own setup logic.
+---
+
 ## Copilot CLI Skills
 
-This repo includes skills in `.github/skills/` that provide guided workflows.
+This repo includes skills in `skills/` that provide guided workflows.
 Skills activate automatically based on prompt context, or can be invoked directly
 with the `/` prefix (e.g., `/test-runner`).
 

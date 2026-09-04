@@ -54,8 +54,9 @@ enums:
 
   cluster_type:
     - sbd:                            &sbd "ISCSI"
+    - asd:                            &asd "ASD"
     - fencing_agent:                  &fencing_agent "AFA"
-    - all_fencing_agent:              &cluster_type [*sbd, *fencing_agent]
+    - all_fencing_agent:              &cluster_type [*sbd, *asd, *fencing_agent]
 
   high_availability:
     - no_ha:                         &no_high_availability "false"
@@ -158,7 +159,7 @@ checks:
       role:                           [*ascs_role, *db_role]
       database_type:                  [*hana]
       high_availability:              *high_availability
-      high_availability_agent:        [*cluster_type]
+      high_availability_agent:        *cluster_type
     collector_type:                   *command
     collector_args:
       command: |
@@ -182,7 +183,7 @@ checks:
       role:                             [*db_role, *ascs_role]
       database_type:                    [*hana]
       high_availability:                *high_availability
-      high_availability_agent:          [*cluster_type]
+      high_availability_agent:          *cluster_type
     collector_type:                     *command
     collector_args:
       command: |
@@ -430,7 +431,7 @@ checks:
       role:                             [*db_role, *ascs_role]
       database_type:                    [*hana]
       high_availability:                *high_availability
-      high_availability_agent:          [*cluster_type]
+      high_availability_agent:          *cluster_type
     collector_type:                     *command
     collector_args:
       command:                          "/bin/cat /etc/modules-load.d/softdog.conf"
@@ -455,7 +456,7 @@ checks:
       role:                             [*db_role, *ascs_role]
       database_type:                    [*hana]
       high_availability:                *high_availability
-      high_availability_agent:          [*sbd]
+      high_availability_agent:          [*sbd, *asd]
     collector_type:                     *command
     collector_args:
       command:                          "lsmod | grep softdog | wc -l"

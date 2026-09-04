@@ -45,8 +45,9 @@ enums:
 
   fencing_agent:
     - sbd:                            &sbd "ISCSI"
+    - asd:                            &asd "ASD"
     - fencing_agent:                  &fencing_agent "AFA"
-    - all_fencing_agent:              &all_fencing_agent [*sbd, *fencing_agent]
+    - all_fencing_agent:              &all_fencing_agent [*sbd, *asd, *fencing_agent]
 
   collector_type:
     - command:                        &command "command"
@@ -104,7 +105,7 @@ checks:
       role:                             [*pas, *app_role]
       database_type:                    [*hana, *sqlserver, *oracle, *db2]
       high_availability:                *scale_up
-      high_availability_agent:          [*sbd, *fencing_agent]
+      high_availability_agent:          [*sbd, *asd, *fencing_agent]
     collector_type:                     *command
     collector_args:
       command:                          "/sbin/sysctl net.ipv4.tcp_keepalive_time"
@@ -130,7 +131,7 @@ checks:
       role:                             [*pas, *app_role]
       database_type:                    [*hana, *sqlserver, *oracle, *db2]
       high_availability:                *scale_up
-      high_availability_agent:          [*sbd, *fencing_agent]
+      high_availability_agent:          [*sbd, *asd, *fencing_agent]
     collector_type:                     *command
     collector_args:
       command:                          "/sbin/sysctl net.ipv4.tcp_retries2"
@@ -205,7 +206,7 @@ checks:
       role:                             [*pas, *app_role]
       database_type:                    [*hana, *sqlserver, *oracle, *db2]
       high_availability:                *scale_up
-      high_availability_agent:          [*sbd, *fencing_agent]
+      high_availability_agent:          [*sbd, *asd, *fencing_agent]
     collector_type:                     *command
     collector_args:
       command:                          "/sbin/sysctl net.ipv4.tcp_tw_recycle"
@@ -231,7 +232,7 @@ checks:
       role:                             [*app_role, *pas]
       database_type:                    [*hana, *sqlserver, *oracle, *db2]
       high_availability:                *scale_up
-      high_availability_agent:          [*sbd, *fencing_agent]
+      high_availability_agent:          [*sbd, *asd, *fencing_agent]
     collector_type:                     *command
     collector_args:
       command:                          "/sbin/sysctl net.ipv4.tcp_tw_reuse"
@@ -257,7 +258,7 @@ checks:
       role:                             [*pas, *app_role]
       database_type:                    [*hana, *sqlserver, *oracle, *db2]
       high_availability:                *scale_up
-      high_availability_agent:          [*sbd, *fencing_agent]
+      high_availability_agent:          [*sbd, *asd, *fencing_agent]
     collector_type:                     *command
     collector_args:
       command:                          "/sbin/sysctl net.ipv4.tcp_retries1"

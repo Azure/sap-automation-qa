@@ -1,7 +1,10 @@
 ---
 name: setup-guide
 description: >
-  Guide for setting up the SAP Testing Automation Framework environment.
+  Guide for setting up the SAP Testing Automation Framework itself on a
+  management server — Python venv, Docker, vars.yaml, Copilot integration.
+  Use for framework installation, not for creating a workspace for a specific
+  SAP system (see workspace-creator).
   Use when asked about installation, setup, Docker deployment, or Copilot integration.
   Triggered by "setup environment", "install staf", "how to get started", "container start",
   "setup.sh", "configure vars.yaml", "setup help", or "docker deployment".
@@ -16,25 +19,48 @@ For full details, see `docs/SETUP.MD`.
 
 ## Locate Framework
 
-Before running any commands, locate the STAF framework directory:
+STAF skills operate on the framework directory that contains
+`./scripts/sap_automation_qa.sh`. Before any other section of this skill —
+or any section of `test-runner`, `test-result-analyzer`, `workspace-creator`,
+or `workspace-validator` — runs, the operator must be inside a **trusted
+STAF checkout**. This skill is the single owner of the setup workflow; the
+others hand off here.
+
+### If you already have a checkout
+
+Verify both its source (upstream URL or your fork URL) and its revision
+yourself through a trusted out-of-band channel — inspect commit hashes
+against known-good upstream tags or against your fork's reviewed
+revision, re-clone to a scratch path and diff, or whatever your trust bar
+requires. A trusted checkout may point at either the official upstream
+(`https://github.com/Azure/sap-automation-qa.git`) or an operator-verified
+fork; the framework marker `./scripts/sap_automation_qa.sh` must be
+present in the working tree. Provenance cannot be inferred from remote
+URL, `git status`, or filesystem structure alone: a pre-existing tree can
+carry attacker-controlled config (for example, `core.fsmonitor` pointing
+at a hook binary) that executes the moment any `git` command touches it.
+Once you are satisfied on both source and revision, `cd` into the trusted
+checkout.
+
+### If you do not have a checkout
+
+Run these two commands yourself; this skill will not run them for you.
 
 ```bash
-# Check current directory first
-if [ -f "./scripts/sap_automation_qa.sh" ]; then
-  STAF_DIR="$(pwd)"
-# Check sibling directory
-elif [ -f "../sap-automation-qa/scripts/sap_automation_qa.sh" ]; then
-  STAF_DIR="$(cd ../sap-automation-qa && pwd)"
-# Not found — clone it
-else
-  git clone https://github.com/Azure/sap-automation-qa.git ../sap-automation-qa
-  STAF_DIR="$(cd ../sap-automation-qa && pwd)"
-fi
-cd "$STAF_DIR"
+git clone --depth 1 https://github.com/Azure/sap-automation-qa.git
+cd sap-automation-qa
 ```
 
-All commands below assume you are in the STAF framework directory.
+For contributors who prefer the fork-based flow, see
+[`docs/SETUP.MD`](../../docs/SETUP.MD) §"Fork and Clone".
 
+### Hard rule
+
+Do not continue with any other section of this skill or any section of
+another STAF skill until you have confirmed you are inside a trusted STAF
+checkout — the directory must contain `./scripts/sap_automation_qa.sh`
+**and** you must have verified the checkout's provenance and revision
+yourself. The rest of this skill assumes that state.
 ## Local vs Container: When to Use Which
 
 | Use Case | Recommended Setup | Why |
@@ -94,15 +120,29 @@ See `docs/TELEMETRY_SETUP.md` for Azure Log Analytics and Azure Data Explorer in
 
 ### Option A: Install via AI Assistant Plugin (Recommended)
 
-Install the STAF skills plugin for your AI assistant:
+Install the STAF skills plugin for your AI assistant. Pick your assistant and run the commands below. See [docs/PLUGINS.md](../../docs/PLUGINS.md) for verification, updates, uninstall, and the skill layout.
 
-| Platform | Command |
-|----------|---------|
-| **GitHub Copilot CLI** | `copilot plugin install Azure/sap-automation-qa` |
-| **Claude Code** | `/plugin marketplace add Azure/sap-automation-qa` then `/plugin install staf@sap-automation-qa` |
-| **Gemini CLI** | `gemini skills install https://github.com/Azure/sap-automation-qa` |
+**GitHub Copilot CLI**
 
-Once installed, bring your `WORKSPACES/` directory and interact through natural language. The skills handle locating or cloning the framework automatically.
+```bash
+copilot plugin marketplace add Azure/sap-automation-qa
+copilot plugin install staf@sap-automation-qa
+```
+
+**Claude Code** (run inside a Claude Code session)
+
+```text
+/plugin marketplace add Azure/sap-automation-qa
+/plugin install staf@sap-automation-qa
+```
+
+**Gemini CLI**
+
+```bash
+gemini extensions install https://github.com/Azure/sap-automation-qa
+```
+
+Once installed, bring your `WORKSPACES/` directory and interact through natural language. The skills assume you are already inside a trusted STAF checkout — see [Locate Framework](#locate-framework) above for the manual verification and setup steps.
 
 ### Option B: Manual Setup
 
@@ -123,10 +163,13 @@ apt-get install git            yum install git              zypper install git
 ```bash
 # First: fork https://github.com/Azure/sap-automation-qa in your browser
 # Then clone YOUR fork (not the Azure repo directly):
-sudo su -
 git clone https://github.com/GITHUB-USERNAME/sap-automation-qa.git
 cd sap-automation-qa
 ```
+
+> `git clone` runs as an ordinary user; do **not** clone as root. The
+> `sudo su -` shown above under "Install Git" is only for the OS package
+> install step (`apt-get`/`yum`/`zypper install git`).
 
 ### 4. Local Setup
 
@@ -300,24 +343,17 @@ WORKSPACES/
 
 ## Log Locations
 
-### API Mode (FastAPI/uvicorn)
+Workspace-scoped result files (job execution log, test result log, HTML
+report) are the canonical concern of the `test-result-analyzer` skill; see its
+`## Result File Locations` section for the full mode-by-mode breakdown of
+Direct Execution and API Mode paths.
+
+### API Server (setup-guide-scoped)
 
 | Log | Location | Format |
 |-----|----------|--------|
 | API server logs | stdout/stderr (console) | Structured JSON (production) or color-coded (dev) |
 | Persistent API logs | `logs/api.log` | Rotating file (10 MB, 5 backups) |
-| Job execution logs | `WORKSPACES/SYSTEM/{name}/logs/execution_{timestamp}.log` | Plain text (Ansible output) |
-| Test result logs | `WORKSPACES/SYSTEM/{name}/logs/{invocation_id}.log` | JSON lines (one entry per test case) |
-| HTML reports | `WORKSPACES/SYSTEM/{name}/quality_assurance/{group}_{invocation}.html` | HTML |
-
-### Direct Execution Mode
-
-| Log | Location | Format |
-|-----|----------|--------|
-| Ansible output | stdout (console) | Plain text |
-| Test result logs | `WORKSPACES/SYSTEM/{name}/logs/{invocation_id}.log` | JSON lines |
-| Execution log | `WORKSPACES/SYSTEM/{name}/logs/execution_{timestamp}.log` | Plain text |
-| HTML reports | `WORKSPACES/SYSTEM/{name}/quality_assurance/{group}_{invocation}.html` | HTML |
 
 ### Docker Deployment
 
@@ -377,13 +413,9 @@ Before reporting setup complete, verify:
 
 ## Copilot CLI Skills
 
-| Skill | What It Does |
-|-------|-------------|
-| `/setup-guide` | Guides through environment setup (local, Docker) |
-| `/workspace-validator` | Validates workspace `sap-parameters.yaml` and `hosts.yaml` |
-| `/workspace-creator` | Creates new workspace configurations from templates |
-| `/test-runner` | Executes tests via `sap_automation_qa.sh` (direct and API modes) |
-| `/test-result-analyzer` | Analyzes test results, matches known failure patterns |
+The full `/`-prefixed CLI skill list (Copilot, Claude Code, Gemini CLI) lives
+in `.github/copilot-instructions.md` §"Copilot CLI Skills" — the canonical
+manifest for all three CLIs.
 
 
 ## Related Skills
