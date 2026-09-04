@@ -305,13 +305,9 @@ class TestMapVgToDiskNames:
             "nvme0n5": "2",
         }
 
-        result = collector._map_vg_to_disk_names(
-            lvm_fullreport, imds_metadata, device_lun_map
-        )
+        result = collector._map_vg_to_disk_names(lvm_fullreport, imds_metadata, device_lun_map)
 
-        assert result == {
-            "vg_hana_data": ["data-disk-0", "data-disk-1", "data-disk-2"]
-        }
+        assert result == {"vg_hana_data": ["data-disk-0", "data-disk-1", "data-disk-2"]}
         assert not any("No LUN mapping found" in log["message"] for log in mock_parent.logs)
 
     def test_map_vg_to_disk_names_error_cases(self, collector, mock_parent):
