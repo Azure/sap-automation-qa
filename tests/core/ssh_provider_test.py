@@ -82,9 +82,7 @@ class TestSshCredentialProvider:
 
     def test_parse_missing_secrets_segment_raises(self) -> None:
         with pytest.raises(CredentialProvisionError, match="parse"):
-            SshCredentialProvider._parse_secret_id(
-                "https://myvault.vault.azure.net/keys/foo"
-            )
+            SshCredentialProvider._parse_secret_id("https://myvault.vault.azure.net/keys/foo")
 
     def test_finds_ssh_key_ppk(self, tmp_path: Path) -> None:
         ws = tmp_path / "SYSTEM" / "WS1"
