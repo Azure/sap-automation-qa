@@ -77,7 +77,8 @@ class TestSshCredentialProvider:
             "https://user:password@myvault.vault.azure.net/secrets/mykey",
             "https://myvault.vault.azure.net:443/secrets/mykey",
             "https://myvault.vault.azure.net:not-a-port/secrets/mykey",
-        ]
+        ],
+    )
     def test_parse_untrusted_vault_url_raises(self, secret_id: str) -> None:
         with pytest.raises(CredentialProvisionError, match="Invalid"):
             SshCredentialProvider._parse_secret_id(secret_id)

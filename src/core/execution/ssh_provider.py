@@ -145,6 +145,11 @@ class SshCredentialProvider:
         """Extract vault URL, secret name, and version from a Key Vault URL."""
         parsed = urlparse(secret_id)
         hostname = parsed.hostname
+        try:
+            port = parsed.port
+        except ValueError as exc:
+            raise CredentialProvisionError(f"Invalid secret_id URL: {secret_id}") from exc
+
         if (
             parsed.scheme != "https"
             or not hostname
@@ -152,7 +157,7 @@ class SshCredentialProvider:
             or hostname.count(".") != 3
             or parsed.username is not None
             or parsed.password is not None
-            or parsed.port is not None
+            or port is not None
         ):
             raise CredentialProvisionError(f"Invalid secret_id URL: {secret_id}")
 
