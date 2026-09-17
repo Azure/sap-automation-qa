@@ -91,6 +91,7 @@ class ConfigurationCheckModule(SapAutomationQA):
         return {
             "string": self.validate_string,
             "range": self.validate_numeric_range,
+            "tiered_range": self.validate_tiered_numeric_range,
             "list": self.validate_list,
             "min_list": self.validate_min_list,
             "check_support": self.validate_vm_support,
@@ -485,6 +486,48 @@ class ConfigurationCheckModule(SapAutomationQA):
                 ),
             }
 
+    def _resolve_tiered_minimum(self, check: Check) -> tuple[float, str]:
+        """Resolve a storage performance minimum from VM memory or SKU."""
+        default_minimum = float(check.validator_args.get("min", "-inf"))
+        storage_property = check.validator_args.get("storage_type_property", "storage_type")
+        storage_value = self.context.get(storage_property, [])
+        if not isinstance(storage_value, list):
+            storage_value = [storage_value]
+
+        tiered_storage_types = check.validator_args.get("tiered_storage_types", [])
+        if not any(storage_type in tiered_storage_types for storage_type in storage_value):
+            return default_minimum, "default storage requirement"
+
+        vm_size = self.context.get("vm_size", "")
+        vm_size_minimums = check.validator_args.get("vm_size_minimums", {})
+        if vm_size in vm_size_minimums:
+            return float(vm_size_minimums[vm_size]), f"VM SKU {vm_size}"
+
+        memory_gib = float(self.context.get("memory_gib", 0))
+        if memory_gib <= 0:
+            return default_minimum, "default requirement (VM memory unavailable)"
+
+        for tier in check.validator_args.get("memory_tiers", []):
+            if memory_gib < float(tier["below_gib"]):
+                return float(tier["min"]), f"{memory_gib:g} GiB VM memory"
+
+        return default_minimum, "default requirement (no matching memory or SKU tier)"
+
+    def validate_tiered_numeric_range(self, check: Check, collected_data: str) -> Dict[str, Any]:
+        """Validate numeric data against a context-dependent minimum."""
+        try:
+            value = float(str(collected_data).strip())
+            min_val, tier_source = self._resolve_tiered_minimum(check)
+            return {
+                "status": self._create_validation_result(check.severity, value >= min_val),
+                "details": f"Required minimum: {min_val:g} ({tier_source})",
+            }
+        except (KeyError, TypeError, ValueError) as error:
+            return {
+                "status": TestStatus.ERROR.value,
+                "details": f"Cannot evaluate tiered range for '{collected_data}': {error}",
+            }
+
     def validate_list(self, check: Check, collected_data: str) -> Dict[str, Any]:
         """
         Validate collected data against expected list (contains)
@@ -826,6 +869,12 @@ class ConfigurationCheckModule(SapAutomationQA):
                 min_val = check.validator_args.get("min", "N/A")
                 max_val = check.validator_args.get("max", "N/A")
                 expected_value = f"Min: {min_val}, Max: {max_val}"
+            elif check.validator_type == "tiered_range":
+                try:
+                    min_val, _ = self._resolve_tiered_minimum(check)
+                    expected_value = f"Min: {min_val:g}"
+                except (KeyError, TypeError, ValueError):
+                    expected_value = f"Min: {check.validator_args.get('min', 'N/A')}"
             elif check.validator_type == "list":
                 valid_list = check.validator_args.get("valid_list", [])
                 if isinstance(valid_list, list) and valid_list:

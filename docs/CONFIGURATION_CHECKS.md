@@ -115,6 +115,27 @@ The supported selectors come from `src/vars/input-api.yaml` and are validated be
 | `WebDispatcherInstances` | Web dispatcher hosts plus the shared application-server execution path used by the current playbook |
 | `ObserverInstances` | Reserved canonical selector in the catalog; the current playbook does not branch observer-only checks yet |
 
+## SAP HANA Premium SSD v2 IOPS validation
+
+`DB-HANA-0042` and `DB-HANA-0044` validate the aggregate provisioned IOPS of all Azure Premium SSD v2 disks backing `/hana/data` and `/hana/log`. For VMs below 8 TiB, STAF selects the required minimum from the VM's physical memory. For larger VMs, it selects the documented VM SKU requirement.
+
+| Virtual machine memory or SKU | Data IOPS | Log IOPS |
+|----------|----------:|----------:|
+| Below 1 TiB | 3,000 | 3,000 |
+| 1 TiB to below 2 TiB | 5,000 | 4,000 |
+| 2 TiB to below 4 TiB | 12,000 | 4,000 |
+| 4 TiB to below 8 TiB | 20,000 | 5,000 |
+| M416ms_v2 | 25,000 | 5,000 |
+| M624(d)s_12_v3 | 40,000 | 6,000 |
+| M832(d)s_12_v3 | 40,000 | 6,000 |
+| M832ixs | 40,000 | 9,000 |
+| M832i(d)s_16_v3 | 60,000 | 10,000 |
+| M832ixs_v2 | 60,000 | 10,000 |
+| M896ixds_32_v3 | 80,000 | 10,000 |
+| M1792ixds_32_v3 | 80,000 | 10,000 |
+
+These thresholds follow [SAP HANA Azure virtual machine Premium SSD v2 configurations](https://learn.microsoft.com/en-us/azure/sap/workloads/hana-vm-premium-ssd-v2). The documented values are aggregate totals for each filesystem, not per-disk requirements. Other supported storage types retain the existing STAF minimums of 7,000 data IOPS and 2,000 log IOPS. If VM memory is unavailable or a Premium SSD v2 VM above 8 TiB does not match a documented SKU, STAF also retains those existing defaults.
+
 ## Viewing Test Results
 
 After the test execution completes, a detailed HTML report is generated. The report provide the summary of each test cases that got executed for each VM.

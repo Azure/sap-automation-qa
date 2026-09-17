@@ -91,16 +91,61 @@ enums:
   validator_type:
     - string:                         &string "string"
     - range:                          &range "range"
+    - tiered_range:                   &tiered_range "tiered_range"
     - list:                           &list "list"
     - disk_consistency:               &disk_consistency "disk_consistency"
     - check_storage_type:             &check_storage_type "check_storage_type"
-    - all:                            &validator_type [*string, *range, *list, *disk_consistency, *check_storage_type]
+    - all:                            &validator_type [*string, *range, *tiered_range, *list, *disk_consistency, *check_storage_type]
 
   report:
     - check:                          &check "check"
     - section:                        &section "section"
     - table:                          &table "table"
     - report:                         &report [*check, *section, *table]
+
+performance_requirements:
+  premium_v2_data_iops_memory: &premium_v2_data_iops_memory
+    - below_gib: 1024
+      min: 3000
+    - below_gib: 2048
+      min: 5000
+    - below_gib: 4096
+      min: 12000
+    - below_gib: 8192
+      min: 20000
+  premium_v2_log_iops_memory: &premium_v2_log_iops_memory
+    - below_gib: 1024
+      min: 3000
+    - below_gib: 2048
+      min: 4000
+    - below_gib: 4096
+      min: 4000
+    - below_gib: 8192
+      min: 5000
+  premium_v2_data_iops_sku: &premium_v2_data_iops_sku
+    Standard_M416ms_v2: 25000
+    Standard_M624s_12_v3: 40000
+    Standard_M624ds_12_v3: 40000
+    Standard_M832s_12_v3: 40000
+    Standard_M832ds_12_v3: 40000
+    Standard_M832ixs: 40000
+    Standard_M832is_16_v3: 60000
+    Standard_M832ids_16_v3: 60000
+    Standard_M832ixs_v2: 60000
+    Standard_M896ixds_32_v3: 80000
+    Standard_M1792ixds_32_v3: 80000
+  premium_v2_log_iops_sku: &premium_v2_log_iops_sku
+    Standard_M416ms_v2: 5000
+    Standard_M624s_12_v3: 6000
+    Standard_M624ds_12_v3: 6000
+    Standard_M832s_12_v3: 6000
+    Standard_M832ds_12_v3: 6000
+    Standard_M832ixs: 9000
+    Standard_M832is_16_v3: 10000
+    Standard_M832ids_16_v3: 10000
+    Standard_M832ixs_v2: 10000
+    Standard_M896ixds_32_v3: 10000
+    Standard_M1792ixds_32_v3: 10000
 
 # Checks for DB roles for database_type == hana
 
@@ -1120,7 +1165,7 @@ checks:
 
   - id:                                 "DB-HANA-0042"
     name:                               "Disk performance for /hana/data (IOPS)"
-    description:                        "The disk performance for /hana/data should be >= 7000 IOPS"
+    description:                        "The aggregate disk performance for /hana/data should meet the storage and VM memory/SKU IOPS requirement"
     category:                           *sap_check
     severity:                           *high
     workload:                           *sap
@@ -1136,9 +1181,13 @@ checks:
       resource_type:                    "disks"
       property:                         "iops"
       mount_point:                      "/hana/data"
-    validator_type:                     *range
+    validator_type:                     *tiered_range
     validator_args:
       min:                              "7000"
+      storage_type_property:            "hana_data_storage_type"
+      tiered_storage_types:             ["PremiumV2_LRS"]
+      memory_tiers:                     *premium_v2_data_iops_memory
+      vm_size_minimums:                 *premium_v2_data_iops_sku
     report:                             *check
     references:
       sap:                              "2972496"
@@ -1172,7 +1221,7 @@ checks:
 
   - id:                                 "DB-HANA-0044"
     name:                               "Disk performance for /hana/log (IOPS)"
-    description:                        "The disk performance for /hana/log should be >= 7000 IOPS"
+    description:                        "The aggregate disk performance for /hana/log should meet the storage and VM memory/SKU IOPS requirement"
     category:                           *sap_check
     severity:                           *high
     workload:                           *sap
@@ -1188,9 +1237,13 @@ checks:
       resource_type:                    "disks"
       property:                         "iops"
       mount_point:                      "/hana/log"
-    validator_type:                     *range
+    validator_type:                     *tiered_range
     validator_args:
       min:                              "2000"
+      storage_type_property:            "hana_log_storage_type"
+      tiered_storage_types:             ["PremiumV2_LRS"]
+      memory_tiers:                     *premium_v2_log_iops_memory
+      vm_size_minimums:                 *premium_v2_log_iops_sku
     report:                             *check
     references:
       sap:                              "2972496"

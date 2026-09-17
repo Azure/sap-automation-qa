@@ -94,6 +94,7 @@
       check_type:                   "{{ check_type }}"
       vm_name:                      "{{ compute_metadata.json.compute.name }}"
       vm_size:                      "{{ compute_metadata.json.compute.vmSize | default('unknown') }}"
+      memory_gib:                   "{{ ansible_memtotal_mb | default(0) | float / 1024 }}"
       resource_group_name:          "{{ compute_metadata.json.compute.resourceGroupName }}"
       subscription_id:              "{{ compute_metadata.json.compute.subscriptionId | default('unknown') }}"
       supported_configurations:     "{{ vm_support }}"
