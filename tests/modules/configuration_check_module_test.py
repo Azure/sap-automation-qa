@@ -571,7 +571,7 @@ class TestExecuteCheck:
         with patch("src.module_utils.collector.CommandCollector.collect", side_effect=mock_collect):
             result = config_module.execute_check(sample_check)
             assert result.status == TestStatus.SUCCESS.value
-            assert "SLES_SAP" in result.expected_value
+            assert result.expected_value == "SLES_SAP, REDHAT"
 
     def test_execute_check_osdb_missing_lookup_fails_closed(
         self, config_module, sample_check, monkeypatch
@@ -636,6 +636,45 @@ class TestExecuteCheck:
             result = config_module.execute_check(sample_check)
             assert result.status == TestStatus.ERROR.value
             assert result.expected_value == "Standard_M32ts, Standard_M64ts"
+
+    def test_execute_check_parsed_sap_0018_info_severity(self, config_module, monkeypatch):
+        """Ensure SAP-0018 remains INFO and its parsed execution has no expectation."""
+        sap_checks = (
+            Path(__file__).parents[2]
+            / "src"
+            / "roles"
+            / "configuration_checks"
+            / "tasks"
+            / "files"
+            / "sap.yml"
+        )
+        config_module.load_checks(sap_checks.read_text(encoding="utf-8"))
+        check = next(check for check in config_module.checks if check.id == "SAP-0018")
+        assert check.severity == TestSeverity.INFO
+        assert check.validator_args["expected_output"] == "1"
+
+        config_module.set_context(
+            {
+                "hostname": "testhost",
+                "os_type": "REDHAT",
+                "os_version": "9.4",
+                "hardware_type": "VM",
+                "storage_type": ["Premium_LRS"],
+                "role": "DB",
+                "database_type": "HANA",
+                "high_availability": "scale_up",
+                "high_availability_agent": "AFA",
+            }
+        )
+
+        with patch(
+            "src.module_utils.collector.CommandCollector.collect",
+            return_value="0",
+        ):
+            result = config_module.execute_check(check)
+
+        assert result.status == TestStatus.INFO.value
+        assert result.expected_value == ""
 
     def test_execute_check_collector_not_found(self, config_module, sample_check):
         """Test check execution with unknown collector"""
