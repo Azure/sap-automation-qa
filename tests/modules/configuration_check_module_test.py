@@ -439,9 +439,8 @@ class TestValidators:
         assert result["status"] == TestStatus.ERROR.value
         assert "Allowed OS" in result["details"]
 
-    def test_validate_osdb_support_custom_image_no_lookup_data(self, config_module, sample_check):
-        """SAP-0002 style: custom/unlisted image where the lookup returns nothing -> SKIPPED,
-        not a FAILED comparison of two masked N/A values."""
+    def test_validate_osdb_support_no_lookup_data(self, config_module, sample_check):
+        """SAP-0002 style: missing lookup evidence fails closed instead of being skipped."""
         config_module.set_context(
             {
                 "role": "db",
@@ -453,7 +452,7 @@ class TestValidators:
         )
         sample_check.validator_args = {"validation_rules": "SupportedOSDBCombinations"}
         result = config_module.validate_vm_support(sample_check, "")
-        assert result["status"] == TestStatus.SKIPPED.value
+        assert result["status"] == TestStatus.ERROR.value
         assert "details" in result
 
 
@@ -574,11 +573,10 @@ class TestExecuteCheck:
             assert result.status == TestStatus.SUCCESS.value
             assert "SLES_SAP" in result.expected_value
 
-    def test_execute_check_osdb_custom_image_skipped_not_failed(
+    def test_execute_check_osdb_missing_lookup_fails_closed(
         self, config_module, sample_check, monkeypatch
     ):
-        """SAP-0002 style: a custom image where the lookup returns nothing must be reported
-        as SKIPPED (not applicable), not as a FAILED comparison of masked N/A values."""
+        """SAP-0002 style: missing lookup evidence must fail closed."""
         config_module.set_context(
             {
                 "hostname": "testhost",
@@ -597,7 +595,47 @@ class TestExecuteCheck:
 
         with patch("src.module_utils.collector.CommandCollector.collect", side_effect=mock_collect):
             result = config_module.execute_check(sample_check)
-            assert result.status == TestStatus.SKIPPED.value
+            assert result.status == TestStatus.ERROR.value
+
+    def test_execute_check_vms_expected_value_lists_supported_skus(
+        self, config_module, sample_check, monkeypatch
+    ):
+        """SAP-0001 style: Expected must list VM SKUs that support the current role/database."""
+        config_module.set_context(
+            {
+                "hostname": "testhost",
+                "role": "db",
+                "database_type": "HANA",
+                "supported_configurations": {
+                    "SupportedVMs": {
+                        "Standard_M32ts": {"db": {"SupportedDB": ["HANA", "DB2"]}},
+                        "Standard_M64ts": {"db": {"SupportedDB": ["HANA"]}},
+                        "Standard_D2s_v3": {"db": {"SupportedDB": ["DB2"]}},
+                    }
+                },
+            }
+        )
+        sample_check.validator_type = "check_support"
+        sample_check.validator_args = {"validation_rules": "SupportedVMs"}
+
+        def mock_collect(check, context):
+            return "Standard_M32ts"
+
+        with patch("src.module_utils.collector.CommandCollector.collect", side_effect=mock_collect):
+            result = config_module.execute_check(sample_check)
+            assert result.status == TestStatus.SUCCESS.value
+            assert result.expected_value == "Standard_M32ts, Standard_M64ts"
+
+        def mock_collect_unknown(check, context):
+            return "Standard_Unknown"
+
+        with patch(
+            "src.module_utils.collector.CommandCollector.collect",
+            side_effect=mock_collect_unknown,
+        ):
+            result = config_module.execute_check(sample_check)
+            assert result.status == TestStatus.ERROR.value
+            assert result.expected_value == "Standard_M32ts, Standard_M64ts"
 
     def test_execute_check_collector_not_found(self, config_module, sample_check):
         """Test check execution with unknown collector"""
@@ -1304,19 +1342,19 @@ class TestValidateVmSupportDiagnostics:
     """Test suite for improved validate_vm_support diagnostics"""
 
     def test_missing_input_details(self, config_module, sample_check):
-        """Test that no collected value (e.g. custom/unlisted image) is SKIPPED, not FAILED"""
+        """Test that missing collected evidence fails closed."""
         config_module.set_context({"role": "", "database_type": "", "supported_configurations": {}})
         sample_check.validator_args = {"validation_rules": "VMs"}
         result = config_module.validate_vm_support(sample_check, "")
-        assert result["status"] == TestStatus.SKIPPED.value
+        assert result["status"] == TestStatus.ERROR.value
         assert "details" in result
 
     def test_missing_input_details_none_collected_data(self, config_module, sample_check):
-        """Test that None collected data (lookup failure) is also SKIPPED, not an exception"""
+        """Test that None collected data (lookup failure) fails closed."""
         config_module.set_context({"role": "", "database_type": "", "supported_configurations": {}})
         sample_check.validator_args = {"validation_rules": "VMs"}
         result = config_module.validate_vm_support(sample_check, None)
-        assert result["status"] == TestStatus.SKIPPED.value
+        assert result["status"] == TestStatus.ERROR.value
 
     def test_missing_role_or_config_with_value_present(self, config_module, sample_check):
         """Test that a real collected value with no role/config data is a genuine ERROR"""

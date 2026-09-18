@@ -580,16 +580,12 @@ class ConfigurationCheckModule(SapAutomationQA):
             )
 
             if not value:
-                # The lookup (e.g. IMDS image publisher) returned nothing at all. This is
-                # distinct from a genuine unsupported combination: with no data collected
-                # there is nothing to compare, so this check cannot make a support
-                # determination (for example, custom/unlisted OS images). Reporting this
-                # as FAILED would be misleading, so mark it as not applicable instead.
+                # An empty collector result does not identify a custom image. It may also
+                # represent a failed lookup, so fail closed rather than skipping validation.
                 return {
-                    "status": TestStatus.SKIPPED.value,
+                    "status": TestStatus.ERROR.value,
                     "details": (
-                        "No value returned by the lookup - support cannot be determined "
-                        "(e.g. custom/unlisted image or unavailable metadata service)."
+                        "No value returned by the support lookup; support cannot be determined."
                     ),
                 }
 
@@ -869,12 +865,11 @@ class ConfigurationCheckModule(SapAutomationQA):
                 if "OSDB" in validation_rules:
                     allowed = supported_configurations.get(database_type, {}).get(role, [])
                 elif "VMs" in validation_rules:
-                    vm_sku = str(actual_value or "").strip()
-                    allowed = (
-                        supported_configurations.get(vm_sku, {})
-                        .get(role, {})
-                        .get("SupportedDB", [])
-                    )
+                    allowed = [
+                        vm_sku
+                        for vm_sku, vm_config in supported_configurations.items()
+                        if database_type in vm_config.get(role, {}).get("SupportedDB", [])
+                    ]
                 else:
                     allowed = []
                 if allowed:
