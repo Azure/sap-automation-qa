@@ -408,6 +408,54 @@ class TestValidators:
         result = config_module.validate_vm_support(sample_check, "Standard_M32ts")
         assert result["status"] == TestStatus.ERROR.value
 
+    def test_validate_osdb_support_match(self, config_module, sample_check):
+        """SAP-0002 style: standard/known image with a real supported OS/DB match -> PASSED"""
+        config_module.set_context(
+            {
+                "role": "db",
+                "database_type": "HANA",
+                "supported_configurations": {
+                    "SupportedOSDBCombinations": {"HANA": {"db": ["SLES_SAP", "REDHAT"]}}
+                },
+            }
+        )
+        sample_check.validator_args = {"validation_rules": "SupportedOSDBCombinations"}
+        result = config_module.validate_vm_support(sample_check, "SLES_SAP")
+        assert result["status"] == TestStatus.SUCCESS.value
+
+    def test_validate_osdb_support_mismatch(self, config_module, sample_check):
+        """SAP-0002 style: standard/known image with a real unsupported OS/DB -> FAILED"""
+        config_module.set_context(
+            {
+                "role": "db",
+                "database_type": "HANA",
+                "supported_configurations": {
+                    "SupportedOSDBCombinations": {"HANA": {"db": ["SLES_SAP"]}}
+                },
+            }
+        )
+        sample_check.validator_args = {"validation_rules": "SupportedOSDBCombinations"}
+        result = config_module.validate_vm_support(sample_check, "REDHAT")
+        assert result["status"] == TestStatus.ERROR.value
+        assert "Allowed OS" in result["details"]
+
+    def test_validate_osdb_support_custom_image_no_lookup_data(self, config_module, sample_check):
+        """SAP-0002 style: custom/unlisted image where the lookup returns nothing -> SKIPPED,
+        not a FAILED comparison of two masked N/A values."""
+        config_module.set_context(
+            {
+                "role": "db",
+                "database_type": "HANA",
+                "supported_configurations": {
+                    "SupportedOSDBCombinations": {"HANA": {"db": ["SLES_SAP", "REDHAT"]}}
+                },
+            }
+        )
+        sample_check.validator_args = {"validation_rules": "SupportedOSDBCombinations"}
+        result = config_module.validate_vm_support(sample_check, "")
+        assert result["status"] == TestStatus.SKIPPED.value
+        assert "details" in result
+
 
 class TestValidateResult:
     """Test suite for validate_result method"""
@@ -463,6 +511,93 @@ class TestExecuteCheck:
         with patch("src.module_utils.collector.CommandCollector.collect", side_effect=mock_collect):
             result = config_module.execute_check(sample_check)
             assert result.status == TestStatus.INFO.value
+
+    def test_execute_check_info_severity_blanks_expected_output(
+        self, config_module, sample_check, monkeypatch
+    ):
+        """SAP-0018 style: severity=info must not surface a derived expected_output in the
+        report, since execute_check short-circuits validation entirely for INFO checks."""
+        config_module.set_context({"hostname": "testhost"})
+        sample_check.severity = TestSeverity.INFO
+        sample_check.validator_type = "string"
+        sample_check.validator_args = {"expected_output": "1"}
+
+        def mock_collect(check, context):
+            return "0"
+
+        with patch("src.module_utils.collector.CommandCollector.collect", side_effect=mock_collect):
+            result = config_module.execute_check(sample_check)
+            assert result.status == TestStatus.INFO.value
+            assert result.expected_value == ""
+
+    def test_execute_check_non_info_severity_keeps_expected_output(
+        self, config_module, sample_check, monkeypatch
+    ):
+        """Ensure the INFO-only blanking does not regress warning/critical severities, where
+        expected_output must remain populated and validation must still be enforced."""
+        config_module.set_context({"hostname": "testhost"})
+        sample_check.severity = TestSeverity.CRITICAL
+        sample_check.validator_type = "string"
+        sample_check.validator_args = {"expected_output": "1"}
+
+        def mock_collect(check, context):
+            return "0"
+
+        with patch("src.module_utils.collector.CommandCollector.collect", side_effect=mock_collect):
+            result = config_module.execute_check(sample_check)
+            assert result.status == TestStatus.ERROR.value
+            assert result.expected_value == "1"
+
+    def test_execute_check_osdb_expected_value_populated(
+        self, config_module, sample_check, monkeypatch
+    ):
+        """SAP-0002 style: the report's Expected column should show the real allowed OS list
+        for a check_support validator, instead of always rendering blank/N/A."""
+        config_module.set_context(
+            {
+                "hostname": "testhost",
+                "role": "db",
+                "database_type": "HANA",
+                "supported_configurations": {
+                    "SupportedOSDBCombinations": {"HANA": {"db": ["SLES_SAP", "REDHAT"]}}
+                },
+            }
+        )
+        sample_check.validator_type = "check_support"
+        sample_check.validator_args = {"validation_rules": "SupportedOSDBCombinations"}
+
+        def mock_collect(check, context):
+            return "SLES_SAP"
+
+        with patch("src.module_utils.collector.CommandCollector.collect", side_effect=mock_collect):
+            result = config_module.execute_check(sample_check)
+            assert result.status == TestStatus.SUCCESS.value
+            assert "SLES_SAP" in result.expected_value
+
+    def test_execute_check_osdb_custom_image_skipped_not_failed(
+        self, config_module, sample_check, monkeypatch
+    ):
+        """SAP-0002 style: a custom image where the lookup returns nothing must be reported
+        as SKIPPED (not applicable), not as a FAILED comparison of masked N/A values."""
+        config_module.set_context(
+            {
+                "hostname": "testhost",
+                "role": "db",
+                "database_type": "HANA",
+                "supported_configurations": {
+                    "SupportedOSDBCombinations": {"HANA": {"db": ["SLES_SAP", "REDHAT"]}}
+                },
+            }
+        )
+        sample_check.validator_type = "check_support"
+        sample_check.validator_args = {"validation_rules": "SupportedOSDBCombinations"}
+
+        def mock_collect(check, context):
+            return ""
+
+        with patch("src.module_utils.collector.CommandCollector.collect", side_effect=mock_collect):
+            result = config_module.execute_check(sample_check)
+            assert result.status == TestStatus.SKIPPED.value
 
     def test_execute_check_collector_not_found(self, config_module, sample_check):
         """Test check execution with unknown collector"""
@@ -1169,10 +1304,25 @@ class TestValidateVmSupportDiagnostics:
     """Test suite for improved validate_vm_support diagnostics"""
 
     def test_missing_input_details(self, config_module, sample_check):
-        """Test that missing input produces details"""
+        """Test that no collected value (e.g. custom/unlisted image) is SKIPPED, not FAILED"""
         config_module.set_context({"role": "", "database_type": "", "supported_configurations": {}})
         sample_check.validator_args = {"validation_rules": "VMs"}
         result = config_module.validate_vm_support(sample_check, "")
+        assert result["status"] == TestStatus.SKIPPED.value
+        assert "details" in result
+
+    def test_missing_input_details_none_collected_data(self, config_module, sample_check):
+        """Test that None collected data (lookup failure) is also SKIPPED, not an exception"""
+        config_module.set_context({"role": "", "database_type": "", "supported_configurations": {}})
+        sample_check.validator_args = {"validation_rules": "VMs"}
+        result = config_module.validate_vm_support(sample_check, None)
+        assert result["status"] == TestStatus.SKIPPED.value
+
+    def test_missing_role_or_config_with_value_present(self, config_module, sample_check):
+        """Test that a real collected value with no role/config data is a genuine ERROR"""
+        config_module.set_context({"role": "", "database_type": "", "supported_configurations": {}})
+        sample_check.validator_args = {"validation_rules": "VMs"}
+        result = config_module.validate_vm_support(sample_check, "Standard_M32ts")
         assert result["status"] == TestStatus.ERROR.value
         assert "details" in result
 

@@ -571,7 +571,7 @@ class ConfigurationCheckModule(SapAutomationQA):
         :rtype: Dict[str, Any]
         """
         try:
-            value = collected_data.strip()
+            value = (collected_data or "").strip()
             role = self.context.get("role", "")
             database_type = self.context.get("database_type", "")
             validation_rules = check.validator_args.get("validation_rules", {})
@@ -579,7 +579,21 @@ class ConfigurationCheckModule(SapAutomationQA):
                 validation_rules, {}
             )
 
-            if not value or not supported_configurations or not role:
+            if not value:
+                # The lookup (e.g. IMDS image publisher) returned nothing at all. This is
+                # distinct from a genuine unsupported combination: with no data collected
+                # there is nothing to compare, so this check cannot make a support
+                # determination (for example, custom/unlisted OS images). Reporting this
+                # as FAILED would be misleading, so mark it as not applicable instead.
+                return {
+                    "status": TestStatus.SKIPPED.value,
+                    "details": (
+                        "No value returned by the lookup - support cannot be determined "
+                        "(e.g. custom/unlisted image or unavailable metadata service)."
+                    ),
+                }
+
+            if not supported_configurations or not role:
                 return {
                     "status": TestStatus.ERROR.value,
                     "details": (
@@ -845,10 +859,39 @@ class ConfigurationCheckModule(SapAutomationQA):
                             if isinstance(prop, dict)
                         ]
                     )
+            elif check.validator_type == "check_support":
+                validation_rules = check.validator_args.get("validation_rules", "")
+                role = self.context.get("role", "")
+                database_type = self.context.get("database_type", "")
+                supported_configurations = self.context.get("supported_configurations", {}).get(
+                    validation_rules, {}
+                )
+                if "OSDB" in validation_rules:
+                    allowed = supported_configurations.get(database_type, {}).get(role, [])
+                elif "VMs" in validation_rules:
+                    vm_sku = str(actual_value or "").strip()
+                    allowed = (
+                        supported_configurations.get(vm_sku, {})
+                        .get(role, {})
+                        .get("SupportedDB", [])
+                    )
+                else:
+                    allowed = []
+                if allowed:
+                    expected_value = ", ".join(str(v) for v in allowed)
             else:
                 expected_value = check.validator_args.get(
                     "expected", check.validator_args.get("expected_output", "")
                 )
+
+            # An INFO-severity check is a short-circuited, non-validating observation (see
+            # execute_check below): validator_args may still define an expected_output for
+            # when the check is later re-enabled at a higher severity, but surfacing it here
+            # implies a pass/fail comparison that never actually happened. Blank it at the
+            # report layer only - validator_args itself must stay intact so the check keeps
+            # its full validation behavior if severity is raised again.
+            if check.severity == TestSeverity.INFO:
+                expected_value = ""
 
             return CheckResult(
                 check=check,
