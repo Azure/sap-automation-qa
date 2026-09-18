@@ -408,6 +408,21 @@ class TestValidators:
         result = config_module.validate_vm_support(sample_check, "Standard_M32ts")
         assert result["status"] == TestStatus.ERROR.value
 
+    def test_validate_vm_support_db2_case_insensitive(self, config_module, sample_check):
+        """SAP-0001 style: DB2 context matches the matrix's canonical Db2 spelling."""
+        config_module.set_context(
+            {
+                "role": "DB",
+                "database_type": "DB2",
+                "supported_configurations": {
+                    "SupportedVMs": {"Standard_M32ts": {"DB": {"SupportedDB": ["Db2"]}}}
+                },
+            }
+        )
+        sample_check.validator_args = {"validation_rules": "SupportedVMs"}
+        result = config_module.validate_vm_support(sample_check, "Standard_M32ts")
+        assert result["status"] == TestStatus.SUCCESS.value
+
     def test_validate_osdb_support_match(self, config_module, sample_check):
         """SAP-0002 style: standard/known image with a real supported OS/DB match -> PASSED"""
         config_module.set_context(
@@ -454,6 +469,21 @@ class TestValidators:
         result = config_module.validate_vm_support(sample_check, "")
         assert result["status"] == TestStatus.ERROR.value
         assert "details" in result
+
+    def test_validate_osdb_support_db2_case_insensitive(self, config_module, sample_check):
+        """SAP-0002 style: DB2 context matches the matrix's canonical Db2 key."""
+        config_module.set_context(
+            {
+                "role": "DB",
+                "database_type": "DB2",
+                "supported_configurations": {
+                    "SupportedOSDBCombinations": {"Db2": {"DB": ["SLES_SAP"]}}
+                },
+            }
+        )
+        sample_check.validator_args = {"validation_rules": "SupportedOSDBCombinations"}
+        result = config_module.validate_vm_support(sample_check, "SLES_SAP")
+        assert result["status"] == TestStatus.SUCCESS.value
 
 
 class TestValidateResult:
@@ -573,6 +603,32 @@ class TestExecuteCheck:
             assert result.status == TestStatus.SUCCESS.value
             assert result.expected_value == "SLES_SAP, REDHAT"
 
+    def test_execute_check_osdb_db2_expected_value_populated(
+        self, config_module, sample_check, monkeypatch
+    ):
+        """SAP-0002 style: DB2 uses the matrix's canonical Db2 key in reporting."""
+        config_module.set_context(
+            {
+                "hostname": "testhost",
+                "role": "DB",
+                "database_type": "DB2",
+                "supported_configurations": {
+                    "SupportedOSDBCombinations": {"Db2": {"DB": ["SLES_SAP"]}}
+                },
+            }
+        )
+        sample_check.validator_type = "check_support"
+        sample_check.validator_args = {"validation_rules": "SupportedOSDBCombinations"}
+
+        with patch(
+            "src.module_utils.collector.CommandCollector.collect",
+            return_value="SLES_SAP",
+        ):
+            result = config_module.execute_check(sample_check)
+
+        assert result.status == TestStatus.SUCCESS.value
+        assert result.expected_value == "SLES_SAP"
+
     def test_execute_check_osdb_missing_lookup_fails_closed(
         self, config_module, sample_check, monkeypatch
     ):
@@ -636,6 +692,35 @@ class TestExecuteCheck:
             result = config_module.execute_check(sample_check)
             assert result.status == TestStatus.ERROR.value
             assert result.expected_value == "Standard_M32ts, Standard_M64ts"
+
+    def test_execute_check_vms_db2_expected_value_lists_supported_skus(
+        self, config_module, sample_check, monkeypatch
+    ):
+        """SAP-0001 style: DB2 uses case-insensitive SupportedDB matching in reporting."""
+        config_module.set_context(
+            {
+                "hostname": "testhost",
+                "role": "DB",
+                "database_type": "DB2",
+                "supported_configurations": {
+                    "SupportedVMs": {
+                        "Standard_M32ts": {"DB": {"SupportedDB": ["Db2"]}},
+                        "Standard_M64ts": {"DB": {"SupportedDB": ["HANA"]}},
+                    }
+                },
+            }
+        )
+        sample_check.validator_type = "check_support"
+        sample_check.validator_args = {"validation_rules": "SupportedVMs"}
+
+        with patch(
+            "src.module_utils.collector.CommandCollector.collect",
+            return_value="Standard_M32ts",
+        ):
+            result = config_module.execute_check(sample_check)
+
+        assert result.status == TestStatus.SUCCESS.value
+        assert result.expected_value == "Standard_M32ts"
 
     def test_execute_check_parsed_sap_0018_info_severity(self, config_module, monkeypatch):
         """Ensure SAP-0018 remains INFO and its parsed execution has no expectation."""

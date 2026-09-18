@@ -307,6 +307,14 @@ class ConfigurationCheckModule(SapAutomationQA):
         self.context = context
         self.hostname = context.get("hostname")
 
+    @staticmethod
+    def _resolve_database_key(database_type: str, configurations: Dict[str, Any]) -> str:
+        """Resolve a database name to the casing used by the support matrix."""
+        for configured_name in configurations:
+            if str(configured_name).casefold() == str(database_type).casefold():
+                return configured_name
+        return database_type
+
     def load_checks(self, raw_file_content: str) -> None:
         """
         Load checks from a YAML file.
@@ -599,8 +607,12 @@ class ConfigurationCheckModule(SapAutomationQA):
                 }
 
             if "VMs" in validation_rules:
-                if database_type not in supported_configurations.get(value, {}).get(role, {}).get(
-                    "SupportedDB", []
+                supported_databases = (
+                    supported_configurations.get(value, {}).get(role, {}).get("SupportedDB", [])
+                )
+                if not any(
+                    str(supported_database).casefold() == str(database_type).casefold()
+                    for supported_database in supported_databases
                 ):
                     allowed_dbs = (
                         supported_configurations.get(value, {}).get(role, {}).get("SupportedDB", [])
@@ -615,12 +627,13 @@ class ConfigurationCheckModule(SapAutomationQA):
                     }
 
             elif "OSDB" in validation_rules:
+                database_key = self._resolve_database_key(database_type, supported_configurations)
                 if role not in supported_configurations.get(
-                    database_type, {}
-                ) or value.upper() not in supported_configurations.get(database_type, {}).get(
+                    database_key, {}
+                ) or value.upper() not in supported_configurations.get(database_key, {}).get(
                     role, []
                 ):
-                    allowed_os = supported_configurations.get(database_type, {}).get(role, [])
+                    allowed_os = supported_configurations.get(database_key, {}).get(role, [])
                     return {
                         "status": TestStatus.ERROR.value,
                         "details": (
@@ -863,12 +876,18 @@ class ConfigurationCheckModule(SapAutomationQA):
                     validation_rules, {}
                 )
                 if "OSDB" in validation_rules:
-                    allowed = supported_configurations.get(database_type, {}).get(role, [])
+                    database_key = self._resolve_database_key(
+                        database_type, supported_configurations
+                    )
+                    allowed = supported_configurations.get(database_key, {}).get(role, [])
                 elif "VMs" in validation_rules:
                     allowed = [
                         vm_sku
                         for vm_sku, vm_config in supported_configurations.items()
-                        if database_type in vm_config.get(role, {}).get("SupportedDB", [])
+                        if any(
+                            str(supported_database).casefold() == str(database_type).casefold()
+                            for supported_database in vm_config.get(role, {}).get("SupportedDB", [])
+                        )
                     ]
                 else:
                     allowed = []
