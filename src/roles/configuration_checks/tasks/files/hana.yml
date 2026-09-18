@@ -564,7 +564,7 @@ checks:
       os_type:                          [*suse, *redhat]
       os_version:                       *all_versions
       hardware_type:                    *all_hardware
-      storage_type:                     *all_storage
+      storage_type:                     *anf
       role:                             [*db_role]
       database_type:                    [*hana]
     collector_type:                     *command
@@ -589,7 +589,7 @@ checks:
       os_type:                          [*suse, *redhat]
       os_version:                       *all_versions
       hardware_type:                    *all_hardware
-      storage_type:                     *all_storage
+      storage_type:                     *anf
       role:                             [*db_role]
       database_type:                    [*hana]
     collector_type:                     *command
@@ -636,7 +636,7 @@ checks:
       os_type:                          [*suse, *redhat]
       os_version:                       *all_versions
       hardware_type:                    *all_hardware
-      storage_type:                     *all_storage
+      storage_type:                     *anf
       role:                             [*db_role]
       database_type:                    [*hana]
     collector_type:                     *command
