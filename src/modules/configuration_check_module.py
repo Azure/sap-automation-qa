@@ -276,6 +276,11 @@ class ConfigurationCheckModule(SapAutomationQA):
         """
         Check if a check is applicable based on its applicability rules and the current context
 
+        ``database_type`` is matched case-insensitively against the rule's supported list:
+        workspace input may supply ``DB2`` while the checks' applicability lists (and the
+        support matrix) spell it ``Db2``. Without this, a case-sensitive membership test would
+        mark the check not applicable and it would be silently SKIPPED rather than evaluated.
+
         :param check: The check to evaluate
         :type check: Check
         :return: True if applicable, False otherwise
@@ -287,6 +292,14 @@ class ConfigurationCheckModule(SapAutomationQA):
         )
         for rule in check.applicability:
             context_value = self.context.get(rule.property)
+            if (
+                rule.property == "database_type"
+                and isinstance(context_value, str)
+                and isinstance(rule.value, list)
+            ):
+                context_value = self._resolve_database_key(
+                    context_value, {name: None for name in rule.value}
+                )
             if not rule.is_applicable(context_value):
                 self.log(
                     logging.DEBUG,

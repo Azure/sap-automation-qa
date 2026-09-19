@@ -267,6 +267,51 @@ class TestIsCheckApplicable:
         assert config_module.is_check_applicable(checks["DB-HANA-0004"]) is False
         assert config_module.is_check_applicable(checks["DB-HANA-0005"]) is True
 
+    def test_check_applicable_db2_case_insensitive_list_match(self, config_module, sample_check):
+        """A workspace-supplied `DB2` must match an applicability list spelled `Db2`,
+        otherwise the check is silently SKIPPED instead of evaluated."""
+        config_module.set_context({"database_type": "DB2"})
+        sample_check.applicability = [
+            ApplicabilityRule(property="database_type", value=["HANA", "Db2", "ASE"])
+        ]
+        assert config_module.is_check_applicable(sample_check) is True
+
+    def test_check_not_applicable_db2_not_in_list(self, config_module, sample_check):
+        """An unsupported database must still fail applicability after normalization."""
+        config_module.set_context({"database_type": "Sybase"})
+        sample_check.applicability = [
+            ApplicabilityRule(property="database_type", value=["HANA", "Db2", "ASE"])
+        ]
+        assert config_module.is_check_applicable(sample_check) is False
+
+    def test_sap_0001_applicable_for_db2_workspace(self, config_module):
+        """SAP-0001/SAP-0002 must remain applicable for a real `DB2` workspace instead of
+        being silently skipped due to case-sensitive applicability matching."""
+        sap_checks = (
+            Path(__file__).parents[2]
+            / "src"
+            / "roles"
+            / "configuration_checks"
+            / "tasks"
+            / "files"
+            / "sap.yml"
+        )
+        config_module.load_checks(sap_checks.read_text(encoding="utf-8"))
+        checks = {check.id: check for check in config_module.checks}
+        config_module.set_context(
+            {
+                "os_type": "REDHAT",
+                "os_version": "9.4",
+                "hardware_type": "VM",
+                "storage_type": ["Premium_LRS"],
+                "role": "DB",
+                "database_type": "DB2",
+            }
+        )
+
+        assert config_module.is_check_applicable(checks["SAP-0001"]) is True
+        assert config_module.is_check_applicable(checks["SAP-0002"]) is True
+
 
 class TestValidators:
     """Test suite for validation methods"""
