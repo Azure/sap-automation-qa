@@ -567,14 +567,15 @@ class ConfigurationCheckModule(SapAutomationQA):
                 "status": TestStatus.ERROR.value,
             }
 
-    def validate_vm_support(self, check: Check, collected_data: str) -> Dict[str, Any]:
+    def validate_vm_support(self, check: Check, collected_data: Optional[str]) -> Dict[str, Any]:
         """
         Validates if a VM SKU is supported for the given role and database type
 
         :param check: Check definition
         :type check: Check
-        :param collected_data: VM SKU from metadata service
-        :type collected_data: str
+        :param collected_data: VM SKU from metadata service, or None/empty if the
+            support lookup failed to collect any evidence
+        :type collected_data: Optional[str]
         :return: Validation result
         :rtype: Dict[str, Any]
         """
