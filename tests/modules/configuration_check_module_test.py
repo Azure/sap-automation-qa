@@ -201,6 +201,29 @@ checks:
         config_module.load_checks("")
         assert len(config_module.checks) == 0
 
+    def test_hana_premium_v2_iops_checks_use_memory_tiers(self, config_module):
+        """Test real HANA IOPS checks use Premium SSD v2 memory requirements."""
+        hana_checks_path = (
+            Path(__file__).parents[2] / "src/roles/configuration_checks/tasks/files/hana.yml"
+        )
+        config_module.load_checks(hana_checks_path.read_text(encoding="utf-8"))
+        checks = {check.id: check for check in config_module.checks}
+        config_module.set_context(
+            {
+                "memory_gib": 974,
+                "hana_data_storage_type": ["PremiumV2_LRS"],
+                "hana_log_storage_type": ["PremiumV2_LRS"],
+            }
+        )
+
+        data_result = config_module.validate_tiered_numeric_range(checks["DB-HANA-0042"], "6000")
+        log_result = config_module.validate_tiered_numeric_range(checks["DB-HANA-0044"], "3000")
+
+        assert checks["DB-HANA-0042"].validator_type == "tiered_range"
+        assert checks["DB-HANA-0044"].validator_type == "tiered_range"
+        assert data_result["status"] == TestStatus.SUCCESS.value
+        assert log_result["status"] == TestStatus.SUCCESS.value
+
 
 class TestIsCheckApplicable:
     """Test suite for is_check_applicable method"""
@@ -359,6 +382,88 @@ class TestValidators:
         sample_check.validator_args = {"min": 10, "max": 100}
         result = config_module.validate_numeric_range(sample_check, "not_a_number")
         assert result["status"] == TestStatus.ERROR.value
+
+    @pytest.mark.parametrize(
+        ("memory_gib", "minimum", "collected_iops", "expected_status"),
+        [
+            (974, 3000, "6000", TestStatus.SUCCESS.value),
+            (1024, 5000, "4999", TestStatus.WARNING.value),
+            (2048, 12000, "12000", TestStatus.SUCCESS.value),
+            (4096, 20000, "19999", TestStatus.WARNING.value),
+        ],
+    )
+    def test_validate_tiered_range_uses_vm_memory_for_premium_v2(
+        self,
+        config_module,
+        sample_check,
+        memory_gib,
+        minimum,
+        collected_iops,
+        expected_status,
+    ):
+        """Test Premium SSD v2 requirements are selected from VM memory."""
+        config_module.set_context(
+            {
+                "memory_gib": memory_gib,
+                "hana_data_storage_type": ["PremiumV2_LRS"],
+            }
+        )
+        sample_check.validator_args = {
+            "min": 7000,
+            "storage_type_property": "hana_data_storage_type",
+            "tiered_storage_types": ["PremiumV2_LRS"],
+            "memory_tiers": [
+                {"below_gib": 1024, "min": 3000},
+                {"below_gib": 2048, "min": 5000},
+                {"below_gib": 4096, "min": 12000},
+                {"below_gib": 8192, "min": 20000},
+            ],
+        }
+
+        result = config_module.validate_tiered_numeric_range(sample_check, collected_iops)
+
+        assert result["status"] == expected_status
+        assert f"Required minimum: {minimum}" in result["details"]
+
+    def test_validate_tiered_range_uses_log_requirement(self, config_module, sample_check):
+        """Test the Premium SSD v2 log requirement is independent of data IOPS."""
+        config_module.set_context(
+            {
+                "memory_gib": 974,
+                "hana_log_storage_type": ["PremiumV2_LRS"],
+            }
+        )
+        sample_check.validator_args = {
+            "min": 2000,
+            "storage_type_property": "hana_log_storage_type",
+            "tiered_storage_types": ["PremiumV2_LRS"],
+            "memory_tiers": [{"below_gib": 1024, "min": 3000}],
+        }
+
+        result = config_module.validate_tiered_numeric_range(sample_check, "2500")
+
+        assert result["status"] == TestStatus.WARNING.value
+
+    def test_validate_tiered_range_uses_default_when_memory_is_unavailable(
+        self, config_module, sample_check
+    ):
+        """Test a missing memory fact does not lower the default requirement."""
+        config_module.set_context(
+            {
+                "hana_data_storage_type": ["PremiumV2_LRS"],
+            }
+        )
+        sample_check.validator_args = {
+            "min": 7000,
+            "storage_type_property": "hana_data_storage_type",
+            "tiered_storage_types": ["PremiumV2_LRS"],
+            "memory_tiers": [{"below_gib": 1024, "min": 3000}],
+        }
+
+        result = config_module.validate_tiered_numeric_range(sample_check, "6000")
+
+        assert result["status"] == TestStatus.WARNING.value
+        assert "VM memory unavailable" in result["details"]
 
     def test_validate_list_contains_match(self, config_module, sample_check):
         """Test list validation with matching item"""
