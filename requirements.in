@@ -21,6 +21,7 @@ pylint
 coverage
 
 # Testing packages
+anyio>=4.14.2
 httpx
 pytest
 pytest-asyncio
