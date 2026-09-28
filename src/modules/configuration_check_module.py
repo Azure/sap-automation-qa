@@ -276,11 +276,6 @@ class ConfigurationCheckModule(SapAutomationQA):
         """
         Check if a check is applicable based on its applicability rules and the current context
 
-        ``database_type`` is matched case-insensitively against the rule's supported list:
-        workspace input may supply ``DB2`` while the checks' applicability lists (and the
-        support matrix) spell it ``Db2``. Without this, a case-sensitive membership test would
-        mark the check not applicable and it would be silently SKIPPED rather than evaluated.
-
         :param check: The check to evaluate
         :type check: Check
         :return: True if applicable, False otherwise
@@ -292,14 +287,6 @@ class ConfigurationCheckModule(SapAutomationQA):
         )
         for rule in check.applicability:
             context_value = self.context.get(rule.property)
-            if (
-                rule.property == "database_type"
-                and isinstance(context_value, str)
-                and isinstance(rule.value, list)
-            ):
-                context_value = self._resolve_database_key(
-                    context_value, {name: None for name in rule.value}
-                )
             if not rule.is_applicable(context_value):
                 self.log(
                     logging.DEBUG,
@@ -319,14 +306,30 @@ class ConfigurationCheckModule(SapAutomationQA):
         """
         self.context = context
         self.hostname = context.get("hostname")
+        self._canonicalize_database_type()
 
-    @staticmethod
-    def _resolve_database_key(database_type: str, configurations: Dict[str, Any]) -> str:
-        """Resolve a database name to the casing used by the support matrix."""
-        for configured_name in configurations:
-            if str(configured_name).casefold() == str(database_type).casefold():
-                return configured_name
-        return database_type
+    def _canonicalize_database_type(self) -> None:
+        """
+        Normalize ``database_type`` to the casing used by the support matrix
+        (``SupportedOSDBCombinations``), once, at the context boundary.
+
+        Workspace input may supply ``DB2`` while the checks' applicability lists and the
+        support matrix spell it ``Db2``. Every downstream consumer (applicability rules,
+        ``validate_vm_support``, report expected-value generation) reads ``database_type``
+        from ``self.context``, so normalizing it here - rather than at each call site -
+        keeps the comparisons simple and case-sensitive everywhere else.
+        """
+        database_type = self.context.get("database_type")
+        if not isinstance(database_type, str):
+            return
+
+        known_database_names = self.context.get("supported_configurations", {}).get(
+            "SupportedOSDBCombinations", {}
+        )
+        for known_database_name in known_database_names:
+            if str(known_database_name).casefold() == database_type.casefold():
+                self.context["database_type"] = known_database_name
+                break
 
     def load_checks(self, raw_file_content: str) -> None:
         """
@@ -621,12 +624,8 @@ class ConfigurationCheckModule(SapAutomationQA):
                 }
 
             if "VMs" in validation_rules:
-                supported_databases = (
-                    supported_configurations.get(value, {}).get(role, {}).get("SupportedDB", [])
-                )
-                if not any(
-                    str(supported_database).casefold() == str(database_type).casefold()
-                    for supported_database in supported_databases
+                if database_type not in supported_configurations.get(value, {}).get(role, {}).get(
+                    "SupportedDB", []
                 ):
                     allowed_dbs = (
                         supported_configurations.get(value, {}).get(role, {}).get("SupportedDB", [])
@@ -641,13 +640,12 @@ class ConfigurationCheckModule(SapAutomationQA):
                     }
 
             elif "OSDB" in validation_rules:
-                database_key = self._resolve_database_key(database_type, supported_configurations)
                 if role not in supported_configurations.get(
-                    database_key, {}
-                ) or value.upper() not in supported_configurations.get(database_key, {}).get(
+                    database_type, {}
+                ) or value.upper() not in supported_configurations.get(database_type, {}).get(
                     role, []
                 ):
-                    allowed_os = supported_configurations.get(database_key, {}).get(role, [])
+                    allowed_os = supported_configurations.get(database_type, {}).get(role, [])
                     return {
                         "status": TestStatus.ERROR.value,
                         "details": (
@@ -889,22 +887,23 @@ class ConfigurationCheckModule(SapAutomationQA):
                 supported_configurations = self.context.get("supported_configurations", {}).get(
                     validation_rules, {}
                 )
+                allowed: List[str] = []
                 if "OSDB" in validation_rules:
-                    database_key = self._resolve_database_key(
-                        database_type, supported_configurations
+                    # Bounded by design: a handful of OS names per database/role.
+                    allowed = supported_configurations.get(database_type, {}).get(role, [])
+                elif (
+                    "VMs" in validation_rules
+                    and isinstance(actual_value, str)
+                    and actual_value.strip()
+                ):
+                    # Report only the databases supported by the specific VM SKU that was
+                    # collected. Never reverse-enumerate the support matrix's hundreds of
+                    # VM SKUs here - that dumped the entire SKU catalog into the report.
+                    allowed = (
+                        supported_configurations.get(actual_value.strip(), {})
+                        .get(role, {})
+                        .get("SupportedDB", [])
                     )
-                    allowed = supported_configurations.get(database_key, {}).get(role, [])
-                elif "VMs" in validation_rules:
-                    allowed = [
-                        vm_sku
-                        for vm_sku, vm_config in supported_configurations.items()
-                        if any(
-                            str(supported_database).casefold() == str(database_type).casefold()
-                            for supported_database in vm_config.get(role, {}).get("SupportedDB", [])
-                        )
-                    ]
-                else:
-                    allowed = []
                 if allowed:
                     expected_value = ", ".join(str(v) for v in allowed)
             else:

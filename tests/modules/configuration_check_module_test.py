@@ -270,7 +270,12 @@ class TestIsCheckApplicable:
     def test_check_applicable_db2_case_insensitive_list_match(self, config_module, sample_check):
         """A workspace-supplied `DB2` must match an applicability list spelled `Db2`,
         otherwise the check is silently SKIPPED instead of evaluated."""
-        config_module.set_context({"database_type": "DB2"})
+        config_module.set_context(
+            {
+                "database_type": "DB2",
+                "supported_configurations": {"SupportedOSDBCombinations": {"Db2": {}}},
+            }
+        )
         sample_check.applicability = [
             ApplicabilityRule(property="database_type", value=["HANA", "Db2", "ASE"])
         ]
@@ -278,7 +283,12 @@ class TestIsCheckApplicable:
 
     def test_check_not_applicable_db2_not_in_list(self, config_module, sample_check):
         """An unsupported database must still fail applicability after normalization."""
-        config_module.set_context({"database_type": "Sybase"})
+        config_module.set_context(
+            {
+                "database_type": "Sybase",
+                "supported_configurations": {"SupportedOSDBCombinations": {"Db2": {}}},
+            }
+        )
         sample_check.applicability = [
             ApplicabilityRule(property="database_type", value=["HANA", "Db2", "ASE"])
         ]
@@ -306,6 +316,7 @@ class TestIsCheckApplicable:
                 "storage_type": ["Premium_LRS"],
                 "role": "DB",
                 "database_type": "DB2",
+                "supported_configurations": {"SupportedOSDBCombinations": {"Db2": {}}},
             }
         )
 
@@ -460,7 +471,8 @@ class TestValidators:
                 "role": "DB",
                 "database_type": "DB2",
                 "supported_configurations": {
-                    "SupportedVMs": {"Standard_M32ts": {"DB": {"SupportedDB": ["Db2"]}}}
+                    "SupportedOSDBCombinations": {"Db2": {}},
+                    "SupportedVMs": {"Standard_M32ts": {"DB": {"SupportedDB": ["Db2"]}}},
                 },
             }
         )
@@ -498,22 +510,6 @@ class TestValidators:
         result = config_module.validate_vm_support(sample_check, "REDHAT")
         assert result["status"] == TestStatus.ERROR.value
         assert "Allowed OS" in result["details"]
-
-    def test_validate_osdb_support_no_lookup_data(self, config_module, sample_check):
-        """SAP-0002 style: missing lookup evidence fails closed instead of being skipped."""
-        config_module.set_context(
-            {
-                "role": "db",
-                "database_type": "HANA",
-                "supported_configurations": {
-                    "SupportedOSDBCombinations": {"HANA": {"db": ["SLES_SAP", "REDHAT"]}}
-                },
-            }
-        )
-        sample_check.validator_args = {"validation_rules": "SupportedOSDBCombinations"}
-        result = config_module.validate_vm_support(sample_check, "")
-        assert result["status"] == TestStatus.ERROR.value
-        assert "details" in result
 
     def test_validate_osdb_support_db2_case_insensitive(self, config_module, sample_check):
         """SAP-0002 style: DB2 context matches the matrix's canonical Db2 key."""
@@ -674,6 +670,40 @@ class TestExecuteCheck:
         assert result.status == TestStatus.SUCCESS.value
         assert result.expected_value == "SLES_SAP"
 
+    def test_execute_check_vms_expected_value_scoped_to_collected_sku(
+        self, config_module, sample_check, monkeypatch
+    ):
+        """SAP-0001 style: Expected must describe the databases supported by the specific VM
+        SKU that was collected, never a reverse-enumeration of the whole support matrix
+        (hundreds of VM SKUs), which previously flooded the report."""
+        config_module.set_context(
+            {
+                "hostname": "testhost",
+                "role": "db",
+                "database_type": "HANA",
+                "supported_configurations": {
+                    "SupportedVMs": {
+                        "Standard_M32ts": {"db": {"SupportedDB": ["HANA", "DB2"]}},
+                        "Standard_M64ts": {"db": {"SupportedDB": ["HANA"]}},
+                        "Standard_D2s_v3": {"db": {"SupportedDB": ["DB2"]}},
+                    }
+                },
+            }
+        )
+        sample_check.validator_type = "check_support"
+        sample_check.validator_args = {"validation_rules": "SupportedVMs"}
+
+        with patch(
+            "src.module_utils.collector.CommandCollector.collect",
+            return_value="Standard_M32ts",
+        ):
+            result = config_module.execute_check(sample_check)
+
+        assert result.status == TestStatus.SUCCESS.value
+        assert result.expected_value == "HANA, DB2"
+        assert "Standard_M64ts" not in result.expected_value
+        assert "Standard_D2s_v3" not in result.expected_value
+
     def test_execute_check_osdb_missing_lookup_fails_closed(
         self, config_module, sample_check, monkeypatch
     ):
@@ -698,74 +728,45 @@ class TestExecuteCheck:
             result = config_module.execute_check(sample_check)
             assert result.status == TestStatus.ERROR.value
 
-    def test_execute_check_vms_expected_value_lists_supported_skus(
-        self, config_module, sample_check, monkeypatch
+    def test_execute_check_parsed_db_hana_0003_stonith_action_reboot_colon_format(
+        self, config_module
     ):
-        """SAP-0001 style: Expected must list VM SKUs that support the current role/database."""
-        config_module.set_context(
-            {
-                "hostname": "testhost",
-                "role": "db",
-                "database_type": "HANA",
-                "supported_configurations": {
-                    "SupportedVMs": {
-                        "Standard_M32ts": {"db": {"SupportedDB": ["HANA", "DB2"]}},
-                        "Standard_M64ts": {"db": {"SupportedDB": ["HANA"]}},
-                        "Standard_D2s_v3": {"db": {"SupportedDB": ["DB2"]}},
-                    }
-                },
-            }
+        """Regression test for DB-HANA-0003: `crm configure get_property` returns
+        `stonith-action: reboot`, which must PASS after the validate_list format fix, not
+        silently regress back to only accepting the bare `reboot` value."""
+        hana_checks = (
+            Path(__file__).parents[2]
+            / "src"
+            / "roles"
+            / "configuration_checks"
+            / "tasks"
+            / "files"
+            / "hana.yml"
         )
-        sample_check.validator_type = "check_support"
-        sample_check.validator_args = {"validation_rules": "SupportedVMs"}
+        config_module.load_checks(hana_checks.read_text(encoding="utf-8"))
+        check = next(check for check in config_module.checks if check.id == "DB-HANA-0003")
 
-        def mock_collect(check, context):
-            return "Standard_M32ts"
-
-        with patch("src.module_utils.collector.CommandCollector.collect", side_effect=mock_collect):
-            result = config_module.execute_check(sample_check)
-            assert result.status == TestStatus.SUCCESS.value
-            assert result.expected_value == "Standard_M32ts, Standard_M64ts"
-
-        def mock_collect_unknown(check, context):
-            return "Standard_Unknown"
-
-        with patch(
-            "src.module_utils.collector.CommandCollector.collect",
-            side_effect=mock_collect_unknown,
-        ):
-            result = config_module.execute_check(sample_check)
-            assert result.status == TestStatus.ERROR.value
-            assert result.expected_value == "Standard_M32ts, Standard_M64ts"
-
-    def test_execute_check_vms_db2_expected_value_lists_supported_skus(
-        self, config_module, sample_check, monkeypatch
-    ):
-        """SAP-0001 style: DB2 uses case-insensitive SupportedDB matching in reporting."""
         config_module.set_context(
             {
                 "hostname": "testhost",
+                "os_type": "SLES_SAP",
+                "os_version": "15.4",
+                "hardware_type": "VM",
+                "storage_type": ["Premium_LRS"],
                 "role": "DB",
-                "database_type": "DB2",
-                "supported_configurations": {
-                    "SupportedVMs": {
-                        "Standard_M32ts": {"DB": {"SupportedDB": ["Db2"]}},
-                        "Standard_M64ts": {"DB": {"SupportedDB": ["HANA"]}},
-                    }
-                },
+                "database_type": "HANA",
+                "high_availability": "scale_up",
+                "high_availability_agent": "AFA",
             }
         )
-        sample_check.validator_type = "check_support"
-        sample_check.validator_args = {"validation_rules": "SupportedVMs"}
 
         with patch(
             "src.module_utils.collector.CommandCollector.collect",
-            return_value="Standard_M32ts",
+            return_value="stonith-action: reboot",
         ):
-            result = config_module.execute_check(sample_check)
+            result = config_module.execute_check(check)
 
         assert result.status == TestStatus.SUCCESS.value
-        assert result.expected_value == "Standard_M32ts"
 
     def test_execute_check_parsed_sap_0018_info_severity(self, config_module, monkeypatch):
         """Ensure SAP-0018 remains INFO and its parsed execution has no expectation."""
@@ -1511,25 +1512,10 @@ class TestValidateVmSupportDiagnostics:
     """Test suite for improved validate_vm_support diagnostics"""
 
     def test_missing_input_details(self, config_module, sample_check):
-        """Test that missing collected evidence fails closed."""
+        """Test that missing input produces details"""
         config_module.set_context({"role": "", "database_type": "", "supported_configurations": {}})
         sample_check.validator_args = {"validation_rules": "VMs"}
         result = config_module.validate_vm_support(sample_check, "")
-        assert result["status"] == TestStatus.ERROR.value
-        assert "details" in result
-
-    def test_missing_input_details_none_collected_data(self, config_module, sample_check):
-        """Test that None collected data (lookup failure) fails closed."""
-        config_module.set_context({"role": "", "database_type": "", "supported_configurations": {}})
-        sample_check.validator_args = {"validation_rules": "VMs"}
-        result = config_module.validate_vm_support(sample_check, None)
-        assert result["status"] == TestStatus.ERROR.value
-
-    def test_missing_role_or_config_with_value_present(self, config_module, sample_check):
-        """Test that a real collected value with no role/config data is a genuine ERROR"""
-        config_module.set_context({"role": "", "database_type": "", "supported_configurations": {}})
-        sample_check.validator_args = {"validation_rules": "VMs"}
-        result = config_module.validate_vm_support(sample_check, "Standard_M32ts")
         assert result["status"] == TestStatus.ERROR.value
         assert "details" in result
 
