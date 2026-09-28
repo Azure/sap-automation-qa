@@ -201,8 +201,8 @@ checks:
         config_module.load_checks("")
         assert len(config_module.checks) == 0
 
-    def test_hana_premium_v2_iops_checks_use_memory_tiers(self, config_module):
-        """Test real HANA IOPS checks use Premium SSD v2 memory requirements."""
+    def test_hana_premium_v2_iops_checks_use_sku_overrides(self, config_module):
+        """Test real HANA IOPS checks prefer documented VM SKU requirements."""
         hana_checks_path = (
             Path(__file__).parents[2] / "src/roles/configuration_checks/tasks/files/hana.yml"
         )
@@ -210,19 +210,46 @@ checks:
         checks = {check.id: check for check in config_module.checks}
         config_module.set_context(
             {
+                "vm_size": "Standard_M416ms_v2",
                 "memory_gib": 974,
                 "hana_data_storage_type": ["PremiumV2_LRS"],
                 "hana_log_storage_type": ["PremiumV2_LRS"],
             }
         )
 
-        data_result = config_module.validate_tiered_numeric_range(checks["DB-HANA-0042"], "6000")
-        log_result = config_module.validate_tiered_numeric_range(checks["DB-HANA-0044"], "3000")
+        data_result = config_module.validate_tiered_numeric_range(checks["DB-HANA-0042"], "24999")
+        log_result = config_module.validate_tiered_numeric_range(checks["DB-HANA-0044"], "4999")
 
         assert checks["DB-HANA-0042"].validator_type == "tiered_range"
         assert checks["DB-HANA-0044"].validator_type == "tiered_range"
+        assert data_result["status"] == TestStatus.ERROR.value
+        assert log_result["status"] == TestStatus.ERROR.value
+        assert data_result["details"] == "Required minimum: 25000 (VM SKU Standard_M416ms_v2)"
+        assert log_result["details"] == "Required minimum: 5000 (VM SKU Standard_M416ms_v2)"
+
+    def test_hana_iops_checks_keep_defaults_for_non_premium_v2_storage(self, config_module):
+        """Test non-Premium SSD v2 storage keeps the baseline IOPS requirements."""
+        hana_checks_path = (
+            Path(__file__).parents[2] / "src/roles/configuration_checks/tasks/files/hana.yml"
+        )
+        config_module.load_checks(hana_checks_path.read_text(encoding="utf-8"))
+        checks = {check.id: check for check in config_module.checks}
+        config_module.set_context(
+            {
+                "vm_size": "Standard_M416ms_v2",
+                "memory_gib": 974,
+                "hana_data_storage_type": ["Premium_LRS"],
+                "hana_log_storage_type": ["Premium_LRS"],
+            }
+        )
+
+        data_result = config_module.validate_tiered_numeric_range(checks["DB-HANA-0042"], "7000")
+        log_result = config_module.validate_tiered_numeric_range(checks["DB-HANA-0044"], "2000")
+
         assert data_result["status"] == TestStatus.SUCCESS.value
         assert log_result["status"] == TestStatus.SUCCESS.value
+        assert data_result["details"] == "Required minimum: 7000 (default storage requirement)"
+        assert log_result["details"] == "Required minimum: 2000 (default storage requirement)"
 
 
 class TestIsCheckApplicable:
