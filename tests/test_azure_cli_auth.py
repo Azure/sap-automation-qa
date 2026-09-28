@@ -47,19 +47,19 @@ def test_shared_authentication_uses_cli_version() -> None:
     tasks_by_name = {task["name"]: task for task in tasks}
 
     version_task = tasks_by_name["Init: Get Azure CLI Version"]
-    client_id_task = tasks_by_name["Init: Authenticate With Client ID (az cli >= 2.61)"]
-    username_task = tasks_by_name["Init: Authenticate With Username (az cli < 2.61)"]
+    client_id_task = tasks_by_name["Init: Authenticate With Client ID (az cli >= 2.69)"]
+    username_task = tasks_by_name["Init: Authenticate With Username (az cli < 2.69)"]
 
     assert version_task["register"] == "azure_cli_version"
     assert version_task["ansible.builtin.command"]["cmd"] == (
         "az version --query '\"azure-cli\"' --output tsv"
     )
-    assert client_id_task["when"] == "azure_cli_version.stdout is version('2.61', '>=')"
+    assert client_id_task["when"] == "azure_cli_version.stdout is version('2.69', '>=')"
     assert (
         "--client-id {{ user_assigned_identity_client_id }}"
         in client_id_task["ansible.builtin.command"]["cmd"]
     )
-    assert username_task["when"] == "azure_cli_version.stdout is version('2.61', '<')"
+    assert username_task["when"] == "azure_cli_version.stdout is version('2.69', '<')"
     assert (
         "--username {{ user_assigned_identity_client_id }}"
         in username_task["ansible.builtin.command"]["cmd"]
@@ -68,12 +68,12 @@ def test_shared_authentication_uses_cli_version() -> None:
 
 @pytest.mark.parametrize(
     ("cli_version", "use_client_id"),
-    [("2.60.0", False), ("2.61.0", True), ("2.90.0", True)],
+    [("2.68.0", False), ("2.69.0", True), ("2.90.0", True)],
 )
 def test_cli_version_threshold(cli_version: str, use_client_id: bool) -> None:
-    """Azure CLI 2.61 is the boundary for the managed identity argument change."""
-    at_or_above_threshold = version_compare(cli_version, "2.61", operator=">=")
-    below_threshold = version_compare(cli_version, "2.61", operator="<")
+    """Azure CLI 2.69 is the boundary for the managed identity argument change."""
+    at_or_above_threshold = version_compare(cli_version, "2.69", operator=">=")
+    below_threshold = version_compare(cli_version, "2.69", operator="<")
 
     assert at_or_above_threshold is use_client_id
     assert below_threshold is not use_client_id
