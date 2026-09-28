@@ -306,6 +306,30 @@ class ConfigurationCheckModule(SapAutomationQA):
         """
         self.context = context
         self.hostname = context.get("hostname")
+        self._canonicalize_database_type()
+
+    def _canonicalize_database_type(self) -> None:
+        """
+        Normalize ``database_type`` to the casing used by the support matrix
+        (``SupportedOSDBCombinations``), once, at the context boundary.
+
+        Workspace input may supply ``DB2`` while the checks' applicability lists and the
+        support matrix spell it ``Db2``. Every downstream consumer (applicability rules,
+        ``validate_vm_support``, report expected-value generation) reads ``database_type``
+        from ``self.context``, so normalizing it here - rather than at each call site -
+        keeps the comparisons simple and case-sensitive everywhere else.
+        """
+        database_type = self.context.get("database_type")
+        if not isinstance(database_type, str):
+            return
+
+        known_database_names = self.context.get("supported_configurations", {}).get(
+            "SupportedOSDBCombinations", {}
+        )
+        for known_database_name in known_database_names:
+            if str(known_database_name).casefold() == database_type.casefold():
+                self.context["database_type"] = known_database_name
+                break
 
     def load_checks(self, raw_file_content: str) -> None:
         """
@@ -559,19 +583,20 @@ class ConfigurationCheckModule(SapAutomationQA):
                 "status": TestStatus.ERROR.value,
             }
 
-    def validate_vm_support(self, check: Check, collected_data: str) -> Dict[str, Any]:
+    def validate_vm_support(self, check: Check, collected_data: Optional[str]) -> Dict[str, Any]:
         """
         Validates if a VM SKU is supported for the given role and database type
 
         :param check: Check definition
         :type check: Check
-        :param collected_data: VM SKU from metadata service
-        :type collected_data: str
+        :param collected_data: VM SKU from metadata service, or None/empty if the
+            support lookup failed to collect any evidence
+        :type collected_data: Optional[str]
         :return: Validation result
         :rtype: Dict[str, Any]
         """
         try:
-            value = collected_data.strip()
+            value = (collected_data or "").strip()
             role = self.context.get("role", "")
             database_type = self.context.get("database_type", "")
             validation_rules = check.validator_args.get("validation_rules", {})
@@ -579,7 +604,17 @@ class ConfigurationCheckModule(SapAutomationQA):
                 validation_rules, {}
             )
 
-            if not value or not supported_configurations or not role:
+            if not value:
+                # An empty collector result does not identify a custom image. It may also
+                # represent a failed lookup, so fail closed rather than skipping validation.
+                return {
+                    "status": TestStatus.ERROR.value,
+                    "details": (
+                        "No value returned by the support lookup; support cannot be determined."
+                    ),
+                }
+
+            if not supported_configurations or not role:
                 return {
                     "status": TestStatus.ERROR.value,
                     "details": (
@@ -845,10 +880,45 @@ class ConfigurationCheckModule(SapAutomationQA):
                             if isinstance(prop, dict)
                         ]
                     )
+            elif check.validator_type == "check_support":
+                validation_rules = check.validator_args.get("validation_rules", "")
+                role = self.context.get("role", "")
+                database_type = self.context.get("database_type", "")
+                supported_configurations = self.context.get("supported_configurations", {}).get(
+                    validation_rules, {}
+                )
+                allowed: List[str] = []
+                if "OSDB" in validation_rules:
+                    # Bounded by design: a handful of OS names per database/role.
+                    allowed = supported_configurations.get(database_type, {}).get(role, [])
+                elif (
+                    "VMs" in validation_rules
+                    and isinstance(actual_value, str)
+                    and actual_value.strip()
+                ):
+                    # Report only the databases supported by the specific VM SKU that was
+                    # collected. Never reverse-enumerate the support matrix's hundreds of
+                    # VM SKUs here - that dumped the entire SKU catalog into the report.
+                    allowed = (
+                        supported_configurations.get(actual_value.strip(), {})
+                        .get(role, {})
+                        .get("SupportedDB", [])
+                    )
+                if allowed:
+                    expected_value = ", ".join(str(v) for v in allowed)
             else:
                 expected_value = check.validator_args.get(
                     "expected", check.validator_args.get("expected_output", "")
                 )
+
+            # An INFO-severity check is a short-circuited, non-validating observation (see
+            # execute_check below): validator_args may still define an expected_output for
+            # when the check is later re-enabled at a higher severity, but surfacing it here
+            # implies a pass/fail comparison that never actually happened. Blank it at the
+            # report layer only - validator_args itself must stay intact so the check keeps
+            # its full validation behavior if severity is raised again.
+            if check.severity == TestSeverity.INFO:
+                expected_value = ""
 
             return CheckResult(
                 check=check,
