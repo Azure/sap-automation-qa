@@ -5,7 +5,7 @@
   register:                         azure_cli_version
   changed_when:                     false
 
-- name:                             "Init: Authenticate With Client ID (az cli >= 2.61)"
+- name:                             "Init: Authenticate With Client ID (az cli >= 2.69)"
   ansible.builtin.command:
     cmd:                            >-
                                     az login --identity
@@ -14,9 +14,9 @@
                                     --client-id {{ user_assigned_identity_client_id }}
                                     {% endif %}
   changed_when:                     false
-  when:                             azure_cli_version.stdout is version('2.61', '>=')
+  when:                             azure_cli_version.stdout is version('2.69', '>=')
 
-- name:                             "Init: Authenticate With Username (az cli < 2.61)"
+- name:                             "Init: Authenticate With Username (az cli < 2.69)"
   ansible.builtin.command:
     cmd:                            >-
                                     az login --identity
@@ -25,4 +25,4 @@
                                     --username {{ user_assigned_identity_client_id }}
                                     {% endif %}
   changed_when:                     false
-  when:                             azure_cli_version.stdout is version('2.61', '<')
+  when:                             azure_cli_version.stdout is version('2.69', '<')
