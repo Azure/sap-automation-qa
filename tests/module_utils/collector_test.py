@@ -398,6 +398,72 @@ class TestAzureDataParser:
         )
         assert result == "5000"
 
+    def test_parse_disks_vars_stripe_size_end_to_end_with_filesystem_collector(self):
+        """
+        End-to-end regression: feed AzureDataParser.parse_disks_vars the actual
+        entries FileSystemCollector._parse_filesystem_data() produces (the same
+        shape that lands in context["filesystems"] in production), for both a
+        genuinely striped LV and a single non-LVM disk. This guards against
+        FileSystemCollector silently dropping "stripes"/"disk_count", which
+        would make every stripe-size check resolve as non-striped (SKIPPED).
+        """
+        from src.module_utils.filesystem_collector import FileSystemCollector
+
+        class _FsParent:
+            def log(self, level, message):
+                pass
+
+        fs_collector = FileSystemCollector(_FsParent())
+
+        striped_findmnt = "/hana/data /dev/mapper/datavg-datalv xfs rw,relatime\n"
+        striped_df = (
+            "Filesystem 1K-blocks Used Available Use% Mounted\n"
+            "/dev/mapper/datavg-datalv 1048576000 104857600 943718400 10% /hana/data\n"
+        )
+        striped_lvm_volume = {
+            "datalv": {
+                "dm_path": "/dev/mapper/datavg-datalv",
+                "vg_name": "datavg",
+                "stripe_size": "256.00k",
+                "stripes": "2",
+            }
+        }
+        striped_filesystems = fs_collector._parse_filesystem_data(
+            striped_findmnt,
+            striped_df,
+            striped_lvm_volume,
+            {},
+            [],
+            [],
+            [],
+            {"datavg": ["disk1", "disk2"]},
+        )
+        result = AzureDataParser(MockParent()).parse_disks_vars(
+            MockCheck({"mount_point": "/hana/data", "property": "stripe_size"}),
+            {"filesystems": striped_filesystems, "azure_disks_metadata": []},
+        )
+        assert result == "stripe_size=256.00k;stripes=2;disk_count=2"
+
+        single_disk_findmnt = "/hana/log /dev/sdc xfs rw,relatime\n"
+        single_disk_df = (
+            "Filesystem 1K-blocks Used Available Use% Mounted\n"
+            "/dev/sdc 104857600 10485760 94371840 10% /hana/log\n"
+        )
+        single_disk_filesystems = fs_collector._parse_filesystem_data(
+            single_disk_findmnt,
+            single_disk_df,
+            {},
+            {},
+            [{"name": "sdc", "mbps": 250, "iops": 7000}],
+            [],
+            [],
+        )
+        result = AzureDataParser(MockParent()).parse_disks_vars(
+            MockCheck({"mount_point": "/hana/log", "property": "stripe_size"}),
+            {"filesystems": single_disk_filesystems, "azure_disks_metadata": []},
+        )
+        assert result == "stripe_size=;stripes=;disk_count=1"
+
     def test_parse_disks_vars_lvm_aggregation(self):
         """
         Test disk parsing with LVM striped volume aggregation and JSON strings

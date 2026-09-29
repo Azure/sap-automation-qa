@@ -405,6 +405,21 @@ class TestValidators:
         )
         assert result["status"] == TestStatus.SKIPPED.value
 
+    def test_validate_stripe_size_striped_but_unresolved_size_is_error(
+        self, config_module, sample_check
+    ):
+        """A confirmed-striped volume (stripes > 1) whose stripe_size could not
+        be resolved is a collection issue, not a pass/fail comparison against
+        "" -- it must not be reported as a severity-scaled mismatch."""
+        sample_check.collector_args = {"mount_point": "/hana/data"}
+        sample_check.validator_args = {"expected": "256.00k"}
+        sample_check.severity = TestSeverity.WARNING
+        result = config_module.validate_stripe_size(
+            sample_check, "stripe_size=;stripes=2;disk_count=2"
+        )
+        assert result["status"] == TestStatus.ERROR.value
+        assert "could not be resolved" in result["details"]
+
     def test_validate_stripe_size_missing_metadata_is_error(self, config_module, sample_check):
         """Missing storage/striping metadata is a collection issue, not a failed check"""
         sample_check.collector_args = {"mount_point": "/hana/data"}

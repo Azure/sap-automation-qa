@@ -482,15 +482,18 @@ class ConfigurationCheckModule(SapAutomationQA):
         """
         Validate stripe size for a mount point, aware of whether it is striped.
 
-        Distinguishes three cases:
+        Distinguishes four cases:
         - Storage/striping metadata could not be collected (e.g. mount point or
           disk metadata missing) -> reported as a collection issue (ERROR), not
           a failed check.
         - The LV segment (or single disk) is not striped, so a stripe size of 0
           is expected -> SKIPPED, the check does not apply. This includes a
           linear/concatenated LV spanning multiple disks with no striping.
-        - The LV segment is striped (``stripes`` > 1) -> validated against
-          ``validator_args.expected`` like a regular string check.
+        - The LV segment is confirmed striped (``stripes`` > 1) but its stripe
+          size could not be resolved -> reported as a collection issue (ERROR),
+          not a mismatch.
+        - The LV segment is striped and its stripe size is known -> validated
+          against ``validator_args.expected`` like a regular string check.
 
         :param check: The check definition
         :type check: Check
@@ -543,10 +546,17 @@ class ConfigurationCheckModule(SapAutomationQA):
                 "concatenated LV); stripe size check is not applicable",
             }
 
+        collected = fields.get("stripe_size", "").strip()
+        if not collected:
+            return {
+                "status": TestStatus.ERROR.value,
+                "details": f"{mount_point} is striped ({stripes} stripes) but its stripe size "
+                "could not be resolved; treating as a collection issue",
+            }
+
         expected = str(
             check.validator_args.get("expected") or check.validator_args.get("expected_output", "")
         ).strip()
-        collected = fields.get("stripe_size", "").strip()
         return {
             "status": self._create_validation_result(check.severity, collected == expected),
         }

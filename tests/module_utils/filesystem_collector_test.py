@@ -256,6 +256,62 @@ class TestParseFilesystemData:
         assert result[0]["azure_disk_names"] == ["disk1", "disk2"]
         assert any("Mapped VG" in log["message"] for log in mock_parent.logs)
 
+    def test_parse_filesystem_striped_lv_carries_stripes_and_disk_count(
+        self, collector, mock_parent
+    ):
+        """
+        A genuinely striped LV must surface both "stripes" (from the LVM segment)
+        and "disk_count" (from the VG-to-disk mapping) in the filesystem entry
+        that becomes context["filesystems"] in production, so stripe-size
+        validation can tell it apart from a non-striped volume.
+        """
+        findmnt_output = "/hana/data /dev/mapper/datavg-datalv xfs rw,relatime\n"
+        df_output = (
+            "Filesystem 1K-blocks Used Available Use% Mounted\n"
+            "/dev/mapper/datavg-datalv 1048576000 104857600 943718400 10% /hana/data\n"
+        )
+        lvm_volume = {
+            "datalv": {
+                "dm_path": "/dev/mapper/datavg-datalv",
+                "vg_name": "datavg",
+                "stripe_size": "256.00k",
+                "stripes": "2",
+            }
+        }
+        vg_to_disk_names = {"datavg": ["disk1", "disk2"]}
+        result = collector._parse_filesystem_data(
+            findmnt_output,
+            df_output,
+            lvm_volume,
+            {},
+            [],
+            [],
+            [],
+            vg_to_disk_names,
+        )
+        assert len(result) == 1
+        assert result[0]["stripe_size"] == "256.00k"
+        assert result[0]["stripes"] == "2"
+        assert result[0]["disk_count"] == 2
+
+    def test_parse_filesystem_non_striped_single_disk_defaults(self, collector):
+        """
+        A single, non-LVM-backed disk must not be mistaken for striped: no "vg"
+        match means "stripes" stays blank, and "disk_count" is set to 1 for the
+        direct-attach case.
+        """
+        findmnt_output = "/hana/log /dev/sdc xfs rw,relatime\n"
+        df_output = (
+            "Filesystem 1K-blocks Used Available Use% Mounted\n"
+            "/dev/sdc 104857600 10485760 94371840 10% /hana/log\n"
+        )
+        result = collector._parse_filesystem_data(
+            findmnt_output, df_output, {}, {}, [{"name": "sdc", "mbps": 250, "iops": 7000}], [], []
+        )
+        assert len(result) == 1
+        assert result[0]["stripes"] == ""
+        assert result[0]["disk_count"] == 1
+
 
 class TestMapVgToDiskNames:
     """Test suite for _map_vg_to_disk_names method"""

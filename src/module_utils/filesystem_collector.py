@@ -67,12 +67,13 @@ class FileSystemCollector(Collector):
                 findmnt_data[target] = {"source": parts[1], "fstype": parts[2], "options": parts[3]}
         for mountpoint, df_info in df_data.items():
             findmnt_info = findmnt_data.get(mountpoint, {})
-            vg_name, stripe_size = "", ""
+            vg_name, stripe_size, stripes = "", "", ""
             filesystem_path = df_info["filesystem"]
             for lv_name, lv_prop in lvm_volume.items():
                 if lv_prop.get("dm_path") == filesystem_path:
                     vg_name = lv_prop.get("vg_name", "")
                     stripe_size = lv_prop.get("stripe_size", "")
+                    stripes = lv_prop.get("stripes", "")
                     break
 
             filesystem_entry = {
@@ -86,6 +87,8 @@ class FileSystemCollector(Collector):
                 "used_percent": df_info["used_percent"],
                 "vg": vg_name,
                 "stripe_size": stripe_size,
+                "stripes": stripes,
+                "disk_count": 0,
                 "max_mbps": 0,
                 "max_iops": 0,
             }
@@ -145,12 +148,14 @@ class FileSystemCollector(Collector):
                         if disk_data.get("name", "").endswith(disk_name):
                             filesystem_entry["max_mbps"] = disk_data.get("mbps", 0)
                             filesystem_entry["max_iops"] = disk_data.get("iops", 0)
+                            filesystem_entry["disk_count"] = 1
                             break
                 elif filesystem_path.startswith("/dev/mapper/") and vg_name:
                     disk_names = vg_to_disk_names.get(vg_name, [])
 
                     if disk_names:
                         filesystem_entry["azure_disk_names"] = disk_names
+                        filesystem_entry["disk_count"] = len(disk_names)
                         self.parent.log(
                             logging.INFO,
                             f"Mapped VG {vg_name} to {len(disk_names)} Azure disks: {disk_names}",
