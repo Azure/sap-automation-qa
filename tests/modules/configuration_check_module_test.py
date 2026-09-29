@@ -384,14 +384,43 @@ class TestValidators:
     def test_validate_stripe_size_absent_stripes_field_is_skipped(
         self, config_module, sample_check
     ):
-        """A blank/absent stripes field (no LVM segment match) is treated as
-        non-striped and skipped, regardless of disk_count"""
+        """A blank/absent stripes field for a non-LVM-backed mount point (no
+        "is_lvm" flag, i.e. a direct-attached disk) is treated as not
+        applicable and skipped, regardless of disk_count"""
         sample_check.collector_args = {"mount_point": "/hana/data"}
         sample_check.validator_args = {"expected": "256.00k"}
         result = config_module.validate_stripe_size(
             sample_check, "stripe_size=0;stripes=;disk_count=1"
         )
         assert result["status"] == TestStatus.SKIPPED.value
+
+    def test_validate_stripe_size_lvm_unresolved_segment_is_error(
+        self, config_module, sample_check
+    ):
+        """A blank/absent stripes field for an LVM-backed mount point
+        ("is_lvm=1") means the LVM segment metadata could not be resolved --
+        this must fail closed as a collection issue (ERROR), not be treated
+        as non-striped (SKIPPED), otherwise a genuinely striped volume with
+        unresolved metadata could silently pass as not-applicable."""
+        sample_check.collector_args = {"mount_point": "/hana/data"}
+        sample_check.validator_args = {"expected": "256.00k"}
+        result = config_module.validate_stripe_size(
+            sample_check, "stripe_size=;stripes=;disk_count=2;is_lvm=1"
+        )
+        assert result["status"] == TestStatus.ERROR.value
+        assert "could not be resolved" in result["details"]
+
+    def test_validate_stripe_size_mixed_segment_layout_is_error(self, config_module, sample_check):
+        """A multi-segment LV whose segments disagree on layout (surfaced by
+        collect_lvm_volumes as the "MIXED" sentinel) must fail closed as a
+        collection issue rather than being silently skipped as non-striped."""
+        sample_check.collector_args = {"mount_point": "/hana/data"}
+        sample_check.validator_args = {"expected": "256.00k"}
+        result = config_module.validate_stripe_size(
+            sample_check, "stripe_size=MIXED;stripes=MIXED;disk_count=2;is_lvm=1"
+        )
+        assert result["status"] == TestStatus.ERROR.value
+        assert "could not be resolved" in result["details"]
 
     def test_validate_stripe_size_linear_multi_disk_is_skipped(self, config_module, sample_check):
         """A linear/concatenated LV spanning multiple disks (disk_count > 1) with

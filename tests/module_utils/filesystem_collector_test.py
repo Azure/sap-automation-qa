@@ -473,6 +473,70 @@ class TestCollectLvmVolumes:
         assert isinstance(result, str)
         assert "ERROR: LVM volume collection failed" in result
 
+    def test_collect_lvm_volumes_multi_segment_agreeing_layout(self, collector):
+        """
+        An LV backed by multiple LVM segments that all agree on the same
+        (stripes, stripe_size) layout must resolve to that single value, not
+        just the first segment encountered.
+        """
+        lvm_fullreport = {
+            "report": [
+                {
+                    "vg": [
+                        {"vg_name": "datavg", "pv_count": "2", "lv_count": "1", "vg_size": "1024g"}
+                    ],
+                    "lv": [
+                        {
+                            "lv_name": "datalv",
+                            "lv_full_name": "datavg/datalv",
+                            "lv_dm_path": "/dev/mapper/datavg-datalv",
+                            "lv_uuid": "uuid123",
+                        }
+                    ],
+                    "seg": [
+                        {"lv_uuid": "uuid123", "stripes": "2", "stripe_size": "256k"},
+                        {"lv_uuid": "uuid123", "stripes": "2", "stripe_size": "256k"},
+                    ],
+                }
+            ]
+        }
+        lvm_volumes, _ = collector.collect_lvm_volumes(lvm_fullreport)
+        assert lvm_volumes["datalv"]["stripes"] == "2"
+        assert lvm_volumes["datalv"]["stripe_size"] == "256k"
+
+    def test_collect_lvm_volumes_multi_segment_mixed_layout_fails_closed(self, collector):
+        """
+        An LV whose segments disagree on layout (e.g. grown from linear to
+        striped via lvextend) must not silently report only the first
+        segment's layout -- that could hide a genuinely striped segment
+        behind a linear one (or vice versa). It must surface a "MIXED"
+        sentinel so the validator fails closed instead of guessing.
+        """
+        lvm_fullreport = {
+            "report": [
+                {
+                    "vg": [
+                        {"vg_name": "datavg", "pv_count": "2", "lv_count": "1", "vg_size": "1024g"}
+                    ],
+                    "lv": [
+                        {
+                            "lv_name": "datalv",
+                            "lv_full_name": "datavg/datalv",
+                            "lv_dm_path": "/dev/mapper/datavg-datalv",
+                            "lv_uuid": "uuid123",
+                        }
+                    ],
+                    "seg": [
+                        {"lv_uuid": "uuid123", "stripes": "1", "stripe_size": "0"},
+                        {"lv_uuid": "uuid123", "stripes": "2", "stripe_size": "256k"},
+                    ],
+                }
+            ]
+        }
+        lvm_volumes, _ = collector.collect_lvm_volumes(lvm_fullreport)
+        assert lvm_volumes["datalv"]["stripes"] == "MIXED"
+        assert lvm_volumes["datalv"]["stripe_size"] == "MIXED"
+
 
 class TestParseMetadata:
     """Test suite for _parse_metadata method"""

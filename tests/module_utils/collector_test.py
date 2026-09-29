@@ -344,11 +344,12 @@ class TestAzureDataParser:
                 "azure_disks_metadata": [],
             },
         )
-        assert result == "stripe_size=0;stripes=1;disk_count=1"
+        assert result == "stripe_size=0;stripes=1;disk_count=1;is_lvm=0"
 
     def test_parse_disks_vars_stripe_size_striped(self):
         """
-        A striped LVM volume across multiple disks/PVs surfaces stripes > 1.
+        A striped LVM volume across multiple disks/PVs surfaces stripes > 1
+        and is_lvm=1 (a volume group was resolved for this mount point).
         """
         result = AzureDataParser(MockParent()).parse_disks_vars(
             MockCheck({"mount_point": "/hana/data", "property": "stripe_size"}),
@@ -356,6 +357,7 @@ class TestAzureDataParser:
                 "filesystems": [
                     {
                         "target": "/hana/data",
+                        "vg": "datavg",
                         "stripe_size": "256.00k",
                         "stripes": "2",
                         "disk_count": "2",
@@ -364,7 +366,7 @@ class TestAzureDataParser:
                 "azure_disks_metadata": [],
             },
         )
-        assert result == "stripe_size=256.00k;stripes=2;disk_count=2"
+        assert result == "stripe_size=256.00k;stripes=2;disk_count=2;is_lvm=1"
 
     def test_parse_disks_vars_stripe_size_missing_metadata(self):
         """
@@ -442,7 +444,7 @@ class TestAzureDataParser:
             MockCheck({"mount_point": "/hana/data", "property": "stripe_size"}),
             {"filesystems": striped_filesystems, "azure_disks_metadata": []},
         )
-        assert result == "stripe_size=256.00k;stripes=2;disk_count=2"
+        assert result == "stripe_size=256.00k;stripes=2;disk_count=2;is_lvm=1"
 
         single_disk_findmnt = "/hana/log /dev/sdc xfs rw,relatime\n"
         single_disk_df = (
@@ -462,7 +464,7 @@ class TestAzureDataParser:
             MockCheck({"mount_point": "/hana/log", "property": "stripe_size"}),
             {"filesystems": single_disk_filesystems, "azure_disks_metadata": []},
         )
-        assert result == "stripe_size=;stripes=;disk_count=1"
+        assert result == "stripe_size=;stripes=;disk_count=1;is_lvm=0"
 
     def test_parse_disks_vars_lvm_aggregation(self):
         """

@@ -331,13 +331,26 @@ class FileSystemCollector(Collector):
                     elif lv.get("vg_name"):
                         vg_name = lv.get("vg_name")
 
-                    stripe_size, stripes = "", ""
                     lv_uuid = lv.get("lv_uuid")
-                    for segment in segments:
-                        if segment.get("lv_uuid") == lv_uuid:
-                            stripes = segment.get("stripes", "")
-                            stripe_size = segment.get("stripe_size", "")
-                            break
+                    matching_segments = [
+                        segment for segment in segments if segment.get("lv_uuid") == lv_uuid
+                    ]
+                    # A single LV can span multiple LVM segments (e.g. after "lvextend")
+                    # with different layouts. Using only the first segment would silently
+                    # miss a striped segment that comes after a linear one (or vice versa).
+                    # If all segments agree, use that single value; otherwise fail closed
+                    # with a sentinel the validator must treat as an unresolved collection
+                    # issue rather than guessing which segment is authoritative.
+                    distinct_layouts = {
+                        (segment.get("stripes", ""), segment.get("stripe_size", ""))
+                        for segment in matching_segments
+                    }
+                    if not matching_segments:
+                        stripe_size, stripes = "", ""
+                    elif len(distinct_layouts) == 1:
+                        stripes, stripe_size = next(iter(distinct_layouts))
+                    else:
+                        stripe_size, stripes = "MIXED", "MIXED"
 
                     if vg_name and vg_name != "rootvg":
                         log_volume_result[lv_name] = {

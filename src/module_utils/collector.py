@@ -476,12 +476,16 @@ class AzureDataParser(Collector):
         self, property: str, value: str, fs_entry: Optional[Dict[str, Any]]
     ) -> str:
         """
-        Append striping metadata (stripes, disk_count) to a stripe_size value.
+        Append striping metadata (stripes, disk_count, is_lvm) to a stripe_size value.
 
         This lets validators tell apart "not striped" (single disk / linear LV,
         where a stripe size of 0 is expected and correct) from a genuine
         misconfiguration or a collection failure, without changing the plain
-        value returned for any other disk property (e.g. mbps, iops).
+        value returned for any other disk property (e.g. mbps, iops). "is_lvm"
+        (derived from whether a volume group was resolved for this mount point)
+        additionally lets the validator distinguish "not LVM-backed, striping is
+        genuinely not applicable" from "LVM-backed but striping could not be
+        resolved" -- both otherwise collapse to a blank/unparsable "stripes".
 
         :param property: Collector property that was requested
         :type property: str
@@ -489,7 +493,8 @@ class AzureDataParser(Collector):
         :type value: str
         :param fs_entry: Correlated filesystem entry the value was resolved from
         :type fs_entry: Optional[Dict[str, Any]]
-        :return: Value unchanged, or "stripe_size=<value>;stripes=<n>;disk_count=<n>"
+        :return: Value unchanged, or
+            "stripe_size=<value>;stripes=<n>;disk_count=<n>;is_lvm=<0|1>"
             when property is "stripe_size"
         :rtype: str
         """
@@ -497,7 +502,8 @@ class AzureDataParser(Collector):
             return value
         stripes = fs_entry.get("stripes", "") if fs_entry else ""
         disk_count = fs_entry.get("disk_count", "") if fs_entry else ""
-        return f"stripe_size={value};stripes={stripes};disk_count={disk_count}"
+        is_lvm = 1 if fs_entry and fs_entry.get("vg") else 0
+        return f"stripe_size={value};stripes={stripes};disk_count={disk_count};is_lvm={is_lvm}"
 
     def parse_disk_consistency_vars(self, check, context) -> str:
         """

@@ -482,24 +482,30 @@ class ConfigurationCheckModule(SapAutomationQA):
         """
         Validate stripe size for a mount point, aware of whether it is striped.
 
-        Distinguishes four cases:
+        Distinguishes five cases:
         - Storage/striping metadata could not be collected (e.g. mount point or
           disk metadata missing) -> reported as a collection issue (ERROR), not
           a failed check.
-        - The LV segment (or single disk) is not striped, so a stripe size of 0
-          is expected -> SKIPPED, the check does not apply. This includes a
+        - The mount point is not LVM-backed (single, direct-attached disk) ->
+          SKIPPED, striping is genuinely not applicable.
+        - The mount point is LVM-backed but its stripe layout could not be
+          resolved to a single value (missing LVM segment metadata, or a
+          multi-segment LV whose segments disagree on layout) -> reported as a
+          collection issue (ERROR); this is a "fail closed" case, not treated
+          as non-striped.
+        - The LV segment is confirmed not striped (``stripes`` <= 1) -> SKIPPED,
+          a stripe size of 0 is expected and correct. This includes a
           linear/concatenated LV spanning multiple disks with no striping.
-        - The LV segment is confirmed striped (``stripes`` > 1) but its stripe
-          size could not be resolved -> reported as a collection issue (ERROR),
-          not a mismatch.
-        - The LV segment is striped and its stripe size is known -> validated
-          against ``validator_args.expected`` like a regular string check.
+        - The LV segment is confirmed striped (``stripes`` > 1): if its stripe
+          size could not be resolved -> ERROR (collection issue, not a
+          mismatch); otherwise validated against ``validator_args.expected``
+          like a regular string check.
 
         :param check: The check definition
         :type check: Check
         :param collected_data: Collector output, in the
-            "stripe_size=<v>;stripes=<n>;disk_count=<n>" format produced by
-            ``AzureDataParser.parse_disks_vars``
+            "stripe_size=<v>;stripes=<n>;disk_count=<n>;is_lvm=<0|1>" format
+            produced by ``AzureDataParser.parse_disks_vars``
         :type collected_data: str
         :return: Validation result
         :rtype: Dict[str, Any]
@@ -526,17 +532,33 @@ class ConfigurationCheckModule(SapAutomationQA):
                 "stripe configuration",
             }
 
-        def _as_int(value: str) -> int:
+        def _as_int(value: str) -> Optional[int]:
             try:
                 return int(float(value))
             except (ValueError, TypeError):
-                return 0
+                return None
 
         # "stripes" reflects the LV segment's own layout (striped vs linear/concat) and is
         # the only reliable signal here. "disk_count" is the VG-level PV/disk count and can
         # be > 1 for a *linear* LV spanning multiple disks with no striping at all, so it
         # must not be used to infer striping on its own.
+        is_lvm = fields.get("is_lvm", "0").strip() == "1"
         stripes = _as_int(fields.get("stripes", ""))
+
+        if stripes is None:
+            if is_lvm:
+                return {
+                    "status": TestStatus.ERROR.value,
+                    "details": f"{mount_point} is LVM-backed but its stripe layout could not "
+                    "be resolved (missing or inconsistent LVM segment metadata); treating as "
+                    "a collection issue",
+                }
+            return {
+                "status": TestStatus.SKIPPED.value,
+                "details": f"{mount_point} is not LVM-backed (single disk); stripe size check "
+                "is not applicable",
+            }
+
         is_striped = stripes > 1
 
         if not is_striped:
