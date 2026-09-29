@@ -36,15 +36,25 @@ class FileSystemCollector(Collector):
         anf_storage_data,
         afs_storage_data,
         vg_to_disk_names=None,
+        device_lun_map=None,
+        imds_metadata=None,
     ):
         """
         Parse filesystem data.
 
         :param vg_to_disk_names: Pre-computed mapping of VG names to Azure disk names
         :type vg_to_disk_names: Dict[str, List[str]]
+        :param device_lun_map: Mapping of Linux device names to LUN numbers, used to
+            resolve a direct-attached disk's Azure resource name via the device -> LUN
+            -> IMDS chain (Linux device names and Azure disk resource names do not
+            share a naming convention, so this is required for a reliable match)
+        :type device_lun_map: Optional[Dict[str, Any]]
+        :param imds_metadata: IMDS metadata with lun-to-diskname mappings
+        :type imds_metadata: Optional[List[Dict[str, Any]]]
         """
         if vg_to_disk_names is None:
             vg_to_disk_names = {}
+        lun_to_diskname = self._build_lun_to_diskname(imds_metadata)
         filesystems = []
         findmnt_data = {}
         df_data = {}
@@ -143,13 +153,35 @@ class FileSystemCollector(Collector):
                         if "/" in filesystem_path
                         else filesystem_path
                     )
+                    # Azure disk resource names (e.g. "hana-data-0") do not share a naming
+                    # convention with Linux device names (e.g. "sdc"), so resolve the
+                    # device through the device -> LUN -> IMDS chain first. Only fall back
+                    # to a name-suffix match when that chain could not be resolved (e.g.
+                    # device_lun_map/IMDS data unavailable), to avoid regressing existing
+                    # environments that happen to rely on it.
+                    resolved_disk_name = self._resolve_device_disk_name(
+                        disk_name, device_lun_map, lun_to_diskname
+                    )
 
                     for disk_data in azure_disk_data:
-                        if disk_data.get("name", "").endswith(disk_name):
+                        azure_name = disk_data.get("name", "")
+                        matched = (
+                            azure_name == resolved_disk_name
+                            if resolved_disk_name
+                            else azure_name.endswith(disk_name)
+                        )
+                        if matched:
                             filesystem_entry["max_mbps"] = disk_data.get("mbps", 0)
                             filesystem_entry["max_iops"] = disk_data.get("iops", 0)
                             filesystem_entry["disk_count"] = 1
                             break
+                    else:
+                        self.parent.log(
+                            logging.WARNING,
+                            f"No Azure disk data found for device {disk_name} "
+                            f"(resolved name: {resolved_disk_name}). "
+                            "Ensure device-to-lun mapping and IMDS metadata are available.",
+                        )
                 elif filesystem_path.startswith("/dev/mapper/") and vg_name:
                     disk_names = vg_to_disk_names.get(vg_name, [])
 
@@ -170,6 +202,48 @@ class FileSystemCollector(Collector):
 
         return filesystems
 
+    def _build_lun_to_diskname(self, imds_metadata):
+        """
+        Build a LUN-number -> Azure disk name mapping from IMDS metadata.
+
+        Shared by the direct-attached-disk and LVM/VG device correlation
+        paths, both of which need to resolve a Linux device to its Azure
+        disk resource name via the device -> LUN -> IMDS chain rather than
+        by comparing Linux device/Azure resource names directly (they do
+        not share a naming convention).
+
+        :param imds_metadata: IMDS metadata with lun-to-diskname mappings
+        :type imds_metadata: List[Dict[str, Any]]
+        :return: Mapping of LUN (as string) to Azure disk name
+        :rtype: Dict[str, str]
+        """
+        lun_to_diskname = {}
+        for disk_info in imds_metadata or []:
+            lun = disk_info.get("lun")
+            name = disk_info.get("name")
+            if lun is not None and name:
+                lun_to_diskname[str(lun)] = name
+        return lun_to_diskname
+
+    def _resolve_device_disk_name(self, device_name, device_lun_map, lun_to_diskname):
+        """
+        Resolve a Linux device name (e.g. "sdc") to its Azure disk resource
+        name via the device -> LUN -> IMDS chain.
+
+        :param device_name: Linux device name, without the "/dev/" prefix
+        :type device_name: str
+        :param device_lun_map: Mapping of device names to LUN numbers
+        :type device_lun_map: Dict[str, Any]
+        :param lun_to_diskname: Mapping of LUN (as string) to Azure disk name
+        :type lun_to_diskname: Dict[str, str]
+        :return: The resolved Azure disk name, or None if it could not be resolved
+        :rtype: Optional[str]
+        """
+        lun = (device_lun_map or {}).get(device_name)
+        if lun is None:
+            return None
+        return (lun_to_diskname or {}).get(str(lun))
+
     def _map_vg_to_disk_names(self, lvm_fullreport, imds_metadata, device_lun_map):
         """
         Map LVM volume groups to Azure disk names using direct device→lun→diskname correlation.
@@ -185,12 +259,7 @@ class FileSystemCollector(Collector):
         vg_to_disk_names = {}
 
         try:
-            lun_to_diskname = {}
-            for disk_info in imds_metadata:
-                lun = disk_info.get("lun")
-                name = disk_info.get("name")
-                if lun is not None and name:
-                    lun_to_diskname[str(lun)] = name
+            lun_to_diskname = self._build_lun_to_diskname(imds_metadata)
 
             reports = lvm_fullreport.get("report", [])
             self.parent.log(
@@ -1009,6 +1078,8 @@ class FileSystemCollector(Collector):
                 anf_storage_data=anf_storage_data,
                 afs_storage_data=afs_storage_data,
                 vg_to_disk_names=vg_to_disk_names,
+                device_lun_map=device_lun_map,
+                imds_metadata=imds_metadata,
             )
 
             formatted_filesystem_info = self.gather_all_filesystem_info(

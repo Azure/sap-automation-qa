@@ -226,6 +226,61 @@ class TestParseFilesystemData:
         assert result[0]["max_mbps"] == 750
         assert result[0]["max_iops"] == 20000
 
+    def test_parse_filesystem_direct_disk_resolved_via_lun_imds_chain(self, collector):
+        """
+        Azure disk resource names (e.g. "hana-data-0") do not share a naming
+        convention with Linux device names (e.g. "sdc"), so correlation must
+        go through the device -> LUN -> IMDS chain, not a name-suffix match.
+        This must succeed (disk_count=1) even when the Azure name looks
+        nothing like the Linux device name.
+        """
+        findmnt_output = "/hana/data /dev/sdc xfs rw,relatime\n"
+        df_output = (
+            "Filesystem 1K-blocks Used Available Use% Mounted\n"
+            "/dev/sdc 524288000 52428800 471859200 10% /hana/data\n"
+        )
+        azure_disk_data = [{"name": "hana-data-0", "mbps": 750, "iops": 20000}]
+        device_lun_map = {"sdc": "2"}
+        imds_metadata = [{"lun": 2, "name": "hana-data-0"}]
+        result = collector._parse_filesystem_data(
+            findmnt_output,
+            df_output,
+            {},
+            {},
+            azure_disk_data,
+            [],
+            [],
+            device_lun_map=device_lun_map,
+            imds_metadata=imds_metadata,
+        )
+        assert len(result) == 1
+        assert result[0]["max_mbps"] == 750
+        assert result[0]["max_iops"] == 20000
+        assert result[0]["disk_count"] == 1
+
+    def test_parse_filesystem_direct_disk_unresolved_lun_chain_is_uncorrelated(
+        self, collector, mock_parent
+    ):
+        """
+        When the device -> LUN -> IMDS chain cannot resolve the Azure disk
+        name (e.g. no device_lun_map entry) and the name-suffix fallback also
+        fails to match, disk_count must stay 0 -- a genuine correlation
+        failure, not a confirmed single disk -- and a warning should be
+        logged so this is diagnosable.
+        """
+        findmnt_output = "/hana/data /dev/sdc xfs rw,relatime\n"
+        df_output = (
+            "Filesystem 1K-blocks Used Available Use% Mounted\n"
+            "/dev/sdc 524288000 52428800 471859200 10% /hana/data\n"
+        )
+        azure_disk_data = [{"name": "hana-data-0", "mbps": 750, "iops": 20000}]
+        result = collector._parse_filesystem_data(
+            findmnt_output, df_output, {}, {}, azure_disk_data, [], []
+        )
+        assert len(result) == 1
+        assert result[0]["disk_count"] == 0
+        assert any("No Azure disk data found" in log["message"] for log in mock_parent.logs)
+
     def test_parse_filesystem_with_lvm_mapping(self, collector, mock_parent):
         """Test filesystem parsing with LVM volume group to disk mapping"""
         findmnt_output = "/hana/data /dev/mapper/datavg-datalv xfs rw,relatime\n"
