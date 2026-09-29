@@ -486,9 +486,10 @@ class ConfigurationCheckModule(SapAutomationQA):
         - Storage/striping metadata could not be collected (e.g. mount point or
           disk metadata missing) -> reported as a collection issue (ERROR), not
           a failed check.
-        - The volume is backed by a single disk / a non-striped LV, so a stripe
-          size of 0 is expected -> SKIPPED, the check does not apply.
-        - The volume is striped across multiple disks/PVs -> validated against
+        - The LV segment (or single disk) is not striped, so a stripe size of 0
+          is expected -> SKIPPED, the check does not apply. This includes a
+          linear/concatenated LV spanning multiple disks with no striping.
+        - The LV segment is striped (``stripes`` > 1) -> validated against
           ``validator_args.expected`` like a regular string check.
 
         :param check: The check definition
@@ -528,15 +529,18 @@ class ConfigurationCheckModule(SapAutomationQA):
             except (ValueError, TypeError):
                 return 0
 
+        # "stripes" reflects the LV segment's own layout (striped vs linear/concat) and is
+        # the only reliable signal here. "disk_count" is the VG-level PV/disk count and can
+        # be > 1 for a *linear* LV spanning multiple disks with no striping at all, so it
+        # must not be used to infer striping on its own.
         stripes = _as_int(fields.get("stripes", ""))
-        disk_count = _as_int(fields.get("disk_count", ""))
-        is_striped = stripes > 1 or disk_count > 1
+        is_striped = stripes > 1
 
         if not is_striped:
             return {
                 "status": TestStatus.SKIPPED.value,
-                "details": f"{mount_point} is backed by a single disk/non-striped volume; "
-                "stripe size check is not applicable",
+                "details": f"{mount_point} is not striped (single disk, or a linear/"
+                "concatenated LV); stripe size check is not applicable",
             }
 
         expected = str(

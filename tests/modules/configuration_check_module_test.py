@@ -381,15 +381,27 @@ class TestValidators:
         assert result["status"] == TestStatus.SKIPPED.value
         assert "not applicable" in result["details"]
 
-    def test_validate_stripe_size_single_disk_no_stripes_field_is_skipped(
+    def test_validate_stripe_size_absent_stripes_field_is_skipped(
         self, config_module, sample_check
     ):
-        """disk_count > 1 without a stripes field still counts as striped;
-        absence of both stripes and disk_count (or values of 1) is non-striped"""
+        """A blank/absent stripes field (no LVM segment match) is treated as
+        non-striped and skipped, regardless of disk_count"""
         sample_check.collector_args = {"mount_point": "/hana/data"}
         sample_check.validator_args = {"expected": "256.00k"}
         result = config_module.validate_stripe_size(
             sample_check, "stripe_size=0;stripes=;disk_count=1"
+        )
+        assert result["status"] == TestStatus.SKIPPED.value
+
+    def test_validate_stripe_size_linear_multi_disk_is_skipped(self, config_module, sample_check):
+        """A linear/concatenated LV spanning multiple disks (disk_count > 1) with
+        no striping (stripes == 1) must be skipped, not failed. disk_count alone
+        is not a reliable striping signal: LVM reports "stripes" per segment, and
+        a linear LV has one non-striped segment per backing disk."""
+        sample_check.collector_args = {"mount_point": "/hana/data"}
+        sample_check.validator_args = {"expected": "256.00k"}
+        result = config_module.validate_stripe_size(
+            sample_check, "stripe_size=;stripes=1;disk_count=2"
         )
         assert result["status"] == TestStatus.SKIPPED.value
 
