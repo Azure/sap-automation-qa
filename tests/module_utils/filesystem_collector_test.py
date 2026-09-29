@@ -281,6 +281,38 @@ class TestParseFilesystemData:
         assert result[0]["disk_count"] == 0
         assert any("No Azure disk data found" in log["message"] for log in mock_parent.logs)
 
+    def test_parse_filesystem_direct_disk_partition_resolved_via_parent_device(
+        self, collector, mock_parent
+    ):
+        """
+        A directly mounted partition (e.g. "/dev/sdc1") must resolve through
+        the parent whole-disk device: device_lun_map is keyed by the whole
+        disk ("sdc"), never the partition, so looking up "sdc1" directly
+        would always miss and wrongly report disk_count=0.
+        """
+        findmnt_output = "/hana/data /dev/sdc1 xfs rw,relatime\n"
+        df_output = (
+            "Filesystem 1K-blocks Used Available Use% Mounted\n"
+            "/dev/sdc1 524288000 52428800 471859200 10% /hana/data\n"
+        )
+        azure_disk_data = [{"name": "hana-data-0", "mbps": 750, "iops": 20000}]
+        device_lun_map = {"sdc": "2"}
+        imds_metadata = [{"lun": 2, "name": "hana-data-0"}]
+        result = collector._parse_filesystem_data(
+            findmnt_output,
+            df_output,
+            {},
+            {},
+            azure_disk_data,
+            [],
+            [],
+            device_lun_map=device_lun_map,
+            imds_metadata=imds_metadata,
+        )
+        assert len(result) == 1
+        assert result[0]["disk_count"] == 1
+        assert result[0]["max_mbps"] == 750
+
     def test_parse_filesystem_with_lvm_mapping(self, collector, mock_parent):
         """Test filesystem parsing with LVM volume group to disk mapping"""
         findmnt_output = "/hana/data /dev/mapper/datavg-datalv xfs rw,relatime\n"
@@ -368,6 +400,27 @@ class TestParseFilesystemData:
         assert result[0]["disk_count"] == 1
 
 
+class TestParentBlockDevice:
+    """Test suite for the _parent_block_device partition-normalization helper"""
+
+    @pytest.mark.parametrize(
+        "device_name,expected",
+        [
+            ("sdc1", "sdc"),
+            ("sdc12", "sdc"),
+            ("sdc", "sdc"),
+            ("nvme0n1p1", "nvme0n1"),
+            ("nvme0n1p12", "nvme0n1"),
+            ("nvme0n1", "nvme0n1"),
+            ("xvdf1", "xvdf"),
+            ("vdb1", "vdb"),
+        ],
+    )
+    def test_parent_block_device(self, collector, device_name, expected):
+        """A partition suffix is stripped; a whole-disk device passes through unchanged"""
+        assert collector._parent_block_device(device_name) == expected
+
+
 class TestMapVgToDiskNames:
     """Test suite for _map_vg_to_disk_names method"""
 
@@ -419,6 +472,31 @@ class TestMapVgToDiskNames:
         result = collector._map_vg_to_disk_names(lvm_fullreport, imds_metadata, device_lun_map)
 
         assert result == {"vg_hana_data": ["data-disk-0", "data-disk-1", "data-disk-2"]}
+        assert not any("No LUN mapping found" in log["message"] for log in mock_parent.logs)
+
+    def test_map_vg_to_disk_names_with_partitioned_pvs(self, collector, mock_parent):
+        """
+        A PV backed by a partition (e.g. "/dev/sdc1", "/dev/nvme0n1p1") must
+        resolve through the parent whole-disk device: the device-to-LUN map is
+        keyed by the whole disk (from "readlink -f" on the LUN symlink), never
+        a partition, so looking up the partition name directly would always
+        miss.
+        """
+        lvm_fullreport = {
+            "report": [
+                {
+                    "pv": [{"pv_name": "/dev/sdc1"}, {"pv_name": "/dev/nvme0n1p1"}],
+                    "vg": [{"vg_name": "datavg"}],
+                }
+            ]
+        }
+        imds_metadata = [
+            {"lun": "0", "name": "disk1"},
+            {"lun": "1", "name": "disk2"},
+        ]
+        device_lun_map = {"sdc": "0", "nvme0n1": "1"}
+        result = collector._map_vg_to_disk_names(lvm_fullreport, imds_metadata, device_lun_map)
+        assert sorted(result["datavg"]) == ["disk1", "disk2"]
         assert not any("No LUN mapping found" in log["message"] for log in mock_parent.logs)
 
     def test_map_vg_to_disk_names_error_cases(self, collector, mock_parent):

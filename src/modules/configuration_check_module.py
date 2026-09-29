@@ -596,9 +596,54 @@ class ConfigurationCheckModule(SapAutomationQA):
         expected = str(
             check.validator_args.get("expected") or check.validator_args.get("expected_output", "")
         ).strip()
+        # LVM and the check's "expected" value can legitimately spell the same stripe
+        # size differently (e.g. "256k" vs "256.00k" vs a bare byte count "262144";
+        # see the DB-HANA-0034/DB-Db2-0025 check descriptions, which document all
+        # three as equivalent). Compare canonical byte counts rather than raw
+        # strings; only fall back to a literal comparison if either side can't be
+        # parsed as a size, so an unparsable value doesn't silently pass.
+        collected_bytes = self._parse_size_to_bytes(collected)
+        expected_bytes = self._parse_size_to_bytes(expected)
+        if collected_bytes is not None and expected_bytes is not None:
+            matches = collected_bytes == expected_bytes
+        else:
+            matches = collected == expected
         return {
-            "status": self._create_validation_result(check.severity, collected == expected),
+            "status": self._create_validation_result(check.severity, matches),
         }
+
+    def _parse_size_to_bytes(self, value: str) -> Optional[int]:
+        """
+        Parse an LVM-style size string into a canonical byte count.
+
+        Accepts an optional fractional component and an optional binary unit
+        suffix (``k``/``m``/``g``/``t``/``p``, optionally followed by ``i``/``b``,
+        case-insensitive), e.g. "256.00k", "256k", "1g", or a bare byte count
+        such as "262144".
+
+        :param value: Size string to parse
+        :type value: str
+        :return: Size in bytes, or ``None`` if the value could not be parsed
+        :rtype: Optional[int]
+        """
+        if not value:
+            return None
+        match = re.fullmatch(r"(\d+(?:\.\d+)?)\s*([kmgtp]?)i?b?", value.strip(), re.IGNORECASE)
+        if not match:
+            return None
+        number, suffix = match.groups()
+        multipliers = {
+            "": 1,
+            "k": 1024,
+            "m": 1024**2,
+            "g": 1024**3,
+            "t": 1024**4,
+            "p": 1024**5,
+        }
+        try:
+            return int(round(float(number) * multipliers[suffix.lower()]))
+        except (ValueError, KeyError):
+            return None
 
     def validate_numeric_range(self, check: Check, collected_data: str) -> Dict[str, Any]:
         """

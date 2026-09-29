@@ -8,6 +8,7 @@ Collectors for data collection in SAP Automation QA
 import ipaddress
 import json
 import logging
+import re
 from typing import Any
 
 try:
@@ -230,7 +231,9 @@ class FileSystemCollector(Collector):
         Resolve a Linux device name (e.g. "sdc") to its Azure disk resource
         name via the device -> LUN -> IMDS chain.
 
-        :param device_name: Linux device name, without the "/dev/" prefix
+        :param device_name: Linux device name, without the "/dev/" prefix. May be a
+            partition (e.g. "sdc1", "nvme0n1p1"); the device-to-LUN map is keyed by
+            the parent whole-disk device, so this is normalized before lookup.
         :type device_name: str
         :param device_lun_map: Mapping of device names to LUN numbers
         :type device_lun_map: Dict[str, Any]
@@ -239,10 +242,35 @@ class FileSystemCollector(Collector):
         :return: The resolved Azure disk name, or None if it could not be resolved
         :rtype: Optional[str]
         """
-        lun = (device_lun_map or {}).get(device_name)
+        lun = (device_lun_map or {}).get(self._parent_block_device(device_name))
         if lun is None:
             return None
         return (lun_to_diskname or {}).get(str(lun))
+
+    @staticmethod
+    def _parent_block_device(device_name):
+        """
+        Strip a partition suffix off a Linux block device name, returning the
+        parent whole-disk device.
+
+        The device-to-LUN map (built from ``readlink -f`` on each LUN symlink) is
+        always keyed by the whole disk (e.g. "sdc", "nvme0n1"), never a partition,
+        so a mount point or LVM PV backed by a partition (e.g. "/dev/sdc1",
+        "/dev/nvme0n1p1") must be normalized before the LUN lookup or it will
+        never resolve.
+
+        :param device_name: Linux device name, without the "/dev/" prefix
+        :type device_name: str
+        :return: The parent whole-disk device name, unchanged if it is already one
+        :rtype: str
+        """
+        match = re.match(r"^(nvme\d+n\d+)p\d+$", device_name)
+        if match:
+            return match.group(1)
+        match = re.match(r"^((?:sd|xvd|vd|hd)[a-z]+)\d+$", device_name)
+        if match:
+            return match.group(1)
+        return device_name
 
     def _map_vg_to_disk_names(self, lvm_fullreport, imds_metadata, device_lun_map):
         """
@@ -290,11 +318,13 @@ class FileSystemCollector(Collector):
                         )
                         continue
                     device_name = pv_name.split("/")[-1] if "/" in pv_name else pv_name
-                    lun = device_lun_map.get(device_name)
+                    parent_device_name = self._parent_block_device(device_name)
+                    lun = device_lun_map.get(parent_device_name)
                     if lun is None:
                         self.parent.log(
                             logging.WARNING,
-                            f"No LUN mapping found for device {device_name} (PV: {pv_name})",
+                            f"No LUN mapping found for device {parent_device_name} "
+                            f"(PV: {pv_name})",
                         )
                         continue
                     disk_name = lun_to_diskname.get(str(lun))

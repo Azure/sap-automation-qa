@@ -491,6 +491,55 @@ class TestValidators:
         assert result["status"] == TestStatus.ERROR.value
         assert "Collection failed" in result["details"]
 
+    @pytest.mark.parametrize(
+        "collected_stripe_size",
+        ["256k", "256.00k", "262144", "0.25m", "262144b"],
+    )
+    def test_validate_stripe_size_equivalent_spellings_match(
+        self, config_module, sample_check, collected_stripe_size
+    ):
+        """
+        LVM and the check's "expected" value can spell the same stripe size
+        differently -- the DB-HANA-0034/DB-Db2-0025 check descriptions
+        explicitly document "256k (256.00k or 262144 bytes)" as equivalent.
+        All of these must compare equal to "256.00k", not fail as a literal
+        string mismatch.
+        """
+        sample_check.collector_args = {"mount_point": "/hana/data"}
+        sample_check.validator_args = {"expected": "256.00k"}
+        result = config_module.validate_stripe_size(
+            sample_check, f"stripe_size={collected_stripe_size};stripes=2;disk_count=2"
+        )
+        assert result["status"] == TestStatus.SUCCESS.value
+
+    def test_validate_stripe_size_genuinely_different_size_still_fails(
+        self, config_module, sample_check
+    ):
+        """Byte-normalization must not mask an actual mismatch, e.g. 64k vs 256k"""
+        sample_check.collector_args = {"mount_point": "/hana/data"}
+        sample_check.validator_args = {"expected": "256.00k"}
+        sample_check.severity = TestSeverity.WARNING
+        result = config_module.validate_stripe_size(
+            sample_check, "stripe_size=64.00k;stripes=2;disk_count=2"
+        )
+        assert result["status"] == TestStatus.WARNING.value
+
+    def test_validate_stripe_size_unparsable_value_falls_back_to_literal_compare(
+        self, config_module, sample_check
+    ):
+        """
+        A collected value that isn't a parsable size (e.g. a stray label) must
+        not be silently treated as a match just because byte-normalization
+        failed; it falls back to a literal string comparison, which fails here.
+        """
+        sample_check.collector_args = {"mount_point": "/hana/data"}
+        sample_check.validator_args = {"expected": "256.00k"}
+        sample_check.severity = TestSeverity.WARNING
+        result = config_module.validate_stripe_size(
+            sample_check, "stripe_size=unknown;stripes=2;disk_count=2"
+        )
+        assert result["status"] == TestStatus.WARNING.value
+
     def test_validate_numeric_range_within_bounds(self, config_module, sample_check):
         """Test numeric range validation within bounds"""
         sample_check.validator_args = {"min": 10, "max": 100}
