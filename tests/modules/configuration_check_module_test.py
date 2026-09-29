@@ -385,14 +385,40 @@ class TestValidators:
         self, config_module, sample_check
     ):
         """A blank/absent stripes field for a non-LVM-backed mount point (no
-        "is_lvm" flag, i.e. a direct-attached disk) is treated as not
-        applicable and skipped, regardless of disk_count"""
+        "is_lvm" flag, i.e. a direct-attached disk) with a confirmed
+        disk_count of 1 is treated as not applicable and skipped."""
         sample_check.collector_args = {"mount_point": "/hana/data"}
         sample_check.validator_args = {"expected": "256.00k"}
         result = config_module.validate_stripe_size(
             sample_check, "stripe_size=0;stripes=;disk_count=1"
         )
         assert result["status"] == TestStatus.SKIPPED.value
+
+    def test_validate_stripe_size_non_lvm_zero_disk_count_is_error(
+        self, config_module, sample_check
+    ):
+        """A non-LVM-backed mount point with disk_count=0 means the direct disk
+        was never correlated against Azure disk metadata -- this is a
+        collection issue, not a confirmed single non-striped disk, and must
+        not be silently skipped."""
+        sample_check.collector_args = {"mount_point": "/hana/data"}
+        sample_check.validator_args = {"expected": "256.00k"}
+        result = config_module.validate_stripe_size(
+            sample_check, "stripe_size=;stripes=;disk_count=0;is_lvm=0"
+        )
+        assert result["status"] == TestStatus.ERROR.value
+        assert "could not be resolved" in result["details"]
+
+    def test_validate_stripe_size_non_lvm_missing_disk_count_is_error(
+        self, config_module, sample_check
+    ):
+        """A non-LVM-backed mount point with no disk_count field at all is a
+        collection issue, not a confirmed single disk."""
+        sample_check.collector_args = {"mount_point": "/hana/data"}
+        sample_check.validator_args = {"expected": "256.00k"}
+        result = config_module.validate_stripe_size(sample_check, "stripe_size=;stripes=;is_lvm=0")
+        assert result["status"] == TestStatus.ERROR.value
+        assert "could not be resolved" in result["details"]
 
     def test_validate_stripe_size_lvm_unresolved_segment_is_error(
         self, config_module, sample_check

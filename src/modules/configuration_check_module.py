@@ -482,12 +482,16 @@ class ConfigurationCheckModule(SapAutomationQA):
         """
         Validate stripe size for a mount point, aware of whether it is striped.
 
-        Distinguishes five cases:
+        Distinguishes six cases:
         - Storage/striping metadata could not be collected (e.g. mount point or
           disk metadata missing) -> reported as a collection issue (ERROR), not
           a failed check.
-        - The mount point is not LVM-backed (single, direct-attached disk) ->
+        - The mount point is not LVM-backed and the encoded metadata confirms
+          exactly one correlated direct-attached disk (``disk_count`` == 1) ->
           SKIPPED, striping is genuinely not applicable.
+        - The mount point is not LVM-backed but ``disk_count`` is missing, 0,
+          or otherwise not exactly 1 -> disk correlation itself failed, so this
+          is a collection issue (ERROR), not a confirmed single disk.
         - The mount point is LVM-backed but its stripe layout could not be
           resolved to a single value (missing LVM segment metadata, or a
           multi-segment LV whose segments disagree on layout) -> reported as a
@@ -552,6 +556,19 @@ class ConfigurationCheckModule(SapAutomationQA):
                     "details": f"{mount_point} is LVM-backed but its stripe layout could not "
                     "be resolved (missing or inconsistent LVM segment metadata); treating as "
                     "a collection issue",
+                }
+            # Not LVM-backed: only skip when the metadata actually establishes a single,
+            # correlated direct-attached disk (disk_count == 1). "disk_count" starts at 0
+            # in the collector and is only set to 1 once the disk is matched against Azure
+            # disk metadata, so 0/blank/anything else means correlation failed and this is
+            # a collection issue, not a confirmed non-striped disk.
+            disk_count = _as_int(fields.get("disk_count", ""))
+            if disk_count != 1:
+                return {
+                    "status": TestStatus.ERROR.value,
+                    "details": f"{mount_point} disk metadata could not be resolved "
+                    f"(disk_count={fields.get('disk_count', '')!r}); treating as a "
+                    "collection issue",
                 }
             return {
                 "status": TestStatus.SKIPPED.value,
