@@ -90,11 +90,12 @@ enums:
 
   validator_type:
     - string:                         &string "string"
+    - stripe_size:                    &stripe_size "stripe_size"
     - range:                          &range "range"
     - list:                           &list "list"
     - disk_consistency:               &disk_consistency "disk_consistency"
     - check_storage_type:             &check_storage_type "check_storage_type"
-    - all:                            &validator_type [*string, *range, *list, *disk_consistency, *check_storage_type]
+    - all:                            &validator_type [*string, *stripe_size, *range, *list, *disk_consistency, *check_storage_type]
 
   report:
     - check:                          &check "check"
@@ -938,7 +939,7 @@ checks:
       resource_type:                    "disks"
       property:                         "stripe_size"
       mount_point:                      "/hana/data"
-    validator_type:                     *string
+    validator_type:                     *stripe_size
     validator_args:
       expected:                         "256.00k"
     report:                             *check
@@ -988,7 +989,7 @@ checks:
       resource_type:                    "disks"
       property:                         "stripe_size"
       mount_point:                      "/hana/log"
-    validator_type:                     *string
+    validator_type:                     *stripe_size
     validator_args:
       expected:                         "64.00k"
     report:                             *check

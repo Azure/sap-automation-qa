@@ -10,7 +10,7 @@ from abc import ABC, abstractmethod
 import logging
 import re
 import shlex
-from typing import Any
+from typing import Any, Dict, Optional
 
 try:
     from ansible.module_utils.sap_automation_qa import SapAutomationQA
@@ -406,6 +406,7 @@ class AzureDataParser(Collector):
         mount_point = check.collector_args.get("mount_point", "")
         property = check.collector_args.get("property", "")
         value = "N/A"
+        fs_entry = None
         try:
             result = self._resolve_mount_disks(check, context)
             if result is None:
@@ -418,7 +419,7 @@ class AzureDataParser(Collector):
                     logging.INFO,
                     f"Found {property}='{value}' for {mount_point} from filesystem data",
                 )
-                return value
+                return self._with_striping_metadata(property, value, fs_entry)
             if not parsed_disks:
                 self.parent.log(logging.WARNING, "No valid disk metadata found")
                 return value
@@ -467,8 +468,36 @@ class AzureDataParser(Collector):
         except Exception as ex:
             self.parent.handle_error(ex)
             value = f"ERROR: Parsing failed: {str(ex)}"
+            return value
 
-        return value
+        return self._with_striping_metadata(property, value, fs_entry)
+
+    def _with_striping_metadata(
+        self, property: str, value: str, fs_entry: Optional[Dict[str, Any]]
+    ) -> str:
+        """
+        Append striping metadata (stripes, disk_count) to a stripe_size value.
+
+        This lets validators tell apart "not striped" (single disk / linear LV,
+        where a stripe size of 0 is expected and correct) from a genuine
+        misconfiguration or a collection failure, without changing the plain
+        value returned for any other disk property (e.g. mbps, iops).
+
+        :param property: Collector property that was requested
+        :type property: str
+        :param value: Raw property value already resolved
+        :type value: str
+        :param fs_entry: Correlated filesystem entry the value was resolved from
+        :type fs_entry: Optional[Dict[str, Any]]
+        :return: Value unchanged, or "stripe_size=<value>;stripes=<n>;disk_count=<n>"
+            when property is "stripe_size"
+        :rtype: str
+        """
+        if property != "stripe_size" or value.startswith("ERROR:"):
+            return value
+        stripes = fs_entry.get("stripes", "") if fs_entry else ""
+        disk_count = fs_entry.get("disk_count", "") if fs_entry else ""
+        return f"stripe_size={value};stripes={stripes};disk_count={disk_count}"
 
     def parse_disk_consistency_vars(self, check, context) -> str:
         """

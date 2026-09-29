@@ -352,6 +352,63 @@ class TestValidators:
         result = config_module.validate_string(sample_check, "  test   value  ")
         assert result["status"] == TestStatus.SUCCESS.value
 
+    def test_validate_stripe_size_striped_matches(self, config_module, sample_check):
+        """A striped volume whose stripe size matches expected passes"""
+        sample_check.collector_args = {"mount_point": "/hana/data"}
+        sample_check.validator_args = {"expected": "256.00k"}
+        result = config_module.validate_stripe_size(
+            sample_check, "stripe_size=256.00k;stripes=2;disk_count=2"
+        )
+        assert result["status"] == TestStatus.SUCCESS.value
+
+    def test_validate_stripe_size_striped_mismatch(self, config_module, sample_check):
+        """A striped volume whose stripe size does not match expected fails"""
+        sample_check.collector_args = {"mount_point": "/hana/data"}
+        sample_check.validator_args = {"expected": "256.00k"}
+        sample_check.severity = TestSeverity.WARNING
+        result = config_module.validate_stripe_size(
+            sample_check, "stripe_size=64.00k;stripes=2;disk_count=2"
+        )
+        assert result["status"] == TestStatus.WARNING.value
+
+    def test_validate_stripe_size_non_striped_is_skipped(self, config_module, sample_check):
+        """A single-disk/non-striped volume is not applicable, not a failure"""
+        sample_check.collector_args = {"mount_point": "/hana/data"}
+        sample_check.validator_args = {"expected": "256.00k"}
+        result = config_module.validate_stripe_size(
+            sample_check, "stripe_size=0;stripes=1;disk_count=1"
+        )
+        assert result["status"] == TestStatus.SKIPPED.value
+        assert "not applicable" in result["details"]
+
+    def test_validate_stripe_size_single_disk_no_stripes_field_is_skipped(
+        self, config_module, sample_check
+    ):
+        """disk_count > 1 without a stripes field still counts as striped;
+        absence of both stripes and disk_count (or values of 1) is non-striped"""
+        sample_check.collector_args = {"mount_point": "/hana/data"}
+        sample_check.validator_args = {"expected": "256.00k"}
+        result = config_module.validate_stripe_size(
+            sample_check, "stripe_size=0;stripes=;disk_count=1"
+        )
+        assert result["status"] == TestStatus.SKIPPED.value
+
+    def test_validate_stripe_size_missing_metadata_is_error(self, config_module, sample_check):
+        """Missing storage/striping metadata is a collection issue, not a failed check"""
+        sample_check.collector_args = {"mount_point": "/hana/data"}
+        sample_check.validator_args = {"expected": "256.00k"}
+        result = config_module.validate_stripe_size(sample_check, "N/A")
+        assert result["status"] == TestStatus.ERROR.value
+        assert "unavailable" in result["details"]
+
+    def test_validate_stripe_size_collection_error_is_error(self, config_module, sample_check):
+        """A collector-reported error is surfaced as a collection issue"""
+        sample_check.collector_args = {"mount_point": "/hana/data"}
+        sample_check.validator_args = {"expected": "256.00k"}
+        result = config_module.validate_stripe_size(sample_check, "ERROR: Parsing failed: boom")
+        assert result["status"] == TestStatus.ERROR.value
+        assert "Collection failed" in result["details"]
+
     def test_validate_numeric_range_within_bounds(self, config_module, sample_check):
         """Test numeric range validation within bounds"""
         sample_check.validator_args = {"min": 10, "max": 100}

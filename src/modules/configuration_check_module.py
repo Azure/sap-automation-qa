@@ -90,6 +90,7 @@ class ConfigurationCheckModule(SapAutomationQA):
         """
         return {
             "string": self.validate_string,
+            "stripe_size": self.validate_stripe_size,
             "range": self.validate_numeric_range,
             "list": self.validate_list,
             "min_list": self.validate_min_list,
@@ -473,6 +474,75 @@ class ConfigurationCheckModule(SapAutomationQA):
             expected = expected.lower()
             collected = collected.lower()
 
+        return {
+            "status": self._create_validation_result(check.severity, collected == expected),
+        }
+
+    def validate_stripe_size(self, check: Check, collected_data: str) -> Dict[str, Any]:
+        """
+        Validate stripe size for a mount point, aware of whether it is striped.
+
+        Distinguishes three cases:
+        - Storage/striping metadata could not be collected (e.g. mount point or
+          disk metadata missing) -> reported as a collection issue (ERROR), not
+          a failed check.
+        - The volume is backed by a single disk / a non-striped LV, so a stripe
+          size of 0 is expected -> SKIPPED, the check does not apply.
+        - The volume is striped across multiple disks/PVs -> validated against
+          ``validator_args.expected`` like a regular string check.
+
+        :param check: The check definition
+        :type check: Check
+        :param collected_data: Collector output, in the
+            "stripe_size=<v>;stripes=<n>;disk_count=<n>" format produced by
+            ``AzureDataParser.parse_disks_vars``
+        :type collected_data: str
+        :return: Validation result
+        :rtype: Dict[str, Any]
+        """
+        raw = str(collected_data).strip() if collected_data is not None else ""
+        mount_point = check.collector_args.get("mount_point", "the mount point")
+
+        if raw.startswith("ERROR:"):
+            return {
+                "status": TestStatus.ERROR.value,
+                "details": f"Collection failed for {mount_point}: {raw}",
+            }
+
+        fields = {}
+        for part in raw.split(";"):
+            if "=" in part:
+                key, _, val = part.partition("=")
+                fields[key.strip()] = val.strip()
+
+        if "stripe_size" not in fields:
+            return {
+                "status": TestStatus.ERROR.value,
+                "details": f"Storage metadata unavailable for {mount_point}; cannot determine "
+                "stripe configuration",
+            }
+
+        def _as_int(value: str) -> int:
+            try:
+                return int(float(value))
+            except (ValueError, TypeError):
+                return 0
+
+        stripes = _as_int(fields.get("stripes", ""))
+        disk_count = _as_int(fields.get("disk_count", ""))
+        is_striped = stripes > 1 or disk_count > 1
+
+        if not is_striped:
+            return {
+                "status": TestStatus.SKIPPED.value,
+                "details": f"{mount_point} is backed by a single disk/non-striped volume; "
+                "stripe size check is not applicable",
+            }
+
+        expected = str(
+            check.validator_args.get("expected") or check.validator_args.get("expected_output", "")
+        ).strip()
+        collected = fields.get("stripe_size", "").strip()
         return {
             "status": self._create_validation_result(check.severity, collected == expected),
         }

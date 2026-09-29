@@ -79,9 +79,10 @@ enums:
 
   validator_type:
     - string:                         &string "string"
+    - stripe_size:                    &stripe_size "stripe_size"
     - range:                          &range "range"
     - list:                           &list "list"
-    - all:                            &validator_type [*string, *range, *list]
+    - all:                            &validator_type [*string, *stripe_size, *range, *list]
 
   report:
     - check:                          &check "check"
@@ -738,7 +739,7 @@ checks:
       resource_type:                    "disks"
       property:                         "stripe_size"
       mount_point:                      "/db2/data"
-    validator_type:                     *string
+    validator_type:                     *stripe_size
     validator_args:
       expected:                         "256.00k"
     report:                             *check
@@ -764,7 +765,7 @@ checks:
       resource_type:                    "disks"
       property:                         "stripe_size"
       mount_point:                      "/db2/log"
-    validator_type:                     *string
+    validator_type:                     *stripe_size
     validator_args:
       expected:                         "64.00k"
     report:                             *check

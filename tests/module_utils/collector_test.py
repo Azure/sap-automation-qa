@@ -325,6 +325,79 @@ class TestAzureDataParser:
             == "5000"
         )
 
+    def test_parse_disks_vars_stripe_size_non_striped(self):
+        """
+        Stripe size lookups append striping metadata; a single-disk/non-striped
+        volume reports stripes=1 and disk_count=1 alongside stripe_size=0.
+        """
+        result = AzureDataParser(MockParent()).parse_disks_vars(
+            MockCheck({"mount_point": "/hana/data", "property": "stripe_size"}),
+            {
+                "filesystems": [
+                    {
+                        "target": "/hana/data",
+                        "stripe_size": "0",
+                        "stripes": "1",
+                        "disk_count": "1",
+                    }
+                ],
+                "azure_disks_metadata": [],
+            },
+        )
+        assert result == "stripe_size=0;stripes=1;disk_count=1"
+
+    def test_parse_disks_vars_stripe_size_striped(self):
+        """
+        A striped LVM volume across multiple disks/PVs surfaces stripes > 1.
+        """
+        result = AzureDataParser(MockParent()).parse_disks_vars(
+            MockCheck({"mount_point": "/hana/data", "property": "stripe_size"}),
+            {
+                "filesystems": [
+                    {
+                        "target": "/hana/data",
+                        "stripe_size": "256.00k",
+                        "stripes": "2",
+                        "disk_count": "2",
+                    }
+                ],
+                "azure_disks_metadata": [],
+            },
+        )
+        assert result == "stripe_size=256.00k;stripes=2;disk_count=2"
+
+    def test_parse_disks_vars_stripe_size_missing_metadata(self):
+        """
+        Missing mount point/disk data still returns a bare "N/A" (no striping
+        metadata suffix) so callers can tell this apart from a resolved value.
+        """
+        result = AzureDataParser(MockParent()).parse_disks_vars(
+            MockCheck({"mount_point": "/missing", "property": "stripe_size"}),
+            {"filesystems": [], "azure_disks_metadata": []},
+        )
+        assert result == "N/A"
+
+    def test_parse_disks_vars_other_property_unaffected(self):
+        """
+        Striping metadata is only appended for the "stripe_size" property;
+        other properties (e.g. iops) keep their plain value.
+        """
+        result = AzureDataParser(MockParent()).parse_disks_vars(
+            MockCheck({"mount_point": "/hana/data", "property": "iops"}),
+            {
+                "filesystems": [
+                    {
+                        "target": "/hana/data",
+                        "iops": "5000",
+                        "stripes": "2",
+                        "disk_count": "2",
+                    }
+                ],
+                "azure_disks_metadata": [],
+            },
+        )
+        assert result == "5000"
+
     def test_parse_disks_vars_lvm_aggregation(self):
         """
         Test disk parsing with LVM striped volume aggregation and JSON strings
