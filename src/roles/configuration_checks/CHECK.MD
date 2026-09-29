@@ -76,8 +76,9 @@ enums:
   validator_type:
     - string:                         &string "string"
     - range:                          &range "range"
+    - tiered_range:                   &tiered_range "tiered_range"
     - list:                           &list "list"
-    - all:                            &validator_type [*string, *range, *list]
+    - all:                            &validator_type [*string, *range, *tiered_range, *list]
 
   report:
     - check:                          &check "check"
