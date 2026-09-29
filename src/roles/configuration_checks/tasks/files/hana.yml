@@ -1239,7 +1239,7 @@ checks:
       mount_point:                      "/hana/log"
     validator_type:                     *tiered_range
     validator_args:
-      min:                              "7000"
+      min:                              "2000"
       storage_type_property:            "hana_log_storage_type"
       tiered_storage_types:             ["PremiumV2_LRS"]
       memory_tiers:                     *premium_v2_log_iops_memory

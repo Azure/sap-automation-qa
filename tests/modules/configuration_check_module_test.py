@@ -244,12 +244,20 @@ checks:
         )
 
         data_result = config_module.validate_tiered_numeric_range(checks["DB-HANA-0042"], "7000")
-        log_result = config_module.validate_tiered_numeric_range(checks["DB-HANA-0044"], "7000")
+        log_result = config_module.validate_tiered_numeric_range(checks["DB-HANA-0044"], "2000")
+        data_below_minimum = config_module.validate_tiered_numeric_range(
+            checks["DB-HANA-0042"], "6999"
+        )
+        log_below_minimum = config_module.validate_tiered_numeric_range(
+            checks["DB-HANA-0044"], "1999"
+        )
 
         assert data_result["status"] == TestStatus.SUCCESS.value
         assert log_result["status"] == TestStatus.SUCCESS.value
+        assert data_below_minimum["status"] == TestStatus.ERROR.value
+        assert log_below_minimum["status"] == TestStatus.ERROR.value
         assert data_result["details"] == "Required minimum: 7000 (default storage requirement)"
-        assert log_result["details"] == "Required minimum: 7000 (default storage requirement)"
+        assert log_result["details"] == "Required minimum: 2000 (default storage requirement)"
 
 
 class TestIsCheckApplicable:
