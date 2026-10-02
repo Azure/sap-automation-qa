@@ -98,9 +98,9 @@ azure-mgmt-loganalytics==13.1.1 \
     --hash=sha256:4f971ee9d43fdc99e8299f44ca9f8f7a3b5f100be139fb0a9dac7efef8b698af \
     --hash=sha256:73382d5036f478d3f6e856a0effc3637be2ebc782ab667fc45b25707edceaa55
     # via -r requirements.in
-azure-mgmt-network==30.2.0 \
-    --hash=sha256:9b17c259e6344808aaa80a34bbc4b13f16bc01185dd9db137eaa0ae26664861a \
-    --hash=sha256:a87edffd7c38aa9d3494daa8d42914213b0863a9072cf8c7c7e48018b12b6532
+azure-mgmt-network==33.0.0 \
+    --hash=sha256:ae5a12555909dce24a2496a8a6f474f8e9e23408b2dddc8692f7776d810df0f6 \
+    --hash=sha256:b076f0e9a0add74dd2155e87220456c22166ba02d1bfd76500314350b526b2f1
     # via -r requirements.in
 azure-mgmt-recoveryservicesbackup==11.1.0 \
     --hash=sha256:5655f814e766e91c947be1df9cb5976c72d2d4a189da09b63d07946b3bd5f518 \
