@@ -62,7 +62,6 @@ azure-core==1.39.0 \
     #   azure-mgmt-core
     #   azure-storage-blob
     #   azure-storage-queue
-    #   msrest
 azure-identity==1.25.3 \
     --hash=sha256:ab23c0d63015f50b630ef6c6cf395e7262f439ce06e5d07a64e874c724f8d9e6 \
     --hash=sha256:f4d0b956a8146f30333e071374171f3cfa7bdb8073adb8c3814b65567aa7447c
@@ -103,9 +102,9 @@ azure-mgmt-network==30.2.0 \
     --hash=sha256:9b17c259e6344808aaa80a34bbc4b13f16bc01185dd9db137eaa0ae26664861a \
     --hash=sha256:a87edffd7c38aa9d3494daa8d42914213b0863a9072cf8c7c7e48018b12b6532
     # via -r requirements.in
-azure-mgmt-recoveryservicesbackup==10.0.0 \
-    --hash=sha256:0cac3c6b872306359bbc47501d184b700846ce548f93f9c0f6ef7d1d10b723e9 \
-    --hash=sha256:300fb7013e9c86d4bd26cbbee4545853e7046dd49ba45e76863ec05cbc1f0dc9
+azure-mgmt-recoveryservicesbackup==11.1.0 \
+    --hash=sha256:5655f814e766e91c947be1df9cb5976c72d2d4a189da09b63d07946b3bd5f518 \
+    --hash=sha256:b7b4ab1746e8a920b80c1f12a7e806dc13f0ba5cf7e357c7b457c5626fe26de4
     # via -r requirements.in
 azure-storage-blob==12.26.0 \
     --hash=sha256:5dd7d7824224f7de00bfeb032753601c982655173061e242f13be6e26d78d71f \
@@ -164,7 +163,6 @@ certifi==2026.2.25 \
     # via
     #   httpcore
     #   httpx
-    #   msrest
     #   requests
 cffi==2.0.0 \
     --hash=sha256:00bdf7acc5f795150faa6957054fbbca2439db2f775ce831222b66f192f03beb \
@@ -713,9 +711,9 @@ isodate==0.7.2 \
     #   azure-mgmt-compute
     #   azure-mgmt-loganalytics
     #   azure-mgmt-network
+    #   azure-mgmt-recoveryservicesbackup
     #   azure-storage-blob
     #   azure-storage-queue
-    #   msrest
 isort==8.0.1 \
     --hash=sha256:171ac4ff559cdc060bcfff550bc8404a486fee0caab245679c2abe7cb253c78d \
     --hash=sha256:28b89bc70f751b559aeca209e6120393d43fbe2490de0559662be7a9787e3d75
@@ -1359,11 +1357,9 @@ requests==2.33.1 \
     #   azure-core
     #   azure-kusto-data
     #   msal
-    #   msrest
     #   pywinrm
     #   requests-credssp
     #   requests-ntlm
-    #   requests-oauthlib
 requests-credssp==2.0.0 \
     --hash=sha256:229afe2f6e1c9fabef64fc2bdf2a10e794ca6c4a0c00a687d53fbfaf7b8ee71d \
     --hash=sha256:47c8b250eef663f9b55af179f341e823f1f7f63b8b2b9037063e641a2df4bfa3
@@ -1372,10 +1368,6 @@ requests-ntlm==1.3.0 \
     --hash=sha256:4c7534a7d0e482bb0928531d621be4b2c74ace437e88c5a357ceb7452d25a510 \
     --hash=sha256:b29cc2462623dffdf9b88c43e180ccb735b4007228a542220e882c58ae56c668
     # via pywinrm
-requests-oauthlib==2.0.0 \
-    --hash=sha256:7dd8a5c40426b779b0868c404bdef9768deccf22749cde15852df527e6269b36 \
-    --hash=sha256:b3dffaebd884d8cd778494369603a9e7b58d29111bf6b41bdc2dcd87203af4e9
-    # via msrest
 resolvelib==1.0.1 \
     --hash=sha256:04ce76cbd63fded2078ce224785da6ecd42b9564b1390793f64ddecbe997b309 \
     --hash=sha256:d2da45d1a8dfee81bdd591647783e340ef3bcb104b54c383f70d422ef5cc7dbf
