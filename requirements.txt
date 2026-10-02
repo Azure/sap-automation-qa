@@ -82,9 +82,9 @@ azure-kusto-ingest==6.0.3 \
     --hash=sha256:0a2af480da969d423457dabb036ebacf6e90621a7905a09482a7308f621dd95e \
     --hash=sha256:db412f4f5c61f87513c4e3929246784c89d22ea8d22a1703818f55e000e07549
     # via -r requirements.in
-azure-mgmt-compute==37.2.0 \
-    --hash=sha256:23499d4d5ad2b2bf40a4c59df2684cc4c9cef0f9672a4e842bb9a1cf6b62f628 \
-    --hash=sha256:70741c26ac94c30408a3b20f4fdfe93e6481e308b3c14a6dbefdfd4794028616
+azure-mgmt-compute==38.4.0 \
+    --hash=sha256:1421fbdc73b0c7c0875eeec559eae6ca9009598f3c73ee792097a7145b407053 \
+    --hash=sha256:7bf2f2b49e2b7cedf5f3eb2a71cf501b70e5898bd45d2421650029b95d589835
     # via -r requirements.in
 azure-mgmt-core==1.6.0 \
     --hash=sha256:0460d11e85c408b71c727ee1981f74432bc641bb25dfcf1bb4e90a49e776dbc4 \
