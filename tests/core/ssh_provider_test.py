@@ -68,9 +68,24 @@ class TestSshCredentialProvider:
         with pytest.raises(CredentialProvisionError, match="Invalid"):
             SshCredentialProvider._parse_secret_id("not-a-url")
 
+    @pytest.mark.parametrize(
+        "secret_id",
+        [
+            "http://myvault.vault.azure.net/secrets/mykey",
+            "https://attacker.example/secrets/mykey",
+            "https://myvault.vault.azure.net.attacker.example/secrets/mykey",
+            "https://user:password@myvault.vault.azure.net/secrets/mykey",
+            "https://myvault.vault.azure.net:443/secrets/mykey",
+            "https://myvault.vault.azure.net:not-a-port/secrets/mykey",
+        ],
+    )
+    def test_parse_untrusted_vault_url_raises(self, secret_id: str) -> None:
+        with pytest.raises(CredentialProvisionError, match="Invalid"):
+            SshCredentialProvider._parse_secret_id(secret_id)
+
     def test_parse_missing_secrets_segment_raises(self) -> None:
         with pytest.raises(CredentialProvisionError, match="parse"):
-            SshCredentialProvider._parse_secret_id("https://vault.azure.net/keys/foo")
+            SshCredentialProvider._parse_secret_id("https://myvault.vault.azure.net/keys/foo")
 
     def test_finds_ssh_key_ppk(self, tmp_path: Path) -> None:
         ws = tmp_path / "SYSTEM" / "WS1"
