@@ -521,7 +521,7 @@ checks:
     name:                               "Pacemaker optional fence_kdump"
     description:                        "SAP Pacemaker optional fence_kdump"
     category:                           *sap_check
-    severity:                           *high
+    severity:                           *info
     workload:                           *sap
     applicability:
       os_type:                          [*redhat]
