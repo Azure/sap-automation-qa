@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file.
 
+## 1.1.5
+Release Date: 10-01-2026
+1. Add tiered HANA Premium SSD v2 IOPS validation. Validate aggregate /hana/data and /hana/log IOPS against VM memory-based thresholds or documented VM SKU requirements; document the supported thresholds.
+2. Improve configuration-check validation and reporting. Normalize database names across casing differences, report unsupported or unavailable VM support evidence as errors, and show more relevant expected values—including avoiding oversized VM SKU lists in reports.
+3. Harden Azure Key Vault secret ID parsing. Require valid HTTPS Azure Key Vault URLs and reject malformed or unexpected URL components; add test coverage.
+4. Refactor Azure authentication tasks to use a shared include file; add the anyio test dependency. 
+5. Update the Db2 configuration check to expect 0 and include an IBM reference about ASLR-related Db2 failures on Linux.
+
 ## 1.1.4
 Release Date: 09-04-2026
 1. STAF skill package installable across GitHub Copilot CLI, Claude Code, and Gemini CLI without Windows-incompatible skill symlinks. Cross-agent skills now have one real home under skills/; the Copilot server-side review skill remains under .github/skills/.
