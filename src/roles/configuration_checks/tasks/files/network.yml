@@ -107,6 +107,7 @@ checks:
                                         --query "[].id" -o tsv | while read nic_id; do \
                                           nic=$(basename "$nic_id"); \
                                           az network nic show --resource-group {{ CONTEXT.resource_group_name }} --name "$nic" \
+                                          --subscription {{ CONTEXT.subscription_id }} \
                                           --query "ipConfigurations[].subnet.id" -o tsv | awk -F'/' '{print $(NF-2)}'; \
                                         done
     report:                           *check
@@ -128,6 +129,7 @@ checks:
                                         --query "[].id" -o tsv | while read nic_id; do \
                                           nic=$(basename "$nic_id"); \
                                           az network nic show --resource-group {{ CONTEXT.resource_group_name }} --name "$nic" \
+                                          --subscription {{ CONTEXT.subscription_id }} \
                                           --query "ipConfigurations[].subnet.id" -o tsv | xargs -I {} basename {}; \
                                         done
     report:                           *check
@@ -185,6 +187,7 @@ checks:
                                         --query "[].id" -o tsv | while read nic_id; do \
                                           nic=$(basename "$nic_id"); \
                                           status=$(az network nic show --resource-group {{ CONTEXT.resource_group_name }} --name "$nic" \
+                                          --subscription {{ CONTEXT.subscription_id }} \
                                           --query "enableAcceleratedNetworking" -o tsv); \
                                           echo "$status"; \
                                         done | sort -u
@@ -210,6 +213,7 @@ checks:
                                         --query "[].id" -o tsv | while read nic_id; do \
                                           nic=$(basename "$nic_id"); \
                                           count=$(az network nic show --resource-group {{ CONTEXT.resource_group_name }} --name "$nic" \
+                                          --subscription {{ CONTEXT.subscription_id }} \
                                           --query "ipConfigurations | length(@)" -o tsv); \
                                           echo "$nic: $count"; \
                                         done
@@ -232,6 +236,7 @@ checks:
                                         while read -r nic_id; do
                                           nic=$(basename "$nic_id")
                                           az network nic show --resource-group {{ CONTEXT.resource_group_name }} --name "$nic" \
+                                            --subscription {{ CONTEXT.subscription_id }} \
                                             --query "ipConfigurations[].{IP:privateIPAddress, Primary:primary}" -o tsv |
                                           while read -r line; do
                                             ip=$(echo "$line" | awk '{print $1}')

@@ -169,7 +169,7 @@ STAF tracks two version identifiers that are separately governed:
 - The **plugin package version** — the `version` field in the five plugin/extension manifests (`.github/plugin/plugin.json`, `.github/plugin/marketplace.json`, `.claude-plugin/plugin.json`, `.claude-plugin/marketplace.json`, `gemini-extension.json`). It advances whenever the installed skill payload changes, so existing installs can detect the update.
 - The **STAF product release version** — the repo-root `VERSION` file and the matching `docs/CHANGELOG.md` stanza.
 
-For the current release both counters happen to be `1.1.4`, because this release ships product changes to the skills alongside the plugin packaging. That alignment is not a rule. A future packaging-only fix (for example, adjusting install-time checks or skill wording without a product release) may bump the five manifests without bumping `VERSION`, and a future product release may bump `VERSION` without changing the manifest contents. The two are permitted to diverge; check both when correlating what a given install has against a release.
+For the current release both counters happen to be `1.1.5`, because this release ships product changes to the skills alongside the plugin packaging. That alignment is not a rule. A future packaging-only fix (for example, adjusting install-time checks or skill wording without a product release) may bump the five manifests without bumping `VERSION`, and a future product release may bump `VERSION` without changing the manifest contents. The two are permitted to diverge; check both when correlating what a given install has against a release.
 
 ## Contributing
 
