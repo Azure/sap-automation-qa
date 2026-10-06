@@ -247,8 +247,11 @@ checks:
       user:                             *root
     validator_type:                     *string
     validator_args:
-      expected_output:                  "5"
+      expected_output:                  "0"
     report:                             *check
+    references:
+      other:                            "https://www.ibm.com/support/pages/various-db2-failures-may-occur-linux-address-space-layout-randomization-aslr"
+
 
   - id:                                 "DB-Db2-0008"
     name:                               "Max Async I/O"
