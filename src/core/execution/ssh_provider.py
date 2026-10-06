@@ -159,7 +159,7 @@ class SshCredentialProvider:
             or parsed.password is not None
             or port is not None
         ):
-            raise CredentialProvisionError(f"Invalid secret_id URL: {secret_id}")
+raise CredentialProvisionError("Invalid secret_id URL")
 
         parts = [p for p in parsed.path.split("/") if p]
         if len(parts) < 2 or parts[0] != "secrets":
