@@ -543,17 +543,18 @@ dummy1 = dummy2
 
 [ha_dr_provider_SAPHanaSR]
 provider = SAPHanaSR
-path = /usr/share/SAPHanaSR
+path = /usr/share/SAPHanaSR/srHook
 execution_order = 1
 
-[ha_dr_provider_suschksrv]
-provider = susChkSrv
-path = /usr/share/SAPHanaSR
-execution_order = 3
-action_on_host = fence
+[ha_dr_provider_chksrv]
+provider = ChkSrv
+path = /usr/share/SAPHanaSR/srHook
+execution_order = 2
+action_on_host = kill
 
 [trace]
-ha_dr_sushanasr = info
+ha_dr_saphanasr = info
+ha_dr_chksrv = info
 """
 
 DB_DUMMY_GLOBAL_INI_ANGI = """[DEFAULT]
@@ -796,22 +797,23 @@ DB_DUMMY_CONSTANTS = {
                 "ha_dr_provider_SAPHanaSR": {
                     "provider": {"value": "SAPHanaSR", "required": True},
                     "path": {
-                        "value": ["/usr/share/SAPHanaSR", "/hana/shared/myHooks"],
+                        "value": ["/usr/share/SAPHanaSR/srHook", "/hana/shared/myHooks"],
                         "required": True,
                     },
                     "execution_order": {"value": "1", "required": True},
                 },
-                "ha_dr_provider_suschksrv": {
-                    "provider": {"value": "susChkSrv", "required": True},
+                "ha_dr_provider_chksrv": {
+                    "provider": {"value": "ChkSrv", "required": True},
                     "path": {
-                        "value": ["/usr/share/SAPHanaSR", "/hana/shared/myHooks"],
+                        "value": ["/usr/share/SAPHanaSR/srHook", "/hana/shared/myHooks"],
                         "required": True,
                     },
-                    "execution_order": {"value": "3", "required": True},
-                    "action_on_host": {"value": "fence", "required": True},
+                    "execution_order": {"value": "2", "required": True},
+                    "action_on_host": {"value": "kill", "required": True},
                 },
                 "trace": {
-                    "ha_dr_sushanasr": {"required": False},
+                    "ha_dr_saphanasr": {"required": False},
+                    "ha_dr_chksrv": {"required": False},
                 },
             },
             "SAPHanaController": {
