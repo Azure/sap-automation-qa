@@ -455,7 +455,23 @@ class TestHAClusterValidator:
         assert len(provider_params) == 2
         provider_values = [p["value"] for p in provider_params]
         assert "SAPHanaSR" in provider_values
-        assert "susChkSrv" in provider_values
+        assert "ChkSrv" in provider_values
+
+    def test_rhel_saphanasr_global_ini_provider_paths(self, validator):
+        """
+        Test RHEL SAPHanaSR providers use the srHook path.
+        """
+        params = validator._parse_global_ini_parameters()
+        path_params = {p["id"]: p for p in params if p["name"] == "path"}
+
+        assert path_params.keys() == {
+            "ha_dr_provider_SAPHanaSR",
+            "ha_dr_provider_chksrv",
+        }
+        for path_param in path_params.values():
+            assert path_param["value"] == "/usr/share/SAPHanaSR/srHook"
+            assert path_param["expected_value"] == "/usr/share/SAPHanaSR/srHook"
+            assert path_param["status"] == TestStatus.SUCCESS.value
 
     def test_parse_global_ini_parameters_angi(self, validator_angi):
         """
@@ -656,12 +672,14 @@ class TestHAClusterValidator:
         Test that multiple sections are parsed correctly from global.ini.
         """
         params = validator._parse_global_ini_parameters()
-        assert len(params) == 8
+        assert len(params) == 9
         param_names = [p["name"] for p in params]
         assert param_names.count("provider") == 2
         assert param_names.count("path") == 2
         assert param_names.count("execution_order") == 2
         assert param_names.count("action_on_host") == 1
+        assert param_names.count("ha_dr_saphanasr") == 1
+        assert param_names.count("ha_dr_chksrv") == 1
 
     def test_parse_global_ini_angi_multiple_sections(self, validator_angi):
         """
