@@ -19,6 +19,8 @@ azure-storage-queue
 black
 pylint
 coverage
+pip-audit
+bandit
 
 # Testing packages
 anyio>=4.14.2
