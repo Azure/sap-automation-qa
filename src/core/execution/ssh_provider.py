@@ -148,7 +148,7 @@ class SshCredentialProvider:
         try:
             port = parsed.port
         except ValueError as exc:
-            raise CredentialProvisionError(f"Invalid secret_id URL: {secret_id}") from exc
+            raise CredentialProvisionError("Invalid secret_id URL") from exc
 
         if (
             parsed.scheme != "https"
