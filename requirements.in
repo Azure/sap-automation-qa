@@ -19,11 +19,8 @@ azure-storage-queue
 black
 pylint
 coverage
-pip-audit
-bandit
 
 # Testing packages
-anyio>=4.14.2
 httpx
 pytest
 pytest-asyncio
@@ -40,7 +37,7 @@ Jinja2
 PyYAML
 requests
 pywinrm[credssp]
-cryptography>=50.0.1
+cryptography>=48.0.1
 
 # CLI tools
 click>=8.3.3
