@@ -117,7 +117,7 @@ The supported selectors come from `src/vars/input-api.yaml` and are validated be
 
 ## SAP HANA Premium SSD v2 IOPS validation
 
-`DB-HANA-0042` and `DB-HANA-0044` validate the aggregate provisioned IOPS of all Azure Premium SSD v2 disks backing `/hana/data` and `/hana/log`. For VMs below 8 TiB, STAF selects the required minimum from the VM's physical memory. For larger VMs, it selects the documented VM SKU requirement.
+`DB-HANA-0042` and `DB-HANA-0044` validate the aggregate provisioned IOPS of all Azure Premium SSD v2 disks backing `/hana/data` and `/hana/log`. For the documented VM SKUs listed below, STAF uses the SKU-specific requirement. For other Premium SSD v2 VMs below 8 TiB, it selects the required minimum from the VM's physical memory.
 
 | Virtual machine memory or SKU | Data IOPS | Log IOPS |
 |----------|----------:|----------:|
