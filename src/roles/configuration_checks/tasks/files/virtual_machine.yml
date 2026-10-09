@@ -629,7 +629,7 @@ checks:
       database_type:                  *db
     collector_type:                   *azure
     collector_args:
-      command:                        "if command -v az >/dev/null 2>&1; then avset_id=$(az vm show --resource-group {{ CONTEXT.resource_group_name }} --name {{ CONTEXT.vm_name }} --query 'availabilitySet.id' -o tsv 2>/dev/null); if [ -z \"$avset_id\" ] || [ \"$avset_id\" = 'null' ]; then echo 'No AvSet defined'; else echo \"$avset_id\"; fi; else echo 'Error: Azure CLI not available'; fi"
+      command:                        "if command -v az >/dev/null 2>&1; then avset_id=$(az vm show --resource-group {{ CONTEXT.resource_group_name }} --name {{ CONTEXT.vm_name }} --subscription {{ CONTEXT.subscription_id }} --query 'availabilitySet.id' -o tsv 2>/dev/null); if [ -z \"$avset_id\" ] || [ \"$avset_id\" = 'null' ]; then echo 'No AvSet defined'; else echo \"$avset_id\"; fi; else echo 'Error: Azure CLI not available'; fi"
     report:                           *check
 
   - id:                               "IC-0032"
@@ -646,7 +646,7 @@ checks:
       database_type:                  *db
     collector_type:                   *azure
     collector_args:
-      command:                        "if command -v az >/dev/null 2>&1; then ppg_id=$(az vm show --resource-group {{ CONTEXT.resource_group_name }} --name {{ CONTEXT.vm_name }} --query 'proximityPlacementGroup.id' -o tsv 2>/dev/null); if [ -z \"$ppg_id\" ] || [ \"$ppg_id\" = 'null' ]; then echo 'No PPG defined'; else echo \"$ppg_id\"; fi; else echo 'Error: Azure CLI not available'; fi"
+      command:                        "if command -v az >/dev/null 2>&1; then ppg_id=$(az vm show --resource-group {{ CONTEXT.resource_group_name }} --name {{ CONTEXT.vm_name }} --subscription {{ CONTEXT.subscription_id }} --query 'proximityPlacementGroup.id' -o tsv 2>/dev/null); if [ -z \"$ppg_id\" ] || [ \"$ppg_id\" = 'null' ]; then echo 'No PPG defined'; else echo \"$ppg_id\"; fi; else echo 'Error: Azure CLI not available'; fi"
     report:                           *check
 
   - id:                               "IC-0033"
@@ -665,12 +665,12 @@ checks:
     collector_args:
       command:                        |-
                                       if command -v az >/dev/null 2>&1; then
-                                        ppg_id=$(az vm show --resource-group {{ CONTEXT.resource_group_name }} --name {{ CONTEXT.vm_name }} --query 'proximityPlacementGroup.id' -o tsv 2>/dev/null);
+                                        ppg_id=$(az vm show --resource-group {{ CONTEXT.resource_group_name }} --name {{ CONTEXT.vm_name }} --subscription {{ CONTEXT.subscription_id }} --query 'proximityPlacementGroup.id' -o tsv 2>/dev/null);
                                         if [ $? -eq 0 ]; then
                                           if [ -z "$ppg_id" ] || [ "$ppg_id" = "null" ]; then
                                             echo "No PPG defined";
                                           else
-                                            az ppg show --ids "$ppg_id" --query 'virtualMachines[].id' -o tsv 2>/dev/null | while read vm_id; do basename "$vm_id"; done || echo "Error: Failed to retrieve PPG VMs";
+                                            az ppg show --ids "$ppg_id" --subscription {{ CONTEXT.subscription_id }} --query 'virtualMachines[].id' -o tsv 2>/dev/null | while read vm_id; do basename "$vm_id"; done || echo "Error: Failed to retrieve PPG VMs";
                                           fi
                                         else
                                           echo "Error: Failed to retrieve VM PPG";
@@ -696,7 +696,7 @@ checks:
     collector_args:
       command:                        |-
                                       if command -v az >/dev/null 2>&1; then
-                                        hyperv_generation=$(az vm show --resource-group {{ CONTEXT.resource_group_name }} --name {{ CONTEXT.vm_name }} --query "storageProfile.osDisk.managedDisk.id" -o tsv 2>/dev/null | xargs -I {} az disk show --ids {} --query "hyperVGeneration" -o tsv 2>/dev/null);
+                                        hyperv_generation=$(az vm show --resource-group {{ CONTEXT.resource_group_name }} --name {{ CONTEXT.vm_name }} --subscription {{ CONTEXT.subscription_id }} --query "storageProfile.osDisk.managedDisk.id" -o tsv 2>/dev/null | xargs -I {} az disk show --ids {} --subscription {{ CONTEXT.subscription_id }} --query "hyperVGeneration" -o tsv 2>/dev/null);
                                         if [ $? -eq 0 ] && [ -n "$hyperv_generation" ]; then
                                           if [ "$hyperv_generation" = "V1" ]; then
                                             echo "Gen1";
@@ -727,7 +727,7 @@ checks:
     collector_args:
       command:                        |-
                                       if command -v az >/dev/null 2>&1; then
-                                        extensions=$(az vm extension list --resource-group {{ CONTEXT.resource_group_name }} --vm-name {{ CONTEXT.vm_name }} --query '[].name' -o tsv 2>/dev/null);
+                                        extensions=$(az vm extension list --resource-group {{ CONTEXT.resource_group_name }} --vm-name {{ CONTEXT.vm_name }} --subscription {{ CONTEXT.subscription_id }} --query '[].name' -o tsv 2>/dev/null);
                                         if [ $? -eq 0 ]; then
                                           if [ -z "$extensions" ]; then
                                             echo "No extensions installed";
@@ -758,9 +758,9 @@ checks:
     collector_args:
       command:                        |-
                                       if command -v az >/dev/null 2>&1; then
-                                        nic_id=$(az vm show --resource-group {{ CONTEXT.resource_group_name }} --name {{ CONTEXT.vm_name }} --query 'networkProfile.networkInterfaces[0].id' -o tsv 2>/dev/null);
+                                        nic_id=$(az vm show --resource-group {{ CONTEXT.resource_group_name }} --name {{ CONTEXT.vm_name }} --subscription {{ CONTEXT.subscription_id }} --query 'networkProfile.networkInterfaces[0].id' -o tsv 2>/dev/null);
                                         if [ $? -eq 0 ] && [ -n "$nic_id" ] && [ "$nic_id" != "null" ]; then
-                                          ip_count=$(az network nic show --ids "$nic_id" --query 'length(ipConfigurations)' -o tsv 2>/dev/null);
+                                          ip_count=$(az network nic show --ids "$nic_id" --subscription {{ CONTEXT.subscription_id }} --query 'length(ipConfigurations)' -o tsv 2>/dev/null);
                                           if [ $? -eq 0 ] && [ -n "$ip_count" ]; then
                                             case "$ip_count" in
                                               ''|*[!0-9]*)
@@ -801,7 +801,7 @@ checks:
     collector_args:
       command:                        |-
                                       if command -v az >/dev/null 2>&1; then
-                                        security_type=$(az vm show --resource-group {{ CONTEXT.resource_group_name }} --name {{ CONTEXT.vm_name }} --query "securityProfile.securityType" -o tsv 2>/dev/null);
+                                        security_type=$(az vm show --resource-group {{ CONTEXT.resource_group_name }} --name {{ CONTEXT.vm_name }} --subscription {{ CONTEXT.subscription_id }} --query "securityProfile.securityType" -o tsv 2>/dev/null);
                                         if [ $? -eq 0 ]; then
                                           if [ -z "$security_type" ] || [ "$security_type" = "null" ]; then
                                             echo "Standard";
@@ -832,7 +832,7 @@ checks:
     collector_args:
       command:                        |-
                                       if command -v az >/dev/null 2>&1; then
-                                        disk_ids=$(az vm show --resource-group {{ CONTEXT.resource_group_name }} --name {{ CONTEXT.vm_name }} --query "storageProfile.dataDisks[].managedDisk.id" -o tsv 2>/dev/null);
+                                        disk_ids=$(az vm show --resource-group {{ CONTEXT.resource_group_name }} --name {{ CONTEXT.vm_name }} --subscription {{ CONTEXT.subscription_id }} --query "storageProfile.dataDisks[].managedDisk.id" -o tsv 2>/dev/null);
                                         if [ $? -eq 0 ]; then
                                           disk_json="[";
                                           if [ -n "$disk_ids" ]; then
@@ -843,7 +843,7 @@ checks:
                                               else
                                                 disk_json="${disk_json},";
                                               fi;
-                                              disk_details=$(az disk show --ids "$disk_id" -o json 2>/dev/null);
+                                              disk_details=$(az disk show --ids "$disk_id" --subscription {{ CONTEXT.subscription_id }} -o json 2>/dev/null);
                                               if [ $? -eq 0 ]; then
                                                 disk_json="${disk_json}${disk_details}";
                                               else
@@ -877,7 +877,7 @@ checks:
     collector_args:
       command:                        |-
                                       if command -v az >/dev/null 2>&1; then
-                                        vmss_id=$(az vm show --resource-group {{ CONTEXT.resource_group_name }} --name {{ CONTEXT.vm_name }} --query "virtualMachineScaleSet.id" -o tsv 2>/dev/null);
+                                        vmss_id=$(az vm show --resource-group {{ CONTEXT.resource_group_name }} --name {{ CONTEXT.vm_name }} --subscription {{ CONTEXT.subscription_id }} --query "virtualMachineScaleSet.id" -o tsv 2>/dev/null);
                                         if [ $? -eq 0 ]; then
                                           if [ -z "$vmss_id" ] || [ "$vmss_id" = "null" ]; then
                                             echo "No VMSS defined";

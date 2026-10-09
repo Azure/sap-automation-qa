@@ -142,10 +142,24 @@ class SshCredentialProvider:
     def _parse_secret_id(
         secret_id: str,
     ) -> tuple[str, str, str]:
-        """Extract vault URL, secret name, and version from a"""
+        """Extract vault URL, secret name, and version from a Key Vault URL."""
         parsed = urlparse(secret_id)
-        if not parsed.scheme or not parsed.hostname:
-            raise CredentialProvisionError(f"Invalid secret_id URL: {secret_id}")
+        hostname = parsed.hostname
+        try:
+            port = parsed.port
+        except ValueError as exc:
+            raise CredentialProvisionError("Invalid secret_id URL") from exc
+
+        if (
+            parsed.scheme != "https"
+            or not hostname
+            or not hostname.endswith(".vault.azure.net")
+            or hostname.count(".") != 3
+            or parsed.username is not None
+            or parsed.password is not None
+            or port is not None
+        ):
+            raise CredentialProvisionError("Invalid secret_id URL")
 
         parts = [p for p in parsed.path.split("/") if p]
         if len(parts) < 2 or parts[0] != "secrets":
@@ -153,7 +167,7 @@ class SshCredentialProvider:
 
         secret_name = parts[1]
         secret_version = parts[2] if len(parts) > 2 else ""
-        return f"{parsed.scheme}://{parsed.hostname}", secret_name, secret_version
+        return f"https://{hostname}", secret_name, secret_version
 
     @staticmethod
     def _fetch_secret(
