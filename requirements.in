@@ -10,7 +10,7 @@ azure-kusto-data
 azure-kusto-ingest
 azure-mgmt-compute
 azure-mgmt-loganalytics
-azure-mgmt-network
+azure-mgmt-network==23.0.0
 azure-mgmt-recoveryservicesbackup
 azure-storage-blob
 azure-storage-queue
