@@ -51,6 +51,10 @@ attrs==26.1.0 \
     # via
     #   jsonschema
     #   referencing
+azure-common==1.1.28 \
+    --hash=sha256:4ac0cd3214e36b6a1b6a442686722a5d8cc449603aa833f3f0f40bda836704a3 \
+    --hash=sha256:5c12d3dcf4ec20599ca6b0d3e09e86e146353d443e7fcc050c9a19c1f9df20ad
+    # via azure-mgmt-network
 azure-core==1.39.0 \
     --hash=sha256:4ac7b70fab5438c3f68770649a78daf97833caa83827f91df9c14e0e0ea7d34f \
     --hash=sha256:8a90a562998dd44ce84597590fff6249701b98c0e8797c95fcdd695b54c35d74
