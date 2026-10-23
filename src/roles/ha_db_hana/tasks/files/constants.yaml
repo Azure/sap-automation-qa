@@ -1559,7 +1559,7 @@ GLOBAL_INI:
           value:                      "ChkSrv"
           required:                   true
         path:
-          value:                      ["/usr/share/SAPHanaSR", "/hana/shared/myHooks"]
+          value:                      ["/usr/share/SAPHanaSR/srHook", "/hana/shared/myHooks"]
           required:                   true
         execution_order:
           value:                      "2"

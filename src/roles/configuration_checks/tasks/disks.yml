@@ -230,15 +230,18 @@
                                         first=true
                                         for pool in $(az netappfiles pool list \
                                           --resource-group "{{ ANF_account_rg | default(compute_metadata.json.compute.resourceGroupName) }}" \
+                                          --subscription "{{ compute_metadata.json.compute.subscriptionId }}" \
                                           --account-name "{{ ANF_account_name }}" \
                                           --query '[].name' -o tsv | awk -F/ '{print $NF}'); do
                                             qos=$(az netappfiles pool show \
                                               --resource-group "{{ ANF_account_rg | default(compute_metadata.json.compute.resourceGroupName) }}" \
+                                              --subscription "{{ compute_metadata.json.compute.subscriptionId }}" \
                                               --account-name "{{ ANF_account_name }}" \
                                               --pool-name "$pool" \
                                               --query "qosType" -o tsv)
                                             for vol in $(az netappfiles volume list \
                                               --resource-group "{{ ANF_account_rg | default(compute_metadata.json.compute.resourceGroupName) }}" \
+                                              --subscription "{{ compute_metadata.json.compute.subscriptionId }}" \
                                               --account-name "{{ ANF_account_name }}" \
                                               --pool-name "$pool" \
                                               --query '[].name' -o tsv | awk -F/ '{print $NF}'); do
@@ -249,6 +252,7 @@
                                                 fi
                                                 az netappfiles volume show \
                                                   --resource-group "{{ ANF_account_rg | default(compute_metadata.json.compute.resourceGroupName) }}" \
+                                                  --subscription "{{ compute_metadata.json.compute.subscriptionId }}" \
                                                   --account-name "{{ ANF_account_name }}" \
                                                   --pool-name "$pool" \
                                                   --volume-name "$vol" \
@@ -279,7 +283,7 @@
                                         #!/bin/bash
                                         set -o pipefail
                                         for acc in {{ accounts_list }}; do
-                                          sa_info=$(az storage account show --name "$acc" --query "{rg:resourceGroup,name:name,id:id}" -o tsv 2>&1)
+                                          sa_info=$(az storage account show --name "$acc" --subscription "{{ compute_metadata.json.compute.subscriptionId }}" --query "{rg:resourceGroup,name:name,id:id}" -o tsv 2>&1)
                                           if [ $? -ne 0 ] || [ -z "$sa_info" ]; then
                                             echo "Error: Failed to retrieve storage account info for $acc: $sa_info" >&2
                                             continue
@@ -287,7 +291,7 @@
                                           rg=$(echo "$sa_info" | awk '{print $1}')
                                           sid=$(echo "$sa_info" | awk '{print $3}')
                                           dns="$acc.privatelink.file.core.windows.net"
-                                          share_list=$(az storage share-rm list --resource-group "$rg" --storage-account "$acc" \
+                                          share_list=$(az storage share-rm list --resource-group "$rg" --storage-account "$acc" --subscription "{{ compute_metadata.json.compute.subscriptionId }}" \
                                             --query "[?enabledProtocols=='NFS'].[name,accessTier,shareQuota]" -o tsv 2>&1)
                                           if [ $? -ne 0 ]; then
                                             echo "Error: Failed to list shares for storage account $acc: $share_list" >&2

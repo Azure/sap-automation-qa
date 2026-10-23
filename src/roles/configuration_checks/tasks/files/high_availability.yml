@@ -126,9 +126,9 @@ checks:
     collector_args:
       command:                        |-
                                       if command -v az >/dev/null 2>&1; then
-                                        nic_id=$(az vm show --resource-group {{ CONTEXT.resource_group_name }} --name {{ CONTEXT.vm_name }} --query 'networkProfile.networkInterfaces[0].id' -o tsv 2>/dev/null);
+                                        nic_id=$(az vm show --resource-group {{ CONTEXT.resource_group_name }} --name {{ CONTEXT.vm_name }} --subscription {{ CONTEXT.subscription_id }} --query 'networkProfile.networkInterfaces[0].id' -o tsv 2>/dev/null);
                                         if [ $? -eq 0 ] && [ -n "$nic_id" ] && [ "$nic_id" != "null" ]; then
-                                          lb_backend_pools=$(az network nic show --ids "$nic_id" --query 'ipConfigurations[0].loadBalancerBackendAddressPools[0].id' -o tsv 2>/dev/null);
+                                          lb_backend_pools=$(az network nic show --ids "$nic_id" --subscription {{ CONTEXT.subscription_id }} --query 'ipConfigurations[0].loadBalancerBackendAddressPools[0].id' -o tsv 2>/dev/null);
                                           if [ -n "$lb_backend_pools" ] && [ "$lb_backend_pools" != "null" ]; then
                                             load_balancer_name=$(echo "$lb_backend_pools" | grep -oP '/loadBalancers/\K[^/]+');
                                             if [ -n "$load_balancer_name" ]; then
