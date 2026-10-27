@@ -431,7 +431,7 @@ checks:
       role:                             [*db_role, *ascs_role]
       database_type:                    [*hana]
       high_availability:                *high_availability
-      high_availability_agent:          *cluster_type
+      high_availability_agent:          [*sbd, *asd]
     collector_type:                     *command
     collector_args:
       command:                          "/bin/cat /etc/modules-load.d/softdog.conf"
