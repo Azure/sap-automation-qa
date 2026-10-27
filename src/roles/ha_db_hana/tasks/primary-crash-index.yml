@@ -117,6 +117,18 @@
             primary_site_name:          "{{ cluster_status_pre.primary_site_name }}"
             operation_mode:             "{{ cluster_status_pre.operation_mode }}"
 
+        # ---------------------------------------------------------------------
+        # The former primary can be fenced/rebooted after the indexserver crash.
+        # Wait until Ansible can reach the node again before running sr_register.
+        # ---------------------------------------------------------------------
+
+        - name:                             "Test Execution: {{ item.name | default('') }} - Wait for failed node to become reachable"
+          when:                             cluster_status_pre.AUTOMATED_REGISTER == "false"
+          ansible.builtin.wait_for_connection:
+            timeout:                        "{{ cluster_timeout }}"
+            sleep:                          "{{ default_delay }}"
+            connect_timeout:                "{{ default_delay }}"
+
         - name:                         "Test Execution: {{ item.name | default('') }} - Register Failed Resource"
           become:                       true
           become_user:                  "{{ db_sid | lower }}adm"
