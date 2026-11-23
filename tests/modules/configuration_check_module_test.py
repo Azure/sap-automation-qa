@@ -95,6 +95,28 @@ def sample_check():
     )
 
 
+@pytest.fixture
+def sap_support_checks(config_module):
+    """Load real SAP checks and the production support matrix."""
+    role_path = Path(__file__).parents[2] / "src/roles/configuration_checks"
+    config_module.load_checks((role_path / "tasks/files/sap.yml").read_text(encoding="utf-8"))
+    config_module.set_context(
+        {
+            "hostname": "testhost",
+            "os_type": "REDHAT",
+            "os_version": "9.4",
+            "hardware_type": "VM",
+            "storage_type": ["Premium_LRS"],
+            "role": "DB",
+            "database_type": "HANA",
+            "supported_configurations": config_module.parse_yaml_from_content(
+                (role_path / "vars/vm-support.yml").read_text(encoding="utf-8")
+            ),
+        }
+    )
+    return {check.id: check for check in config_module.checks}
+
+
 class TestConfigurationCheckModuleInit:
     """Test suite for ConfigurationCheckModule initialization"""
 
@@ -867,6 +889,92 @@ class TestExecuteCheck:
         with patch("src.module_utils.collector.CommandCollector.collect", side_effect=mock_collect):
             result = config_module.execute_check(sample_check)
             assert result.status == TestStatus.ERROR.value
+
+    @pytest.mark.parametrize(
+        "publisher,guest_os,database,status,actual",
+        [
+            ("", "SLES_SAP", "HANA", "PASSED", "SUSE"),
+            (" \r\n", "REDHAT", "HANA", "PASSED", "REDHAT"),
+            ("", "OracleLinux", "Oracle", "PASSED", "ORACLELINUX"),
+            ("", "Windows", "SQLSERVER", "PASSED", "MICROSOFTWINDOWSSERVER"),
+            ("", "REDHAT", "DB2", "PASSED", "REDHAT"),
+            ("", "REDHAT", "SQLSERVER", "FAILED", "REDHAT"),
+            ("SUSE", "REDHAT", "HANA", "PASSED", "SUSE"),
+            ("Canonical", "REDHAT", "HANA", "FAILED", "Canonical"),
+            (
+                "ERROR: Command timed out",
+                "SLES_SAP",
+                "HANA",
+                "FAILED",
+                "ERROR: Command timed out",
+            ),
+        ],
+    )
+    def test_sap_0002_publisher_and_guest_evidence(
+        self, config_module, sap_support_checks, publisher, guest_os, database, status, actual
+    ):
+        """Real SAP-0002 validates guest fallback without masking publisher failures."""
+        config_module.set_context(
+            {**config_module.context, "os_type": guest_os, "database_type": database}
+        )
+        with patch("src.module_utils.collector.CommandCollector.collect", return_value=publisher):
+            result = config_module.execute_check(sap_support_checks["SAP-0002"])
+
+        assert result.status == status
+        assert result.actual_value == actual
+        assert result.expected_value
+        assert ("using guest OS facts" in (result.details or "")) == (not publisher.strip())
+        if status == "FAILED":
+            assert "not supported" in result.details
+        assert config_module.context["os_type"] == guest_os
+
+    def test_sap_0002_windows_precollected_fallback_report(self, config_module, sap_support_checks):
+        """Windows fallback uses remote facts and preserves evidence in the HTML payload."""
+        config_module.set_context(
+            {
+                **config_module.context,
+                "os_type": "Windows",
+                "database_type": "SQLSERVER",
+                "precollected_command_outputs": {"SAP-0002": "\r\n"},
+            }
+        )
+        with patch.object(config_module, "execute_command_subprocess") as execute:
+            result = config_module.execute_check(sap_support_checks["SAP-0002"])
+        execute.assert_not_called()
+        config_module.result["check_results"].append(result)
+        config_module.format_results_for_html_report()
+        report = config_module.result["check_results"][0]
+
+        assert report["status"] == "PASSED"
+        assert report["actual_value"] == "MICROSOFTWINDOWSSERVER"
+        assert report["expected_value"] == "MICROSOFTWINDOWSSERVER"
+        assert "using guest OS facts" in report["details"]
+
+    @pytest.mark.parametrize("guest_os", [None, "", "Rocky", "AlmaLinux"])
+    def test_osdb_fallback_missing_or_unrecognized_guest_fails(
+        self, config_module, sample_check, sap_support_checks, guest_os
+    ):
+        """Unavailable or unrecognized guest evidence cannot establish OS support."""
+        config_module.set_context({**config_module.context, "os_type": guest_os})
+        sample_check.validator_type = "check_support"
+        sample_check.validator_args = {"validation_rules": "SupportedOSDBCombinations"}
+        with patch("src.module_utils.collector.CommandCollector.collect", return_value=""):
+            result = config_module.execute_check(sample_check)
+
+        assert result.status == "FAILED"
+        assert result.expected_value == "REDHAT, SUSE"
+        assert result.details
+
+    def test_sap_0001_empty_sku_does_not_use_guest_fallback(
+        self, config_module, sap_support_checks
+    ):
+        """OS facts cannot substitute for missing VM SKU evidence."""
+        with patch("src.module_utils.collector.CommandCollector.collect", return_value=""):
+            result = config_module.execute_check(sap_support_checks["SAP-0001"])
+
+        assert result.status == "FAILED"
+        assert result.actual_value == ""
+        assert "No value returned" in result.details
 
     def test_execute_check_parsed_db_hana_0003_stonith_action_reboot_colon_format(
         self, config_module

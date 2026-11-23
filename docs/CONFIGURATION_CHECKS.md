@@ -115,6 +115,18 @@ The supported selectors come from `src/vars/input-api.yaml` and are validated be
 | `WebDispatcherInstances` | Web dispatcher hosts plus the shared application-server execution path used by the current playbook |
 | `ObserverInstances` | Reserved canonical selector in the catalog; the current playbook does not branch observer-only checks yet |
 
+## OS/DB support checks for custom images
+
+`SAP-0002` validates the OS family against the supported database and VM role.
+It normally uses the image publisher reported by Azure Instance Metadata Service (IMDS).
+For custom or Azure Compute Gallery images with an empty publisher, it uses the guest OS
+facts already gathered by Ansible instead. The report shows the resolved OS in Actual,
+the allowed OS families in Expected, and the fallback source in Details.
+
+Unsupported combinations still fail. Missing OS evidence or collection errors also fail;
+an empty publisher alone does not make the check inapplicable. This check validates
+OS-family compatibility, not OS-version support or certification of the custom image.
+
 ## SAP HANA Premium SSD v2 IOPS validation
 
 `DB-HANA-0042` and `DB-HANA-0044` validate the aggregate provisioned IOPS of all Azure Premium SSD v2 disks backing `/hana/data` and `/hana/log`. For the documented VM SKUs listed below, STAF uses the SKU-specific requirement. For other Premium SSD v2 VMs below 8 TiB, it selects the required minimum from the VM's physical memory.

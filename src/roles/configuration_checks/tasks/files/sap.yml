@@ -135,8 +135,8 @@ checks:
       database_type:                  *db
     collector_type:                   *command
     collector_args:
-      command:                        curl -s --noproxy '*' -H Metadata:true 'http://169.254.169.254/metadata/instance/compute/storageProfile/imageReference/publisher?api-version=2021-02-01&format=text'
-      windows_command:                "Invoke-RestMethod -Uri 'http://169.254.169.254/metadata/instance/compute/storageProfile/imageReference/publisher?api-version=2021-02-01&format=text' -Headers @{Metadata='true'}"
+      command:                        curl --fail --silent --show-error --connect-timeout 5 --max-time 10 --noproxy '*' -H Metadata:true 'http://169.254.169.254/metadata/instance/compute/storageProfile/imageReference/publisher?api-version=2021-02-01&format=text'
+      windows_command:                "Invoke-RestMethod -Uri 'http://169.254.169.254/metadata/instance/compute/storageProfile/imageReference/publisher?api-version=2021-02-01&format=text' -Headers @{Metadata='true'} -ErrorAction Stop -TimeoutSec 10"
     validator_type:                   *check_support
     validator_args:
       validation_rules:               "SupportedOSDBCombinations"

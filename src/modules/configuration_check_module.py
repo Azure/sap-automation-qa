@@ -626,6 +626,50 @@ class ConfigurationCheckModule(SapAutomationQA):
                 "status": TestStatus.ERROR.value,
             }
 
+    def _resolve_osdb_fallback(
+        self, check: Check, collected_data: Any
+    ) -> tuple[Any, Optional[str]]:
+        """Resolve missing OS publisher evidence using guest facts.
+
+        :param check: Check whose evidence is being resolved
+        :type check: Check
+        :param collected_data: Original collector output, including any error diagnostics
+        :type collected_data: Any
+        :return: Effective evidence and an optional explanation of its source
+        :rtype: tuple[Any, Optional[str]]
+        """
+        if (
+            check.validator_type != "check_support"
+            or check.validator_args.get("validation_rules") != "SupportedOSDBCombinations"
+            or (
+                collected_data is not None
+                and (not isinstance(collected_data, str) or collected_data.strip())
+            )
+        ):
+            return collected_data, None
+
+        guest_os = self.context.get("os_type")
+        if not isinstance(guest_os, str) or not guest_os.strip():
+            return collected_data, None
+
+        os_aliases = {
+            "SLES_SAP": "SUSE",
+            "SLES": "SUSE",
+            "SUSE": "SUSE",
+            "REDHAT": "REDHAT",
+            "ORACLELINUX": "ORACLELINUX",
+            "WINDOWS": "MICROSOFTWINDOWSSERVER",
+            "MICROSOFTWINDOWSSERVER": "MICROSOFTWINDOWSSERVER",
+        }
+        guest_os = guest_os.strip().upper()
+        resolved_os = os_aliases.get(guest_os, guest_os)
+        details = (
+            "Image publisher is empty; using guest OS facts "
+            f"(os_type='{guest_os}', resolved OS='{resolved_os}')."
+        )
+        self.log(logging.INFO, details)
+        return resolved_os, details
+
     def validate_vm_support(self, check: Check, collected_data: Optional[str]) -> Dict[str, Any]:
         """
         Validates if a VM SKU is supported for the given role and database type
@@ -1006,12 +1050,16 @@ class ConfigurationCheckModule(SapAutomationQA):
                 return create_result(
                     TestStatus.INFO.value, actual_value=collected_data, details=details
                 )
+            collected_data, evidence_details = self._resolve_osdb_fallback(check, collected_data)
             validation_result = self.validate_result(check, collected_data)
+            details = validation_result.get("details")
+            if evidence_details:
+                details = f"{evidence_details} {details}" if details else evidence_details
             return create_result(
                 status=validation_result["status"],
                 actual_value=collected_data,
                 execution_time=int(execution_time),
-                details=validation_result.get("details"),
+                details=details,
             )
 
         except Exception as e:
