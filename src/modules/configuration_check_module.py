@@ -657,6 +657,7 @@ class ConfigurationCheckModule(SapAutomationQA):
             "SLES": "SUSE",
             "SUSE": "SUSE",
             "REDHAT": "REDHAT",
+            "RHEL": "REDHAT",
             "ORACLELINUX": "ORACLELINUX",
             "WINDOWS": "MICROSOFTWINDOWSSERVER",
             "MICROSOFTWINDOWSSERVER": "MICROSOFTWINDOWSSERVER",
